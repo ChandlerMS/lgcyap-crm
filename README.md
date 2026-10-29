@@ -11,7 +11,8 @@ The black-and-gold recruiting interface, logo, read filters, twelve editable
 properties, and explicit Edit → Review → Save flow are retained. Hosting changes:
 
 - Standard Next.js 16 on Node.js 24, with Vercel Node route handlers.
-- Google Workspace sign-in through Better Auth and PostgreSQL sessions.
+- Google sign-in through Better Auth and PostgreSQL sessions; Workspace by default
+  with optional exact approved Gmail exceptions.
 - Explicit email authorization at sign-in and on every recruiting request.
 - PostgreSQL replaces the Cloudflare D1 request ledger. No Worker bindings,
   Sites identity headers, or Sites publishing metadata remain.
@@ -32,7 +33,7 @@ npm run test:smoke
 No real secrets are needed. Tests use fictional records, mocked HubSpot HTTP, and
 embedded PostgreSQL (PGlite). Auth tests exercise the installed Better Auth
 implementation, its generated schema, signed sessions, expiry, OAuth initiation,
-PKCE, Google Workspace claim checks, and denied identities. They do not contact
+PKCE, Google Workspace claim checks, exact personal exceptions, and denied identities. They do not contact
 Google, Neon, HubSpot, or Vercel.
 
 The smoke command starts the production build on a temporary port with credentials
@@ -61,14 +62,19 @@ credential was copied into this migration checkout.
 | GOOGLE_CLIENT_ID | Google OAuth Web application client ID |
 | GOOGLE_CLIENT_SECRET | Google OAuth client secret |
 | GOOGLE_WORKSPACE_DOMAIN | Optional exact Workspace domain; blank requires any Workspace domain plus the exact email list |
+| GOOGLE_PERSONAL_EMAILS | Optional exact @gmail.com exceptions, also required in RECRUITING_EDITOR_EMAILS; blank denies all personal Gmail accounts |
 | DATABASE_URL | New PostgreSQL database; a pooled Neon URL is suitable for runtime if choosing Neon |
-| RECRUITING_EDITOR_EMAILS | Comma-separated exact approved Google work emails; blank denies all |
+| RECRUITING_EDITOR_EMAILS | Comma-separated exact approved Google account emails; blank denies all |
 | HUBSPOT_ACCESS_TOKEN | Server-only scoped credential; never prefix with NEXT_PUBLIC_ |
 | RECRUITING_WRITES_ENABLED | Default false; enable only at coordinated production cutover |
 
-Personal Gmail accounts are denied even if listed. Only Google identity scopes are
-requested; password signup and account linking are disabled. Google Workspace domain
-claims and verified email are required. Sessions expire after eight hours, use
+Personal Gmail accounts are denied unless their exact address is listed in both
+GOOGLE_PERSONAL_EMAILS and RECRUITING_EDITOR_EMAILS. Work accounts still require
+Google Workspace domain claims. When a personal exception is active, the Google
+chooser permits both account types and the server enforces each account's policy.
+Removing a Gmail exception denies its next recruiting request, including an existing
+session. Only Google identity scopes are requested; password signup and account
+linking are disabled. Verified email is always required. Sessions expire after eight hours, use
 host-only secure cookies on HTTPS, and are checked against the database. Removing an
 email from the deployed allowlist denies its next recruiting request. This shared
 HubSpot credential does not enforce individual HubSpot seat permissions; approved
@@ -118,7 +124,7 @@ payload hashes, status, and timestamps, without CRM field values.
 3. Configure Preview first, with writes disabled. Register the exact Google callback
    https://<stable-preview-host>/api/auth/callback/google and set BETTER_AUTH_URL to
    that origin. Configure Google's consent audience and internal/test access for the
-   agency's chosen Workspace accounts.
+   agency's chosen approved Google accounts.
 4. Initialize the separate database and check its schema. Test the protected Preview
    with approved and unapproved accounts.
 5. Prepare Production settings and its exact callback separately, still keeping the
@@ -138,7 +144,8 @@ No coworker invitations or additional paid seats have been created.
 
 ## Required integration checks
 
-- Actual Google login permits approved verified Workspace accounts and denies others;
+- Actual Google login permits approved verified Workspace accounts and exact Gmail
+  exceptions and denies others;
   sign-out revokes the current session.
 - Schema and connectivity checks pass on the actual database provider, and separate
   function instances share sessions and ledger claims.
@@ -201,7 +208,7 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 
 - [Next.js on Vercel](https://vercel.com/docs/frameworks/full-stack/nextjs)
 - [Git deployment setup](https://vercel.com/docs/git)
-- [Google Workspace OAuth](https://better-auth.com/docs/authentication/google)
+- [Google OAuth](https://better-auth.com/docs/authentication/google)
 - [Better Auth migrations](https://better-auth.com/docs/concepts/database)
 - [Vercel pool lifecycle](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#attachdatabasepool)
 - [Neon pooling](https://neon.com/docs/connect/connection-pooling)

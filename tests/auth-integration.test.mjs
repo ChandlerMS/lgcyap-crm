@@ -11,7 +11,7 @@ import { sessionUser } from '../lib/auth-policy.mjs';
 const email = 'editor@example.invalid';
 const env = { BETTER_AUTH_URL: 'http://localhost:3000', BETTER_AUTH_SECRET: 'synthetic-auth-secret-with-at-least-32-characters', GOOGLE_CLIENT_ID: 'synthetic-client', GOOGLE_CLIENT_SECRET: 'synthetic-secret', RECRUITING_EDITOR_EMAILS: email };
 
-async function setup() {
+async function setup(config = env) {
   const db = await PGlite.create();
   const query = async (sql, params) => {
     const result = await db.query(sql, params);
@@ -20,7 +20,7 @@ async function setup() {
   // pg-compatible boundary over the real embedded PostgreSQL engine. No network,
   // production data, or alternate authentication path is used by these tests.
   const pool = { connect: async () => ({ query, release() {} }), query, end: async () => {} };
-  const options = authOptions(env, pool);
+  const options = authOptions(config, pool);
   const migration = await getMigrations(options);
   await migration.runMigrations();
   const auth = betterAuth(options);
@@ -72,6 +72,52 @@ test('installed Google provider enforces Workspace hd claims, including an exact
   assert.equal((await exact.getUserInfo({ idToken: profile('example.invalid') })).user.email, email);
 });
 
+test('installed provider permits only the explicit verified Gmail exception while retaining Workspace claims', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  const personal = 'personal.editor@gmail.com';
+  const main = `${email},${personal}`;
+  const mixed = { ...env, GOOGLE_WORKSPACE_DOMAIN: 'example.invalid', RECRUITING_EDITOR_EMAILS: main, GOOGLE_PERSONAL_EMAILS: personal };
+  const token = claims => ({ idToken: `e30.${Buffer.from(JSON.stringify({ sub: 'synthetic-subject', name: 'Synthetic Editor', email, email_verified: true, ...claims })).toString('base64url')}.synthetic` });
+  // Only the installed profile filter is isolated here. Real OAuth retains the
+  // library's Google token verification, code exchange, state and PKCE checks.
+  const provider = google(authOptions(mixed, {}).socialProviders.google);
+  const accepted = await provider.getUserInfo(token({ email: personal.toUpperCase() }));
+  assert.equal(accepted?.user.email, personal.toUpperCase());
+  assert.equal(accepted?.user.emailVerified, true);
+  assert.equal((await provider.getUserInfo(token({ hd: 'example.invalid' })))?.user.email, email);
+  const rejected = [
+    { email: 'outsider@gmail.com' },
+    { email: 'personal.editor+alias@gmail.com' },
+    { email: personal, email_verified: false },
+    { email: personal, email_verified: 'true' },
+    {},
+    { hd: 'other.invalid' },
+    { hd: 'example.invalid', email: 'outsider@example.invalid' },
+    { hd: 'example.invalid', email_verified: false },
+  ];
+  for (const claims of rejected) {
+    let result;
+    try { result = await provider.getUserInfo(token(claims)); }
+    catch (error) { assert.equal(error.statusCode, 403); continue; }
+    assert.equal(result, null);
+  }
+  const noException = google(authOptions({ ...mixed, GOOGLE_PERSONAL_EMAILS: '' }, {}).socialProviders.google);
+  assert.equal(await noException.getUserInfo(token({ email: personal })), null);
+});
+
+test('personal exceptions also gate creation of database users and sessions', async () => {
+  const personal = 'personal.editor@gmail.com';
+  const config = { ...env, RECRUITING_EDITOR_EMAILS: `${email},${personal}`, GOOGLE_PERSONAL_EMAILS: personal };
+  const identity = { email: personal.toUpperCase(), emailVerified: true };
+  const options = authOptions(config, {});
+  await options.databaseHooks.user.create.before(identity);
+  const context = { context: { internalAdapter: { findUserById: async () => identity } } };
+  await options.databaseHooks.session.create.before({ userId: 'synthetic' }, context);
+  const strict = authOptions({ ...config, GOOGLE_PERSONAL_EMAILS: '' }, {});
+  await assert.rejects(strict.databaseHooks.user.create.before(identity));
+  await assert.rejects(strict.databaseHooks.session.create.before({ userId: 'synthetic' }, context));
+});
+
 test('Better Auth PostgreSQL migration and signed session verification reject forged/expired sessions', async () => {
   const { db, auth, options } = await setup();
   try {
@@ -113,5 +159,23 @@ test('real auth route starts Google OAuth with fixed callback and rejects cross-
     assert.equal((await handle(request('https://other.example.invalid'))).status, 403);
     const password = await handle(new Request('http://localhost:3000/api/auth/sign-up/email', { method: 'POST', headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: 'synthetic-test-password', name: 'Synthetic' }) }));
     assert.notEqual(password.status, 200);
+  } finally { await db.close(); }
+});
+
+test('mixed-account OAuth omits the Workspace chooser restriction and retains identity-only PKCE sign-in', async () => {
+  const personal = 'personal.editor@gmail.com';
+  const mixed = { ...env, GOOGLE_WORKSPACE_DOMAIN: 'example.invalid', RECRUITING_EDITOR_EMAILS: `${email},${personal}`, GOOGLE_PERSONAL_EMAILS: personal };
+  const { db, auth } = await setup(mixed);
+  try {
+    const request = new Request('http://localhost:3000/api/auth/sign-in/social', { method: 'POST', headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: 'google', callbackURL: '/' }) });
+    const response = await handleAuthRequest(request, { resolveAuth: () => auth, baseURL: env.BETTER_AUTH_URL });
+    assert.equal(response.status, 200);
+    const url = new URL((await response.json()).url);
+    assert.equal(url.hostname, 'accounts.google.com');
+    assert.equal(url.searchParams.get('hd'), null);
+    assert.equal(url.searchParams.get('redirect_uri'), 'http://localhost:3000/api/auth/callback/google');
+    assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
+    assert.equal(url.searchParams.get('access_type'), 'online');
+    assert.ok(url.searchParams.get('scope').split(' ').every(scope => ['openid', 'email', 'profile'].includes(scope)));
   } finally { await db.close(); }
 });

@@ -15,7 +15,7 @@ const base = `http://127.0.0.1:${port}`;
 const env = { ...process.env, NEXT_TELEMETRY_DISABLED: '1', BETTER_AUTH_URL: base, RECRUITING_WRITES_ENABLED: 'false' };
 // Empty values also prevent Next's dotenv loader from loading real values from
 // a developer's .env.local after this child process starts.
-for (const key of ['HUBSPOT_ACCESS_TOKEN', 'DATABASE_URL', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'BETTER_AUTH_SECRET', 'RECRUITING_EDITOR_EMAILS']) env[key] = '';
+for (const key of ['HUBSPOT_ACCESS_TOKEN', 'DATABASE_URL', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'BETTER_AUTH_SECRET', 'RECRUITING_EDITOR_EMAILS', 'GOOGLE_PERSONAL_EMAILS']) env[key] = '';
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', String(port)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
 let serverOutput = '';
 for (const stream of [server.stdout, server.stderr]) stream.on('data', chunk => { serverOutput = (serverOutput + chunk.toString()).slice(-10000); });

@@ -17,6 +17,17 @@ test('only explicit verified Google email identities are approved', () => {
   assert.equal(approvedIdentity({ email, emailVerified: true }, '*@example.invalid'), false);
 });
 
+test('a verified Gmail identity needs the exact personal exception and main allowlist', () => {
+  const personal = 'personal.editor@gmail.com';
+  const identity = { email: personal.toUpperCase(), emailVerified: true };
+  assert.equal(approvedIdentity(identity, personal, personal.toUpperCase()), true);
+  assert.equal(approvedIdentity(identity, personal), false);
+  assert.equal(approvedIdentity(identity, personal, 'another@gmail.com'), false);
+  assert.equal(approvedIdentity(identity, email, personal), false);
+  assert.equal(approvedIdentity({ ...identity, emailVerified: false }, personal, personal), false);
+  assert.equal(approvedIdentity({ ...identity, email: 'personal.editor+alias@gmail.com' }, personal, personal), false);
+});
+
 test('session projection denies expired, revoked, invalid or unverified sessions', () => {
   assert.deepEqual(sessionUser(session(), email, now), { userId: 'synthetic-user', email, displayName: 'Synthetic Editor', fullName: 'Synthetic Editor' });
   const expired = session(); expired.session.expiresAt = new Date(now);
@@ -24,6 +35,14 @@ test('session projection denies expired, revoked, invalid or unverified sessions
   for (const value of [null, {}, { user: session().user }, expired, unverified]) assert.equal(sessionUser(value, email, now), null);
   assert.equal(sessionUser(session(), 'another@example.invalid', now), null);
   assert.equal(sessionUser({ headers: { 'oai-authenticated-user-id': 'synthetic-user', 'oai-authenticated-user-email': email } }, email, now), null);
+});
+
+test('removing a Gmail exception immediately denies its existing session without removing the main email', () => {
+  const personal = 'personal.editor@gmail.com';
+  const current = session(); current.user.email = personal.toUpperCase();
+  assert.equal(sessionUser(current, personal, now, personal).email, personal);
+  assert.equal(sessionUser(current, personal, now, ''), null);
+  assert.equal(sessionUser(current, personal, now, 'another@gmail.com'), null);
 });
 
 test('authentication setup fails closed without all credentials, explicit origin, and allowlist', () => {
@@ -37,6 +56,15 @@ test('authentication setup fails closed without all credentials, explicit origin
   assert.ok(authSetupIssues({ ...config(), BETTER_AUTH_SECRET: 'short' }).includes('BETTER_AUTH_SECRET'));
   assert.ok(authSetupIssues({ ...config(), GOOGLE_WORKSPACE_DOMAIN: 'https://invalid.example' }).includes('GOOGLE_WORKSPACE_DOMAIN'));
   assert.ok(!authSetupIssues({ ...config(), GOOGLE_WORKSPACE_DOMAIN: '*' }).length);
+});
+
+test('personal exceptions must be exact Gmail addresses already present in the main allowlist', () => {
+  const personal = 'personal.editor@gmail.com';
+  const mixed = { ...config(), RECRUITING_EDITOR_EMAILS: `${email},${personal}` };
+  assert.deepEqual(authSetupIssues({ ...mixed, GOOGLE_PERSONAL_EMAILS: ` ${personal.toUpperCase()} ` }), []);
+  for (const value of ['another@gmail.com', '*@gmail.com', email, 'personal.editor@googlemail.com', `${personal},bad-address`]) {
+    assert.ok(authSetupIssues({ ...mixed, GOOGLE_PERSONAL_EMAILS: value }).includes('GOOGLE_PERSONAL_EMAILS'));
+  }
 });
 
 test('post-login return paths stay in this app and cannot loop through auth', () => {

@@ -19,7 +19,7 @@ export async function getAppUser(): Promise<AppUser | null> {
   if (!auth) return null;
   try {
     const session = await auth.api.getSession({ headers: requestHeaders });
-    return sessionUser(session, process.env.RECRUITING_EDITOR_EMAILS);
+    return sessionUser(session, process.env.RECRUITING_EDITOR_EMAILS, Date.now(), process.env.GOOGLE_PERSONAL_EMAILS);
   } catch { throw new AuthUnavailableError(); }
 }
 
