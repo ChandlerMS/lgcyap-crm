@@ -94,6 +94,22 @@ the hosted checks below passed.
   against the canvas, subject to the same rendering/platform limits as before.
 - All 77 existing tests, TypeScript, lint, production build and HTTP smoke passed.
   No font-only unit tests or fictitious CRM records were added for verification.
+- Production deployment `dpl_2v96gWhWNgj3Z2xqnvf7nHoHJ8tC` is READY from runtime
+  source `1ba2bc277027ab6c20ab72adce149ce58aa00d0c`. The canonical live app was
+  reloaded and visually inspected: Today, Recruits, Contracting and Add recruit
+  are the four menu items, Follow-up is on Today, and visiting `#follow-up`
+  normalizes to `#today` with Today highlighted. Computed font family and heading
+  weights match the reviewed stylesheet. Final screenshot:
+  `../../output/today-followup-apple-style-font.png`.
+- On this deployment, Add recruit still shows Contact entry enabled, the license
+  checkbox and enabled Save contact. Clicking the deployed Cristian Email link
+  opened the exact HubSpot Ticket with `interaction=email` and a native Email
+  composer. Its Send control was disabled; the composer was closed without
+  sending. No real Contact was created and no call was placed for verification.
+- Anonymous root requests redirect to sign-in; anonymous recruit-read and
+  contact-create POST requests return 401 with private/no-store responses. The
+  former project hostname still redirects 307 to the canonical hostname, while
+  Preview and the generated deployment URL retain Vercel authentication.
 
 ## Canonical hostname and expanded account access
 
