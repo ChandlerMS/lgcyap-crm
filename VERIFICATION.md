@@ -67,11 +67,33 @@ the hosted checks below passed.
 - HubSpot's native calling UI reported that the inspected recruiting Ticket needs
   an associated Contact before calling. Five exact-name Contact candidates were
   found for the five currently loaded recruiting Tickets; the proposed links were
-  presented for explicit identity confirmation. No associations were changed
-  while that confirmation was pending. Names alone are not treated as identity.
+  presented for explicit identity confirmation. The user approved all five links.
+  Existing Contacts were selected by the verified emails of the approved IDs in
+  HubSpot's native association picker, without changing Contact property values
+  or adding association labels. Independent MCP association reads confirmed one
+  exact approved Contact for each of the five Tickets. Names alone were not used
+  as authorization to associate records.
 - Native HubSpot login, user permissions, connected inbox and calling settings
   apply. Opening these shortcuts is not proof of a completed communication or of
   its final activity associations. No call was placed and no email was sent.
+
+## Today consolidation and typography
+
+- Follow-up is part of Today, with the complete office-filtered review list,
+  count, statistics and Coming up retained. The separate menu item/page and old
+  three-row truncation/View all link were removed. Existing exact `#follow-up`
+  links normalize to `#today`, with Today navigation and focus handling preserved.
+- Typography uses the Apple system font stack and installed Segoe UI Variable
+  on this Windows computer, plus standard fallbacks. Body/headings/controls use
+  coherent weights, spacing, optical sizing and smoothing. No fonts were downloaded
+  or bundled; black/gold colors, keyboard focus and responsive structure remain.
+- Source-only independent review found no practical navigation blocker. Grok's
+  text review was independently assessed; speculative changes to business-rule
+  overlap and undocumented hash variants were not adopted. Key body, muted and
+  gold text colors retain contrast ratios of 17.53, 9.35 and 9.42 respectively
+  against the canvas, subject to the same rendering/platform limits as before.
+- All 77 existing tests, TypeScript, lint, production build and HTTP smoke passed.
+  No font-only unit tests or fictitious CRM records were added for verification.
 
 ## Canonical hostname and expanded account access
 

@@ -54,6 +54,19 @@ Calling from a recruiting Ticket requires an associated Contact with a phone
 number. Opening an icon does not place a call, send an email or create an activity.
 See [COMMUNICATIONS-API.md](COMMUNICATIONS-API.md) for the navigation contract.
 
+## Today and follow-up
+
+Today includes the complete office-filtered Follow-up list alongside its counts
+and upcoming orientations. Follow-up no longer has a separate menu item; existing
+`#follow-up` links normalize to `#today`. Suggested reviews keep the existing
+five-day open-stage rule. The menu contains Today, Recruits, Contracting and Add
+recruit.
+
+Typography uses native Apple system fonts on Apple platforms and Segoe UI Variable
+on supported Windows systems, with standard fallbacks. Body, headings and controls
+use consistent weights, optical sizing, spacing and smoothing; fonts are not
+downloaded or bundled. The black-and-gold palette and keyboard focus remain.
+
 ## Local verification
 
 ```powershell
