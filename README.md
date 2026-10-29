@@ -12,7 +12,7 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
 
 - Standard Next.js 16 on Node.js 24, with Vercel Node route handlers.
 - Google sign-in through Better Auth and PostgreSQL sessions; Workspace by default
-  with optional exact approved Gmail exceptions.
+  with optional exact approved Gmail and outside-company account exceptions.
 - Explicit email authorization at sign-in and on every recruiting request.
 - PostgreSQL replaces the Cloudflare D1 request ledger. No Worker bindings,
   Sites identity headers, or Sites publishing metadata remain.
@@ -33,7 +33,7 @@ npm run test:smoke
 No real secrets are needed. Tests use fictional records, mocked HubSpot HTTP, and
 embedded PostgreSQL (PGlite). Auth tests exercise the installed Better Auth
 implementation, its generated schema, signed sessions, expiry, OAuth initiation,
-PKCE, Google Workspace claim checks, exact personal exceptions, and denied identities. They do not contact
+PKCE, Google Workspace claim checks, exact personal/external exceptions, and denied identities. They do not contact
 Google, Neon, HubSpot, or Vercel.
 
 The smoke command starts the production build on a temporary port with credentials
@@ -61,19 +61,24 @@ credential was copied into this migration checkout.
 | BETTER_AUTH_SECRET | Fresh random secret of 32+ characters, unique per environment |
 | GOOGLE_CLIENT_ID | Google OAuth Web application client ID |
 | GOOGLE_CLIENT_SECRET | Google OAuth client secret |
-| GOOGLE_WORKSPACE_DOMAIN | Optional exact Workspace domain; blank requires any Workspace domain plus the exact email list |
+| GOOGLE_WORKSPACE_DOMAIN | Optional exact Workspace domain; required with external exceptions; otherwise blank requires any Workspace domain plus the exact email list |
 | GOOGLE_PERSONAL_EMAILS | Optional exact @gmail.com exceptions, also required in RECRUITING_EDITOR_EMAILS; blank denies all personal Gmail accounts |
+| GOOGLE_EXTERNAL_EMAILS | Optional exact non-Gmail outside-company exceptions, also required in RECRUITING_EDITOR_EMAILS; requires an exact GOOGLE_WORKSPACE_DOMAIN; never admits a whole external domain |
 | DATABASE_URL | New PostgreSQL database; a pooled Neon URL is suitable for runtime if choosing Neon |
 | RECRUITING_EDITOR_EMAILS | Comma-separated exact approved Google account emails; blank denies all |
 | HUBSPOT_ACCESS_TOKEN | Server-only scoped credential; never prefix with NEXT_PUBLIC_ |
 | RECRUITING_WRITES_ENABLED | Default false; enable only at coordinated production cutover |
 
 Personal Gmail accounts are denied unless their exact address is listed in both
-GOOGLE_PERSONAL_EMAILS and RECRUITING_EDITOR_EMAILS. Work accounts still require
-Google Workspace domain claims. When a personal exception is active, the Google
-chooser permits both account types and the server enforces each account's policy.
-Removing a Gmail exception denies its next recruiting request, including an existing
-session. Only Google identity scopes are requested; password signup and account
+GOOGLE_PERSONAL_EMAILS and RECRUITING_EDITOR_EMAILS. A Google account outside the
+configured company domain also needs its exact address in GOOGLE_EXTERNAL_EMAILS
+and the main list. External exceptions require an exact company Workspace domain;
+they permit that verified Google identity with or without an external Workspace
+claim. Other company accounts still require the configured Google Workspace claim.
+When any exception is active, the Google chooser permits both account types and
+the server enforces each account's policy. Removing an exception denies its next
+recruiting request, including an existing session; retain the company domain when
+revoking external access. Only Google identity scopes are requested; password signup and account
 linking are disabled. Verified email is always required. Sessions expire after eight hours, use
 host-only secure cookies on HTTPS, and are checked against the database. Removing an
 email from the deployed allowlist denies its next recruiting request. This shared
@@ -148,7 +153,7 @@ have been created. See VERIFICATION.md for actual login evidence and limits.
 ## Required integration checks
 
 - Actual Google login permits approved verified Workspace accounts and exact Gmail
-  exceptions and denies others;
+  or outside-company exceptions and denies others;
   sign-out revokes the current session.
 - Schema and connectivity checks pass on the actual database provider, and separate
   function instances share sessions and ledger claims.

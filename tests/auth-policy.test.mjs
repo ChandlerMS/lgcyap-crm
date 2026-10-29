@@ -28,6 +28,18 @@ test('a verified Gmail identity needs the exact personal exception and main allo
   assert.equal(approvedIdentity({ ...identity, email: 'personal.editor+alias@gmail.com' }, personal, personal), false);
 });
 
+test('an outside-company identity needs its exact external exception and main allowlist', () => {
+  const external = 'partner.editor@partner.invalid';
+  const identity = { email: external.toUpperCase(), emailVerified: true };
+  assert.equal(approvedIdentity(identity, external, '', external.toUpperCase(), 'example.invalid'), true);
+  assert.equal(approvedIdentity(identity, external, '', '', 'example.invalid'), false);
+  assert.equal(approvedIdentity(identity, external, '', 'another@partner.invalid', 'example.invalid'), false);
+  assert.equal(approvedIdentity(identity, email, '', external, 'example.invalid'), false);
+  assert.equal(approvedIdentity({ ...identity, emailVerified: false }, external, '', external, 'example.invalid'), false);
+  assert.equal(approvedIdentity({ ...identity, email: 'other@partner.invalid' }, `${external},other@partner.invalid`, '', external, 'example.invalid'), false);
+  assert.equal(approvedIdentity({ email, emailVerified: true }, email, '', '', 'example.invalid'), true);
+});
+
 test('session projection denies expired, revoked, invalid or unverified sessions', () => {
   assert.deepEqual(sessionUser(session(), email, now), { userId: 'synthetic-user', email, displayName: 'Synthetic Editor', fullName: 'Synthetic Editor' });
   const expired = session(); expired.session.expiresAt = new Date(now);
@@ -43,6 +55,14 @@ test('removing a Gmail exception immediately denies its existing session without
   assert.equal(sessionUser(current, personal, now, personal).email, personal);
   assert.equal(sessionUser(current, personal, now, ''), null);
   assert.equal(sessionUser(current, personal, now, 'another@gmail.com'), null);
+});
+
+test('removing an external exception immediately denies its existing session while the company domain remains configured', () => {
+  const external = 'partner.editor@partner.invalid';
+  const current = session(); current.user.email = external.toUpperCase();
+  assert.equal(sessionUser(current, external, now, '', external, 'example.invalid').email, external);
+  assert.equal(sessionUser(current, external, now, '', '', 'example.invalid'), null);
+  assert.equal(sessionUser(current, external, now, '', 'other@partner.invalid', 'example.invalid'), null);
 });
 
 test('authentication setup fails closed without all credentials, explicit origin, and allowlist', () => {
@@ -64,6 +84,18 @@ test('personal exceptions must be exact Gmail addresses already present in the m
   assert.deepEqual(authSetupIssues({ ...mixed, GOOGLE_PERSONAL_EMAILS: ` ${personal.toUpperCase()} ` }), []);
   for (const value of ['another@gmail.com', '*@gmail.com', email, 'personal.editor@googlemail.com', `${personal},bad-address`]) {
     assert.ok(authSetupIssues({ ...mixed, GOOGLE_PERSONAL_EMAILS: value }).includes('GOOGLE_PERSONAL_EMAILS'));
+  }
+});
+
+test('external exceptions require exact outside-company non-Gmail addresses in the main list and an exact company domain', () => {
+  const external = 'partner.editor@partner.invalid';
+  const mixed = { ...config(), GOOGLE_WORKSPACE_DOMAIN: 'example.invalid', RECRUITING_EDITOR_EMAILS: `${email},${external},personal.editor@gmail.com` };
+  assert.deepEqual(authSetupIssues({ ...mixed, GOOGLE_EXTERNAL_EMAILS: external.toUpperCase() }), []);
+  for (const value of ['other@partner.invalid', '*@partner.invalid', email, 'personal.editor@gmail.com', `${external},bad-address`]) {
+    assert.ok(authSetupIssues({ ...mixed, GOOGLE_EXTERNAL_EMAILS: value }).includes('GOOGLE_EXTERNAL_EMAILS'));
+  }
+  for (const domain of [undefined, '', '*', 'https://invalid.example']) {
+    assert.ok(authSetupIssues({ ...mixed, GOOGLE_EXTERNAL_EMAILS: external, GOOGLE_WORKSPACE_DOMAIN: domain }).includes('GOOGLE_WORKSPACE_DOMAIN'));
   }
 });
 

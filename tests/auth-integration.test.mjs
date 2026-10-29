@@ -118,6 +118,49 @@ test('personal exceptions also gate creation of database users and sessions', as
   await assert.rejects(strict.databaseHooks.session.create.before({ userId: 'synthetic' }, context));
 });
 
+test('installed provider allows only exact verified external exceptions without weakening company Workspace claims', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  const external = 'partner.editor@partner.invalid';
+  const other = 'other@partner.invalid';
+  const mixed = { ...env, GOOGLE_WORKSPACE_DOMAIN: 'example.invalid', RECRUITING_EDITOR_EMAILS: `${email},${external},${other}`, GOOGLE_EXTERNAL_EMAILS: external };
+  const token = claims => ({ idToken: `e30.${Buffer.from(JSON.stringify({ sub: 'synthetic-subject', name: 'Synthetic Editor', email, email_verified: true, ...claims })).toString('base64url')}.synthetic` });
+  const provider = google(authOptions(mixed, {}).socialProviders.google);
+  for (const hd of [undefined, 'partner.invalid', 'another.invalid']) {
+    const accepted = await provider.getUserInfo(token({ email: external.toUpperCase(), ...(hd ? { hd } : {}) }));
+    assert.equal(accepted?.user.email, external.toUpperCase());
+    assert.equal(accepted?.user.emailVerified, true);
+  }
+  assert.equal((await provider.getUserInfo(token({ hd: 'example.invalid' })))?.user.email, email);
+  for (const claims of [
+    { email: other },
+    { email: other, hd: 'example.invalid' },
+    { email: external, email_verified: false },
+    { email: external, email_verified: 'true' },
+    { email: 'unlisted@partner.invalid' },
+    { email: 'personal.editor@gmail.com' },
+    {},
+    { hd: 'another.invalid' },
+  ]) {
+    let result;
+    try { result = await provider.getUserInfo(token(claims)); }
+    catch (error) { assert.equal(error.statusCode, 403); continue; }
+    assert.equal(result, null);
+  }
+});
+
+test('external exceptions also gate creation of database users and sessions after removal', async () => {
+  const external = 'partner.editor@partner.invalid';
+  const config = { ...env, GOOGLE_WORKSPACE_DOMAIN: 'example.invalid', RECRUITING_EDITOR_EMAILS: `${email},${external}`, GOOGLE_EXTERNAL_EMAILS: external };
+  const identity = { email: external.toUpperCase(), emailVerified: true };
+  const options = authOptions(config, {});
+  await options.databaseHooks.user.create.before(identity);
+  const context = { context: { internalAdapter: { findUserById: async () => identity } } };
+  await options.databaseHooks.session.create.before({ userId: 'synthetic' }, context);
+  const strict = authOptions({ ...config, GOOGLE_EXTERNAL_EMAILS: '' }, {});
+  await assert.rejects(strict.databaseHooks.user.create.before(identity));
+  await assert.rejects(strict.databaseHooks.session.create.before({ userId: 'synthetic' }, context));
+});
+
 test('Better Auth PostgreSQL migration and signed session verification reject forged/expired sessions', async () => {
   const { db, auth, options } = await setup();
   try {
@@ -176,6 +219,22 @@ test('mixed-account OAuth omits the Workspace chooser restriction and retains id
     assert.equal(url.searchParams.get('redirect_uri'), 'http://localhost:3000/api/auth/callback/google');
     assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
     assert.equal(url.searchParams.get('access_type'), 'online');
+    assert.ok(url.searchParams.get('scope').split(' ').every(scope => ['openid', 'email', 'profile'].includes(scope)));
+  } finally { await db.close(); }
+});
+
+test('an external exception alone removes the Workspace chooser restriction while preserving fixed-callback PKCE', async () => {
+  const external = 'partner.editor@partner.invalid';
+  const mixed = { ...env, GOOGLE_WORKSPACE_DOMAIN: 'example.invalid', RECRUITING_EDITOR_EMAILS: `${email},${external}`, GOOGLE_EXTERNAL_EMAILS: external };
+  const { db, auth } = await setup(mixed);
+  try {
+    const request = new Request('http://localhost:3000/api/auth/sign-in/social', { method: 'POST', headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: 'google', callbackURL: '/' }) });
+    const response = await handleAuthRequest(request, { resolveAuth: () => auth, baseURL: env.BETTER_AUTH_URL });
+    assert.equal(response.status, 200);
+    const url = new URL((await response.json()).url);
+    assert.equal(url.searchParams.get('hd'), null);
+    assert.equal(url.searchParams.get('redirect_uri'), 'http://localhost:3000/api/auth/callback/google');
+    assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
     assert.ok(url.searchParams.get('scope').split(' ').every(scope => ['openid', 'email', 'profile'].includes(scope)));
   } finally { await db.close(); }
 });
