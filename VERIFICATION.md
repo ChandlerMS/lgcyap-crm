@@ -1,11 +1,51 @@
 # Vercel migration verification — 2026-10-29
 
-Status: user-approved editing cutover complete. Protected Vercel Production is the
-active editor. Preview and the Sites backup remain read-only. The requested Gmail
-owner and Sarah work account are approved for Production. No real CRM field
-value was changed during verification; Sarah's actual first login is not yet tested.
+Status: user-approved editing cutover complete. Vercel Production remains the active
+editor at the canonical hostname below; Preview and the Sites backup remain
+read-only. Sixteen identities are configured for the expanded access rollout.
+No real CRM field value was changed during verification. Individual coworker
+logins have not been exercised. The expanded-account deployment is READY and
+the hosted checks below passed.
 
-## Requested Google-account access
+## Canonical hostname and expanded account access
+
+- Canonical Production: `https://lgcyap-crm.vercel.app`.
+- The former project domain `https://legacy-recruiting-private.vercel.app` returns
+  a 307 redirect to the canonical hostname. Production's exact BETTER_AUTH_URL and
+  registered Google callback use the new origin; cookies remain host-only and a
+  new-host login is required. The same Production database and ledger are retained.
+- Expanded-account Production deployment: **`dpl_dxpmcjiFg8bTGDfwDDByDgYGje3d`**
+  is READY from source `c203c14c2e0ab4f3b049f5c57106ea9d0d67c9d9`.
+- After deployment, anonymous root requests redirect to Google sign-in; the sign-in
+  page returns 200 with no recruiting data. Anonymous read/edit requests and forged
+  identity headers return 401, with private/no-store responses. The anonymous
+  session endpoint returns null. Preview and the generated deployment URL still
+  require Vercel authentication. The old Production hostname still returns the
+  configured 307 redirect, preserving the requested path and query.
+- Google consent remains in Testing, and all sixteen approved test-user identities
+  were saved. Production's main email list contains all sixteen approved addresses.
+  GOOGLE_PERSONAL_EMAILS contains only the three exact approved Gmail addresses.
+  GOOGLE_EXTERNAL_EMAILS contains only `carlos@fam1life.net`; this is an individual
+  exception and grants no other `fam1life.net` account access.
+- The exact external Google identity must have a verified email. It may have an
+  external Workspace claim or no Workspace claim. Company accounts still require
+  the configured `lgcyap.com` Workspace claim. Removing an external exception denies
+  its existing session on its next app request while that company domain remains
+  configured; Gmail exceptions and the main email list are also rechecked.
+- Existing owner Gmail sign-in on the new hostname was tested, and its session
+  still loads all five HubSpot recruits with Editing enabled after deployment.
+  That evidence does
+  not establish successful first login for each coworker; their credentials were
+  not requested or used, and individual coworker logins remain untested.
+- The expanded policy passed all 58 tests, TypeScript, lint, the production build,
+  HTTP smoke, and independent review. Tests cover exact external exceptions with
+  absent/different hosted-domain claims, unverified/unlisted identities, invalid
+  exception configuration, chooser behavior, and existing-session revocation.
+- Production stays write-enabled with the approved writer credential. Preview and
+  the Sites backup remain read-only; this account/hostname rollout does not create
+  another writer or perform a field-changing HubSpot test save.
+
+## Earlier three-account rollout evidence
 
 - Production deployment `dpl_7V6DPKkD7t1LKFwzU9YUWMaKryJf` is READY from source
   `b2c5900cd9673e3a287a13571782ceded2cc9f9d` with the reviewed account-policy change.

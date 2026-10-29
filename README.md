@@ -140,15 +140,24 @@ created. The user approved and activated Vercel Pro. DNS is unchanged; the exist
 Sites app is now a read-only backup. See VERIFICATION.md and the deployment checkpoint for current
 integration evidence and remaining release work.
 
-Current Production URL: `https://legacy-recruiting-private.vercel.app`.
+Current canonical Production URL: `https://lgcyap-crm.vercel.app`.
+The former Production project domain `https://legacy-recruiting-private.vercel.app`
+returns a 307 redirect to the canonical host. Cookies remain host-only, so users
+sign in again on the new hostname. Production uses that exact origin for
+BETTER_AUTH_URL and its `/api/auth/callback/google` OAuth callback.
 Current Preview URL: `https://legacy-recruiting-preview-main-team8.vercel.app`.
 The Production domain uses the app's Google sign-in and exact approved-email list;
 ordinary app users do not need Vercel accounts. Vercel Standard Protection
 (`prod_deployment_urls_and_all_previews`) still protects Preview and generated
 deployment URLs. Google consent remains in Testing; each approved app user also
-needs Google test-user access. Three requested identities are configured, including
-one exact Gmail exception. No Vercel team invitations or additional paid seats
-have been created. See VERIFICATION.md for actual login evidence and limits.
+needs Google test-user access. All sixteen approved Google Testing users are saved,
+and the Production configuration retains all sixteen exact email addresses. It has
+three exact Gmail exceptions and one exact outside-company exception,
+`carlos@fam1life.net`; no external domain receives blanket access. Company users
+still require the configured `lgcyap.com` Workspace claim. The owner Gmail login
+on the new hostname was exercised; individual coworker logins have not been tested.
+The expanded-account deployment and its final checks are recorded in VERIFICATION.md.
+No Vercel team invitations or additional paid seats have been created.
 
 ## Required integration checks
 
