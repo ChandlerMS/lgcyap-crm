@@ -20,6 +20,28 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
   RECRUITING_WRITES_ENABLED=true. Local and Preview environments cannot save.
   Do not manually spoof platform variables.
 
+## Add a potential recruit
+
+The Add recruit page (`#add-recruit`) saves a HubSpot Contact with First name,
+Last name, Phone number, and an Active 2-14 / 2-15 license checkbox. Checked maps to
+`licensed_2_14_2_15=Yes`; unchecked maps to `No`, as confirmed by the app owner.
+It creates a Contact; recruiting pipeline Tickets are managed separately.
+
+Contact creation has its own Production flag, `RECRUITING_CONTACT_CREATION_ENABLED`,
+in addition to the existing write flag, Google identity policy and editor allowlist.
+The server verifies the HubSpot credential's portal, app and contact-read/write
+scopes. Migration `0002_contact_creation_ledger.sql` must be applied before enabling
+contact creation. Existing recruiting edits, Preview and the Sites backup retain
+their current behavior. See [CONTACT-API.md](CONTACT-API.md) for the request contract,
+durable submission handling, phone matching limits and permission requirements.
+
+The ledger stores metadata and keyed hashes, never submitted names or phone values.
+Unconfirmed creates retain a phone claim and require reconciliation in HubSpot;
+refreshing or using a new request ID cannot automatically repeat that phone.
+A change to BETTER_AUTH_SECRET requires a reviewed claim migration plan; otherwise
+contact creation fails closed. Phone search reduces duplicates; it cannot guarantee global
+phone uniqueness across other integrations or HubSpot's search indexing delay.
+
 ## Local verification
 
 ```powershell

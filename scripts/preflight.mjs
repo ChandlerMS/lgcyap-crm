@@ -5,8 +5,12 @@ nextEnv.loadEnvConfig(process.cwd());
 const issues = authSetupIssues(process.env);
 if (!process.env.HUBSPOT_ACCESS_TOKEN?.trim()) issues.push('HUBSPOT_ACCESS_TOKEN');
 if (!['false', 'true'].includes(process.env.RECRUITING_WRITES_ENABLED ?? 'false')) issues.push('RECRUITING_WRITES_ENABLED');
+if (!['false', 'true'].includes(process.env.RECRUITING_CONTACT_CREATION_ENABLED ?? 'false')) issues.push('RECRUITING_CONTACT_CREATION_ENABLED');
 if (process.env.VERCEL_ENV === 'preview' && process.env.RECRUITING_WRITES_ENABLED === 'true') {
   issues.push('RECRUITING_WRITES_ENABLED must remain false in Preview');
+}
+if (process.env.RECRUITING_CONTACT_CREATION_ENABLED === 'true' && (process.env.RECRUITING_WRITES_ENABLED !== 'true' || process.env.VERCEL_ENV !== 'production')) {
+  issues.push('RECRUITING_CONTACT_CREATION_ENABLED requires Production and RECRUITING_WRITES_ENABLED=true');
 }
 
 if (issues.length) {

@@ -7,6 +7,26 @@ No real CRM field value was changed during verification. Individual coworker
 logins have not been exercised. The expanded-account deployment is READY and
 the hosted checks below passed.
 
+## Contact entry rollout
+
+- Added Add recruit (`#add-recruit`) and `POST /api/contacts` for First name,
+  Last name, Phone number and the user-confirmed Active 2-14 / 2-15 license flag.
+  The checkbox maps to existing Contact property `licensed_2_14_2_15`, using the
+  live-verified `Yes`/`No` enum. No custom property or recruiting Ticket is created.
+- All 73 local tests passed, including shared PostgreSQL phone claims, concurrent
+  callers, duplicate mobilephone matching, licensed payloads, wrong portal/app/scope,
+  definite rejections, timed-out creates and failed database confirmation after a
+  successful provider response. TypeScript, lint, production build and production
+  HTTP smoke passed. Provider create/readback responses were mocked.
+- Independent backend and frontend reviews found no release blocker. Grok's
+  design review was reviewed independently; global phone uniqueness is not claimed.
+- Production's contact-creation flag is false pending the additional HubSpot
+  contact-write grant. Existing ticket editing stays enabled; Preview and the
+  old Sites backup remain read-only. No real Contact was created for testing.
+- The authenticated HubSpot browser identity was verified as
+  `chandler@lgcyap.com` in portal `50894788`. The separate ChatGPT connector still
+  lacks contact-write and USER_INFORMATION; it is not used as the app credential.
+
 ## Canonical hostname and expanded account access
 
 - Canonical Production: `https://lgcyap-crm.vercel.app`.
