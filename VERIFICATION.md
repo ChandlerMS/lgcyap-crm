@@ -23,6 +23,20 @@ the hosted checks below passed.
 - Production's contact-creation flag is false pending the additional HubSpot
   contact-write grant. Existing ticket editing stays enabled; Preview and the
   old Sites backup remain read-only. No real Contact was created for testing.
+- Prepared Production deployment `dpl_BkrZVLBpZVtLFquAD7S9PnE9RZFP` is READY
+  from source `129b6f0f3af5307eb784f8cdf55d5d819870cd0a`. Its four-field page was
+  inspected live; the license checkbox toggles correctly and Save contact stays
+  disabled. Recruits still shows five records with Editing enabled. Anonymous and
+  forged-identity contact POSTs return 401; GET returns 405, all private/no-store.
+  The former Vercel hostname still redirects 307 to the canonical hostname.
+- Migration 0002 was applied to the Production Neon database using three separate
+  additive statements because the Vercel query editor rejects multiple prepared
+  statements. Catalog verification confirmed the eight metadata columns, durable
+  key table, and unique phone index retaining pending/created/duplicate/uncertain
+  claims. Both new tables had zero rows. The query editor was returned to read-only.
+  Migration SHA256: `7bd46dd090dfdf7a8246a9dac6efa75acaf0df282bf1ee295b7139de6c3499e2`.
+- The native writer app's local scope addition was validated, but not uploaded or
+  authorized while the contact-write approval is pending. No token was rotated.
 - The authenticated HubSpot browser identity was verified as
   `chandler@lgcyap.com` in portal `50894788`. The separate ChatGPT connector still
   lacks contact-write and USER_INFORMATION; it is not used as the app credential.
