@@ -20,9 +20,17 @@ the hosted checks below passed.
   HTTP smoke passed. Provider create/readback responses were mocked.
 - Independent backend and frontend reviews found no release blocker. Grok's
   design review was reviewed independently; global phone uniqueness is not claimed.
-- Production's contact-creation flag is false pending the additional HubSpot
-  contact-write grant. Existing ticket editing stays enabled; Preview and the
-  old Sites backup remain read-only. No real Contact was created for testing.
+- The user approved contact-write access. Native HubSpot build #6 deployed for
+  app `59264745`, and the additional grant was completed in portal `50894788` as
+  `chandler@lgcyap.com`. HubSpot confirmed the app was successfully installed.
+  Existing ticket editing stays enabled; Preview and the old Sites backup remain
+  read-only. No real Contact was created for testing, and no token was rotated.
+- Enabled Production deployment `dpl_4j9sqsxaMLe8vXBj1B9dNvs3ritQ` is READY from
+  the same reviewed runtime source `129b6f0f3af5307eb784f8cdf55d5d819870cd0a`.
+  `RECRUITING_CONTACT_CREATION_ENABLED=true` is Production-only. After the grant,
+  live Refresh showed Contact entry enabled and an enabled Save contact button.
+  That capability requires the actual server token's portal/app/contact-read/write
+  metadata checks to pass. Real provider create/confirmation was not exercised.
 - Prepared Production deployment `dpl_BkrZVLBpZVtLFquAD7S9PnE9RZFP` is READY
   from source `129b6f0f3af5307eb784f8cdf55d5d819870cd0a`. Its four-field page was
   inspected live; the license checkbox toggles correctly and Save contact stays
@@ -35,11 +43,35 @@ the hosted checks below passed.
   key table, and unique phone index retaining pending/created/duplicate/uncertain
   claims. Both new tables had zero rows. The query editor was returned to read-only.
   Migration SHA256: `7bd46dd090dfdf7a8246a9dac6efa75acaf0df282bf1ee295b7139de6c3499e2`.
-- The native writer app's local scope addition was validated, but not uploaded or
-  authorized while the contact-write approval is pending. No token was rotated.
+- The prepared deployment and disabled-state checks above preceded the approved
+  native app upload/grant and enabled deployment. They remain historical evidence.
 - The authenticated HubSpot browser identity was verified as
   `chandler@lgcyap.com` in portal `50894788`. The separate ChatGPT connector still
   lacks contact-write and USER_INFORMATION; it is not used as the app credential.
+
+## Native call and email shortcuts
+
+- Recruits list phone/email icons are immediately before the initials and name.
+  Both use the exact recruiting Ticket's validated fixed-portal HubSpot URL.
+  Phone opens the record for its native Call control. Email adds only the
+  `interaction=email` query observed while opening the real Ticket email composer.
+  No speculative call query, direct dialing, mail client navigation or sending API
+  was added. No extra Contact/association reads or values enter the app dataset.
+- Native Ticket email composition was inspected live with Send disabled; its
+  empty composer was closed without sending. The native Contact Call menu and
+  options window were inspected without selecting a phone number or pressing Call.
+  One built-in refresh resolved an initial options-window loading error. The
+  options window still uses the record's base URL, so no call deep link is claimed.
+- All 77 local tests pass, including four URL/identity/interaction security tests.
+  TypeScript, lint, the production build and production HTTP smoke passed.
+- HubSpot's native calling UI reported that the inspected recruiting Ticket needs
+  an associated Contact before calling. Five exact-name Contact candidates were
+  found for the five currently loaded recruiting Tickets; the proposed links were
+  presented for explicit identity confirmation. No associations were changed
+  while that confirmation was pending. Names alone are not treated as identity.
+- Native HubSpot login, user permissions, connected inbox and calling settings
+  apply. Opening these shortcuts is not proof of a completed communication or of
+  its final activity associations. No call was placed and no email was sent.
 
 ## Canonical hostname and expanded account access
 

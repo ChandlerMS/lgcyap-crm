@@ -42,6 +42,18 @@ A change to BETTER_AUTH_SECRET requires a reviewed claim migration plan; otherwi
 contact creation fails closed. Phone search reduces duplicates; it cannot guarantee global
 phone uniqueness across other integrations or HubSpot's search indexing delay.
 
+## Call and email from the Recruits list
+
+Phone and email icons sit immediately before each recruit's initials and name.
+Phone opens that recruiting record in HubSpot; choose its native Call control to
+continue. Email opens the same record's native email composer. Destinations are
+restricted to this portal and the exact recruiting Ticket, and open in a new tab.
+
+HubSpot manages recipients, connected inboxes, calling settings and user access.
+Calling from a recruiting Ticket requires an associated Contact with a phone
+number. Opening an icon does not place a call, send an email or create an activity.
+See [COMMUNICATIONS-API.md](COMMUNICATIONS-API.md) for the navigation contract.
+
 ## Local verification
 
 ```powershell
