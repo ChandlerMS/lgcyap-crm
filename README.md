@@ -1,8 +1,8 @@
 # Legacy Recruiting — Vercel migration
 
 Separate Vercel branch for the private Legacy Agency Partners recruiting app.
-The protected Vercel Preview has passed real Google sign-in and HubSpot read checks.
-Production setup is in progress with separate login credentials and database.
+Protected Vercel Production is deployed and has passed real Google sign-in and
+HubSpot read checks. Preview has its own login credentials and database.
 The current Sites app and public demo remain live and unchanged; no writer cutover
 has occurred. Do not deploy this branch through Sites.
 
@@ -74,10 +74,10 @@ HubSpot credential does not enforce individual HubSpot seat permissions; approve
 users receive the app's access.
 
 Use distinct Preview/Production databases, auth secrets, and Google OAuth clients.
-Prefer a read-only Preview HubSpot credential. A separate reader app is deployed
-and awaits installation approval; the temporary existing app credential has write
-scope, while Preview is blocked from saving by both the environment gate and flag.
-Replace that temporary credential with the reader before release. Use a stable Preview host
+Production and Preview use the approved read-only HubSpot app
+`Legacy Recruiting Vercel Reader` (`59299825`). Its token replaced the temporary
+Preview credential in project settings and is stored as a server-only secret.
+Both environments keep saves disabled. Use a stable Preview host
 for exact OAuth redirects. Do not trust wildcard *.vercel.app origins or redirects.
 
 Run npm run preflight after configuration. It checks formats and required settings
@@ -127,6 +127,13 @@ The Vercel project, separate Google clients, and separate free Neon databases ar
 created. The user approved and activated Vercel Pro. DNS and the existing Sites app
 remain unchanged. See VERIFICATION.md and the deployment checkpoint for current
 integration evidence and remaining release work.
+
+Current Production URL: `https://legacy-recruiting-private.vercel.app`.
+Current Preview URL: `https://legacy-recruiting-preview-main-team8.vercel.app`.
+Access currently requires Vercel Authentication and the single approved Google
+work account. Google consent remains in Testing; coworkers need explicit Google
+test access, application email approval, and Vercel deployment access before use.
+No coworker invitations or additional paid seats have been created.
 
 ## Required integration checks
 
