@@ -1,8 +1,10 @@
 # Legacy Recruiting — Vercel migration
 
-Separate preparation branch for the private Legacy Agency Partners recruiting app.
-The current Sites app and public demo remain live and unchanged. This checkout is
-not a deployment or a cutover. Do not deploy this branch through Sites.
+Separate Vercel branch for the private Legacy Agency Partners recruiting app.
+The protected Vercel Preview has passed real Google sign-in and HubSpot read checks.
+Production setup is in progress with separate login credentials and database.
+The current Sites app and public demo remain live and unchanged; no writer cutover
+has occurred. Do not deploy this branch through Sites.
 
 The black-and-gold recruiting interface, logo, read filters, twelve editable
 properties, and explicit Edit → Review → Save flow are retained. Hosting changes:
@@ -72,7 +74,10 @@ HubSpot credential does not enforce individual HubSpot seat permissions; approve
 users receive the app's access.
 
 Use distinct Preview/Production databases, auth secrets, and Google OAuth clients.
-Keep the Preview HubSpot credential read-only or absent. Use a stable Preview host
+Prefer a read-only Preview HubSpot credential. A separate reader app is deployed
+and awaits installation approval; the temporary existing app credential has write
+scope, while Preview is blocked from saving by both the environment gate and flag.
+Replace that temporary credential with the reader before release. Use a stable Preview host
 for exact OAuth redirects. Do not trust wildcard *.vercel.app origins or redirects.
 
 Run npm run preflight after configuration. It checks formats and required settings
@@ -81,8 +86,9 @@ without printing values. It does not verify live connectivity or permissions.
 ## Database initialization
 
 Create a new PostgreSQL database; do not modify the live Sites D1 database. For Neon,
-prefer Marketplace provisioning when the Vercel project is ready. No database was
-provisioned or migrated by this preparation task. Remote TLS certificates are verified
+prefer Marketplace provisioning when the Vercel project is ready. Separate free Neon
+Preview and Production databases have been provisioned and explicitly migrated.
+Remote TLS certificates are verified
 and connection/query timeouts are bounded.
 
 Apply migrations explicitly from a trusted local environment with the new database
@@ -117,9 +123,10 @@ payload hashes, status, and timestamps, without CRM field values.
 5. Prepare Production settings and its exact callback separately, still keeping the
    write flag false. Verify recruiting reads before cutover.
 
-No Vercel project, OAuth client, database, DNS, or production settings were created or
-changed by this branch. Business use needs an appropriate Vercel plan; Hobby is for
-personal non-commercial use.
+The Vercel project, separate Google clients, and separate free Neon databases are
+created. The user approved and activated Vercel Pro. DNS and the existing Sites app
+remain unchanged. See VERIFICATION.md and the deployment checkpoint for current
+integration evidence and remaining release work.
 
 ## Required integration checks
 
