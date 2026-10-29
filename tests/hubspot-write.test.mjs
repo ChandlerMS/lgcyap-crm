@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createD1Ledger, editorAllowed, handleRecruitWriteRequest, saveRecruit, validateWriteInput, writeCapability } from '../lib/hubspot-write.mjs';
+import { editorAllowed, hostingAllowsWrites, handleRecruitWriteRequest, saveRecruit, validateWriteInput, writeCapability } from '../lib/hubspot-write.mjs';
 import { EDITABLE_PROPERTIES } from '../lib/recruit-edit-config.mjs';
 import { PIPELINE_ID, RECRUIT_PROPERTIES } from '../lib/recruiting-config.mjs';
 
@@ -66,11 +64,11 @@ test('validation allows exactly the editable properties and preserves independen
 });
 
 test('only the explicitly allowed trusted identity with enabled writes and a database can edit', () => {
-  const db = { prepare() {} };
+  const ledger = new MemoryLedger();
   assert.equal(editorAllowed(user, 'EDITOR@example.invalid'), true);
   assert.equal(editorAllowed({ userId: 'synthetic-user' }, user.email), false);
-  assert.equal(writeCapability(user, { editorEmails: user.email, writesEnabled: 'true', db }), true);
-  assert.equal(writeCapability(user, { editorEmails: user.email, writesEnabled: 'false', db }), false);
+  assert.equal(writeCapability(user, { editorEmails: user.email, writesEnabled: 'true', ledger, vercel: '1', vercelEnv: 'production' }), true);
+  assert.equal(writeCapability(user, { editorEmails: user.email, writesEnabled: 'false', ledger }), false);
   assert.equal(writeCapability(user, { editorEmails: user.email, writesEnabled: 'true' }), false);
 });
 
@@ -174,13 +172,13 @@ function request(body = JSON.stringify(rawInput()), headers = {}, method = 'POST
 }
 function boundary(overrides = {}) {
   let calls = 0;
-  return { options: { getUser: () => user, editorEmails: user.email, writesEnabled: 'true', db: { prepare() {} }, ledger: {}, saveData: async () => { calls += 1; return { status: 'saved' }; }, ...overrides }, calls: () => calls };
+  return { options: { getUser: () => user, editorEmails: user.email, writesEnabled: 'true', ledger: new MemoryLedger(), vercel: '1', vercelEnv: 'production', allowedOrigin: 'https://private.example', saveData: async () => { calls += 1; return { status: 'saved' }; }, ...overrides }, calls: () => calls };
 }
 
 test('the request boundary blocks anonymous, non-editor, disabled, cross-origin and non-POST requests before any save', async () => {
   const cases = [
     [request(), { getUser: () => null }, 401], [request(), { editorEmails: 'someone-else@example.invalid' }, 403],
-    [request(), { writesEnabled: 'false' }, 403], [request(), { db: undefined }, 403],
+    [request(), { writesEnabled: 'false' }, 403], [request(), { ledger: undefined }, 403],
     [request(undefined, { Origin: 'https://elsewhere.invalid' }), {}, 403], [request(undefined, {}, 'GET'), {}, 405],
   ];
   for (const [req, config, status] of cases) {
@@ -208,22 +206,24 @@ test('the authenticated valid boundary passes only validated changes and redacts
   assert.equal(failed.status, 503); assert.doesNotMatch(await failed.text(), /credential secret/);
 });
 
-test('the actual ledger SQL enforces per-user request IDs, one pending record and expiry without storing field values', async () => {
-  const sql = new DatabaseSync(':memory:');
-  for (const file of readdirSync(new URL('../drizzle/', import.meta.url)).filter(file => file.endsWith('.sql')).sort()) sql.exec(readFileSync(new URL('../drizzle/' + file, import.meta.url), 'utf8'));
-  const db = { prepare(query) { return { bind(...args) { return { async run() { const result = sql.prepare(query).run(...args); return { meta: { changes: Number(result.changes) } }; }, async first() { return sql.prepare(query).get(...args); } }; } }; } };
-  const ledger = createD1Ledger(db);
-  const first = { userId: 'synthetic-user', requestId: id1, ticketId: '101', hash: 'hash-only', now: clock() };
-  assert.deepEqual(await ledger.claim(first), { acquired: true });
-  assert.deepEqual(await ledger.claim(first), { acquired: false, hash: 'hash-only', status: 'pending' });
-  assert.deepEqual(await ledger.claim({ ...first, requestId: id2 }), { acquired: false, status: 'busy' });
-  assert.equal(await ledger.finish({ ...first, status: 'saved' }), true);
-  assert.equal(await ledger.finish({ ...first, status: 'failed' }), false);
-  assert.deepEqual(await ledger.claim({ ...first, requestId: id2 }), { acquired: true });
-  const third = { ...first, requestId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', now: clock() + 120001 };
-  assert.deepEqual(await ledger.claim(third), { acquired: true });
-  assert.equal((await ledger.claim({ ...first, requestId: id2, now: third.now })).status, 'uncertain');
-  const columns = sql.prepare('PRAGMA table_info(recruit_write_requests)').all().map(row => row.name);
-  assert.deepEqual(columns, ['user_id', 'request_id', 'ticket_id', 'payload_hash', 'status', 'created_at', 'updated_at']);
-  sql.close();
+test('Vercel previews cannot acquire write capability even when the write flag is true', () => {
+  const base = { editorEmails: user.email, writesEnabled: 'true', ledger: new MemoryLedger() };
+  for (const environment of [{}, { vercel: '1', vercelEnv: 'preview' }, { vercel: '1', vercelEnv: 'development' }, { vercel: '1' }, { vercelEnv: 'preview' }, { vercelEnv: 'production' }]) {
+    assert.equal(hostingAllowsWrites(environment), false);
+    assert.equal(writeCapability(user, { ...base, ...environment }), false);
+  }
+  assert.equal(writeCapability(user, { ...base, vercel: '1', vercelEnv: 'production' }), true);
+  assert.equal(writeCapability(user, base), false);
+});
+
+test('preview and forged-host requests are blocked before a save', async () => {
+  for (const [req, overrides] of [
+    [request(), { vercel: '1', vercelEnv: 'preview' }],
+    [new Request('https://attacker.invalid/api/recruits/101', { method: 'POST', headers: { Origin: 'https://attacker.invalid', 'Content-Type': 'application/json' }, body: JSON.stringify(rawInput()) }), {}],
+    [request(), { allowedOrigin: undefined }],
+  ]) {
+    const fixture = boundary(overrides);
+    assert.equal((await handleRecruitWriteRequest(req, '101', fixture.options)).status, 403);
+    assert.equal(fixture.calls(), 0);
+  }
 });

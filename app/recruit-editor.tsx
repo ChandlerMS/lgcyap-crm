@@ -54,8 +54,6 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
   const changes = changedValues(draft, baseline);
   const dirty = Object.keys(changes).length > 0;
   const busy = saving || reloading;
-  const closeRef = useRef(onClose); closeRef.current = onClose;
-  const dirtyRef = useRef(dirty); dirtyRef.current = dirty;
 
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -84,8 +82,8 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
 
   function requestClose() {
     if (busyRef.current) return;
-    if (dirtyRef.current) setPhase("discard");
-    else closeRef.current();
+    if (dirty) setPhase("discard");
+    else onClose();
   }
   function review(event: FormEvent) {
     event.preventDefault();
@@ -95,7 +93,7 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
     setError(null); setPhase("review");
   }
   async function reloadLatest() {
-    if (busyRef.current || retryAt > Date.now()) return;
+    if (busyRef.current || retryAt > 0) return;
     busyRef.current = true; setReloading(true);
     try {
       const latest = await onReload();
@@ -104,7 +102,7 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
     } finally { busyRef.current = false; setReloading(false); }
   }
   async function save() {
-    if (busyRef.current || !canEdit || blocked || retryAt > Date.now() || !dirty || !base.updatedAt) return;
+    if (busyRef.current || !canEdit || blocked || retryAt > 0 || !dirty || !base.updatedAt) return;
     const issue = validate(changes); if (issue) { setError(issue); setPhase("edit"); return; }
     busyRef.current = true; setSaving(true); setError(null);
     const requestId = requestIdRef.current ?? crypto.randomUUID(); requestIdRef.current = requestId;
@@ -119,6 +117,8 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
       if (response.status === 401) { onUnauthorized(); return; }
       if (!response.ok) {
         const retry = Number(result.retryAfterSeconds ?? response.headers.get("Retry-After"));
+        // Deadline is captured after an async Save click, never while rendering.
+        // eslint-disable-next-line react-hooks/purity
         if (Number.isFinite(retry) && retry > 0) setRetryAt(Date.now() + Math.min(retry, 86400) * 1000);
         setBlocked(true);
         if (result.error?.code === "RECORD_CHANGED") setError("This recruit changed in HubSpot after you opened it. Reload the latest record before saving. Your draft has been kept.");
@@ -133,7 +133,7 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
     } finally { window.clearTimeout(timer); requestRef.current = null; busyRef.current = false; setSaving(false); }
   }
 
-  const permissionNote = !canEdit ? writeAccessPending ? "Editing is prepared. HubSpot write permission must be approved before changes can be saved." : "Editing is unavailable for this account." : null;
+  const permissionNote = !canEdit ? writeAccessPending ? "This workspace is read-only. Saving has not been enabled." : "Editing is unavailable for this account." : null;
   const reviewedFields = fields.filter(field => Object.hasOwn(changes, field.property));
   return <dialog ref={dialogRef} className="modal recruit-editor" aria-labelledby="edit-title" aria-describedby="edit-description" onCancel={event => { event.preventDefault(); requestClose(); }}>
     <div className="dialog-header"><div><h2 id="edit-title">{phase === "review" ? "Review your changes" : phase === "discard" ? "Discard this draft?" : phase === "reload" ? "Reload the latest record?" : "Edit recruit"}</h2><p className="editor-recruit-name">{base.name}</p></div><button className="btn btn-quiet" type="button" aria-label="Close editor" disabled={busy} onClick={requestClose}>×</button></div>
@@ -141,10 +141,10 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
       <p id="edit-description" className="helper">Changes are sent to HubSpot only when you choose Save to HubSpot.</p>
       {permissionNote && <p className="editor-permission" role="status">{permissionNote}</p>}
       {!base.updatedAt && <p className="editor-error" role="alert">The record&apos;s update time is missing. Reload it before saving.</p>}
-      {error && <div className="editor-error" role="alert"><p>{error}</p>{retryAt > 0 && <p>Wait until {new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(retryAt))} before trying again.</p>}{blocked && <button className="btn btn-secondary" type="button" disabled={busy || retryAt > Date.now()} onClick={() => setPhase("reload")}>Reload latest record</button>}</div>}
+      {error && <div className="editor-error" role="alert"><p>{error}</p>{retryAt > 0 && <p>Wait until {new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(retryAt))} before trying again.</p>}{blocked && <button className="btn btn-secondary" type="button" disabled={busy || retryAt > 0} onClick={() => setPhase("reload")}>Reload latest record</button>}</div>}
       {phase === "discard" ? <section><h3 data-phase-heading tabIndex={-1} className="editor-phase-heading">Close this local draft?</h3><p className="muted">{blocked ? "If a save outcome was unconfirmed, check the record in HubSpot before trying again." : "Discarding closes this draft and leaves the HubSpot record as it is."}</p></section> : phase === "reload" ? <section><h3 data-phase-heading tabIndex={-1} className="editor-phase-heading">Replace this draft with the latest HubSpot values?</h3><p className="muted">Review the current record before starting another save.</p></section> : phase === "review" ? <section><h3 data-phase-heading tabIndex={-1} className="editor-phase-heading">{reviewedFields.length} field{reviewedFields.length === 1 ? "" : "s"} will change</h3><div className="editor-review-wrap"><table className="editor-review-table"><thead><tr><th>Field</th><th>Current value</th><th>New value</th></tr></thead><tbody>{reviewedFields.map(field => <tr key={field.property}><th scope="row">{field.label}</th><td>{displayValue(field, baseline[field.property])}</td><td>{displayValue(field, changes[field.property])}</td></tr>)}</tbody></table></div><p className="editor-workflow-note">Saving may trigger your existing HubSpot workflows. Review stage and progress changes carefully.</p></section> : <form id="recruit-edit-form" onSubmit={review} noValidate><h3 data-phase-heading tabIndex={-1} className="sr-only">Recruit fields</h3><div className="form-grid">{fields.map((field, index) => <label className={`field ${index === 7 ? "editor-progress-start" : ""}`} key={field.property}><span>{field.label}</span>{field.type === "select" ? <select value={draft[field.property]} disabled={busy} aria-required={field.required || undefined} onChange={event => setDraft(value => ({ ...value, [field.property]: event.target.value }))}>{!field.options?.some(option => option.value === draft[field.property]) && <option value={draft[field.property]}>Current value: {draft[field.property] || "Not recorded"}</option>}{field.options?.map(option => <option value={option.value} key={option.value}>{option.label}</option>)}</select> : <input type={field.type === "date" ? "date" : "text"} value={draft[field.property]} maxLength={field.maxLength ?? 180} disabled={busy} aria-required={field.required || undefined} autoComplete="off" onChange={event => setDraft(value => ({ ...value, [field.property]: event.target.value }))} />}</label>)}</div><p className="helper editor-field-help">Recruit name and ticket name are separate fields. Intake status is not license verification; appointment creation is not carrier approval.</p></form>}
     </div>
-    <div className="dialog-actions editor-actions">{phase === "discard" ? <><button className="btn btn-secondary" type="button" onClick={() => setPhase("edit")}>Keep editing</button><button className="btn btn-primary" type="button" onClick={onClose}>Discard changes</button></> : phase === "reload" ? <><button className="btn btn-secondary" type="button" disabled={busy} onClick={() => setPhase("edit")}>Keep draft</button><button className="btn btn-primary" type="button" disabled={busy || retryAt > Date.now()} onClick={() => void reloadLatest()}>{reloading ? "Loading…" : "Reload latest record"}</button></> : phase === "review" ? <><button className="btn btn-secondary" type="button" disabled={busy} onClick={() => setPhase("edit")}>Back to edit</button><button className="btn btn-primary" type="button" disabled={busy || !canEdit || blocked || !base.updatedAt || retryAt > Date.now()} onClick={() => void save()}>{saving ? "Saving to HubSpot…" : "Save to HubSpot"}</button></> : <><button className="btn btn-secondary" type="button" disabled={busy} onClick={requestClose}>Cancel</button><button className="btn btn-primary" type="submit" form="recruit-edit-form" disabled={busy || !dirty || blocked}>Review changes</button></>}</div>
+    <div className="dialog-actions editor-actions">{phase === "discard" ? <><button className="btn btn-secondary" type="button" onClick={() => setPhase("edit")}>Keep editing</button><button className="btn btn-primary" type="button" onClick={onClose}>Discard changes</button></> : phase === "reload" ? <><button className="btn btn-secondary" type="button" disabled={busy} onClick={() => setPhase("edit")}>Keep draft</button><button className="btn btn-primary" type="button" disabled={busy || retryAt > 0} onClick={() => void reloadLatest()}>{reloading ? "Loading…" : "Reload latest record"}</button></> : phase === "review" ? <><button className="btn btn-secondary" type="button" disabled={busy} onClick={() => setPhase("edit")}>Back to edit</button><button className="btn btn-primary" type="button" disabled={busy || !canEdit || blocked || !base.updatedAt || retryAt > 0} onClick={() => void save()}>{saving ? "Saving to HubSpot…" : "Save to HubSpot"}</button></> : <><button className="btn btn-secondary" type="button" disabled={busy} onClick={requestClose}>Cancel</button><button className="btn btn-primary" type="submit" form="recruit-edit-form" disabled={busy || !dirty || blocked}>Review changes</button></>}</div>
   </dialog>;
 }
 

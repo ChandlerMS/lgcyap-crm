@@ -1,26 +1,34 @@
-import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '@/app/chatgpt-auth';
+import { getAppUser } from '@/app/app-auth';
+import { getPool } from '@/db/pool.mjs';
 import { handleRecruitRequest, readRecruitingData } from '@/lib/hubspot.mjs';
-import { editorAllowed, writeCapability } from '@/lib/hubspot-write.mjs';
+import { createPostgresLedger, editorAllowed, writeCapability } from '@/lib/hubspot-write.mjs';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  const bindings = env as Cloudflare.Env;
-  const user = await getChatGPTUser();
+  let user: Awaited<ReturnType<typeof getAppUser>>;
   return handleRecruitRequest(request, {
-    getUser: async () => user,
-    authorizeUser: (visitor: { email?: string }) => editorAllowed(visitor, bindings.RECRUITING_EDITOR_EMAILS),
+    getUser: async () => { user = await getAppUser(); return user; },
+    authorizeUser: visitor => editorAllowed(visitor, process.env.RECRUITING_EDITOR_EMAILS),
+    allowedOrigin: process.env.BETTER_AUTH_URL,
     readData: async () => ({
-      ...await readRecruitingData({ accessToken: bindings.HUBSPOT_ACCESS_TOKEN }),
+      ...await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN }),
       capabilities: {
-        canEdit: writeCapability(user, { editorEmails: bindings.RECRUITING_EDITOR_EMAILS, writesEnabled: bindings.RECRUITING_WRITES_ENABLED, db: bindings.DB }),
-        writeAccessPending: editorAllowed(user, bindings.RECRUITING_EDITOR_EMAILS) && bindings.RECRUITING_WRITES_ENABLED !== 'true',
+        canEdit: writeCapability(user, {
+          editorEmails: process.env.RECRUITING_EDITOR_EMAILS,
+          writesEnabled: process.env.RECRUITING_WRITES_ENABLED,
+          ledger: process.env.DATABASE_URL ? createPostgresLedger(getPool()) : undefined,
+          vercel: process.env.VERCEL,
+          vercelEnv: process.env.VERCEL_ENV,
+        }),
+        writeAccessPending: editorAllowed(user, process.env.RECRUITING_EDITOR_EMAILS)
+          && process.env.RECRUITING_WRITES_ENABLED !== 'true',
       },
     }),
   });
 }
 
 export async function GET(request: Request) {
-  return handleRecruitRequest(request, { getUser: getChatGPTUser, readData: () => Promise.reject() });
+  return handleRecruitRequest(request, { getUser: getAppUser, readData: () => Promise.reject(), allowedOrigin: process.env.BETTER_AUTH_URL });
 }

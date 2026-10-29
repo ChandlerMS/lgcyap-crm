@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readRecruitingData, normalizeRecruit, handleRecruitRequest, RecruitingError } from '../lib/hubspot.mjs';
+import { readRecruitingData, normalizeRecruit, handleRecruitRequest as handleBoundary, RecruitingError } from '../lib/hubspot.mjs';
 import { RECRUIT_PROPERTIES, PIPELINE_ID, PORTAL_ID } from '../lib/recruiting-config.mjs';
+
+const handleRecruitRequest = (request, options) => handleBoundary(request, { allowedOrigin: 'https://private.example', ...options });
 
 const clock = () => Date.parse('2026-10-29T12:00:00Z');
 const token = 'test-only-credential';
@@ -102,7 +104,7 @@ test('pagination is bounded at ten pages and exposes partial counts honestly', a
   assert.equal(data.partial, true);
 });
 
-test('uses the Workers-compatible manual redirect mode and refuses redirects without another request', async () => {
+test('uses manual redirect mode and refuses redirects without another request', async () => {
   let calls = 0;
   const data = await readRecruitingData({ accessToken: token, now: clock, fetchImpl: async (_url, options) => {
     if (options.redirect === 'error') throw new TypeError('Unsupported redirect mode: error');
@@ -162,7 +164,7 @@ test('unauthenticated, cross-origin and non-POST requests cannot reach HubSpot',
   const readData = async () => { calls++; return {}; };
   const anonymous = await handleRecruitRequest(request(), { getUser: () => null, readData });
   assert.equal(anonymous.status, 401);
-  assert.equal((await anonymous.json()).signInPath, '/signin-with-chatgpt?return_to=%2F');
+  assert.equal((await anonymous.json()).signInPath, '/sign-in');
   assert.equal((await handleRecruitRequest(request('{}', { Origin: 'https://untrusted.invalid' }), { getUser: signedIn, readData })).status, 403);
   assert.equal((await handleRecruitRequest(request(undefined, {}, 'GET'), { getUser: signedIn, readData })).status, 405);
   assert.equal(calls, 0);
@@ -190,4 +192,13 @@ test('successful and failed reads have no-store headers; unexpected exceptions a
   const limited = await handleRecruitRequest(request(), { getUser: signedIn, readData: async () => { throw new RecruitingError('HUBSPOT_RATE_LIMITED', 'Wait before Refresh.', 429, 90); } });
   assert.equal(limited.headers.get('Retry-After'), '90');
   assert.equal((await limited.json()).retryAfterSeconds, 90);
+});
+
+test('read origin is pinned to configured application URL rather than a caller-selected Host', async () => {
+  let calls = 0;
+  const deps = { getUser: signedIn, readData: async () => { calls++; } };
+  const forged = new Request('https://attacker.invalid/api/recruits', { method: 'POST', headers: { Origin: 'https://attacker.invalid', 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal((await handleRecruitRequest(forged, deps)).status, 403);
+  assert.equal((await handleBoundary(request(), deps)).status, 403);
+  assert.equal(calls, 0);
 });
