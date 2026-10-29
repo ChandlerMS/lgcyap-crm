@@ -1,8 +1,40 @@
 # Vercel migration verification — 2026-10-29
 
 Status: user-approved editing cutover complete. Protected Vercel Production is the
-active editor. Preview and the Sites backup remain read-only. No real CRM field
-value was changed during verification; coworkers are not yet provisioned.
+active editor. Preview and the Sites backup remain read-only. The requested Gmail
+owner and Sarah work account are approved for Production. No real CRM field
+value was changed during verification; Sarah's actual first login is not yet tested.
+
+## Requested Google-account access
+
+- Production deployment `dpl_7V6DPKkD7t1LKFwzU9YUWMaKryJf` is READY from source
+  `b2c5900cd9673e3a287a13571782ceded2cc9f9d` with the reviewed account-policy change.
+- Production's exact list is `chandler@lgcyap.com`, `chandlerms@gmail.com`, and
+  `sarah@lgcyap.com`. The only `GOOGLE_PERSONAL_EMAILS` exception is
+  `chandlerms@gmail.com`; Workspace-domain checks still apply to work accounts.
+  Google Testing audience visibly lists all three identities.
+- A fresh real login selected `chandlerms@gmail.com`, completed Google's basic
+  profile consent, and loaded all five records with Editing enabled. It passed
+  before the extra Vercel gate was changed, then read access was refreshed afterward.
+- Sarah's Google test access and app authorization are configured. Her credentials
+  were not requested or used, and her actual Google login has not been exercised.
+- All 52 tests, TypeScript, lint, production build, HTTP smoke, and independent
+  code review passed. Tests use the installed Google provider and cover exact Gmail
+  exceptions, unapproved/unverified identities, wrong/missing Workspace claims,
+  invalid exception configuration, chooser behavior, and immediate denial of an
+  existing Gmail session when its exception is removed.
+- Google's cryptographic/provider verification, exact origin/CSRF boundaries,
+  password-disabled and account-linking-disabled settings remain unchanged.
+- Vercel now uses Standard Protection (`prod_deployment_urls_and_all_previews`):
+  the Production domain reaches the app's Google sign-in without a Vercel account;
+  Preview and generated Production URLs remain Vercel-protected. No team Viewer
+  invitation, new infrastructure access, or additional paid seat was created.
+- Live anonymous checks: Production `/` redirects to `/sign-in`, sign-in renders
+  with no recruiting data, record read/update POSTs return 401, and responses retain
+  no-store. Forged Sites identity headers also return 401. Anonymous get-session
+  returns null. Preview and the generated Production URL still redirect to Vercel auth.
+- Grok's separate access review did not return; the independent code review and
+  automated/live checks above completed. No real CRM field values were changed.
 
 ## Editing cutover evidence
 
@@ -51,8 +83,8 @@ value was changed during verification; coworkers are not yet provisioned.
 - Stable Production: `https://legacy-recruiting-private.vercel.app`.
 - Final reader deployments are `dpl_Brt6mJtdiH4nMY7iUUPmGCPVuVUJ` (native Preview
   API target `staging`) and `dpl_8bLHRSmNzJjhwhgUEQdqR7TyPASf` (Production), both READY
-  from source `3846e7636da14d4e15eed7b32ee1c2ab37dadddb`. Later commits only update
-  this verification record and setup documentation.
+  from source `3846e7636da14d4e15eed7b32ee1c2ab37dadddb`. These were the initial
+  read-only builds; the current Production account-policy deployment is listed above.
 - Real Google OAuth login succeeded for approved account `chandler@lgcyap.com`.
   Google consent remains External / Testing, with that single approved test user.
   The separate Production client also completed real login; its own database
@@ -122,10 +154,11 @@ confirm the built app rejects anonymous and forged callers without CRM calls.
 
 ## Remaining validation and coworker rollout
 
-Coworkers require explicit work-email authorization, Google test-user access,
-and Vercel deployment access. These were not provisioned, and no additional paid
-seats were purchased. A real unapproved Google-account login was not exercised;
-denial rules are covered by local auth integration tests and hosted anonymous checks.
+Further coworkers require explicit Google-email authorization and Google test-user
+access for Production. The requested Sarah identity is configured; her first real
+login still needs confirmation from her account. A real unapproved Google-account
+login was not exercised; denial rules are covered by installed-provider integration
+tests and hosted anonymous/forged-identity checks. No paid seats were purchased.
 
 An actual field-changing save can be checked on a user-chosen record/value. No
 arbitrary real recruit was edited for QA. Keep the Sites backup read-only and do

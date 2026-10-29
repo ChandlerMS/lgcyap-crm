@@ -137,10 +137,13 @@ integration evidence and remaining release work.
 
 Current Production URL: `https://legacy-recruiting-private.vercel.app`.
 Current Preview URL: `https://legacy-recruiting-preview-main-team8.vercel.app`.
-Access currently requires Vercel Authentication and the single approved Google
-work account. Google consent remains in Testing; coworkers need explicit Google
-test access, application email approval, and Vercel deployment access before use.
-No coworker invitations or additional paid seats have been created.
+The Production domain uses the app's Google sign-in and exact approved-email list;
+ordinary app users do not need Vercel accounts. Vercel Standard Protection
+(`prod_deployment_urls_and_all_previews`) still protects Preview and generated
+deployment URLs. Google consent remains in Testing; each approved app user also
+needs Google test-user access. Three requested identities are configured, including
+one exact Gmail exception. No Vercel team invitations or additional paid seats
+have been created. See VERIFICATION.md for actual login evidence and limits.
 
 ## Required integration checks
 
