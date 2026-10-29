@@ -42,6 +42,25 @@ test('missing facts are not fabricated and invalid calendar dates remain null', 
   assert.equal(recruit.enteredStageAt, null);
 });
 
+test('editable values preserve separate name and ticket title and canonical blank, flag and date values', () => {
+  const recruit = normalizeRecruit(fixture('104', { recruit_name: 'Example Person', subject: 'An independent ticket title', orientation_date: '1793404800000' }));
+  assert.equal(recruit.editValues.recruit_name, 'Example Person');
+  assert.equal(recruit.editValues.subject, 'An independent ticket title');
+  assert.equal(recruit.editValues.orientation_registered, 'true');
+  assert.equal(recruit.editValues.orientation_checked_in, 'false');
+  assert.equal(recruit.editValues.licensing_started, '');
+  assert.equal(recruit.editValues.orientation_date, '2026-10-31');
+  assert.equal(Object.keys(recruit.editValues).length, 12);
+});
+
+test('a signed-in account outside the server allowlist cannot read recruiting data', async () => {
+  let read = false;
+  const result = await handleRecruitRequest(request(), { getUser: signedIn, authorizeUser: () => false, readData: async () => { read = true; } });
+  assert.equal(result.status, 403);
+  assert.equal(read, false);
+  assert.equal((await result.json()).error.code, 'ACCESS_DENIED');
+});
+
 test('rejects out-of-pipeline records and unsafe record identifiers', () => {
   assert.throws(() => normalizeRecruit(fixture('101', { hs_pipeline: '0' })), { code: 'HUBSPOT_RESPONSE_INVALID' });
   assert.throws(() => normalizeRecruit(fixture('../secret')), { code: 'HUBSPOT_RESPONSE_INVALID' });

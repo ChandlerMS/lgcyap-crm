@@ -1,8 +1,8 @@
 # Legacy Recruiting Live
 
-Private, read-only recruiting workspace for Legacy Agency Partners. The separate public proof of concept remains unchanged.
+Private recruiting workspace for Legacy Agency Partners with explicit, reviewed saves to HubSpot. The separate public proof of concept remains unchanged.
 
-The Site access policy initially allows only its owner. Sites handles sign-in. Each API read also requires a trusted signed-in visitor identity. The server uses the existing Legacy Recruiting Command Center app's scoped credential for HubSpot portal 50894788, Recruiting pipeline 924992938. This is a shared server credential: HubSpot seat permissions are not separately enforced for dashboard viewers. Adding coworkers requires deliberate changes to the Site's audience.
+The Site access policy allows only its owner. Sites handles sign-in; read and write APIs also require a trusted identity in the server editor email allowlist. The server uses the existing Legacy Recruiting Command Center app's scoped credential for HubSpot portal 50894788, Recruiting pipeline 924992938. This shared credential does not enforce each viewer's HubSpot seat permissions. Adding coworkers requires deliberate Site audience and server allowlist changes.
 
 ## Data contract
 
@@ -16,7 +16,15 @@ Errors return error.code and error.message, optionally signInPath or retryAfterS
 
 ## Configuration and verification
 
-Hosted secret HUBSPOT_ACCESS_TOKEN is configured through Sites runtime environment settings. Local preview can use an ignored .dev.vars. Never commit credentials or CRM snapshots. Live data is held in browser memory only, without localStorage or sessionStorage.
+Hosted secrets HUBSPOT_ACCESS_TOKEN, RECRUITING_EDITOR_EMAILS, and RECRUITING_WRITES_ENABLED are configured through Sites runtime settings. Saving requires the enabled value 'true', an allowed editor, and the DB binding. Keep writes disabled until the installed HubSpot token has crm.objects.tickets.write. Local preview uses an ignored .dev.vars. Never commit credentials or CRM snapshots. Live data is held in browser memory only, without localStorage or sessionStorage.
+
+## Reviewed saves
+
+POST /api/recruits/{numeric-id} accepts expectedUpdatedAt, expectedValues, requestId (UUID), and changes. expectedValues and changes must contain the same supported keys. The shared edit-field schema lists the 12 permitted properties; pipeline, identity, and system timestamps cannot be edited. Recruit name and ticket title are independent fields. Only changed fields are sent to HubSpot.
+
+The server checks current pipeline, timestamp, and reviewed old values, sends one PATCH, then verifies a fresh read before reporting success. This detects prior conflicts; HubSpot does not document an atomic conditional PATCH, so another system can still change a record between the read and write. HubSpot workflows may run when properties change.
+
+D1 stores request IDs, user/ticket IDs, payload hashes, statuses, and timestamps; it stores no recruiting field values. A unique pending-ticket index serializes app saves. Duplicate, failed, or uncertain requests do not replay PATCH. Pending requests older than 120 seconds become uncertain. Ambiguous outcomes require an explicit reload and review; saves never automatically retry. Migrations live under drizzle/ and are applied through Sites.
 
 Run npm test, npm run check, and npm run dev -- --hostname 127.0.0.1 --port 4180. Local sign-in is simulated only by the maintained portable starter and excluded from production. Hosted access is enforced by Sites. Preserve the maintained Worker, Vite, and authentication integrations.
 
