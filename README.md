@@ -1,10 +1,11 @@
 # Legacy Recruiting — Vercel migration
 
 Separate Vercel branch for the private Legacy Agency Partners recruiting app.
-Protected Vercel Production is deployed and has passed real Google sign-in and
-HubSpot read checks. Preview has its own login credentials and database.
-The current Sites app and public demo remain live and unchanged; no writer cutover
-has occurred. Do not deploy this branch through Sites.
+Protected Vercel Production is the active recruiting editor. Google sign-in,
+HubSpot reads, granted ticket-write scope, and a non-changing backend save have
+been verified. Preview has its own login credentials/database and remains read-only.
+The Sites app remains live as a read-only backup with a persistent save-claim
+database fence. The public demo is unchanged. Do not deploy this branch through Sites.
 
 The black-and-gold recruiting interface, logo, read filters, twelve editable
 properties, and explicit Edit → Review → Save flow are retained. Hosting changes:
@@ -74,10 +75,10 @@ HubSpot credential does not enforce individual HubSpot seat permissions; approve
 users receive the app's access.
 
 Use distinct Preview/Production databases, auth secrets, and Google OAuth clients.
-Production and Preview use the approved read-only HubSpot app
-`Legacy Recruiting Vercel Reader` (`59299825`). Its token replaced the temporary
-Preview credential in project settings and is stored as a server-only secret.
-Both environments keep saves disabled. Use a stable Preview host
+Production uses the existing approved writer app `Legacy Recruiting Command Center`
+(`59264745`) and has saves enabled. Preview and the Sites backup use
+`Legacy Recruiting Vercel Reader` (`59299825`) and keep saves disabled. Credentials
+are server-only secrets scoped to the intended environment. Use a stable Preview host
 for exact OAuth redirects. Do not trust wildcard *.vercel.app origins or redirects.
 
 Run npm run preflight after configuration. It checks formats and required settings
@@ -124,8 +125,8 @@ payload hashes, status, and timestamps, without CRM field values.
    write flag false. Verify recruiting reads before cutover.
 
 The Vercel project, separate Google clients, and separate free Neon databases are
-created. The user approved and activated Vercel Pro. DNS and the existing Sites app
-remain unchanged. See VERIFICATION.md and the deployment checkpoint for current
+created. The user approved and activated Vercel Pro. DNS is unchanged; the existing
+Sites app is now a read-only backup. See VERIFICATION.md and the deployment checkpoint for current
 integration evidence and remaining release work.
 
 Current Production URL: `https://legacy-recruiting-private.vercel.app`.
@@ -147,11 +148,11 @@ No coworker invitations or additional paid seats have been created.
 - A deliberately approved production edit is verified in both app and HubSpot during
   controlled cutover. Do not change arbitrary recruits merely for QA.
 
-## Cutover and rollback — not part of preparation
+## Single-writer cutover and rollback
 
-Keep the old app live during testing; its write settings remain unchanged by this
-work. The apps have independent identities and ledgers and must not accept writes
-simultaneously.
+The user-approved editing cutover is complete. Vercel Production is the writer;
+the old Sites app is read-only. The apps have independent identities and ledgers
+and must not accept writes simultaneously.
 
 At an approved window, disable old Sites writes and deploy that setting while keeping
 its read interface live. Confirm its API rejects saves, drain in-flight requests, and
@@ -163,8 +164,13 @@ Then enable Vercel Production writes, deploy, and verify a deliberately approved
 Switch coworker links or a custom domain after acceptance. Old open tabs cannot save
 because the old server checks its write flag.
 
-For rollback, disable Vercel writes first, drain/reconcile pending requests, and only
-then re-enable old writes. Never enable both while troubleshooting.
+For rollback, disable and fence Vercel writes first, including every retained
+write-enabled deployment; a project environment update does not rewrite immutable
+deployment settings. Drain/reconcile pending requests before reopening another writer.
+The Sites backup also has persistent D1 trigger `recruit_write_cutover_fence`.
+Only after Vercel is fenced may a separately approved append-only D1 migration drop
+that trigger and the backup's writer credential/flag be restored. Preserve ledger
+history. Never enable both while troubleshooting.
 
 ## API contract and limits
 

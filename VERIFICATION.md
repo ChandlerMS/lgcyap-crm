@@ -1,11 +1,49 @@
 # Vercel migration verification — 2026-10-29
 
-Status: protected Production and Preview are deployed and tested with real Google
-sign-in and HubSpot reads using the approved read-only reader. Ready for the
-owner's read-only acceptance testing. No writer cutover or real recruiting-record
-edit has occurred; coworkers are not yet provisioned.
+Status: user-approved editing cutover complete. Protected Vercel Production is the
+active editor. Preview and the Sites backup remain read-only. No real CRM field
+value was changed during verification; coworkers are not yet provisioned.
 
-## Hosted integration evidence
+## Editing cutover evidence
+
+- Production deployment `dpl_BeHLaCboe7ZcMAeH4f34b33ZWzvj` is READY from reviewed
+  source `7cb26b06e3bb3ea2342124a9d77a04372342e9a2`. Production alone has the approved
+  writer token and `RECRUITING_WRITES_ENABLED=true`; Preview retains the reader
+  token and false flag. Actual UI shows Editing enabled and five recruiting records.
+- HubSpot's token-information endpoint returned 200 and confirmed portal `50894788`,
+  writer app `59264745`, and granted tickets-read, tickets-write, and contacts-read scopes.
+  No token was rotated or new HubSpot write scope granted during this cutover.
+- The old Sites app first deployed with its write flag false. Its final backup
+  deployment `appgdep_6ae37181a1fc8191ac2e8ea47f2ed6c1`, saved version 3, uses
+  source `f2c22818aca1d41aa57ac54800c30a62c30ec376` and environment revision 5.
+  That version installs the persistent D1 BEFORE INSERT trigger
+  `recruit_write_cutover_fence`, and the runtime uses the read-only reader token.
+- The published archive includes the exact trigger migration and Drizzle journal.
+  Publication succeeded; authoritative full ledger reads after publication and
+  after enabling Vercel found zero old rows, no pagination, and no truncation.
+  The trigger rejects new claims even from delayed old Worker requests. Existing
+  claims cannot be hidden because the inspected old save code never deletes rows.
+- Old-app tests: all 35 passed, plus typecheck and the official Sites build helper.
+  Actual SQLite/Drizzle tests verify INSERT OR IGNORE rejection before any provider
+  call, preserved history/schema/indexes, completion of preexisting claims, and
+  explicit future DROP TRIGGER rollback. No live synthetic old ledger rows were added.
+- Production's editor allowed review of a local draft and enabled Save to HubSpot.
+  The draft was discarded without clicking Save. The backup and Preview both
+  continued showing read-only and five records.
+- A direct backend integration check used the actual approved Google user's ID,
+  actual production PostgreSQL ledger, writer credential, fresh recruiting data,
+  and a same-value request. saveRecruit returned saved/unchanged:true, performed
+  exactly one provider GET, and persisted one saved metadata row. A test fetch guard
+  forbade every non-GET provider request; zero mutations were attempted and zero
+  pending/uncertain PostgreSQL rows remained. This check did not exercise HTTP auth;
+  that was separately verified through real browser login and hosted access checks.
+- Anonymous requests to the enabled Production read/update APIs still returned 401;
+  pages required Vercel authentication and responses retained no-store headers.
+- Actual field-changing HubSpot PATCH sync was not tested against an arbitrary live
+  recruit. Its permission is live-verified; the sparse PATCH/confirm behavior remains
+  covered by the existing mocked integration tests. No CRM field values were changed.
+
+## Earlier read-only setup evidence
 
 - Vercel project `legacy-recruiting-private` is on the user-approved Main Team Pro plan.
   Deployment protection remains enabled for all deployments.
@@ -82,24 +120,22 @@ instances. Mocked HubSpot requests cover sparse edits, conflict checks, duplicat
 suppression, ambiguous outcomes, and no automatic PATCH retry. HTTP smoke tests
 confirm the built app rejects anonymous and forged callers without CRM calls.
 
-## Still required before release
+## Remaining validation and coworker rollout
 
 Coworkers require explicit work-email authorization, Google test-user access,
 and Vercel deployment access. These were not provisioned, and no additional paid
 seats were purchased. A real unapproved Google-account login was not exercised;
 denial rules are covered by local auth integration tests and hosted anonymous checks.
 
-Production is intentionally read-only. Its reader credential cannot support saves.
-A deliberately approved HubSpot save requires the existing approved write credential,
-coordinated single-writer cutover, and a user-chosen record/value; no save QA is
-authorized against an arbitrary real recruit. Keep the original app as writer until
-its writes are disabled, in-flight outcomes are reconciled, and the new writer is
-enabled and checked. No such cutover occurred in this deployment.
+An actual field-changing save can be checked on a user-chosen record/value. No
+arbitrary real recruit was edited for QA. Keep the Sites backup read-only and do
+not restore its writer flag or drop its D1 fence while Vercel accepts edits.
 
-## Existing app preserved
+## Existing app retained as backup
 
-The original `legacy-recruiting-live` checkout remains clean at base commit
-`c9ff3a9c8cba63dd47adabd0f3696d96e0faf546`. This work used only the separate
-`codex/vercel-migration` worktree. No Sites deployment, live access setting,
-production environment variable, or DNS change was made. See README for explicit
-disable/drain/reconcile cutover and rollback instructions.
+The original Sites app remains available at its existing private URL and preserves
+its data, save history, and owner-only access. The authorized cutover changed its
+write flag, replaced its runtime writer credential with the reader, and added only
+the append-only D1 fence migration and verification tests/documentation. Its source
+is clean at `f2c22818aca1d41aa57ac54800c30a62c30ec376`. The public demo and DNS are
+unchanged. See README for explicit fenced rollback requirements.
