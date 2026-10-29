@@ -11,6 +11,8 @@ are in progress. No writer cutover or real recruiting-record edit has occurred.
 - Stable Preview: `https://legacy-recruiting-preview-main-team8.vercel.app`.
 - Real Google OAuth login succeeded for approved account `chandler@lgcyap.com`.
   Google consent remains External / Testing, with that single approved test user.
+  The separate Production client also completed real login; its own database
+  confirmed one approved verified user and one session.
 - Separate Preview and Production Google clients use exact HTTPS callback URLs;
   session secrets are independent, server-only Vercel sensitive variables.
 - Separate free Neon databases are connected only to their corresponding Vercel
@@ -22,7 +24,9 @@ are in progress. No writer cutover or real recruiting-record edit has occurred.
   records, no partial result. All five are in `Complete - Active`, so Today correctly
   shows zero active recruiting records. Recruits shows all five.
 - Preview recruit detail and editor preview work; Review changes is disabled and
-  the editor states that saving is unavailable.
+  the editor states that saving is unavailable. Preview sign-out removed its
+  database session. Anonymous page/session GET requests redirect to Vercel auth,
+  while anonymous record read/update POST requests return 401 with no-store headers.
 - The existing HubSpot static token was copied without rotation. It has write
   scope, while Preview saves remain blocked by the runtime gate and false flag.
   A separate app `Legacy Recruiting Vercel Reader` (`59299825`) is deployed with
@@ -70,8 +74,8 @@ confirm the built app rejects anonymous and forged callers without CRM calls.
 ## Still required before release
 
 Finish installing the approved read-only HubSpot connection, redeploy with that
-credential, and verify Production login and reads. Actual anonymous denial and
-sign-out must also be checked on the final hosted deployment. A deliberately
+credential, and verify Production reads. Anonymous denial and sign-out must also
+be checked on the final Production deployment. A deliberately
 approved HubSpot save requires coordinated cutover and a user-chosen record/value;
 no save QA is authorized against an arbitrary real recruit.
 
