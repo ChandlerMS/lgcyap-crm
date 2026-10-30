@@ -202,7 +202,8 @@ and connection/query timeouts are bounded.
 
 Apply migrations explicitly from a trusted local environment with the new database
 URL configured. A direct provider connection is preferable for schema administration;
-restore the pooled runtime URL in Vercel. Builds and requests never apply migrations.
+restore the pooled runtime URL in Vercel. Normal builds and application requests do
+not apply migrations.
 
 ```powershell
 npm run db:migrate -- --apply
@@ -216,13 +217,28 @@ schema. The check returns nonzero if changes remain. Auth tables store approved 
 profiles, sessions, and encrypted OAuth tokens. The recruiting ledger stores IDs,
 payload hashes, status, and timestamps, without CRM field values.
 
+For the Add Recruits release, the Production deployment explicitly uses this
+one-off build command with the existing server-side database connection:
+
+```sh
+node scripts/migrate-intake.mjs --apply && npm run build
+```
+
+The migration script requires Vercel Production and `--apply`, applies only
+`0003_recruit_intake.sql` in a transaction, and verifies its columns and unique
+indexes before committing. A failure stops the build. Successful migration still
+requires confirmation from deployment logs and live schema checks; this command
+alone is not evidence it completed. Subsequent deployments use the normal
+`npm run build` command.
+
 ## Vercel project setup
 
 1. Export this prepared source to a separate private repository, or use the migration
    branch in a supported Git provider. Do not change the live Sites source branch.
    Import it as a new Vercel project.
 2. Select Next.js, Node.js 24, and this app's directory as the project root.
-   vercel.json configures npm ci and npm run build.
+   `vercel.json` configures `npm ci` and the Next.js framework; it does not set a
+   build command. The normal project build command remains `npm run build`.
 3. Configure Preview first, with writes disabled. Register the exact Google callback
    https://<stable-preview-host>/api/auth/callback/google and set BETTER_AUTH_URL to
    that origin. Configure Google's consent audience and internal/test access for the

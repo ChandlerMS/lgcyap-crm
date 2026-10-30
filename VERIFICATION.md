@@ -32,9 +32,9 @@ the hosted checks below passed.
   contact-only endpoint and Text sending remain disabled.
 - The Vercel data browser initially opened an account table by default; the
   workflow was changed to schema-only queries and those fields were not used.
-  The query editor remained read-only; its toggle did not respond, so no DDL was
-  applied there. A guarded one-off Production build migration is prepared using
-  the existing server connection, transactional additive DDL and catalog checks.
+  No DDL was applied in that console. Migration 0003 ran successfully using a
+  guarded one-off Production build, the existing server connection, transactional
+  additive DDL and catalog checks. The query console was restored to read-only.
   No credentials are copied to a local environment file for this migration.
 - All 115 tests, TypeScript, lint, production build and production HTTP smoke
   passed. Production dependency audit reported zero vulnerabilities. All new
@@ -42,6 +42,27 @@ the hosted checks below passed.
   mocks and real PostgreSQL-compatible constraints, not real CRM test records.
 - Migration 0003 SHA256:
   `878ad0dfb7cbd0b11bd39e9b643ccd2527aba18309a91574d0e9bc1b0ec819be`.
+- Production deployment `dpl_AbYirDPoZECqoawo5aMzemoP7m4x` is READY at
+  `https://lgcyap-crm.vercel.app`, runtime commit
+  `1ef6cea8ed062413b733c515577b0e06b171d1f9`. An initial build ignored the
+  one-off migration command because vercel.json took priority; removing that
+  build-command override allowed the next deployment to run it explicitly.
+  The project build command was reset to normal `npm run build` afterward.
+- Migration build logs confirmed ten columns, all three required unique indexes
+  and zero intake requests. A separate catalog/count query confirmed two intake
+  tables, ten request columns, three required indexes and zero requests after QA.
+- Live UI verified the 40 inputs, ten entry rows, Recruit entry enabled capability,
+  gold Submit, Excel and CSV previews (two synthetic rows each, optional email
+  blank), Submit readiness and dirty-form navigation/Refresh protection. Both
+  imported previews were cleared without submission. Today List and Board each
+  showed all five Completed recruits, and search stayed on Today. The gold
+  navigation divider appears below Add Recruits.
+- Chrome's extension file chooser required file-URL permission; normal Windows
+  file selection successfully exercised both imports without changing extension
+  permissions. No real Contacts, Tickets, calls, emails or SMS were created.
+- Anonymous read/edit/contact/intake POSTs and a forged-header intake request
+  returned 401 with private/no-store responses. Root redirects to sign-in, the
+  old hostname redirects to canonical, and generated/Preview hosts remain protected.
 
 ## Profile actions and quick stage edits
 
@@ -50,7 +71,8 @@ the hosted checks below passed.
   native Ticket menu offered Log SMS, whose empty dialog was inspected and closed
   without logging or sending. Its observed `interaction=logged-sms` route is not
   misrepresented as a sending action. The optional choice about opening that log
-  versus keeping Text inactive remains unanswered at release preparation.
+  versus keeping Text inactive was resolved by the user: keep Text disabled until
+  a sending service is connected.
 - Review links in the list were replaced with Up/back and Down/forward stage
   arrows. Stage cells have the eight ordered choices. New controls reuse the same
   `POST /api/recruits/:id` contract with only `hs_pipeline_stage`, its expected
