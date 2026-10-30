@@ -77,4 +77,4 @@
 .recruitSummary :global(.communication-tooltip) { left: auto; right: 0; transform: none; }
 .sort { display: grid; gap: 6px; color: #b6b2a8; font-size: 13px; }
 .expanded .recruitSummary { padding-right: 22px; }
-.expanded .grip { top: 19px; right: -9px; }
+.expanded .grip { top: 19px; right: 0; }
