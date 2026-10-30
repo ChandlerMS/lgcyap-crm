@@ -3,6 +3,7 @@ import { createPostgresLedger, editorAllowed } from '@/lib/hubspot-write.mjs';
 import { handleHubSpotToolRequest, readHubSpotTool } from '@/lib/hubspot-tools.mjs';
 import { checkToolWriteCapability } from '@/lib/hubspot-tool-write.mjs';
 import { getPool } from '@/db/pool.mjs';
+import { readInboxPage } from '@/lib/hubspot-inbox.mjs';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,7 +16,8 @@ async function handle(request: Request, context: { params: Promise<{ tool: strin
     getUser: async () => { user = await getAppUser(); return user; },
     authorizeUser: user => editorAllowed(user, process.env.RECRUITING_EDITOR_EMAILS),
     allowedOrigin: process.env.BETTER_AUTH_URL,
-    readData: async (selectedTool: string, input: { threadId?: string; query?: string; recordId?: string }) => {
+    readData: async (selectedTool: string, input: { threadId?: string; query?: string; recordId?: string; archive?: string; continuation?: string }) => {
+      if (selectedTool === 'inbox') return readInboxPage(input, { userId: user?.userId ?? '', hmacSecret: process.env.BETTER_AUTH_SECRET, accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
       const result = await readHubSpotTool(selectedTool, input, { accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
       result.capabilities.canEdit = result.status === 'available' && Boolean(input.recordId) && await checkToolWriteCapability(selectedTool, user, {
         accessToken: process.env.HUBSPOT_ACCESS_TOKEN, hmacSecret: process.env.BETTER_AUTH_SECRET,

@@ -95,7 +95,24 @@ messaging is added. Calendar represents CRM meetings, not Google Calendar.
 Inbox reads plain-text messages without sending or attachments. See
 [the API contract and scope requirements](HUBSPOT-TOOLS-API.md).
 
-## Add Recruits
+## Leaderboard and Inbox pagination
+
+`#leaderboard` follows the supplied HTML design using native React components.
+It groups HubSpot Sales Pipeline Sold deals by `writing_agent_name`, with policy
+counts and USD `annual_premium_amount` totals using Eastern close-date periods.
+The existing private app requires the approved `crm.objects.deals.read` grant.
+Shopper and Source Performance remain explicitly unconnected because no PolicyTek
+report source was supplied. See [LEADERBOARD-API.md](LEADERBOARD-API.md).
+
+Inbox reads one bounded provider page per request. Signed continuations bind the
+cursor to the current user, credential, archive filter and selected conversation.
+The browser accumulates unique rows, supports Pause/Continue, and has no 500-row
+ceiling. All includes active and archived threads and messages. Provider cursor
+URL encoding is decoded once before URLSearchParams encodes the outgoing value;
+next-link URLs are never followed. Plain text is kept intact within each 2 MB
+provider page; upstream content truncation remains visible.
+
+## Add Recruits intake
 
 `#add-recruits` starts with ten rows for First Name, Last Name, Phone Number,
 optional Email, and a required per-recruit Referrals/Recruiters path. Bulk import

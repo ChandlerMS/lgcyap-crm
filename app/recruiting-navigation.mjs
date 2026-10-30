@@ -44,6 +44,7 @@ export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'calendar', label: 'Calendar', icon: 'calendar', path: '/calendar/50894788' },
   { id: 'meetings', label: 'Meetings', icon: 'calendar', path: '/contacts/50894788/objects/0-47' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
+export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' })]);
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
@@ -51,7 +52,7 @@ export function resolveWorkspaceRoute(hash) {
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['recruits', 'orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
   if (value.startsWith('recruit/')) return { view: 'today', id: value.slice(8) };
-  return { view: WORKSPACE_NAV.some(item => item.id === value) || STAGE_PAGES.some(item => item.id === value) || HUBSPOT_TOOLS.some(item => item.id === value) ? value : 'today' };
+  return { view: WORKSPACE_NAV.some(item => item.id === value) || STAGE_PAGES.some(item => item.id === value) || HUBSPOT_TOOLS.some(item => item.id === value) || WORKSPACE_EXTRA_PAGES.some(item => item.id === value) ? value : 'today' };
 }
 
 export function stagePageForView(view) {

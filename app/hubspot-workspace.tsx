@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import HubSpotRecordEditor, { type HubspotEditField } from "./hubspot-record-editor";
+import InboxWorkspace from "./inbox-workspace";
 import { hubspotRecordSnapshotAvailable } from "./hubspot-record-edit.mjs";
 import { currentHubspotMonth, filterHubspotRows, hubspotDateKey, hubspotMonthDays, hubspotRetryDeadline, hubspotSearchResponseMatches, normalizeHubspotSearchQuery, safeHubspotViewLink, shiftHubspotMonth, sortHubspotRows } from "./hubspot-workspace-view.mjs";
 import styles from "./hubspot-workspace.module.css";
@@ -52,7 +53,11 @@ function NativeLink({ href, label = "Open in HubSpot" }: { href: unknown; label?
   return safe ? <a className={styles.nativeLink} href={safe} target="_blank" rel="noopener noreferrer">{label}<ExternalIcon /><span className="sr-only"> (opens in a new tab)</span></a> : null;
 }
 
-export default function HubSpotWorkspace({ tool, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
+export default function HubSpotWorkspace(props: Props) {
+  return props.tool === "inbox" ? <InboxWorkspace onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
+}
+
+function CrmWorkspace({ tool, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
   const definition = DEFINITIONS[tool];
   const [data, setData] = useState<ToolResult | null>(null);
   const [loading, setLoading] = useState(true);
