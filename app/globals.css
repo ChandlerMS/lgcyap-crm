@@ -424,7 +424,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .intake-grid th:last-child { width: 40px; padding-right: 0; }
 .intake-grid td:last-child { padding-right: 0; }
 .intake-grid tbody th { padding-top: 24px; font-weight: 400; }
-.intake-grid input:not([type="checkbox"]) { width: 100%; min-width: 0; min-height: 44px; padding: 11px 10px; font-size: 14px; }
+.intake-grid input:not([type="checkbox"]) { width: 100%; min-width: 0; min-height: 44px; padding: 11px 10px; border: 1px solid #6b6656; border-radius: 5px; background: #111110; color: var(--text); font-size: 14px; line-height: 1.4; }
 .intake-grid input[aria-invalid="true"] { border-color: #b77d61; }
 .intake-grid input:disabled { opacity: .7; }
 .intake-optional { font-size: 11px; color: #a39f91; }
