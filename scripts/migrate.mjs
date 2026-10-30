@@ -11,11 +11,11 @@ if (process.argv[2] !== '--apply') {
   let pool;
   try {
     pool = getPool();
-    for (const filename of ['0001_recruiting_ledger.sql', '0002_contact_creation_ledger.sql']) {
+    for (const filename of ['0001_recruiting_ledger.sql', '0002_contact_creation_ledger.sql', '0003_recruit_intake.sql']) {
       const sql = await readFile(new URL(`../migrations/${filename}`, import.meta.url), 'utf8');
       await pool.query(sql);
     }
-    console.log('Recruiting edit and contact creation ledger migrations applied. Auth tables are managed by the separate auth migration.');
+    console.log('Recruiting edit, contact creation and recruit intake ledger migrations applied. Auth tables are managed by the separate auth migration.');
   } catch {
     console.error('Migration failed. Check the database configuration and connectivity. Credentials were not logged.');
     process.exitCode = 1;

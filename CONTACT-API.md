@@ -1,7 +1,8 @@
 # Contact creation API contract
 
 Status: retained but disabled in Production after the user removed Add recruit.
-There is no contact-entry page or CTA; old `#add-recruit` links go to Recruits.
+The old contact-only page is retired; old `#add-recruit` links now go to the separate
+Add Recruits page, whose combined Contact/Ticket flow uses `/api/recruit-intake`.
 `RECRUITING_CONTACT_CREATION_ENABLED=false` denies authenticated create attempts
 before a provider mutation. The contract below describes the retained guarded code.
 

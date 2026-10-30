@@ -22,10 +22,13 @@
     "@next/env": "16.4.3",
     "@vercel/functions": "3.6.1",
     "better-auth": "1.7.14",
+    "fflate": "0.8.3",
     "next": "16.4.3",
     "pg": "8.23.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "read-excel-file": "9.3.14",
+    "saxen": "11.1.0",
     "server-only": "0.0.1"
   },
   "devDependencies": {

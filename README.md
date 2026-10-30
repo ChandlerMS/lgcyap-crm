@@ -22,7 +22,8 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
 
 ## Recruiting stage pages
 
-Today is followed by Recruits, Phone Interview, Orientation, Licensing,
+Today and Add Recruits sit above a cosmetic sidebar divider. Below it are
+Recruits, Phone Interview, Orientation, Licensing,
 Contracting, Transfers, Training and Completed. Each page shows only its exact
 HubSpot Recruiting ticket stage; Recruits is the initial stage, not an all-stage
 list. Office and license filters, stage-scoped search, communication shortcuts,
@@ -44,10 +45,26 @@ Edit / Review changes / Save to HubSpot. Search and header Refresh are disabled
 while this local draft is open; a missing-record reload preserves that draft.
 There is no separate Review action column or modal editor in the workspace.
 
-## Retired contact entry
+## Add Recruits
+
+`#add-recruits` starts with ten rows for First Name, Last Name, Phone Number and
+optional Email, plus a gold Submit button. Bulk import previews CSV and Excel
+`.xlsx` files in the browser (first worksheet only); limits are 2 MB and 500 rows.
+The page validates all populated rows before sending them sequentially. The new
+`POST /api/recruit-intake` creates or safely reuses a Contact, then creates and
+confirms an associated Recruiting ticket in Recruits (`1473225367`). Existing
+recruiting tickets keep their stage; matching records are not overwritten.
+
+This uses Production-only `RECRUITING_INTAKE_ENABLED=true` plus the existing write,
+identity and scope checks. Migration `0003_recruit_intake.sql` holds only request
+metadata, keyed identity/payload hashes and CRM IDs. Partial and uncertain results
+are shown per row; potentially sent creates are never automatically retried.
+See [RECRUIT-INTAKE-API.md](RECRUIT-INTAKE-API.md) for matching and resume behavior.
+
+## Retired contact-only entry
 
 The Add recruit page and its calls to the creation API were removed at the user's
-request. Existing `#add-recruit` links normalize to `#recruits`. Production's
+request. Existing `#add-recruit` links now normalize to the new `#add-recruits` page. Production's
 `RECRUITING_CONTACT_CREATION_ENABLED=false` disables the retained endpoint as well.
 The ledger, existing Contacts and granted app scopes were not deleted or changed.
 
@@ -87,11 +104,13 @@ See [COMMUNICATIONS-API.md](COMMUNICATIONS-API.md) for the navigation contract.
 
 ## Today and follow-up
 
-Today includes the complete office-filtered Follow-up list alongside its counts
-and upcoming orientations. Follow-up no longer has a separate menu item; existing
+Today includes every loaded recruiting pipeline record, including Completed,
+under Follow-up, with the same List/Board selector, filters and row controls as
+stage pages. Search on Today covers the pipeline. Upcoming orientations appear
+below this full-width collection. Follow-up has no separate menu item; existing
 `#follow-up` links normalize to `#today`. Suggested reviews keep the existing
-five-day open-stage rule. The menu contains Today followed by the eight recruiting
-stage pages listed above.
+five-day open-stage rule for the Suggested for review statistic, independently
+of the complete Follow-up collection.
 
 Typography uses native Apple system fonts on Apple platforms and Segoe UI Variable
 on supported Windows systems, with standard fallbacks. Body, headings and controls

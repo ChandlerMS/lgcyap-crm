@@ -2,13 +2,14 @@ import { STAGE_PAGES } from '../lib/recruiting-config.mjs';
 
 export const WORKSPACE_NAV = Object.freeze([
   Object.freeze({ id: 'today', label: 'Today', icon: 'home' }),
+  Object.freeze({ id: 'add-recruits', label: 'Add Recruits', icon: 'add-person' }),
   ...STAGE_PAGES,
 ]);
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (value === 'follow-up') return { view: 'today' };
-  if (value === 'add-recruit') return { view: 'recruits' };
+  if (value === 'add-recruit') return { view: 'add-recruits' };
   if (value.startsWith('recruit/')) return { view: 'recruits', id: value.slice(8) };
   return { view: WORKSPACE_NAV.some(item => item.id === value) ? value : 'today' };
 }

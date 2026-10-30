@@ -33,7 +33,9 @@ still apply. The app does not assert that every user or Ticket can communicate.
 There is no communication API endpoint, new database state, additional permission
 request, `tel:`/`mailto:` navigation, guessed calling query parameter, or direct
 API request to create calls, emails, activities, or communication logs. Contact
-creation remains disabled after its page was retired.
+creation through the old `/api/contacts` endpoint remains disabled. The separate
+Add Recruits flow creates associated Contacts and recruiting tickets as documented
+in [RECRUIT-INTAKE-API.md](RECRUIT-INTAKE-API.md).
 
 The record's native Log SMS dialog and `interaction=logged-sms` route were
 inspected and closed without logging an activity. This is recorded evidence of

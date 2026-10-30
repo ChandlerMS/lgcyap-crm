@@ -12,7 +12,7 @@ await once(portProbe, 'listening');
 const port = portProbe.address().port;
 await new Promise(resolve => portProbe.close(resolve));
 const base = `http://127.0.0.1:${port}`;
-const env = { ...process.env, NEXT_TELEMETRY_DISABLED: '1', BETTER_AUTH_URL: base, RECRUITING_WRITES_ENABLED: 'false', RECRUITING_CONTACT_CREATION_ENABLED: 'false' };
+const env = { ...process.env, NEXT_TELEMETRY_DISABLED: '1', BETTER_AUTH_URL: base, RECRUITING_WRITES_ENABLED: 'false', RECRUITING_CONTACT_CREATION_ENABLED: 'false', RECRUITING_INTAKE_ENABLED: 'false' };
 // Empty values also prevent Next's dotenv loader from loading real values from
 // a developer's .env.local after this child process starts.
 for (const key of ['HUBSPOT_ACCESS_TOKEN', 'DATABASE_URL', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'BETTER_AUTH_SECRET', 'RECRUITING_EDITOR_EMAILS', 'GOOGLE_PERSONAL_EMAILS', 'GOOGLE_EXTERNAL_EMAILS']) env[key] = '';
@@ -35,7 +35,7 @@ try {
   assert.match(signIn.headers.get('cache-control') ?? '', /no-store/);
   assert.equal(signIn.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(signIn.headers.get('x-frame-options'), 'DENY');
-  for (const path of ['/api/recruits', '/api/recruits/101', '/api/contacts']) {
+  for (const path of ['/api/recruits', '/api/recruits/101', '/api/contacts', '/api/recruit-intake']) {
     for (const forged of [false, true]) {
       const headers = { Origin: base, 'Content-Type': 'application/json' };
       if (forged) Object.assign(headers, {

@@ -3,6 +3,7 @@ import { getPool } from '@/db/pool.mjs';
 import { handleRecruitRequest, readRecruitingData } from '@/lib/hubspot.mjs';
 import { createPostgresLedger, editorAllowed, writeCapability } from '@/lib/hubspot-write.mjs';
 import { checkContactCreationCapability, createContactPostgresLedger } from '@/lib/hubspot-contact-create.mjs';
+import { checkRecruitIntakeCapability, createRecruitIntakePostgresLedger } from '@/lib/recruit-intake.mjs';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -16,6 +17,16 @@ export async function POST(request: Request) {
     readData: async () => ({
       ...await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN }),
       capabilities: {
+        canCreateRecruit: await checkRecruitIntakeCapability(user, {
+          editorEmails: process.env.RECRUITING_EDITOR_EMAILS,
+          writesEnabled: process.env.RECRUITING_WRITES_ENABLED,
+          intakeEnabled: process.env.RECRUITING_INTAKE_ENABLED,
+          hmacSecret: process.env.BETTER_AUTH_SECRET,
+          accessToken: process.env.HUBSPOT_ACCESS_TOKEN,
+          ledger: process.env.DATABASE_URL ? createRecruitIntakePostgresLedger(getPool()) : undefined,
+          vercel: process.env.VERCEL,
+          vercelEnv: process.env.VERCEL_ENV,
+        }),
         canCreateContact: await checkContactCreationCapability(user, {
           editorEmails: process.env.RECRUITING_EDITOR_EMAILS,
           writesEnabled: process.env.RECRUITING_WRITES_ENABLED,

@@ -8,7 +8,7 @@ import {
 
 test('navigation follows the eight recruiting stages in the requested order', () => {
   assert.deepEqual(WORKSPACE_NAV.map(page => page.label), [
-    'Today', 'Recruits', 'Phone Interview', 'Orientation', 'Licensing',
+    'Today', 'Add Recruits', 'Recruits', 'Phone Interview', 'Orientation', 'Licensing',
     'Contracting', 'Transfers', 'Training', 'Completed',
   ]);
   assert.equal(new Set(STAGE_PAGES.map(page => page.id)).size, 8);
@@ -35,7 +35,7 @@ test('each stage page includes only its exact HubSpot stage ID', () => {
 test('stage routes and shared record links remain addressable after removing old pages', () => {
   for (const page of WORKSPACE_NAV) assert.deepEqual(resolveWorkspaceRoute(`#${page.id}`), { view: page.id });
   assert.deepEqual(resolveWorkspaceRoute('#follow-up'), { view: 'today' });
-  assert.deepEqual(resolveWorkspaceRoute('#add-recruit'), { view: 'recruits' });
+  assert.deepEqual(resolveWorkspaceRoute('#add-recruit'), { view: 'add-recruits' });
   assert.deepEqual(resolveWorkspaceRoute('#recruit/123'), { view: 'recruits', id: '123' });
   assert.deepEqual(resolveWorkspaceRoute('#unsupported'), { view: 'today' });
 });

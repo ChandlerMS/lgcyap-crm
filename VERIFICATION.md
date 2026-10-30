@@ -7,6 +7,42 @@ No real CRM field value was changed during verification. Individual coworker
 logins have not been exercised. The expanded-account deployment is READY and
 the hosted checks below passed.
 
+## Add Recruits and full-pipeline Follow-up
+
+- Add Recruits is between Today and Recruits, with a cosmetic gold divider below
+  it. The entry grid has ten rows and four requested fields: First Name, Last
+  Name, Phone Number and optional Email. Bulk import previews CSV/.xlsx in the
+  browser, first worksheet only, capped at 2 MB/500 entries, with gold Submit.
+- The new row endpoint creates or safely reuses a Contact without overwriting
+  it, then confirms an associated Ticket in Recruiting/Recruits. Strict input,
+  same-origin Google authorization, Production flags, fixed portal/app and four
+  token-scope checks apply. Metadata-only PostgreSQL claims arbitrate normalized
+  phone/email across users; only confirmed definite partial outcomes may resume
+  on the same UUID/payload/user. Possible creates never retry automatically.
+- Today Follow-up now includes all loaded pipeline stages, including Completed,
+  with the shared List/Board collection, filters, row controls and pipeline search.
+  The five-day Suggested for review statistic remains a separate business rule.
+- Independent review fixed malformed identity-search responses and an import
+  navigation race. Excel review fixed sparse-coordinate expansion, falsified ZIP
+  sizes and reserved archive paths before the reader executes. Streaming actual
+  byte limits, strict XML/coordinate checks and a clean stored ZIP bound parser
+  work; formulas, macros and external relationships are rejected.
+- Grok completed the bounded design review; its uncertainty, scope, resume and
+  validation concerns were independently checked against code/tests. The original
+  contact-only endpoint and Text sending remain disabled.
+- The Vercel data browser initially opened an account table by default; the
+  workflow was changed to schema-only queries and those fields were not used.
+  The query editor remained read-only; its toggle did not respond, so no DDL was
+  applied there. A guarded one-off Production build migration is prepared using
+  the existing server connection, transactional additive DDL and catalog checks.
+  No credentials are copied to a local environment file for this migration.
+- All 115 tests, TypeScript, lint, production build and production HTTP smoke
+  passed. Production dependency audit reported zero vulnerabilities. All new
+  Contact/Ticket creates and partial-failure paths were exercised with synthetic
+  mocks and real PostgreSQL-compatible constraints, not real CRM test records.
+- Migration 0003 SHA256:
+  `878ad0dfb7cbd0b11bd39e9b643ccd2527aba18309a91574d0e9bc1b0ec819be`.
+
 ## Profile actions and quick stage edits
 
 - Contact tools moved to the right of stage list rows and profile headers in
