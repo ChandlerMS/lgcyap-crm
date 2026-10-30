@@ -7,7 +7,35 @@ No real CRM field value was changed during verification. Individual coworker
 logins have not been exercised. The expanded-account deployment is READY and
 the hosted checks below passed.
 
-## Contact entry rollout
+## Profile actions and quick stage edits
+
+- Contact tools moved to the right of stage list rows and profile headers in
+  Call / Text / Email order. Text is present but explicitly unavailable: the live
+  native Ticket menu offered Log SMS, whose empty dialog was inspected and closed
+  without logging or sending. Its observed `interaction=logged-sms` route is not
+  misrepresented as a sending action. The optional choice about opening that log
+  versus keeping Text inactive remains unanswered at release preparation.
+- Review links in the list were replaced with Up/back and Down/forward stage
+  arrows. Stage cells have the eight ordered choices. New controls reuse the same
+  `POST /api/recruits/:id` contract with only `hs_pipeline_stage`, its expected
+  baseline, record version and a fresh request UUID. The backend, scopes, schema,
+  database and account authorization were not changed.
+- No optimistic stage move or automatic retry occurs. A global pending-write lock,
+  disabled boundary arrows and read-only/stale-snapshot guards prevent invalid
+  client actions. Conflict, denial, rate limit and uncertain outcomes retain the
+  current record and require Refresh before another deliberate attempt.
+- Name links open the existing profile, now with embedded edit/review/save.
+  Independent review identified and fixed two draft-loss paths: global search and
+  header Refresh are disabled during editing; reload of a missing edited record
+  returns the missing result without replacing the displayed snapshot/draft.
+  The reviewer found no remaining release blockers. Grok's request timed out and
+  did not return a completed review; no successful Grok review is claimed.
+- All 87 tests passed, including five stage-client tests and explicit unavailable
+  Text behavior. TypeScript, lint, production build and HTTP smoke passed.
+  New provider-facing stage mutations were tested with mocks; real recruiting
+  records were not moved merely to exercise the controls.
+
+## Earlier contact entry rollout
 
 The later eight-stage rollout below retires contact entry: the Add recruit UI is
 removed and its Production flag is false. The contact-entry evidence in this

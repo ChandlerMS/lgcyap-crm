@@ -16,9 +16,10 @@ export function safeRecruitCommunicationUrl(recruitId, hubspotUrl) {
 }
 
 export function communicationAction(recruitId, hubspotUrl, action) {
-  if (!['call', 'email'].includes(action)) return { href: null, reason: 'This HubSpot action is unavailable.' };
+  if (!['call', 'text', 'email'].includes(action)) return { href: null, reason: 'This HubSpot action is unavailable.' };
   const recordUrl = safeRecruitCommunicationUrl(recruitId, hubspotUrl);
   if (!recordUrl) return { href: null, reason: 'This recruiting record link could not be verified. Use Refresh to try again.' };
+  if (action === 'text') return { href: null, reason: 'Text sending is not connected. HubSpot offers Log SMS here, which records a text but does not send it.' };
   // Email's interaction parameter was verified against the native ticket UI.
   // Calling has no verified composer URL: open the record for the native Call step.
   return action === 'email'

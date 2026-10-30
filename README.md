@@ -33,6 +33,17 @@ stage IDs were retained where possible; the two new IDs and labels are in the
 shared `lib/recruiting-config.mjs`, also used by editor options and server validation.
 Completed remains closed. All five existing tickets retained their stage ID.
 
+The Stage column is now an editable dropdown. Up moves a recruit back one stage;
+Down advances one stage. These deliberate controls save immediately through the
+existing guarded sparse-update API, with no optimistic move or automatic retry.
+The first/last arrows, read-only accounts, missing snapshots and busy controls are
+disabled. Failures require a fresh read before another deliberate attempt.
+
+Click the recruit's name for one profile containing details and inline
+Edit / Review changes / Save to HubSpot. Search and header Refresh are disabled
+while this local draft is open; a missing-record reload preserves that draft.
+There is no separate Review action column or modal editor in the workspace.
+
 ## Retired contact entry
 
 The Add recruit page and its calls to the creation API were removed at the user's
@@ -62,7 +73,9 @@ phone uniqueness across other integrations or HubSpot's search indexing delay.
 
 ## Call and email from stage lists
 
-Phone and email icons sit immediately before each recruit's initials and name.
+Call, Text and Email icons sit at the right of each list row and in the profile
+header. Text is visibly unavailable until a sending integration is configured;
+the native Log SMS action only records a message and is not presented as sending.
 Phone opens that recruiting record in HubSpot; choose its native Call control to
 continue. Email opens the same record's native email composer. Destinations are
 restricted to this portal and the exact recruiting Ticket, and open in a new tab.

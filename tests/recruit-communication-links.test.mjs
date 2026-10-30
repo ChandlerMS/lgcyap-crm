@@ -47,3 +47,9 @@ test('tracking values are discarded rather than forwarded into HubSpot interacti
   const untrustedTracking = `${recordUrl}?utm_source=${encodeURIComponent('https://evil.invalid/?interaction=call')}`;
   assert.equal(communicationAction('12345', untrustedTracking, 'email').href, `${recordUrl}?interaction=email`);
 });
+
+test('text sending stays unavailable without a verified sending integration', () => {
+  const action = communicationAction('12345', recordUrl, 'text');
+  assert.equal(action.href, null);
+  assert.match(action.reason, /does not send/);
+});
