@@ -7,6 +7,17 @@ been verified. Preview has its own login credentials/database and remains read-o
 The Sites app remains live as a read-only backup with a persistent save-claim
 database fence. The public demo is unchanged. Do not deploy this branch through Sites.
 
+## Automatic deployments
+
+The private GitHub repository [ChandlerMS/lgcyap-crm](https://github.com/ChandlerMS/lgcyap-crm)
+is connected to the existing `legacy-recruiting-private` Vercel project in Main
+Team. Every push or merge to `main` creates a Production deployment and assigns
+[lgcyap-crm.vercel.app](https://lgcyap-crm.vercel.app) after a successful build.
+
+Vercel builds from the repository root with Node.js 24, `npm ci`, and
+`npm run build`. Production credentials stay in Vercel environment settings;
+ordinary Git builds do not apply database migrations.
+
 The black-and-gold recruiting interface, logo, read filters, twelve editable
 properties, and explicit Edit → Review → Save flow are retained. Hosting changes:
 
