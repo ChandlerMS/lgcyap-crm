@@ -44,7 +44,7 @@ export default function RingCentralPanel({ clientId, isDemo, children }: { clien
     const command = communicationCommand(intent.action, intent.phone, isDemo);
     if (!command || !frame.current?.contentWindow) return;
     frame.current.contentWindow.postMessage(command, RINGCENTRAL_ORIGIN);
-    setNotice(intent.action === "call" ? "Number prepared. Review it and press Dial in RingCentral to call." : "Conversation opened. Write and send your message in RingCentral.");
+    setNotice(intent.action === "call" ? "Call preparation requested. Review the number and calling status in RingCentral before dialing." : "Text composer requested. Check RingCentral below for sender availability before writing your message.");
   }
   return <Context.Provider value={{ configured: Boolean(src) && !isDemo, open: reveal }}>
     {children}
@@ -52,7 +52,7 @@ export default function RingCentralPanel({ clientId, isDemo, children }: { clien
       <button className="rc-launcher btn btn-secondary" hidden={isDemo || expanded} onClick={() => reveal()} aria-expanded={expanded} aria-controls="ringcentral-panel">RingCentral{loggedIn ? " · Signed in" : ""}</button>
       {loaded && <section id="ringcentral-panel" className="rc-panel" hidden={!expanded || isDemo} aria-labelledby="rc-title" onKeyDown={event => { if (event.key === "Escape") minimize(); }}>
         <header className="rc-panel-header"><div><h2 id="rc-title" ref={heading} tabIndex={-1}>RingCentral</h2><p role="status">{loggedIn ? "Signed in to RingCentral" : "Sign in with your RingCentral account below"}</p></div><button type="button" className="btn btn-quiet" onClick={minimize} aria-label="Minimize RingCentral">−</button></header>
-        {intent && <div className="rc-recipient"><strong>{intent.name}</strong><span>{intent.phone}</span><button className="btn btn-primary" disabled={!loggedIn || (intent.action === "call" && !ready)} onClick={prepare}>{intent.action === "call" ? "Prepare call" : "Open text conversation"}</button>{notice && <p role="status">{notice}</p>}</div>}
+        {intent && <div className="rc-recipient"><strong>{intent.name}</strong><span>{intent.phone}</span><button className="btn btn-primary" disabled={!loggedIn || (intent.action === "call" && !ready)} onClick={prepare}>{intent.action === "call" ? "Prepare call" : "Open text conversation"}</button>{loggedIn && intent.action === "call" && !ready && <p>Browser calling is not ready. Check your RingCentral line and microphone permissions.</p>}{notice && <p role="status">{notice}</p>}</div>}
         <iframe ref={frame} title="RingCentral phone and text messages" src={src} allow="autoplay; microphone https://apps.ringcentral.com" className="rc-frame" />
         <p className="rc-panel-footnote">Calls and texts use your RingEX line. HubSpot activity sync for this embedded phone is not connected yet.</p>
       </section>}

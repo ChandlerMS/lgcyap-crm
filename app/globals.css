@@ -636,7 +636,7 @@ input.task-check { display: inline-block; width: 22px; height: 22px; margin: 0; 
 @media (max-width: 1100px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 30px; } }
 /* One persistent provider frame; minimizing never interrupts an active call. */
 .rc-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 55; box-shadow: 0 8px 30px #0008; }
-.rc-panel { position: fixed; right: 24px; bottom: 24px; z-index: 60; width: 380px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow: auto; border-radius: 16px; background: #141414; color: #f4f1e8; box-shadow: 0 12px 60px #000b; border: 1px solid #d4af3733; }
+.rc-panel { position: fixed; right: 24px; bottom: 24px; z-index: 60; width: 380px; max-width: calc(100% - 32px); max-height: calc(100dvh - 32px); overflow: auto; border-radius: 16px; background: #141414; color: #f4f1e8; box-shadow: 0 12px 60px #000b; border: 1px solid #d4af3733; }
 .rc-panel[hidden], .rc-launcher[hidden] { display: none; }
 .rc-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; gap: 12px; }
 .rc-panel-header h2 { margin: 0; font-size: 20px; }
@@ -649,5 +649,5 @@ input.task-check { display: inline-block; width: 22px; height: 22px; margin: 0; 
 .communication-button:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 600px) {
   .rc-launcher { right: 16px; bottom: 16px; }
-  .rc-panel { right: 8px; bottom: 8px; max-width: calc(100vw - 16px); width: 380px; max-height: calc(100dvh - 16px); }
+  .rc-panel { right: 8px; bottom: 8px; max-width: calc(100% - 16px); width: 380px; max-height: calc(100dvh - 16px); }
 }

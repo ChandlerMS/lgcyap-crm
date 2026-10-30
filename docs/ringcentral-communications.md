@@ -15,6 +15,10 @@ Approved app scopes: Call Control, SMS, VoIP Calling, WebSocket Subscriptions, R
 - Transcripts require provider availability and suitable access. Call summaries are not labeled as transcripts.
 - No calls or texts are sent during verification.
 
+## Production verification, 2026-10-30
+
+Private app registration and the per-user PKCE sign-in succeeded. The tested Chandler account was denied browser calling because no Digital Line is assigned, and the SMS composer reported that its number is not configured to send SMS. These are provider account prerequisites, not proof of working call/SMS delivery. No call or message was sent. A suitably enabled employee account is required to finish end-to-end verification.
+
 ## Official contracts
 
 - https://ringcentral.github.io/ringcentral-embeddable/docs/app-registration/
