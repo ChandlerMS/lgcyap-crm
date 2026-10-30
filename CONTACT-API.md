@@ -1,5 +1,10 @@
 # Contact creation API contract
 
+Status: retained but disabled in Production after the user removed Add recruit.
+There is no contact-entry page or CTA; old `#add-recruit` links go to Recruits.
+`RECRUITING_CONTACT_CREATION_ENABLED=false` denies authenticated create attempts
+before a provider mutation. The contract below describes the retained guarded code.
+
 `POST /api/contacts` creates one HubSpot Contact. It never creates a recruiting
 Ticket, association, owner assignment, marketing subscription, or workflow action.
 Existing HubSpot automations may run in response to a contact being created.

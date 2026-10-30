@@ -20,9 +20,27 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
   RECRUITING_WRITES_ENABLED=true. Local and Preview environments cannot save.
   Do not manually spoof platform variables.
 
-## Add a potential recruit
+## Recruiting stage pages
 
-The Add recruit page (`#add-recruit`) saves a HubSpot Contact with First name,
+Today is followed by Recruits, Phone Interview, Orientation, Licensing,
+Contracting, Transfers, Training and Completed. Each page shows only its exact
+HubSpot Recruiting ticket stage; Recruits is the initial stage, not an all-stage
+list. Office and license filters, stage-scoped search, communication shortcuts,
+and the reviewed editor remain available. The All stages filter is removed.
+
+HubSpot pipeline `924992938` has the same eight stages in this order. Existing
+stage IDs were retained where possible; the two new IDs and labels are in the
+shared `lib/recruiting-config.mjs`, also used by editor options and server validation.
+Completed remains closed. All five existing tickets retained their stage ID.
+
+## Retired contact entry
+
+The Add recruit page and its calls to the creation API were removed at the user's
+request. Existing `#add-recruit` links normalize to `#recruits`. Production's
+`RECRUITING_CONTACT_CREATION_ENABLED=false` disables the retained endpoint as well.
+The ledger, existing Contacts and granted app scopes were not deleted or changed.
+
+The retained implementation can save a HubSpot Contact with First name,
 Last name, Phone number, and an Active 2-14 / 2-15 license checkbox. Checked maps to
 `licensed_2_14_2_15=Yes`; unchecked maps to `No`, as confirmed by the app owner.
 It creates a Contact; recruiting pipeline Tickets are managed separately.
@@ -42,7 +60,7 @@ A change to BETTER_AUTH_SECRET requires a reviewed claim migration plan; otherwi
 contact creation fails closed. Phone search reduces duplicates; it cannot guarantee global
 phone uniqueness across other integrations or HubSpot's search indexing delay.
 
-## Call and email from the Recruits list
+## Call and email from stage lists
 
 Phone and email icons sit immediately before each recruit's initials and name.
 Phone opens that recruiting record in HubSpot; choose its native Call control to
@@ -59,8 +77,8 @@ See [COMMUNICATIONS-API.md](COMMUNICATIONS-API.md) for the navigation contract.
 Today includes the complete office-filtered Follow-up list alongside its counts
 and upcoming orientations. Follow-up no longer has a separate menu item; existing
 `#follow-up` links normalize to `#today`. Suggested reviews keep the existing
-five-day open-stage rule. The menu contains Today, Recruits, Contracting and Add
-recruit.
+five-day open-stage rule. The menu contains Today followed by the eight recruiting
+stage pages listed above.
 
 Typography uses native Apple system fonts on Apple platforms and Segoe UI Variable
 on supported Windows systems, with standard fallbacks. Body, headings and controls

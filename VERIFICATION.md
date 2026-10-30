@@ -9,6 +9,10 @@ the hosted checks below passed.
 
 ## Contact entry rollout
 
+The later eight-stage rollout below retires contact entry: the Add recruit UI is
+removed and its Production flag is false. The contact-entry evidence in this
+section records the earlier approved rollout, not current availability.
+
 - Added Add recruit (`#add-recruit`) and `POST /api/contacts` for First name,
   Last name, Phone number and the user-confirmed Active 2-14 / 2-15 license flag.
   The checkbox maps to existing Contact property `licensed_2_14_2_15`, using the
@@ -110,6 +114,38 @@ the hosted checks below passed.
   contact-create POST requests return 401 with private/no-store responses. The
   former project hostname still redirects 307 to the canonical hostname, while
   Preview and the generated deployment URL retain Vercel authentication.
+
+## Eight Recruiting stages
+
+- The user confirmed these are the Recruiting ticket pipeline stages, not Contact
+  lifecycle values. Native HubSpot identity was reverified as `chandler@lgcyap.com`
+  in portal `50894788`. The connector's separate write grant remains unavailable;
+  the existing-pipeline editor was operated through the authenticated native UI.
+- Before editing, a full pipeline-scoped read returned five of five tickets, all
+  at stage `1416243218`; the native editor also showed zero tickets in each of
+  the two omitted stages. Their permanent removal was explicitly approved.
+- The native editor saved exactly this order and showed Success: Recruits
+  (`1473225367`), Phone Interview (`1473225368`), Orientation (`1416243212`),
+  Licensing (`1416243213`), Contracting (`1416243216`), Transfers (`1416243214`),
+  Training (`1416243217`), Completed (`1416243218`). The first seven are open;
+  Completed remains closed. A separate connector property read confirmed the
+  exact eight IDs/labels and the retired options' absence. Support Pipeline was
+  not modified. No ticket stage ID or Contact lifecycle property was changed.
+- All stages and Add recruit are removed from the app UI. Each new page filters
+  by its exact shared live stage ID; Contracting no longer groups other stages.
+  Existing Add recruit links go to Recruits. Detail navigation follows the
+  actual stage, and unmapped records have explicit review links. The sidebar
+  scrolls on short screens. Typography and black/gold branding are retained.
+- Production contact creation was disabled through its existing dedicated flag;
+  ticket editing, session policy, Preview and the Sites read-only backup remain
+  configured as before. Retained contact ledgers and app scopes were untouched.
+- Independent source review found no blockers. Grok reviewed migration risks;
+  count/ID preservation and deletion confirmation were verified independently.
+- A fresh post-save full pipeline read confirmed five tickets, all still at the
+  same Completed stage ID. Reloading HubSpot retained the eight saved rows/order.
+- All 81 tests pass, including exact-stage navigation and accepting new stage
+  IDs/rejecting retired or foreign stage edits. TypeScript, lint, production build
+  and the actual production HTTP smoke passed without real CRM writes.
 
 ## Canonical hostname and expanded account access
 

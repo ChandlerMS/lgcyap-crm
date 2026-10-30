@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { editorAllowed, hostingAllowsWrites, handleRecruitWriteRequest, saveRecruit, validateWriteInput, writeCapability } from '../lib/hubspot-write.mjs';
-import { EDITABLE_PROPERTIES } from '../lib/recruit-edit-config.mjs';
+import { EDITABLE_PROPERTIES, EDIT_FIELDS } from '../lib/recruit-edit-config.mjs';
 import { PIPELINE_ID, RECRUIT_PROPERTIES } from '../lib/recruiting-config.mjs';
 
 const beforeTime = '2026-10-29T12:00:00.000Z';
@@ -61,6 +61,13 @@ test('validation allows exactly the editable properties and preserves independen
   assert.throws(() => validateWriteInput('101', { ...rawInput(), extra: 'authority' }), /invalid/);
   assert.throws(() => validateWriteInput('101', { ...rawInput(), expectedUpdatedAt: '2026-02-31T12:00:00.000Z' }), /Refresh/);
   for (const expectedValues of [undefined, {}, { extra: 'wrong key' }, { orientation_office: true }, { orientation_office: 'x'.repeat(201) }]) assert.throws(() => validateWriteInput('101', { ...rawInput(), expectedValues }), /Refresh/);
+});
+
+test('stage edits accept the migrated pipeline and reject retired or foreign stages', () => {
+  const ids = ['1473225367', '1473225368', '1416243212', '1416243213', '1416243216', '1416243214', '1416243217', '1416243218'];
+  assert.deepEqual(EDIT_FIELDS.find(field => field.property === 'hs_pipeline_stage').options.map(option => option.value), ids);
+  for (const stageId of ids) assert.equal(input({ hs_pipeline_stage: stageId }).changes.hs_pipeline_stage, stageId);
+  for (const stageId of ['1416243215', '1416243219', '4', 'Recruits']) assert.throws(() => input({ hs_pipeline_stage: stageId }));
 });
 
 test('only the explicitly allowed trusted identity with enabled writes and a database can edit', () => {
