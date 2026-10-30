@@ -52,6 +52,45 @@ function stageAtPoint(x: number, y: number): { target: Target; key: string } | n
   return { key: element.dataset.targetKey ?? "", target: { stageId: element.dataset.stageId ?? "", allowDrop: element.dataset.allowDrop !== "false", ...(element.dataset.recruitingPath ? { recruitingPath: element.dataset.recruitingPath } : {}), ...(element.dataset.licenseRoute ? { licenseRoute: element.dataset.licenseRoute } : {}) } };
 }
 
+function PipelineConnectors() {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [paths, setPaths] = useState<string[]>([]);
+  useEffect(() => {
+    const flow = svgRef.current?.parentElement;
+    if (!flow) return;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const bounds = flow.getBoundingClientRect();
+        const nodes = new Map([...flow.querySelectorAll<HTMLElement>("[data-stage-view]")].map(node => [node.dataset.stageView, node.querySelector("header")?.getBoundingClientRect()]));
+        const edges = [
+          ["genpop-hiring-event", "genpop-application"], ["genpop-application", "genpop-phone-interview"], ["genpop-phone-interview", "offer"],
+          ["mass-application", "mass-phone-interview"], ["mass-phone-interview", "mass-hiring-event"], ["mass-hiring-event", "offer"],
+          ["offer", "licensed-contracting"], ["offer", "licensing-reminders"], ["licensing-reminders", "licensed-npn"],
+          ["licensed-npn", "unlicensed-contracting"], ["licensed-contracting", "training"], ["unlicensed-contracting", "training"],
+          ["training", "completed"], ["training", "withdrawn"],
+        ];
+        setPaths(edges.flatMap(([from, to]) => {
+          const a = nodes.get(from), b = nodes.get(to);
+          if (!a || !b) return [];
+          const x1 = a.right - bounds.left, y1 = a.top + a.height / 2 - bounds.top;
+          const x2 = b.left - bounds.left, y2 = b.top + b.height / 2 - bounds.top;
+          const middle = (x1 + x2) / 2;
+          return [`M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`];
+        }));
+      });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(flow);
+    flow.querySelectorAll("[data-stage-view]").forEach(node => observer.observe(node));
+    window.addEventListener("resize", measure);
+    measure();
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); window.removeEventListener("resize", measure); };
+  }, []);
+  return <svg ref={svgRef} className={styles.connectors} aria-hidden="true">{paths.map((path, i) => <path key={i} d={path} />)}</svg>;
+}
+
 /** The horizontal viewport preserves the graph; recruit dragging chooses validated edges. */
 export default function RecruitPipeline({ records, stages, partial = false, now = 0, canEdit = false, disabled = false, blockedIds = [], pendingId = null, onNavigate, onStageChange }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -180,11 +219,12 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     const viewport = viewportRef.current;
     if (viewport) viewport.scrollBy({ left: direction * Math.max(290, viewport.clientWidth * .75), behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   };
-  const recruitCard = (recruit: PipelineRecruit, stageLabel: string) => {
-    const name = recruit.name || `Recruit ${recruit.id}`;
+  const recruitCard = (recruit: PipelineRecruit, stageLabel: string, details = true) => {
+    const name = [recruit.firstName, recruit.lastName].filter(Boolean).join(" ") || recruit.name || `Recruit ${recruit.id}`;
     return <article key={recruit.id} data-recruit-card className={`${styles.recruit} ${draggedId === recruit.id ? styles.draggingRecruit : ""}`} aria-label={name}>
-      {editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a connected stage`} title="Drag to a highlighted stage. Hold at an edge or over the arrows to scroll, or use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Use the lifecycle stage menu on this card to move a recruit with your keyboard.")}>⠿</button>}
-      <dl className={styles.recruitDetails}>
+      {details && editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a connected stage`} title="Drag to a highlighted stage. Hold at an edge or over the arrows to scroll, or use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Use the lifecycle stage menu on this card to move a recruit with your keyboard.")}>⠿</button>}
+      <div className={styles.recruitSummary}><a href={recordHref(recruit)} draggable={false}>{name}</a><RecruitCommunications recruitName={name} recruitId={recruit.id} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
+      {details && <dl className={styles.recruitDetails}>
         <div><dt>First name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.firstName || "Not recorded"}</a></dd></div>
         <div><dt>Last name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.lastName || "Not recorded"}</a></dd></div>
         <div><dt>Phone</dt><dd>{recruit.phone || "Not recorded"}</dd></div>
@@ -193,8 +233,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
         <div><dt>Stage</dt><dd>{canEdit && onStageChange ? <RecruitStageControls recruit={{ ...recruit, name, stageId: recruit.stageId ?? "", recruitingPath: recruit.recruitingPath ?? "", licenseRoute: recruit.licenseRoute ?? "", updatedAt: recruit.updatedAt ?? null }} mode="select" canEdit={canEdit} disabled={disabled || Boolean(pendingId) || blockedIds.includes(recruit.id)} onChange={(id, changes) => onStageChange(recruit, id, changes)} /> : recruit.stage || stageLabel}</dd></div>
         <div><dt>Time in stage</dt><dd>{pipelineAge(recruit.enteredStageAt, now)}</dd></div>
         <div><dt>Last contacted</dt><dd>{dateLabel(recruit.lastContactedAt)}</dd></div>
-      </dl>
-      <div className={styles.cardFooter}><RecruitCommunications recruitName={name} recruitId={recruit.id} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
+      </dl>}
     </article>;
   };
   const card = (key: Key, options: CardOptions = {}) => {
@@ -207,14 +246,15 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     const sort = sorts[targetKey] ?? { key: "firstName", direction: "asc" as const };
     const sorted = sortPipelineRecruits(recruits, sort.key, sort.direction) as PipelineRecruit[];
     const validDrop = dragged && editable(dragged) && pipelineDropChoice(dragged, target);
-    return <section key={targetKey} className={`${styles.stage} ${recruits.length ? styles.occupied : ""} ${validDrop ? styles.dropAvailable : ""} ${dropHover === targetKey && validDrop ? styles.dropHover : ""}`} aria-label={`${title}${options.subtitle ? `, ${options.subtitle}` : path ? `, ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}: ${recruits.length} recruits`}
-      onClick={event => toggleFromBlock(event, targetKey)} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
+    return <section key={targetKey} className={`${styles.stage} ${open ? styles.expanded : ""} ${Object.keys(LABELS).indexOf(key) % 2 ? styles.warm : styles.cool} ${recruits.length ? styles.occupied : ""} ${validDrop ? styles.dropAvailable : ""} ${dropHover === targetKey && validDrop ? styles.dropHover : ""}`} aria-label={`${title}${options.subtitle ? `, ${options.subtitle}` : path ? `, ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}: ${recruits.length} recruits`}
+      onClick={event => toggleFromBlock(event, targetKey)} data-stage-view={options.records && options.allowDrop === false ? undefined : view} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
       {validDrop && <span className={styles.dropHint}>Drop here</span>}
       <header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded(value => ({ ...value, [targetKey]: !value[targetKey] }))}><span>{title}{options.subtitle && <small>{options.subtitle}</small>}</span><span className={styles.count}>{recruits.length}</span><span className={styles.chevron} aria-hidden="true">{open ? "⌃" : "⌄"}</span></button></h4></header>
-      <div id={contentId} className={styles.stageContent} hidden={!open}>{open && <>
-        <div className={styles.stageToolbar}><a href={`#${view}`} className={styles.stagePageLink} onClick={event => navigate(event, view)}>Open stage page</a><label className={styles.sort}><span className="sr-only">Sort {title}{options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}</span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label><button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "↑" : "↓"}</button></div>
-        {sorted.length ? <div className={styles.recruits}>{sorted.map(record => recruitCard(record, title))}</div> : <p className={styles.empty}>No recruits</p>}
-      </>}</div>
+      <div id={contentId} className={styles.stageContent}>{open && <>
+        <div className={styles.stageToolbar}><a href={`#${view}`} className={styles.stagePageLink} onClick={event => navigate(event, view)}>Open stage page ↗</a><label className={styles.sort}><span>Sort by<span className="sr-only"> {title}{options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}</span></span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label><button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "↑" : "↓"}</button></div>
+      </>}
+        {sorted.length ? <div className={styles.recruits}>{sorted.map(record => recruitCard(record, title, open))}</div> : open ? <p className={styles.empty}>No recruits</p> : null}
+      </div>
     </section>;
   };
   const arrow = <span className={styles.arrow} aria-hidden="true">→</span>;
@@ -240,7 +280,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={cancelPointerGesture} onLostPointerCapture={event => { if (event.target === event.currentTarget) cancelPointerGesture(); }}
       onKeyDown={event => { if (event.target === event.currentTarget && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); shiftCarousel(event.key === "ArrowRight" ? 1 : -1); } }}
       onClickCapture={event => { if (suppressClickRef.current) { suppressClickRef.current = false; if (event.detail > 0) { event.preventDefault(); event.stopPropagation(); } } }}>
-      <div className={styles.flow}>{panels[0]}<span className={styles.merge} aria-hidden="true" />{panels[1]}{arrow}{panels[2]}<span className={styles.merge} aria-hidden="true" />{panels[3]}<span className={styles.split} aria-hidden="true" />{panels[4]}</div>
+      <div className={styles.flow}><PipelineConnectors />{panels[0]}<span className={styles.merge} aria-hidden="true" />{panels[1]}{arrow}{panels[2]}<span className={styles.merge} aria-hidden="true" />{panels[3]}<span className={styles.split} aria-hidden="true" />{panels[4]}</div>
     </div>
     {dragged && dragOrigin && <div ref={ghostRef} className={styles.dragGhost} style={{ transform: `translate3d(${dragOrigin.x + 14}px, ${dragOrigin.y + 14}px, 0)` }} aria-hidden="true">{dragged.name || "Recruit"}</div>}
     <span className="sr-only" role="status" aria-live="polite">{announcement}</span>
