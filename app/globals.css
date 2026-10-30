@@ -619,3 +619,9 @@ input.task-check { display: inline-block; width: 22px; height: 22px; margin: 0; 
 }
 
 @media (max-width: 520px) { .source-bar { flex-wrap: wrap; } .source-summary { min-width: 0; max-width: 100%; overflow-wrap: anywhere; } }
+
+.today-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; gap: 36px; margin-bottom: 40px; }
+.today-overview > section { min-width: 0; margin-bottom: 0; }
+.today-overview .follow-up-section .table-wrap { max-height: 350px; overflow: auto; }
+.today-overview .follow-up-section .data-table { min-width: 580px; }
+@media (max-width: 1100px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 30px; } }

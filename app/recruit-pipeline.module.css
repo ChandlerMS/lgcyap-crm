@@ -92,3 +92,8 @@
 .stageTitle:hover { color: #e9cf7a; text-decoration: underline; }
 .expandButton { flex: 0 0 40px; width: 40px; height: 44px; border: 0; padding: 0; color: #d4bc79; background: transparent; cursor: pointer; font: inherit; font-size: 22px; }
 .stageTitle:focus-visible, .expandButton:focus-visible { outline: 2px solid #d4af37; outline-offset: 3px; }
+
+.stage.expanded { width: min(720px, calc(100vw - 64px)); flex-basis: min(720px, calc(100vw - 64px)); }
+.expanded .recruits { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
+.expanded .stageContent { padding-inline: 20px; }
+@media (max-width: 700px) { .stage.expanded { width: calc(100vw - 48px); flex-basis: calc(100vw - 48px); } .expanded .recruits { grid-template-columns: minmax(0, 1fr); } .expanded .stageContent { padding-inline: 12px; } }
