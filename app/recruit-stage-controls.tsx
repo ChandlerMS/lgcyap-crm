@@ -4,7 +4,7 @@ import { FLOW_STAGES, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 import { stageTransitionChoices, stageSnapshotAvailable } from "./recruit-stage-save.mjs";
 
 export type StageFlowChanges = { licensing_branch?: "licensed" | "not_licensed" };
-type StageRecruit = { id: string; name: string; stageId: string; stageKey?: string; recruitingPath?: string; licenseRoute?: string; updatedAt: string | null; editValues?: Record<string, string> };
+type StageRecruit = { id: string; name: string; stageId: string; stageKey?: string; recruitingPath?: string; licenseRoute?: string; updatedAt: string | null; editValues?: Record<string, string>; isDemo?: boolean };
 type Props = { recruit: StageRecruit; canEdit: boolean; disabled: boolean; onChange: (stageId: string, flowChanges?: StageFlowChanges) => void; mode: "select" | "arrows" };
 type Choice = ReturnType<typeof stageTransitionChoices>[number];
 const optionValue = (choice: Choice) => JSON.stringify([choice.stageId, choice.licenseRoute ?? ""]);
@@ -30,7 +30,7 @@ export default function RecruitStageControls({ recruit, canEdit, disabled, onCha
     if (available && choice) onChange(choice.stageId, choice.flowChanges);
   };
   if (mode === "select") return <select className="select stage-select" aria-label={`Lifecycle stage for ${recruit.name}`} value="current" disabled={!available || !back.length && !forward.length}
-    title={!available ? unavailable : "Choose a connected step to save it to HubSpot."}
+    title={!available ? unavailable : recruit.isDemo ? "Choose a connected step. Demo changes stay in this app." : "Choose a connected step to save it to HubSpot."}
     onChange={event => choose([...back, ...forward], event.target.value)}>
     <option value="current">{current?.label ?? "Unrecognized stage"}</option>
     {back.length > 0 && <optgroup label="Back">{back.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
@@ -41,7 +41,7 @@ export default function RecruitStageControls({ recruit, canEdit, disabled, onCha
       const choices = direction === "back" ? back : forward;
       const single = choices.length === 1 ? choices[0] : undefined;
       const label = direction === "back" ? `Move ${recruit.name} back${single ? ` to ${choiceLabel(single)}` : " a step"}` : `Advance ${recruit.name}${single ? ` to ${choiceLabel(single)}` : " a step"}`;
-      const reason = !available ? unavailable : !choices.length ? !recruit.recruitingPath && ["hiring-event", "phone-interview", "offer"].includes(recruit.stageKey ?? "") ? "Choose this recruit’s path in the profile before this move." : "There is no connected step in this direction." : `${direction === "back" ? "Move back" : "Advance"} to ${single ? choiceLabel(single) : "a chosen step"}. Saves to HubSpot.`;
+      const reason = !available ? unavailable : !choices.length ? !recruit.recruitingPath && ["hiring-event", "phone-interview", "offer"].includes(recruit.stageKey ?? "") ? "Choose this recruit’s path in the profile before this move." : "There is no connected step in this direction." : `${direction === "back" ? "Move back" : "Advance"} to ${single ? choiceLabel(single) : "a chosen step"}. ${recruit.isDemo ? "Demo changes stay in this app." : "Saves to HubSpot."}`;
       if (choices.length > 1) return <select className="select stage-select" style={{ minWidth: 102, width: 136, maxWidth: 170 }} key={direction}
         aria-label={`${direction === "back" ? "Choose previous step" : "Choose next step"} for ${recruit.name}`} title={reason} value="" disabled={!available}
         onChange={event => choose(choices, event.target.value)}>

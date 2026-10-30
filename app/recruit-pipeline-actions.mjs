@@ -20,16 +20,22 @@ export function pipelineAge(enteredStageAt, now) {
     : `${Math.floor(hours / 24)} day${Math.floor(hours / 24) === 1 ? '' : 's'}`;
 }
 
-export function carouselIndex(turn, count = 5) {
-  return ((turn % count) + count) % count;
-}
-
-export function carouselDragSteps(distance) {
-  if (!Number.isFinite(distance) || Math.abs(distance) < 50) return 0;
-  return Math.max(-2, Math.min(2, -Math.round(distance / 400) || -Math.sign(distance)));
-}
-
-export function carouselSectionDelta(current, target, count = 5) {
-  const forward = carouselIndex(target - current, count);
-  return forward > count / 2 ? forward - count : forward;
+/** Stable local sorting keeps missing data last in either direction and never mutates input. */
+export function sortPipelineRecruits(records, key = 'firstName', direction = 'asc') {
+  const keys = new Set(['firstName', 'lastName', 'phone', 'email', 'recruiter', 'stage', 'timeInStage', 'lastContactedAt']);
+  const field = keys.has(key) ? key : 'firstName';
+  const value = record => {
+    if (field === 'timeInStage' || field === 'lastContactedAt') {
+      const date = Date.parse(record[field === 'timeInStage' ? 'enteredStageAt' : field] ?? '');
+      return Number.isFinite(date) ? field === 'timeInStage' ? -date : date : null;
+    }
+    return typeof record[field] === 'string' && record[field].trim() ? record[field].trim() : null;
+  };
+  return [...records].sort((a, b) => {
+    const left = value(a), right = value(b);
+    if (left === null || right === null) return left === right ? 0 : left === null ? 1 : -1;
+    const compare = typeof left === 'number' && typeof right === 'number' ? left - right
+      : String(left).localeCompare(String(right), 'en-US', { sensitivity: 'base', numeric: true });
+    return (direction === 'desc' ? -1 : 1) * compare;
+  });
 }

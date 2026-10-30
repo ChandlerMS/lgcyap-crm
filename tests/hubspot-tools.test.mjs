@@ -68,6 +68,18 @@ test('query validation rejects unsafe authority, types, controls and lengths bef
   assert.equal(result.query, literal);
 });
 
+test('fresh detail reads expose only supported editable snapshots and never infer write capability from read access', async () => {
+  const result = await readHubSpotTool('contacts', { recordId: '101' }, { accessToken: token, now, fetchImpl: async (url, options) => {
+    const parsed = new URL(url); assert.equal(parsed.origin, 'https://api.hubapi.com'); assert.equal(parsed.pathname, '/crm/v3/objects/contacts/101'); assert.equal(options.method, 'GET');
+    assert.ok(parsed.searchParams.get('properties').includes('firstname'));
+    return new Response(JSON.stringify(row('101', { firstname: 'Synthetic', lastname: 'Person', phone: '2025550101', email: 'SYNTHETIC@example.invalid', company: 'Example', lastmodifieddate: '2026-10-29T09:00:00Z' })));
+  } });
+  assert.equal(result.status, 'available'); assert.equal(result.selectedRecordId, '101'); assert.equal(result.records[0].id, '101'); assert.equal(result.records[0].editValues.email, 'synthetic@example.invalid'); assert.equal(result.records[0].updatedAt, '2026-10-29T09:00:00.000Z'); assert.equal(result.capabilities.canEdit, false); assert.equal(result.fields.length, 5);
+  assert.throws(() => validateToolInput('contacts', { recordId: '../101' }));
+  assert.throws(() => validateToolInput('contacts', { recordId: '101', query: 'Synthetic' }));
+  for (const tool of ['calls', 'calendar', 'inbox']) assert.throws(() => validateToolInput(tool, { recordId: '101' }));
+});
+
 test('global query is retained on every bounded result page with genuine total and partial status', async () => {
   let calls = 0;
   const result = await readHubSpotTool('contacts', { query: 'Synthetic Example' }, { accessToken: token, now, fetchImpl: async (_url, options) => {
@@ -170,6 +182,16 @@ test('Inbox opaque pagination cursors may contain long base64 and URL punctuatio
     assert.equal(parsed.searchParams.get('after'), cursor); return provider([{ id: '124', status: 'OPEN' }]);
   } });
   assert.equal(result.status, 'available'); assert.equal(result.loadedCount, 2); assert.equal(result.partial, false); assert.equal(calls, 2);
+});
+
+test('Inbox unusable or repeated pagination preserves valid loaded threads with explicit incomplete history', async () => {
+  for (const cursor of [{ unsupported: 'must-not-leak' }, 'a'.repeat(4097), 'invalid\ncontrol']) {
+    const result = await readHubSpotTool('inbox', {}, { accessToken: token, now, fetchImpl: async () => provider([{ id: '123' }], undefined, cursor) });
+    assert.equal(result.status, 'available'); assert.equal(result.partial, true); assert.equal(result.total, null); assert.equal(result.loadedCount, 1); assert.match(result.notice, /not the complete inbox/); assert.ok(result.paginationWarning.validationReason.startsWith('CURSOR_')); assert.doesNotMatch(JSON.stringify(result), /must-not-leak|invalid\\ncontrol/);
+  }
+  let calls = 0;
+  const repeated = await readHubSpotTool('inbox', {}, { accessToken: token, now, fetchImpl: async () => { calls++; return provider([{ id: '123' }], undefined, 'same-cursor'); } });
+  assert.equal(calls, 2); assert.equal(repeated.paginationWarning.validationReason, 'CURSOR_REPEATED'); assert.equal(repeated.loadedCount, 1); assert.equal(repeated.partial, true);
 });
 
 test('Inbox history enforces a total message response budget with honest partial history', async () => {

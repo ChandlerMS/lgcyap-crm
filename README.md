@@ -70,20 +70,30 @@ current lifecycle stages of recruits created in that America/New_York period;
 they are not historical stage-entry or conversion metrics. Missing dates and
 partial loaded cohorts are disclosed. Search filters both totals and cards.
 
-The pipeline is a five-section rotating 3D carousel. Empty-space dragging rotates;
-recruit grips choose connected stage moves. Stage menus provide a keyboard
-alternative. Names open recruit profiles; stage blocks open their exact queues.
-Only the front section is interactive, and reduced motion uses flat section
-switching. Recruit cards show recorded owner, office, dates and contact tools.
-Text remains disabled until a sending service is connected.
+The pipeline slides horizontally using arrows or empty-space dragging. Stage
+blocks expand downward to reveal sortable recruit details. Recruit grips move
+records along connected stage edges; stage menus offer a keyboard alternative.
+Names open detailed profiles. Cards show first/last name, phone, email, recruiter,
+stage, time in stage and last contact. Text stays disabled until a sender connects.
 
-The Pipeline folder and its branches start collapsed. The full sidebar can also
-be collapsed. Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar
-and Meetings are connected read-only pages inside the app, using the existing
-approved-user session. Calendar shows CRM meetings rather than a Google Calendar
-or marketing-calendar mirror; Inbox reads plain-text messages, without replies
-or attachments. Advanced actions remain in HubSpot. See
-[the read contract and scope requirements](HUBSPOT-TOOLS-API.md).
+Today displays total recruits, recruits with recorded contact activity, and their
+percentage for the selected created-date cohort. Missing contact history is not
+proof that nobody contacted a recruit.
+
+Demo data mode generates 60 fictional Test recruits, six per canonical stage,
+with reserved fictional phones and example.invalid email addresses. Demo edits
+and stage moves live only in browser memory and reset on reload. They never write
+to HubSpot. Live tools and intake cannot mount beneath a demo label.
+
+The Pipeline folder and its branches start collapsed; the full sidebar also
+collapses. Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar and
+Meetings use the existing approved-user session. CRM tables have sortable columns,
+global search and in-app detail views. Contacts, tickets, tasks, companies and
+meetings offer Edit → Review → Save for their fixed supported fields when the
+server verifies the required write grants. No generic creation, deletion or
+messaging is added. Calendar represents CRM meetings, not Google Calendar.
+Inbox reads plain-text messages without sending or attachments. See
+[the API contract and scope requirements](HUBSPOT-TOOLS-API.md).
 
 ## Add Recruits
 

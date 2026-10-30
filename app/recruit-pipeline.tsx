@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import RecruitCommunications from "./recruit-communications";
 import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
 import { stageSnapshotAvailable } from "./recruit-stage-save.mjs";
-import { carouselDragSteps, carouselIndex, carouselSectionDelta, pipelineAge, pipelineDropChoice } from "./recruit-pipeline-actions.mjs";
+import { pipelineAge, pipelineDropChoice, sortPipelineRecruits } from "./recruit-pipeline-actions.mjs";
 import styles from "./recruit-pipeline.module.css";
 
 export type PipelineRecruit = {
+  isDemo?: boolean;
   id: string; name?: string; stageId?: string; stageKey?: string; stage?: string;
+  firstName?: string | null; lastName?: string | null; phone?: string | null; email?: string | null;
   recruitingPath?: string | null; licenseRoute?: string | null; office?: string | null;
   recruiter?: string | null; createdAt?: string | null; enteredStageAt?: string | null;
   recruiterStatus?: string;
@@ -31,8 +33,7 @@ const LABELS: Record<Key, string> = {
 };
 const PRE_OFFER = new Set<string>(["hiring-event", "application", "phone-interview"]);
 const KNOWN = new Set<string>(Object.keys(LABELS));
-const CAROUSEL_SECTIONS = ["Recruiting paths", "Offer", "Licensing branches", "Training", "Outcomes"];
-const SECTION_ANGLE = 360 / CAROUSEL_SECTIONS.length;
+const SORT_FIELDS = [["firstName", "First name"], ["lastName", "Last name"], ["phone", "Phone"], ["email", "Email"], ["recruiter", "Recruiter"], ["stage", "Stage"], ["timeInStage", "Time in stage"], ["lastContactedAt", "Last contacted"]];
 const DATE_FORMAT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
 function canonicalKey(value: string | undefined) {
   const key = String(value ?? "").trim().toLowerCase().replace(/[_\s]+/g, "-");
@@ -51,41 +52,41 @@ function stageAtPoint(x: number, y: number): { target: Target; key: string } | n
   return { key: element.dataset.targetKey ?? "", target: { stageId: element.dataset.stageId ?? "", allowDrop: element.dataset.allowDrop !== "false", ...(element.dataset.recruitingPath ? { recruitingPath: element.dataset.recruitingPath } : {}), ...(element.dataset.licenseRoute ? { licenseRoute: element.dataset.licenseRoute } : {}) } };
 }
 
-/** The 3D ring browses graph sections; recruit dragging chooses validated graph edges. */
+/** The horizontal viewport preserves the graph; recruit dragging chooses validated edges. */
 export default function RecruitPipeline({ records, stages, partial = false, now = 0, canEdit = false, disabled = false, blockedIds = [], pendingId = null, onNavigate, onStageChange }: Props) {
-  const panelRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const panRef = useRef<{ pointerId: number; x: number; y: number; distance: number; moved: boolean } | null>(null);
-  const recordDragRef = useRef<{ pointerId: number; id: string; x: number; y: number; moved: boolean } | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ pointerId: number; x: number; y: number; scroll: number; moved: boolean } | null>(null);
+  const recordDragRef = useRef<{ pointerId: number; id: string; startX: number; startY: number; x: number; y: number; moved: boolean } | null>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const suppressClickRef = useRef(false);
-  const [turn, setTurn] = useState(0);
-  const [rotationOffset, setRotationOffset] = useState(0);
-  const [panelHeight, setPanelHeight] = useState(540);
+  const pipelineId = useId();
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [sorts, setSorts] = useState<Record<string, { key: string; direction: "asc" | "desc" }>>({});
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number } | null>(null);
-  const [hoverDirection, setHoverDirection] = useState<-1 | 1 | null>(null);
   const [dropHover, setDropHover] = useState<string | null>(null);
   const [panning, setPanning] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  const activeIndex = carouselIndex(turn, CAROUSEL_SECTIONS.length);
-  const rotationAllowed = Boolean(draggedId && canEdit && !disabled && !pendingId && !blockedIds.includes(draggedId));
   useEffect(() => {
-    const panel = panelRefs.current[activeIndex];
-    if (!panel) return;
-    const previousFocus = document.activeElement?.closest<HTMLElement>("[data-ring-panel]");
-    if (previousFocus && previousFocus !== panel) panel.closest<HTMLElement>("[data-pipeline-carousel]")?.focus({ preventScroll: true });
-    const observer = new ResizeObserver(entries => {
-      const height = entries[0]?.borderBoxSize?.[0]?.blockSize ?? entries[0]?.contentRect.height;
-      if (height) setPanelHeight(Math.ceil(height) + 28);
-    });
-    observer.observe(panel);
-    return () => observer.disconnect();
-  }, [activeIndex]);
-  useEffect(() => {
-    if (!rotationAllowed || !hoverDirection) return;
-    const timer = setTimeout(() => { setDropHover(null); setTurn(value => value + hoverDirection); }, 650);
-    return () => clearTimeout(timer);
-  }, [rotationAllowed, hoverDirection, turn]);
+    if (!draggedId || !canEdit || disabled || pendingId || blockedIds.includes(draggedId)) return;
+    let frame = 0;
+    const tick = () => {
+      const drag = recordDragRef.current, viewport = viewportRef.current;
+      const recruit = records.find(record => record.id === draggedId);
+      if (!drag || !viewport || !recruit) return;
+      const bounds = viewport.getBoundingClientRect();
+      const control = document.elementFromPoint(drag.x, drag.y)?.closest<HTMLElement>("[data-carousel-scroll]")?.dataset.carouselScroll;
+      const direction = control === "-1" ? -1 : control === "1" ? 1 : drag.y >= bounds.top && drag.y <= bounds.bottom ? drag.x < bounds.left + 55 ? -1 : drag.x > bounds.right - 55 ? 1 : 0 : 0;
+      if (direction) {
+        viewport.scrollLeft += direction * 12;
+        const destination = stageAtPoint(drag.x, drag.y);
+        setDropHover(destination && pipelineDropChoice(recruit, destination.target) ? destination.key : null);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [draggedId, canEdit, disabled, pendingId, blockedIds, records]);
   const unique = [...new Map(records.map(record => [record.id, record])).values()];
   const items: Item[] = unique.map(recruit => {
     const stage = stages.find(item => item.stageId && item.stageId === recruit.stageId);
@@ -104,29 +105,28 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       event.preventDefault(); onNavigate(view);
     }
   };
-  const navigateFromBlock = (event: MouseEvent<HTMLElement>, view: string) => {
+  const toggleFromBlock = (event: MouseEvent<HTMLElement>, key: string) => {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
-      || (event.target as HTMLElement).closest("a,button,input,select,textarea,summary,[role=button]")) return;
+      || (event.target as HTMLElement).closest("[data-recruit-card],a,button,input,select,textarea,summary,[role=button]")) return;
     event.preventDefault();
-    if (onNavigate) onNavigate(view);
-    else event.currentTarget.querySelector<HTMLAnchorElement>("h4 a")?.click();
+    setExpanded(value => ({ ...value, [key]: !value[key] }));
   };
-  const clearHoverRotation = () => setHoverDirection(null);
-  const finishRecordDrag = () => { recordDragRef.current = null; clearHoverRotation(); setDraggedId(null); setDragOrigin(null); setDropHover(null); };
+  const finishRecordDrag = () => { recordDragRef.current = null; setDraggedId(null); setDragOrigin(null); setDropHover(null); };
   const beginRecordDrag = (event: PointerEvent<HTMLButtonElement>, recruit: PipelineRecruit) => {
     if (event.button !== 0 || !editable(recruit)) return;
     event.preventDefault(); event.stopPropagation(); suppressClickRef.current = false;
     const surface = event.currentTarget.closest<HTMLElement>("[data-pipeline-carousel]");
     if (!surface) return;
-    recordDragRef.current = { pointerId: event.pointerId, id: recruit.id, x: event.clientX, y: event.clientY, moved: false };
+    recordDragRef.current = { pointerId: event.pointerId, id: recruit.id, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moved: false };
     surface.setPointerCapture(event.pointerId);
   };
-  const dropRecord = (id: string, target: Target | null) => {
+  const dropRecord = (id: string, destination: { key: string; target: Target } | null) => {
     const recruit = unique.find(record => record.id === id);
-    const choice = recruit && editable(recruit) ? pipelineDropChoice(recruit, target) : null;
+    const choice = recruit && editable(recruit) ? pipelineDropChoice(recruit, destination?.target ?? null) : null;
     finishRecordDrag();
     if (recruit && choice && onStageChange) {
-      setAnnouncement(`Saving ${recruit.name || "recruit"} to ${choice.label}.`);
+      if (destination) setExpanded(value => ({ ...value, [destination.key]: true }));
+      setAnnouncement(recruit.isDemo ? `Updating ${recruit.name || "recruit"} locally to ${choice.label}. HubSpot will not change.` : `Saving ${recruit.name || "recruit"} to ${choice.label}.`);
       onStageChange(recruit, choice.stageId, choice.flowChanges);
     } else setAnnouncement("That move is unavailable. Choose a connected step or use the recruit’s stage menu.");
   };
@@ -135,24 +135,23 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     if (event.button !== 0 || draggedId) return;
     const element = event.target as HTMLElement;
     if (element.closest("[data-recruit-card],button,input,select,textarea") || element.closest("a:not([data-pipeline-background])")) return;
-    panRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, distance: 0, moved: false };
+    panRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, scroll: event.currentTarget.scrollLeft, moved: false };
   };
   const panMove = (event: PointerEvent<HTMLDivElement>) => {
     const recordDrag = recordDragRef.current;
     if (recordDrag && recordDrag.pointerId === event.pointerId) {
       const recruit = unique.find(record => record.id === recordDrag.id);
       if (!recruit || !editable(recruit)) { finishRecordDrag(); return; }
-      if (!recordDrag.moved && Math.hypot(event.clientX - recordDrag.x, event.clientY - recordDrag.y) < 6) return;
+      recordDrag.x = event.clientX; recordDrag.y = event.clientY;
+      if (!recordDrag.moved && Math.hypot(event.clientX - recordDrag.startX, event.clientY - recordDrag.startY) < 6) return;
       event.preventDefault();
       if (!recordDrag.moved) {
         recordDrag.moved = true; setDraggedId(recordDrag.id); setDragOrigin({ x: event.clientX, y: event.clientY });
-        setAnnouncement(`Moving ${recruit.name || "recruit"}. Hover Previous or Next to rotate. Highlighted stages are connected steps.`);
+        setAnnouncement(`Moving ${recruit.name || "recruit"}. Hold at an edge or over Previous or Next to scroll. Highlighted stages are connected steps.`);
       }
       if (ghostRef.current) ghostRef.current.style.transform = `translate3d(${event.clientX + 14}px, ${event.clientY + 14}px, 0)`;
       const destination = stageAtPoint(event.clientX, event.clientY);
       setDropHover(destination && pipelineDropChoice(recruit, destination.target) ? destination.key : null);
-      const rotateButton = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-carousel-rotate]");
-      setHoverDirection(rotateButton?.dataset.carouselRotate === "-1" ? -1 : rotateButton?.dataset.carouselRotate === "1" ? 1 : null);
       return;
     }
     const pan = panRef.current;
@@ -161,40 +160,41 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     if (!pan.moved && Math.abs(delta) < 6) return;
     if (!pan.moved && Math.abs(event.clientY - pan.y) > Math.abs(delta)) { panRef.current = null; return; }
     if (!pan.moved) { pan.moved = true; setPanning(true); event.currentTarget.setPointerCapture(event.pointerId); }
-    pan.distance = delta;
-    event.preventDefault(); setRotationOffset(Math.max(-144, Math.min(144, delta * .18)));
+    event.preventDefault(); event.currentTarget.scrollLeft = pan.scroll - delta;
   };
   const panEnd = (event: PointerEvent<HTMLDivElement>) => {
     const recordDrag = recordDragRef.current;
     if (recordDrag && recordDrag.pointerId === event.pointerId) {
       if (recordDrag.moved) {
         event.preventDefault(); suppressClickRef.current = true;
-        dropRecord(recordDrag.id, stageAtPoint(event.clientX, event.clientY)?.target ?? null);
+        dropRecord(recordDrag.id, stageAtPoint(event.clientX, event.clientY));
       } else finishRecordDrag();
       return;
     }
     const pan = panRef.current;
-    if (pan?.moved) { suppressClickRef.current = true; setTurn(value => value + carouselDragSteps(pan.distance)); }
-    panRef.current = null; setPanning(false); setRotationOffset(0);
+    if (pan?.moved) suppressClickRef.current = true;
+    panRef.current = null; setPanning(false);
   };
-  const cancelPointerGesture = () => { finishRecordDrag(); panRef.current = null; setPanning(false); setRotationOffset(0); };
+  const cancelPointerGesture = () => { finishRecordDrag(); panRef.current = null; setPanning(false); };
   const shiftCarousel = (direction: -1 | 1) => {
-    setDropHover(null); setTurn(value => value + direction);
+    const viewport = viewportRef.current;
+    if (viewport) viewport.scrollBy({ left: direction * Math.max(290, viewport.clientWidth * .75), behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   };
   const recruitCard = (recruit: PipelineRecruit, stageLabel: string) => {
     const name = recruit.name || `Recruit ${recruit.id}`;
     return <article key={recruit.id} data-recruit-card className={`${styles.recruit} ${draggedId === recruit.id ? styles.draggingRecruit : ""}`} aria-label={name}>
-      <div className={styles.person}><a href={recordHref(recruit)} draggable={false}>{name}</a>{editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a connected stage`} title="Drag to a highlighted stage. Hold over the carousel arrows to rotate, or use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Use the lifecycle stage menu on this card to move a recruit with your keyboard.")}>⠿</button>}</div>
+      {editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a connected stage`} title="Drag to a highlighted stage. Hold at an edge or over the arrows to scroll, or use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Use the lifecycle stage menu on this card to move a recruit with your keyboard.")}>⠿</button>}
       <dl className={styles.recruitDetails}>
-        <div><dt>Office</dt><dd>{recruit.office || "Not recorded"}</dd></div>
+        <div><dt>First name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.firstName || "Not recorded"}</a></dd></div>
+        <div><dt>Last name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.lastName || "Not recorded"}</a></dd></div>
+        <div><dt>Phone</dt><dd>{recruit.phone || "Not recorded"}</dd></div>
+        <div><dt>Email</dt><dd>{recruit.email || "Not recorded"}</dd></div>
         <div><dt>Recruiter</dt><dd>{recruit.recruiter || (recruit.recruiterStatus === "unassigned" ? "Not assigned" : recruit.recruiterStatus === "unavailable" || recruit.recruiterStatus === "not-found" ? "Unavailable" : "Not recorded")}</dd></div>
-        <div><dt>Lifecycle stage</dt><dd>{recruit.stage || stageLabel}</dd></div>
+        <div><dt>Stage</dt><dd>{canEdit && onStageChange ? <RecruitStageControls recruit={{ ...recruit, name, stageId: recruit.stageId ?? "", recruitingPath: recruit.recruitingPath ?? "", licenseRoute: recruit.licenseRoute ?? "", updatedAt: recruit.updatedAt ?? null }} mode="select" canEdit={canEdit} disabled={disabled || Boolean(pendingId) || blockedIds.includes(recruit.id)} onChange={(id, changes) => onStageChange(recruit, id, changes)} /> : recruit.stage || stageLabel}</dd></div>
         <div><dt>Time in stage</dt><dd>{pipelineAge(recruit.enteredStageAt, now)}</dd></div>
-        <div><dt>Created</dt><dd>{dateLabel(recruit.createdAt)}</dd></div>
         <div><dt>Last contacted</dt><dd>{dateLabel(recruit.lastContactedAt)}</dd></div>
       </dl>
-      <div className={styles.cardFooter}><RecruitCommunications recruitName={name} recruitId={recruit.id} hubspotUrl={recruit.hubspotUrl ?? ""} /></div>
-      {canEdit && onStageChange && <div className={styles.stageControl}><RecruitStageControls recruit={{ ...recruit, name, stageId: recruit.stageId ?? "", recruitingPath: recruit.recruitingPath ?? "", licenseRoute: recruit.licenseRoute ?? "", updatedAt: recruit.updatedAt ?? null }} mode="select" canEdit={canEdit} disabled={disabled || Boolean(pendingId) || blockedIds.includes(recruit.id)} onChange={(id, changes) => onStageChange(recruit, id, changes)} /></div>}
+      <div className={styles.cardFooter}><RecruitCommunications recruitName={name} recruitId={recruit.id} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
     </article>;
   };
   const card = (key: Key, options: CardOptions = {}) => {
@@ -203,13 +203,18 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     const title = label(key), view = options.view ?? (path ? `${path === "genpop" ? "genpop" : "mass"}-${key}` : key);
     const target: Target = { stageId: stageId(key), allowDrop: options.allowDrop, ...(path ? { recruitingPath: path } : {}), ...(route ? { licenseRoute: route } : {}) };
     const targetKey = `${view}-${options.records ? "unassigned" : "stage"}`;
+    const open = expanded[targetKey] === true, contentId = `${pipelineId}-${targetKey}`;
+    const sort = sorts[targetKey] ?? { key: "firstName", direction: "asc" as const };
+    const sorted = sortPipelineRecruits(recruits, sort.key, sort.direction) as PipelineRecruit[];
     const validDrop = dragged && editable(dragged) && pipelineDropChoice(dragged, target);
     return <section key={targetKey} className={`${styles.stage} ${recruits.length ? styles.occupied : ""} ${validDrop ? styles.dropAvailable : ""} ${dropHover === targetKey && validDrop ? styles.dropHover : ""}`} aria-label={`${title}${options.subtitle ? `, ${options.subtitle}` : path ? `, ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}: ${recruits.length} recruits`}
-      onClick={event => navigateFromBlock(event, view)} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
+      onClick={event => toggleFromBlock(event, targetKey)} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
       {validDrop && <span className={styles.dropHint}>Drop here</span>}
-      <a href={`#${view}`} className={styles.stageBackground} data-pipeline-background draggable={false} aria-label={`Open ${title}${options.subtitle ? `, ${options.subtitle}` : path ? ` for ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} onClick={event => navigate(event, view)} />
-      <header className={styles.stageHeading}><h4><a href={`#${view}`} draggable={false} onClick={event => navigate(event, view)}>{title}</a>{options.subtitle && <small>{options.subtitle}</small>}</h4><span className={styles.count}>{recruits.length}</span></header>
-      {recruits.length ? <div className={styles.recruits}>{recruits.map(record => recruitCard(record, title))}</div> : <span className={styles.empty}>{validDrop ? "Drop recruit here" : "No recruits"}</span>}
+      <header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded(value => ({ ...value, [targetKey]: !value[targetKey] }))}><span>{title}{options.subtitle && <small>{options.subtitle}</small>}</span><span className={styles.count}>{recruits.length}</span><span className={styles.chevron} aria-hidden="true">{open ? "⌃" : "⌄"}</span></button></h4></header>
+      <div id={contentId} className={styles.stageContent} hidden={!open}>{open && <>
+        <div className={styles.stageToolbar}><a href={`#${view}`} className={styles.stagePageLink} onClick={event => navigate(event, view)}>Open stage page</a><label className={styles.sort}><span className="sr-only">Sort {title}{options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}</span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label><button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "↑" : "↓"}</button></div>
+        {sorted.length ? <div className={styles.recruits}>{sorted.map(record => recruitCard(record, title))}</div> : <p className={styles.empty}>No recruits</p>}
+      </>}</div>
     </section>;
   };
   const arrow = <span className={styles.arrow} aria-hidden="true">→</span>;
@@ -226,22 +231,18 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       {unassignedContracting.length > 0 && card("contracting", { records: unassignedContracting, subtitle: "Branch not recorded", allowDrop: false })}
     </div>,
     <div className={styles.singleStage} key="training">{card("training")}</div>,
-    <div className={styles.outcomes} key="outcomes">{card("completed")}{card("withdrawn")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><h4>Stage not recognized <span className={styles.count}>{unrecognized.length}</span></h4><div className={styles.recruits}>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</div></section>}</div>,
+    <div className={styles.outcomes} key="outcomes">{card("completed")}{card("withdrawn")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <div className={styles.recruits}>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</div>}</div></section>}</div>,
   ];
   return <section className={styles.pipeline} aria-labelledby="recruit-pipeline-title">
-    <div className={styles.heading}><h2 id="recruit-pipeline-title">Recruiting pipeline</h2><div className={styles.carouselControls} aria-label="Pipeline carousel controls"><button type="button" data-carousel-rotate="-1" aria-label="Previous pipeline section" title={draggedId ? "Hold the recruit here to rotate back" : "Rotate back"} onClick={() => shiftCarousel(-1)}>←</button><button type="button" data-carousel-rotate="1" aria-label="Next pipeline section" title={draggedId ? "Hold the recruit here to rotate forward" : "Rotate forward"} onClick={() => shiftCarousel(1)}>→</button></div></div>
+    <div className={styles.heading}><h2 id="recruit-pipeline-title">Recruiting pipeline</h2><div className={styles.carouselControls} aria-label="Pipeline slider controls"><button type="button" data-carousel-scroll="-1" aria-label="Previous pipeline stages" title={draggedId ? "Hold the recruit here to scroll left" : "Slide left"} onClick={() => shiftCarousel(-1)}>←</button><button type="button" data-carousel-scroll="1" aria-label="Next pipeline stages" title={draggedId ? "Hold the recruit here to scroll right" : "Slide right"} onClick={() => shiftCarousel(1)}>→</button></div></div>
     {partial && <p className={styles.partial} role="status">Counts cover loaded records only.</p>}
-    <div className={styles.sectionNavigation} role="group" aria-label="Pipeline sections">{CAROUSEL_SECTIONS.map((section, index) => <button key={section} type="button" aria-pressed={activeIndex === index} onClick={() => { setDropHover(null); setTurn(value => value + carouselSectionDelta(activeIndex, index, CAROUSEL_SECTIONS.length)); }}>{section}</button>)}</div>
-    <div data-pipeline-carousel className={`${styles.carousel} ${panning ? styles.panning : ""}`} style={{ height: panelHeight, "--ring-rotation": `${-turn * SECTION_ANGLE + rotationOffset}deg` } as CSSProperties} role="region" aria-roledescription="carousel" aria-label="Recruiting logic tree. Drag empty space to rotate. Drag recruits by their grip; hover Previous or Next to rotate to another connected stage." tabIndex={0}
+    <div ref={viewportRef} data-pipeline-carousel className={`${styles.slider} ${panning || draggedId ? styles.dragging : ""}`} role="region" aria-roledescription="carousel" aria-label="Recruiting logic tree. Drag empty space to slide left or right. Expand a stage to see prospects; drag a recruit’s grip to a highlighted connected stage." tabIndex={0}
       onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={cancelPointerGesture} onLostPointerCapture={event => { if (event.target === event.currentTarget) cancelPointerGesture(); }}
       onKeyDown={event => { if (event.target === event.currentTarget && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); shiftCarousel(event.key === "ArrowRight" ? 1 : -1); } }}
-      onClickCapture={event => { if (suppressClickRef.current) { event.preventDefault(); event.stopPropagation(); suppressClickRef.current = false; } }}>
-      <div className={styles.ring}>{panels.map((panel, index) => <div key={CAROUSEL_SECTIONS[index]} ref={element => { panelRefs.current[index] = element; }} data-ring-panel className={`${styles.panel} ${activeIndex === index ? styles.activePanel : ""}`} style={{ "--panel-angle": `${index * SECTION_ANGLE}deg` } as CSSProperties} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${CAROUSEL_SECTIONS.length}: ${CAROUSEL_SECTIONS[index]}`} aria-hidden={activeIndex !== index} inert={activeIndex !== index}>
-        <h3 className={styles.panelTitle}>{CAROUSEL_SECTIONS[index]}</h3><div className={styles.panelScroll} tabIndex={activeIndex === index ? 0 : -1} role="region" aria-label={`${CAROUSEL_SECTIONS[index]} stage blocks`}>{panel}</div>
-      </div>)}</div>
+      onClickCapture={event => { if (suppressClickRef.current) { suppressClickRef.current = false; if (event.detail > 0) { event.preventDefault(); event.stopPropagation(); } } }}>
+      <div className={styles.flow}>{panels[0]}<span className={styles.merge} aria-hidden="true" />{panels[1]}{arrow}{panels[2]}<span className={styles.merge} aria-hidden="true" />{panels[3]}<span className={styles.split} aria-hidden="true" />{panels[4]}</div>
     </div>
     {dragged && dragOrigin && <div ref={ghostRef} className={styles.dragGhost} style={{ transform: `translate3d(${dragOrigin.x + 14}px, ${dragOrigin.y + 14}px, 0)` }} aria-hidden="true">{dragged.name || "Recruit"}</div>}
-    <span className="sr-only" role="status" aria-live="polite">Showing {CAROUSEL_SECTIONS[activeIndex]}, section {activeIndex + 1} of {CAROUSEL_SECTIONS.length}.</span>
     <span className="sr-only" role="status" aria-live="polite">{announcement}</span>
   </section>;
 }

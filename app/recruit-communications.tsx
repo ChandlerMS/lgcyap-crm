@@ -10,11 +10,11 @@ function CommunicationIcon({ action }: { action: "call" | "text" | "email" }) {
     : <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>}</svg>;
 }
 
-export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl }: { recruitName: string; recruitId: string; hubspotUrl: string }) {
+export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, isDemo = false }: { recruitName: string; recruitId: string; hubspotUrl: string; isDemo?: boolean }) {
   const id = useId();
   return <div className="recruit-communications" role="group" aria-label={`HubSpot tools for ${recruitName}`}>
     {(["call", "text", "email"] as const).map(action => {
-      const result = communicationAction(recruitId, hubspotUrl, action);
+      const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
       const label = action === "call" ? `Open HubSpot calling tools for ${recruitName}` : action === "text" ? `Texting not connected for ${recruitName}` : `Email ${recruitName} in HubSpot`;
       const descriptionId = `${id}-${action}`;
       return <span className="communication-item" key={action}>

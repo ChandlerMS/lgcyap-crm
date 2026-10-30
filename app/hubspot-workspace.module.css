@@ -19,6 +19,13 @@
 .search { width: min(340px, 100%); }
 .search input { width: 100%; min-height: 43px; padding: 10px 14px; border: 1px solid #3e392c; border-radius: 6px; background: #10100f; color: var(--text); }
 .notice { margin: 0 0 17px; color: var(--muted); font-size: 13px; }
+.providerSearch { padding: 0 0 25px; margin: 0 0 26px; border-bottom: 1px solid var(--line); }
+.providerSearch > label { display: block; color: #d9d3c3; font-size: 14px; margin-bottom: 10px; }
+.providerSearch > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.providerSearch input { flex: 1 1 250px; min-height: 44px; max-width: 470px; padding: 10px 14px; border: 1px solid #54482c; border-radius: 6px; background: #11100d; color: var(--text); }
+.providerSearch > p { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+.providerSearch > p.messageError { color: var(--error); }
+.searchSummary { margin: 0 0 15px; color: #dfcd98; font-size: 13px; overflow-wrap: anywhere; }
 .tableWrap { max-width: 100%; overflow-x: auto; scrollbar-color: #756333 #111; }
 .table { border-collapse: collapse; width: 100%; min-width: 720px; text-align: left; font-size: 13px; }
 .table th { padding: 14px 17px; border-bottom: 1px solid #4a4332; font-weight: 400; color: var(--muted); font-size: 12px; white-space: nowrap; }
@@ -26,6 +33,21 @@
 .table th:first-child, .table td:first-child { padding-left: 0; }
 .table th:last-child, .table td:last-child { padding-right: 0; text-align: right; }
 .table td strong { color: var(--text); font-weight: 500; }
+.sortButton { display: inline-flex; align-items: center; justify-content: space-between; gap: 15px; padding: 0; border: 0; background: transparent; color: inherit; font-size: inherit; font-weight: inherit; text-align: left; min-height: 30px; }
+.sortButton > span:last-child { color: #a18b51; font-size: 14px; }
+.sortButton:hover { color: var(--gold); }
+.table th[aria-sort="ascending"], .table th[aria-sort="descending"] { color: #e0cb8e; }
+.recordName { padding: 0; border: 0; background: transparent; color: var(--text); font-weight: 500; font-size: inherit; text-align: left; line-height: 1.6; overflow-wrap: anywhere; }
+.recordName:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+.calendarRecord { padding: 0; border: 0; background: transparent; color: #ddc46f; font-size: 11px; line-height: 1.4; text-align: left; overflow-wrap: anywhere; }
+.calendarRecord:hover { color: #f3de9d; text-decoration: underline; }
+.detailBack { margin-bottom: 22px; }
+.detailGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 45px; margin: 0; border-top: 1px solid var(--line); }
+.detailGrid > div { display: grid; grid-template-columns: minmax(110px, 35%) minmax(0, 1fr); gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.detailGrid dt { color: var(--muted); font-size: 13px; }
+.detailGrid dd { margin: 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.detailHeading { font-size: 20px; font-weight: 500; margin: 0 0 20px; }
+.detailPreview { margin-top: 28px; color: #c8c3b8; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .table tr:hover td { background: #10100e; }
 .secondary { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
 .status { font-size: 12px; }
@@ -66,3 +88,4 @@
 .agendaTitle span { color: var(--gold); margin-left: 10px; font-size: 15px; }
 @media (max-width: 950px) { .inbox { grid-template-columns: minmax(210px, 38%) minmax(0, 1fr); } .messages { padding: 22px 18px; } }
 @media (max-width: 620px) { .heading { gap: 18px; margin-bottom: 27px; } .headingActions { width: 100%; } .toolbar { align-items: flex-start; } .toolbar p { text-align: left; } .inbox { grid-template-columns: 1fr; } .threadList { max-height: 320px; border-right: 0; border-bottom: 1px solid #51472d; } .thread { padding: 18px 12px; } .messages { padding: 25px 10px; } .monthHeading h2 { font-size: 20px; } }
+@media (max-width: 950px) { .detailGrid { grid-template-columns: 1fr; } }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { carouselDragSteps, carouselIndex, carouselSectionDelta, pipelineAge, pipelineDropChoice } from '../app/recruit-pipeline-actions.mjs';
+import { pipelineAge, pipelineDropChoice, sortPipelineRecruits } from '../app/recruit-pipeline-actions.mjs';
 import { stageIdForKey } from '../lib/recruiting-config.mjs';
 
 function recruit(stageKey, path = 'genpop', route = '') {
@@ -43,17 +43,16 @@ test('stage age is truthful for missing and future dates', () => {
   assert.equal(pipelineAge('2026-10-30T11:40:00Z', now), 'Less than an hour');
   assert.equal(pipelineAge('2026-10-29T12:00:00Z', now), '1 day');
 });
-test('3D carousel wraps sections without reversing a full revolution', () => {
-  assert.equal(carouselIndex(-1), 4);
-  assert.equal(carouselIndex(5), 0);
-  assert.equal(carouselSectionDelta(4, 0), 1);
-  assert.equal(carouselSectionDelta(0, 4), -1);
-  assert.equal(carouselSectionDelta(0, 3), -2);
+test('stage prospect sorting is stable, leaves unknowns last, and never mutates the source', () => {
+  const records = [{ id: '1', firstName: 'Alex', recruiter: null }, { id: '2', firstName: 'bella', recruiter: 'Morgan' }, { id: '3', firstName: null, recruiter: 'Alex' }, { id: '4', firstName: 'Alex', recruiter: 'Morgan' }];
+  assert.deepEqual(sortPipelineRecruits(records).map(row => row.id), ['1', '4', '2', '3']);
+  assert.deepEqual(sortPipelineRecruits(records, 'firstName', 'desc').map(row => row.id), ['2', '1', '4', '3']);
+  assert.deepEqual(sortPipelineRecruits(records, 'recruiter', 'asc').map(row => row.id), ['3', '2', '4', '1']);
+  assert.deepEqual(records.map(row => row.id), ['1', '2', '3', '4']);
 });
-test('3D carousel requires a deliberate drag and snaps to a bounded number of panels', () => {
-  assert.equal(carouselDragSteps(25), 0);
-  assert.equal(carouselDragSteps(-160), 1);
-  assert.equal(carouselDragSteps(160), -1);
-  assert.equal(carouselDragSteps(-3000), 2);
-  assert.equal(carouselDragSteps(Infinity), 0);
+test('stage-age and last-contact sorting compare dates rather than formatted labels', () => {
+  const records = [{ id: 'old', enteredStageAt: '2026-01-01T00:00:00Z', lastContactedAt: '2026-10-29T00:00:00Z' }, { id: 'new', enteredStageAt: '2026-10-01T00:00:00Z', lastContactedAt: '2026-09-01T00:00:00Z' }, { id: 'missing', enteredStageAt: null, lastContactedAt: null }];
+  assert.deepEqual(sortPipelineRecruits(records, 'timeInStage', 'asc').map(row => row.id), ['new', 'old', 'missing']);
+  assert.deepEqual(sortPipelineRecruits(records, 'timeInStage', 'desc').map(row => row.id), ['old', 'new', 'missing']);
+  assert.deepEqual(sortPipelineRecruits(records, 'lastContactedAt', 'desc').map(row => row.id), ['old', 'new', 'missing']);
 });

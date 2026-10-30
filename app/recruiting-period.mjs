@@ -116,8 +116,10 @@ export function recruitingPeriodStats(records, stages, period, basis = 'createdA
   }));
   const counted = stageTotals.reduce((total, stage) => total + stage.count, 0);
   const unique = [...new Map(records.map(record => [record.id, record])).values()];
+  const contactedCount = selected.filter(record => recruitingCalendarDate(record.lastContactedAt) != null).length;
   return {
-    records: selected, total: selected.length, stageTotals,
+    records: selected, total: selected.length, stageTotals, contactedCount,
+    contactedPercentage: selected.length ? Math.round(contactedCount / selected.length * 1000) / 10 : 0,
     unknownStageCount: selected.length - counted,
     missingDateCount: unique.filter(record => recruitingCalendarDate(record[basis]) == null).length,
   };

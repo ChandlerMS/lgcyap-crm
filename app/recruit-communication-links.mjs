@@ -15,7 +15,8 @@ export function safeRecruitCommunicationUrl(recruitId, hubspotUrl) {
   } catch { return null; }
 }
 
-export function communicationAction(recruitId, hubspotUrl, action) {
+export function communicationAction(recruitId, hubspotUrl, action, isDemo = false) {
+  if (isDemo) return { href: null, reason: 'Demo contact tools are inactive. These fictional records cannot call, text or email.' };
   if (!['call', 'text', 'email'].includes(action)) return { href: null, reason: 'This HubSpot action is unavailable.' };
   const recordUrl = safeRecruitCommunicationUrl(recruitId, hubspotUrl);
   if (!recordUrl) return { href: null, reason: 'This recruiting record link could not be verified. Use Refresh to try again.' };

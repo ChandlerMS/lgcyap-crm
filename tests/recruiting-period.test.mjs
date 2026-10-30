@@ -8,6 +8,14 @@ import {
 const resolve = (preset, now, dates = {}) => resolveRecruitingPeriod({ preset, ...dates }, now);
 const bounds = period => [period.startDate, period.endDate];
 
+test('contacted KPIs use unique created-cohort recruits with recorded contact dates', () => {
+  const a = {id:'a',createdAt:'2026-10-30T12:00:00Z',lastContactedAt:'2026-10-30T13:00:00Z'};
+  const rows = [a,a,{id:'b',createdAt:a.createdAt,lastContactedAt:null},{id:'c',createdAt:a.createdAt,lastContactedAt:'invalid'}, {id:'outside',createdAt:'2026-09-01T12:00:00Z',lastContactedAt:a.lastContactedAt}];
+  const stats = recruitingPeriodStats(rows,[],resolve('today','2026-10-30T16:00:00Z'));
+  assert.equal(stats.total,3); assert.equal(stats.contactedCount,1); assert.equal(stats.contactedPercentage,33.3);
+  assert.equal(recruitingPeriodStats([],[],resolve('today','2026-10-30T16:00:00Z')).contactedPercentage,0);
+});
+
 test('Today follows Eastern agency time even when UTC is on the next day', () => {
   assert.equal(recruitingCalendarDate('2026-10-31T03:59:59.999Z'), '2026-10-30');
   assert.equal(recruitingCalendarDate('2026-10-31T04:00:00.000Z'), '2026-10-31');

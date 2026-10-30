@@ -7,7 +7,32 @@ No real CRM field value was changed during verification. Individual coworker
 logins have not been exercised. The expanded-account deployment is READY and
 the hosted checks below passed.
 
-## Interactive workspace and connected HubSpot pages — 2026-10-30
+## Sliding pipeline, isolated demo and CRM editing — 2026-10-30
+
+- Replaced the 3D carousel with horizontal scrolling and downward stage expansion.
+  Local browser checks verified all eight prospect fields, a legal drag/drop,
+  profile navigation and a locally saved demo edit. Branch rules remain enforced.
+- Demo mode contains 60 fictional Test recruits, six per canonical stage; initial
+  totals are 60 recruits, 30 with recorded contact and 50%. All demo changes stay
+  in memory, communication buttons are inert, and live tools/intake cannot mount
+  under a demo label.
+- Today uses the selected created-date cohort for three large KPIs. CRM and
+  recruiting grids have sortable columns and in-app record details.
+- Existing contacts, tickets, tasks, companies and meetings have fixed-field
+  Edit/Review/Save support. Server token introspection validates portal, app and
+  grants before record operations. Fresh baselines, shared ticket locks, durable
+  metadata-only request claims and confirmation reads protect saves. Company
+  editing stays unavailable until its additional write grant is installed.
+- Local checks: **231 tests passed**, ESLint passed, production build/TypeScript
+  passed, and HTTP smoke rejected anonymous/forged identities on all read/write
+  routes. Temporary QA route was removed before the production build.
+- No real CRM record was changed or message sent during this revision's tests.
+  Live deployment checks are recorded separately in the local release checkpoint.
+- Inbox previously failed on an opaque pagination cursor. This revision retains
+  validated rows as explicitly partial and logs only cursor type/length/repetition
+  diagnostics; it never follows a provider next-link or invents completeness.
+
+## Earlier interactive workspace and connected HubSpot pages — 2026-10-30
 
 - Referrals/Recruiters display labels retain stored `genpop`/`mass_recruiting`
   values. The native HubSpot property was saved and reopened to verify both.

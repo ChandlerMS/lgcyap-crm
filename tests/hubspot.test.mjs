@@ -32,7 +32,7 @@ test('normalization keeps only allowlisted recruiting facts with truthful nullab
   assert.equal(recruit.orientationDate, '2026-10-31');
   assert.equal(recruit.enteredStageAt, '2026-10-20T08:00:00.000Z');
   assert.match(recruit.hubspotUrl, new RegExp(`/contacts/${PORTAL_ID}/record/0-5/101\\?utm_source=codex`));
-  assert.doesNotMatch(JSON.stringify(recruit), /do-not-include|bank_account|unknown_field|email/);
+  assert.doesNotMatch(JSON.stringify(recruit), /do-not-include|bank_account|unknown_field/);
 });
 
 test('missing facts are not fabricated and invalid calendar dates remain null', () => {

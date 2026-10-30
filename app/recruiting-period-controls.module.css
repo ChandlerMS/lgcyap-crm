@@ -8,14 +8,12 @@
 .dates input { color: var(--text); color-scheme: dark; background: #141414; border: 1px solid #454137; border-radius: 7px; padding: 8px 10px; min-height: 40px; }
 .dates input[aria-invalid="true"] { border-color: var(--error); }
 .description { margin: 12px 0 24px; color: var(--muted); font-size: 13px; }
-.context { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; margin-bottom: 14px; color: var(--muted); font-size: 13px; }
-.context p { margin: 0; }
-.context strong { color: var(--text); font-variant-numeric: tabular-nums; }
-.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-.stats div { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 16px 18px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 0; }
-.stats dt { color: #c6c0b3; font-size: 12px; line-height: 1.4; }
-.stats dd { margin: 0; color: var(--gold); font-size: 26px; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.context { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.stats { display: flex; flex-wrap: wrap; gap: 20px 46px; margin: 0 0 0 auto; }
+.stats div { display: flex; flex-direction: column-reverse; gap: 7px; min-width: 110px; }
+.stats dt { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.stats dd { margin: 0; color: var(--text); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .error { color: var(--error); margin: -12px 0 20px; font-size: 13px; }
 .note { color: var(--muted); margin: 12px 0 0; font-size: 12px; }
-@media (max-width: 1000px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .section { margin-bottom: 26px; } .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats div { padding: 14px; } .context span { width: 100%; } }
+@media (max-width: 1000px) { .stats { margin-left: 0; gap: 18px 30px; } }
+@media (max-width: 620px) { .section { margin-bottom: 26px; } .stats { width: 100%; gap: 18px; } .stats div { min-width: 0; flex: 1; } .stats dd { font-size: 30px; } }

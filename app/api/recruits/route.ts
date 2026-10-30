@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     authorizeUser: visitor => editorAllowed(visitor, process.env.RECRUITING_EDITOR_EMAILS),
     allowedOrigin: process.env.BETTER_AUTH_URL,
     readData: async () => ({
-      ...await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN }),
+      ...await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN, includeContacts: true }),
       capabilities: {
         canCreateRecruit: await checkRecruitIntakeCapability(user, {
           editorEmails: process.env.RECRUITING_EDITOR_EMAILS,

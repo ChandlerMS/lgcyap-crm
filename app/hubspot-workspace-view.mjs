@@ -58,11 +58,43 @@ export function filterHubspotRows(records, query) {
   return records.filter(record => fields.some(field => typeof record[field] === 'string' && record[field].toLocaleLowerCase('en-US').includes(normalized)));
 }
 
+const sortableFields = new Set(['title', 'subtitle', 'status', 'owner', 'createdAt', 'updatedAt', 'scheduledAt', 'endedAt', 'phone', 'email', 'company', 'health']);
+const dateFields = new Set(['createdAt', 'updatedAt', 'scheduledAt', 'endedAt']);
+const textCollator = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true });
+/** Sort the entire loaded cohort before pagination. Missing values stay last in either direction. */
+export function sortHubspotRows(records, sort) {
+  if (!sort || !sortableFields.has(sort.field) || !['asc', 'desc'].includes(sort.direction)) return [...records];
+  const valueOf = record => {
+    const value = record[sort.field];
+    if (typeof value !== 'string' || !value.trim()) return null;
+    if (!dateFields.has(sort.field)) return value.trim();
+    const instant = Date.parse(value);
+    return Number.isFinite(instant) ? instant : null;
+  };
+  return records.map((record, index) => ({ record, index, value: valueOf(record) })).sort((a, b) => {
+    if (a.value === null || b.value === null) return a.value === null && b.value === null ? a.index - b.index : a.value === null ? 1 : -1;
+    const result = typeof a.value === 'number' && typeof b.value === 'number' ? a.value - b.value : textCollator.compare(a.value, b.value);
+    return result ? result * (sort.direction === 'asc' ? 1 : -1) : a.index - b.index;
+  }).map(item => item.record);
+}
+
 /** Both HTTP 429 and the tool's HTTP-200 unavailable envelope can carry a cooldown. */
 export function hubspotRetryDeadline(value, rateLimited = false, now = Date.now()) {
   const seconds = Number(value);
   const delay = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 86400) : rateLimited ? 60 : 0;
   return delay ? now + Math.ceil(delay * 1000) : null;
+}
+
+export function normalizeHubspotSearchQuery(value) {
+  if (typeof value !== 'string') return { query: null, error: 'Enter a search phrase.' };
+  const query = value.trim();
+  if (!query) return { query: null, error: null };
+  if (query.length < 2 || query.length > 200 || /[\x00-\x1f\x7f]/.test(query)) return { query: null, error: 'Use 2–200 characters without line breaks or control characters.' };
+  return { query, error: null };
+}
+
+export function hubspotSearchResponseMatches(requestedQuery, returnedQuery) {
+  return requestedQuery === null ? returnedQuery === null : typeof requestedQuery === 'string' && requestedQuery === returnedQuery;
 }
 
 /** Links remain on the fixed account; never render provider-supplied external destinations. */

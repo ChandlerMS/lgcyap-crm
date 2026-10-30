@@ -4,7 +4,7 @@ import { RECRUITING_PERIODS, resolveRecruitingPeriod, recruitingPeriodStats } fr
 import styles from "./recruiting-period-controls.module.css";
 
 export type PeriodSelection = { preset: string; startDate?: string; endDate?: string };
-type PeriodRecord = { id: string; stageId?: string; stageKey?: string; createdAt?: string | null; enteredStageAt?: string | null };
+type PeriodRecord = { id: string; stageId?: string; stageKey?: string; createdAt?: string | null; enteredStageAt?: string | null; lastContactedAt?: string | null };
 type PeriodStage = { id: string; key?: string; stageId?: string; label: string };
 type Props = {
   records: readonly PeriodRecord[];
@@ -28,6 +28,11 @@ export default function RecruitingPeriodControls({ records, stages, selection, o
           {RECRUITING_PERIODS.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
         </select>
       </h1>
+      <dl className={styles.stats} aria-label="Recruiting totals for the selected period">
+        <div><dt>Total recruits</dt><dd>{stats.total}</dd></div>
+        <div><dt>Recruits contacted</dt><dd>{stats.contactedCount}</dd></div>
+        <div><dt>Percentage contacted</dt><dd>{stats.contactedPercentage}%</dd></div>
+      </dl>
       {(selection.preset === "date" || selection.preset === "range") && <div className={styles.dates}>
         <label>{selection.preset === "date" ? "Date" : "Start date"}<input type="date" min="0001-01-01" max="9999-12-31" required value={selection.startDate ?? ""} onChange={event => onSelectionChange({ ...selection, startDate: event.target.value })} aria-invalid={!period.valid} /></label>
         {selection.preset === "range" && <label>End date<input type="date" min={selection.startDate || "0001-01-01"} max="9999-12-31" required value={selection.endDate ?? ""} onChange={event => onSelectionChange({ ...selection, endDate: event.target.value })} aria-invalid={!period.valid} /></label>}
@@ -35,11 +40,7 @@ export default function RecruitingPeriodControls({ records, stages, selection, o
     </div>
     <p id="recruiting-period-description" className={styles.description}>{period.valid ? `${period.description} · Eastern time${selection.preset === "weekly" ? " · Monday–Sunday" : ""}` : "Select a valid reporting date or range."}</p>
     {!period.valid && <p className={styles.error} role="alert">{period.error}</p>}
-    <div className={styles.context}>
-      <p>{usesCreated ? "Recruits created in this period" : "Recruits who entered their current stage in this period"}: <strong>{stats.total}</strong>{partial ? " loaded" : ""}</p>
-      <span>Current lifecycle stages</span>
-    </div>
-    <dl className={styles.stats} aria-label="Lifecycle stage totals for the selected period">{stats.stageTotals.map((stage: PeriodStage & { count: number }) => <div key={stage.id}><dt>{stage.label}</dt><dd>{stage.count}</dd></div>)}</dl>
+    <p className={styles.context}>{usesCreated ? "Recruits created in the selected period." : "Recruits who entered their current stage in the selected period."} Contacted means at least one contact activity is recorded.</p>
     {(partial || stats.unknownStageCount > 0 || stats.missingDateCount > 0) && <p className={styles.note}>
       {partial ? "Totals include loaded records only. " : ""}
       {stats.unknownStageCount > 0 ? `${stats.unknownStageCount} selected recruit${stats.unknownStageCount === 1 ? " has" : "s have"} an unrecognized stage. ` : ""}
