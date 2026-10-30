@@ -8,6 +8,7 @@ import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
 import RecruitStageControls from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
+import RecruitFollowUp from "./recruit-follow-up";
 import DemoRecruitEditor from "./demo-recruit-editor";
 import { createDemoRecruits, applyDemoStage } from "./recruit-demo.mjs";
 import HubSpotWorkspace from "./hubspot-workspace";
@@ -414,6 +415,7 @@ export default function RecruitingWorkspace() {
     }
     if (route.view === "today") return <>
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} />
+      <RecruitFollowUp records={all} now={timestamp} partial={data.partial} />
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
     </>;

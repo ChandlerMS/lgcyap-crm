@@ -599,3 +599,9 @@ input.task-check { display: inline-block; width: 22px; height: 22px; margin: 0; 
 .intake-notice p + p { margin-top: 10px; }
 .intake-notice.is-error { background: #1c1711; color: #e0c4a2; border-color: #9a7450; }
 @media (max-width: 520px) { .intake-pagination { align-items: flex-start; flex-direction: column; } .intake-submit-bar > .btn { flex: 1 1 100%; } .intake-submit-bar .intake-submit { order: -1; } }
+
+.follow-up-section { margin: 0 0 42px; }
+.follow-up-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.follow-up-heading h2 { margin: 0; font-size: 24px; letter-spacing: -.025em; }
+.follow-up-heading h2 span { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.follow-up-age { display: block; margin-top: 6px; color: var(--muted); }
