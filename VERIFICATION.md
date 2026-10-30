@@ -146,6 +146,19 @@ section records the earlier approved rollout, not current availability.
 - All 81 tests pass, including exact-stage navigation and accepting new stage
   IDs/rejecting retired or foreign stage edits. TypeScript, lint, production build
   and the actual production HTTP smoke passed without real CRM writes.
+- Production deployment `dpl_A35aPMgmjekMj71PX7AdNeeuvsFs` is READY from runtime
+  source `b1c4b73deef5a73ad030b5b96c84c5a7d8b4c94a`. All eight hosted page headings
+  and active navigation states passed after waiting for React rendering. Completed
+  has five rows; each other stage has zero. The list still has five phone and
+  five email shortcuts. All stages and Add recruit controls are absent.
+- Hosted detail navigation highlights/returns to Completed. The editor contains
+  exactly the eight ordered stage options and Review changes is disabled without
+  edits; it was closed without saving. Old `#add-recruit` normalizes to `#recruits`
+  and exposes no Save contact control. No real record edit was used for QA.
+- Fresh anonymous read/edit/contact-create POSTs return 401 with private/no-store
+  headers. Unsupported edit PATCH returns 405. Root still redirects to sign-in,
+  the old domain redirects to the canonical domain, and Preview/generated URLs
+  retain Vercel authentication protection.
 
 ## Canonical hostname and expanded account access
 
