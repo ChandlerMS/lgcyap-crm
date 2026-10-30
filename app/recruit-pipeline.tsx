@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import RecruitCommunications from "./recruit-communications";
 import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
 import { stageSnapshotAvailable } from "./recruit-stage-save.mjs";
@@ -50,6 +50,25 @@ function stageAtPoint(x: number, y: number): { target: Target; key: string } | n
   const element = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-pipeline-stage-target]");
   if (!element || element.closest("[inert]")) return null;
   return { key: element.dataset.targetKey ?? "", target: { stageId: element.dataset.stageId ?? "", allowDrop: element.dataset.allowDrop !== "false", ...(element.dataset.recruitingPath ? { recruitingPath: element.dataset.recruitingPath } : {}), ...(element.dataset.licenseRoute ? { licenseRoute: element.dataset.licenseRoute } : {}) } };
+}
+
+function RecruitStack({ children }: { children: ReactNode }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const resize = () => {
+      const entries = [...list.children] as HTMLElement[];
+      if (entries.length <= 10) { list.style.maxHeight = "none"; return; }
+      const first = entries[0].getBoundingClientRect(), tenth = entries[9].getBoundingClientRect();
+      list.style.maxHeight = `${Math.ceil(tenth.bottom - first.top + 2)}px`;
+    };
+    const observer = new ResizeObserver(resize);
+    [...list.children].slice(0, 10).forEach(child => observer.observe(child));
+    resize();
+    return () => observer.disconnect();
+  }, [children]);
+  return <div ref={listRef} className={styles.recruits}>{children}</div>;
 }
 
 function PipelineConnectors() {
@@ -249,11 +268,11 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     return <section key={targetKey} className={`${styles.stage} ${open ? styles.expanded : ""} ${Object.keys(LABELS).indexOf(key) % 2 ? styles.warm : styles.cool} ${recruits.length ? styles.occupied : ""} ${validDrop ? styles.dropAvailable : ""} ${dropHover === targetKey && validDrop ? styles.dropHover : ""}`} aria-label={`${title}${options.subtitle ? `, ${options.subtitle}` : path ? `, ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}: ${recruits.length} recruits`}
       onClick={event => toggleFromBlock(event, targetKey)} data-stage-view={options.records && options.allowDrop === false ? undefined : view} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
       {validDrop && <span className={styles.dropHint}>Drop here</span>}
-      <header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded(value => ({ ...value, [targetKey]: !value[targetKey] }))}><span>{title}{options.subtitle && <small>{options.subtitle}</small>}</span><span className={styles.count}>{recruits.length}</span><span className={styles.chevron} aria-hidden="true">{open ? "⌃" : "⌄"}</span></button></h4></header>
+      <header className={styles.stageHeading}><h4><span className={styles.stageToggle}><a className={styles.stageTitle} href={`#${view}`} onClick={event => navigate(event, view)}>{title}{options.subtitle && <small>{options.subtitle}</small>}</a><span className={styles.count}>{recruits.length}</span><button type="button" className={styles.expandButton} aria-label={`${open ? "Collapse" : "Expand"} ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded(value => ({ ...value, [targetKey]: !value[targetKey] }))}><span aria-hidden="true">{open ? "⌃" : "⌄"}</span></button></span></h4></header>
       <div id={contentId} className={styles.stageContent}>{open && <>
-        <div className={styles.stageToolbar}><a href={`#${view}`} className={styles.stagePageLink} onClick={event => navigate(event, view)}>Open stage page ↗</a><label className={styles.sort}><span>Sort by<span className="sr-only"> {title}{options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}</span></span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label><button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "↑" : "↓"}</button></div>
+        <div className={styles.stageToolbar}><label className={styles.sort}><span>Sort by<span className="sr-only"> {title}{options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}</span></span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label><button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "↑" : "↓"}</button></div>
       </>}
-        {sorted.length ? <div className={styles.recruits}>{sorted.map(record => recruitCard(record, title, open))}</div> : open ? <p className={styles.empty}>No recruits</p> : null}
+        {sorted.length ? <RecruitStack>{sorted.map(record => recruitCard(record, title, open))}</RecruitStack> : open ? <p className={styles.empty}>No recruits</p> : null}
       </div>
     </section>;
   };
@@ -271,7 +290,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       {unassignedContracting.length > 0 && card("contracting", { records: unassignedContracting, subtitle: "Branch not recorded", allowDrop: false })}
     </div>,
     <div className={styles.singleStage} key="training">{card("training")}</div>,
-    <div className={styles.outcomes} key="outcomes">{card("completed")}{card("withdrawn")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <div className={styles.recruits}>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</div>}</div></section>}</div>,
+    <div className={styles.outcomes} key="outcomes">{card("completed")}{card("withdrawn")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <RecruitStack>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</RecruitStack>}</div></section>}</div>,
   ];
   return <section className={styles.pipeline} aria-labelledby="recruit-pipeline-title">
     <div className={styles.heading}><h2 id="recruit-pipeline-title">Recruiting pipeline</h2><div className={styles.carouselControls} aria-label="Pipeline slider controls"><button type="button" data-carousel-scroll="-1" aria-label="Previous pipeline stages" title={draggedId ? "Hold the recruit here to scroll left" : "Slide left"} onClick={() => shiftCarousel(-1)}>←</button><button type="button" data-carousel-scroll="1" aria-label="Next pipeline stages" title={draggedId ? "Hold the recruit here to scroll right" : "Slide right"} onClick={() => shiftCarousel(1)}>→</button></div></div>

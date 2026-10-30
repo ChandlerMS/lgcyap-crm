@@ -33,7 +33,7 @@
 .dropAvailable { box-shadow: inset 0 0 0 1px #cead50; }
 .dropHover { background: #302719; box-shadow: inset 0 0 0 2px #e1c66f; }
 .dropHint { position: absolute; top: -18px; right: 8px; color: #f0d078; font-size: 14px; }
-.recruits { display: grid; gap: 0; max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #887237 #11110f; padding: 1px; }
+.recruits { display: grid; gap: 0; max-height: none; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #887237 #11110f; padding: 1px; }
 .recruit { position: relative; min-width: 0; padding: 14px 0; border: 0; border-top: 1px solid #ffffff12; background: transparent; cursor: auto; }
 .draggingRecruit { opacity: .45; }
 .grip { position: absolute; top: 11px; right: 0; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: #211d13; font-size: 20px; color: #b3a16d; line-height: 1; cursor: grab; touch-action: none; user-select: none; }
@@ -60,7 +60,7 @@
 .directRoute { display: flex; align-items: flex-start; justify-content: flex-end; min-height: 102px; }
 .directRoute > span:first-child { padding: 40px 20px 0; color: #c7b774; font-size: 15px; }
 .outcomes { display: flex; flex-direction: column; align-items: flex-start; gap: 56px; }
-@media (max-width: 600px) { .heading h2 { font-size: 28px; } .heading { gap: 15px; } .stage { flex-basis: 320px; width: 320px; padding: 0; } .recruits { max-height: 580px; } }
+@media (max-width: 600px) { .heading h2 { font-size: 28px; } .heading { gap: 15px; } .stage { flex-basis: 320px; width: 320px; padding: 0; } }
 @media (prefers-reduced-motion: reduce) { .slider { scroll-behavior: auto; } }
 
 .connectors { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
@@ -87,3 +87,8 @@
   .recruitDetails > div { grid-template-columns: 90px minmax(0, 1fr); }
   .sort select, .recruitDetails :global(.stage-select) { font-size: 16px; min-height: 44px; }
 }
+
+.stageTitle { flex: 1; min-width: 0; color: inherit; text-decoration: none; line-height: 1.5; }
+.stageTitle:hover { color: #e9cf7a; text-decoration: underline; }
+.expandButton { flex: 0 0 40px; width: 40px; height: 44px; border: 0; padding: 0; color: #d4bc79; background: transparent; cursor: pointer; font: inherit; font-size: 22px; }
+.stageTitle:focus-visible, .expandButton:focus-visible { outline: 2px solid #d4af37; outline-offset: 3px; }
