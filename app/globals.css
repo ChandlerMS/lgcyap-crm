@@ -617,3 +617,5 @@ input.task-check { display: inline-block; width: 22px; height: 22px; margin: 0; 
   .intake-toolbar, .intake-toolbar > div { flex-wrap: wrap; gap: 12px; }
   .content, .workspace, .follow-up-section { min-width: 0; }
 }
+
+@media (max-width: 520px) { .source-bar { flex-wrap: wrap; } .source-summary { min-width: 0; max-width: 100%; overflow-wrap: anywhere; } }
