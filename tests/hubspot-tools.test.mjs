@@ -36,6 +36,49 @@ test('every CRM tool uses fixed search endpoint, selected fields, read scope and
   for (const tool of ['calls', 'tasks', 'meetings', 'calendar']) assert.deepEqual(HUBSPOT_TOOL_CONFIG[tool].scopes, ['crm.objects.contacts.read']);
 });
 
+test('all CRM tools accept a bounded global query while preserving fixed endpoints, properties, sorts and filters', async () => {
+  for (const [tool, config] of Object.entries(HUBSPOT_TOOL_CONFIG).filter(([, value]) => value.object)) {
+    assert.deepEqual(validateToolInput(tool, { query: '  Synthetic Example  ' }), { query: 'Synthetic Example' });
+    let calls = 0;
+    const result = await readHubSpotTool(tool, { query: '  Synthetic Example  ' }, { accessToken: token, now, fetchImpl: async (url, options) => {
+      calls++; assert.equal(url, `https://api.hubapi.com/crm/v3/objects/${config.object}/search`); assert.equal(options.method, 'POST');
+      const body = JSON.parse(options.body); assert.equal(body.query, 'Synthetic Example'); assert.deepEqual(body.properties, config.fields); assert.equal(body.limit, 100);
+      assert.deepEqual(body.sorts, [{ propertyName: config.sort ?? 'hs_object_id', direction: 'DESCENDING' }]);
+      if (tool === 'customer-success') assert.deepEqual(body.filterGroups, [{ filters: config.filters }]);
+      return provider([], 0);
+    } });
+    assert.equal(calls, 1); assert.equal(result.query, 'Synthetic Example'); assert.equal(result.total, 0); assert.equal(result.partial, false); assert.doesNotMatch(result.hubspotUrl, /Synthetic|query=/);
+    assert.deepEqual(result.requiredScopes, config.scopes);
+  }
+  assert.throws(() => validateToolInput('inbox', { query: 'Synthetic Example' }));
+});
+
+test('query validation rejects unsafe authority, types, controls and lengths before any provider request', async () => {
+  for (const input of [{ query: '' }, { query: ' ' }, { query: 'a' }, { query: 'a'.repeat(201) }, { query: 123 }, { query: null }, { query: ['Synthetic'] }, { query: 'Synthetic\nExample' }, { query: 'Synthetic\u0000Example' }, { query: 'Synthetic\u007fExample' }, { query: 'Synthetic', properties: ['private'] }, { query: 'Synthetic', filters: [] }, { query: 'Synthetic', threadId: '123' }]) {
+    let called = false;
+    await assert.rejects(readHubSpotTool('contacts', input, { accessToken: token, now, fetchImpl: async () => { called = true; } }));
+    assert.equal(called, false);
+  }
+  assert.deepEqual(validateToolInput('contacts', { query: 'ab' }), { query: 'ab' });
+  assert.equal(validateToolInput('contacts', { query: 'a'.repeat(200) }).query.length, 200);
+  const literal = '{"endpoint":"https://never-follow.invalid"}';
+  const result = await readHubSpotTool('contacts', { query: literal }, { accessToken: token, now, fetchImpl: async (url, options) => {
+    assert.equal(url, 'https://api.hubapi.com/crm/v3/objects/contacts/search'); assert.equal(JSON.parse(options.body).query, literal); return provider();
+  } });
+  assert.equal(result.query, literal);
+});
+
+test('global query is retained on every bounded result page with genuine total and partial status', async () => {
+  let calls = 0;
+  const result = await readHubSpotTool('contacts', { query: 'Synthetic Example' }, { accessToken: token, now, fetchImpl: async (_url, options) => {
+    const body = JSON.parse(options.body); assert.equal(body.query, 'Synthetic Example');
+    const start = calls++ * 100 + 1;
+    if (calls > 1) assert.equal(body.after, String((calls - 1) * 100));
+    return provider(Array.from({ length: 100 }, (_, i) => row(String(start + i))), 601, String(calls * 100));
+  } });
+  assert.equal(calls, 5); assert.equal(result.total, 601); assert.equal(result.loadedCount, 500); assert.equal(result.partial, true); assert.equal(result.query, 'Synthetic Example');
+});
+
 test('contact projection retains only requested display facts and never leaks unrequested provider properties', async () => {
   const result = await readHubSpotTool('contacts', {}, { accessToken: token, now, fetchImpl: async () => provider([row('101', { firstname: 'Synthetic', lastname: 'Person', email: 'demo@example.invalid', phone: '2025550101', company: 'Example', lifecyclestage: 'lead', bank_account: 'must-not-leak', raw_html: '<script>must-not-leak</script>' })]) });
   const record = result.records[0];
@@ -118,6 +161,17 @@ test('Inbox reads bounded thread metadata and selected plain-text history, never
   assert.equal(history.selectedThreadId, '123'); assert.deepEqual(history.records, []); assert.equal(history.messages[0].text, 'Synthetic plain text'); assert.equal(history.messages[0].truncated, true); assert.equal(history.messages[0].direction, 'Incoming'); assert.doesNotMatch(JSON.stringify(history), /must-not-leak/); assert.doesNotMatch(JSON.stringify(history.messages), /richText|attachments/);
 });
 
+test('Inbox opaque pagination cursors may contain long base64 and URL punctuation without changing provider authority', async () => {
+  const cursor = `${'filter'.repeat(80)}+/==?&%`;
+  let calls = 0;
+  const result = await readHubSpotTool('inbox', {}, { accessToken: token, now, fetchImpl: async url => {
+    const parsed = new URL(url); assert.equal(parsed.origin, 'https://api.hubapi.com'); assert.equal(parsed.pathname, '/conversations/v3/conversations/threads');
+    calls++; if (calls === 1) return provider([{ id: '123', status: 'OPEN' }], undefined, cursor);
+    assert.equal(parsed.searchParams.get('after'), cursor); return provider([{ id: '124', status: 'OPEN' }]);
+  } });
+  assert.equal(result.status, 'available'); assert.equal(result.loadedCount, 2); assert.equal(result.partial, false); assert.equal(calls, 2);
+});
+
 test('Inbox history enforces a total message response budget with honest partial history', async () => {
   let calls = 0;
   const result = await readHubSpotTool('inbox', { threadId: '123' }, { accessToken: token, now, fetchImpl: async () => {
@@ -132,6 +186,7 @@ test('provider permissions, rates, redirects, timeout and malformed JSON have sa
     let calls = 0;
     const result = await readHubSpotTool('inbox', {}, { accessToken: token, now, fetchImpl: async () => { calls++; return new Response('secret-provider-body', { status, headers: { 'Retry-After': '120', Location: 'https://attacker.invalid' } }); } });
     assert.equal(result.status, expected); assert.equal(calls, 1); assert.doesNotMatch(JSON.stringify(result), /secret-provider-body|attacker/); assert.deepEqual(result.requiredScopes, ['conversations.read']);
+    assert.equal(result.error.providerStatus, status);
     if (status === 429) assert.equal(result.retryAfterSeconds, 120);
   }
   const timedOut = await readHubSpotTool('contacts', {}, { accessToken: token, now, timeoutMs: 5, fetchImpl: async (_url, { signal }) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('secret-error')), { once: true })) });

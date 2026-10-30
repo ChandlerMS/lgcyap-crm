@@ -4,7 +4,9 @@
 
 ## Requests
 
-Send `Content-Type: application/json` with `{}`. The only optional input is `{ "threadId": "123" }` for `inbox`, selected deliberately to load that thread's plain-text messages. Inputs cannot choose provider URLs, properties, filters, scopes, pagination or object types. Thread IDs must be positive decimal strings of at most 20 digits. Bodies are limited to 1,024 bytes.
+Send `Content-Type: application/json` with `{}` to load the current bounded dataset. CRM pages (every tool except `inbox`) also accept `{ "query": "Example" }` for a real HubSpot search across that configured object's default searchable properties. Queries are trimmed, limited to 2–200 characters and reject ASCII control characters. Query text travels only in the private POST body, never a URL. Customer Success keeps its current-customer filter when searching. The response echoes the normalized `query`, or `null` for the default dataset. This search can find records outside the initial 500-row dataset; results retain the same 500-row cap and honest upstream total/partial status.
+
+For `inbox`, `{ "threadId": "123" }` deliberately loads that thread's plain-text messages. Thread IDs must be positive decimal strings of at most 20 digits. Query and thread selection cannot be combined. Inputs cannot choose provider URLs, returned properties, structured filters, scopes, pagination or object types. Bodies are limited to 1,024 bytes.
 
 | Tool | Fixed upstream source | Minimum read scope | Visible meaning |
 | --- | --- | --- | --- |
@@ -32,6 +34,7 @@ Successful HTTP reads return:
   "status": "available",
   "source": "HubSpot",
   "readOnly": true,
+  "query": null,
   "records": [],
   "total": 0,
   "loadedCount": 0,
@@ -52,7 +55,7 @@ Inbox thread selection additionally returns `selectedThreadId`, `records: []`, a
 - Maximum five pages of 100 records or messages. Record IDs are deduplicated.
 - CRM `total` is the upstream search total; `loadedCount` is the displayed dataset size. `partial` is true when the bounded read is incomplete or disagrees with the reported total.
 - Inbox does not expose a global total. Its `total` remains `null` if pagination or message budget limits truncate history; otherwise it equals the exhausted, deduplicated count.
-- Local search/date filters cover loaded records only. A partial read must not be presented as all CRM records or complete calendar availability.
+- Local search/date filters cover loaded records only. The separate submitted HubSpot query searches the configured object's default searchable properties across HubSpot; its returned matches are still capped. A partial read must not be presented as all CRM records or complete calendar availability.
 - Each upstream response is limited to 2 MiB, with a 30-second total read budget including optional metadata. Individual provider reads time out after at most eight seconds. Additional CRM search pages are paced to reduce search rate bursts. Requests are never retried automatically.
 - Optional ticket pipeline labels are read once from `/crm/v3/pipelines/tickets` when needed, bounded by response size and stage counts, with a five-minute successful cache and 30-second failure cache. Unresolved stage IDs are explicitly shown as IDs.
 - Owner labels use the same credential-scoped short server cache as recruiting data. Neither cache is persisted or shared across credentials.
