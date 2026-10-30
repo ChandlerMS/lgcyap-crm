@@ -5,7 +5,7 @@ import { readSheet } from 'read-excel-file/node';
 import { inspectRecruitWorkbook, parseRecruitCsv, parseRecruitImport, recruitRowsFromCells, recruitRowIssues } from '../app/recruit-intake-import.mjs';
 
 const header = ['First Name', 'Last Name', 'Phone Number', 'Email'];
-const draft = { firstName: 'Avery', lastName: 'Example', phone: '(407) 555-0123', email: 'avery@example.invalid' };
+const draft = { firstName: 'Avery', lastName: 'Example', phone: '(407) 555-0123', email: 'avery@example.invalid', recruitingPath: '' };
 function file(name, bytes) { return new File([bytes], name); }
 const readWorkbook = (input, sheet, options) => readSheet(Buffer.from(input), sheet, options);
 function workbook(extra = {}, formula = '') {
@@ -44,10 +44,20 @@ test('import maps explicit headers, preserves editable invalid rows and rejects 
 });
 
 test('duplicate detection uses canonical phone and lowercased email and marks both rows', () => {
-  const rows = [{ ...draft }, { ...draft, firstName: 'Another', phone: '+14075550123', email: 'AVERY@EXAMPLE.INVALID' }];
+  const rows = [{ ...draft, recruitingPath: 'genpop' }, { ...draft, firstName: 'Another', phone: '+14075550123', email: 'AVERY@EXAMPLE.INVALID', recruitingPath: 'mass_recruiting' }];
   const errors = recruitRowIssues(rows);
   assert.ok(errors[0].phone && errors[1].phone && errors[0].email && errors[1].email);
-  assert.deepEqual(recruitRowIssues([{ firstName: '', lastName: '', phone: '', email: '' }]), [{}]);
+  assert.deepEqual(recruitRowIssues([{ firstName: '', lastName: '', phone: '', email: '', recruitingPath: 'genpop' }]), [{}]);
+});
+
+test('imports normalize optional recruiting paths while leaving missing choices for manual review', () => {
+  const rows = recruitRowsFromCells([...[[...header, 'Recruiting Path']], ['Avery', 'Example', '4075550123', '', 'GenPop'], ['Another', 'Example', '4075550188', '', 'Mass Recruiting'], ['Missing', 'Path', '4075550199', '', '']]);
+  assert.deepEqual(rows.map(row => row.recruitingPath), ['genpop', 'mass_recruiting', '']);
+  assert.equal(recruitRowIssues(rows)[0].recruitingPath, undefined);
+  assert.equal(recruitRowIssues(rows)[1].recruitingPath, undefined);
+  assert.ok(recruitRowIssues(rows)[2].recruitingPath);
+  assert.equal(recruitRowsFromCells([[...header, 'Path'], ['', '', '', '', 'GenPop'], ['Avery', 'Example', '4075550123', '', 'genpop']]).length, 1);
+  assert.throws(() => recruitRowsFromCells([[...header, 'Path', 'Recruiting Path'], ['Avery', 'Example', '4075550123', '', 'GenPop', 'GenPop']]), /more than one Recruiting Path/);
 });
 
 test('an actual synthetic XLSX workbook reads its first worksheet and retains numeric phone digits', async () => {

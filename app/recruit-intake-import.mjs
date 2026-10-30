@@ -8,12 +8,14 @@ const MAX_EXPANDED_BYTES = 10 * 1024 * 1024;
 const MAX_WORKSHEET_ROW = MAX_INTAKE_ROWS + 1;
 const MAX_WORKSHEET_COLUMN = 128;
 const RESERVED_PATHS = new Set(['__proto__', 'constructor', 'prototype']);
-const FIELDS = ['firstName', 'lastName', 'phone', 'email'];
+const CONTACT_FIELDS = ['firstName', 'lastName', 'phone', 'email'];
+const FIELDS = [...CONTACT_FIELDS, 'recruitingPath'];
 const HEADERS = new Map([
   ['firstname', 'firstName'], ['first', 'firstName'], ['givenname', 'firstName'],
   ['lastname', 'lastName'], ['last', 'lastName'], ['surname', 'lastName'], ['familyname', 'lastName'],
   ['phone', 'phone'], ['phonenumber', 'phone'], ['mobile', 'phone'], ['mobilephone', 'phone'], ['mobilephonenumber', 'phone'],
   ['email', 'email'], ['emailaddress', 'email'],
+  ['recruitingpath', 'recruitingPath'], ['path', 'recruitingPath'],
 ]);
 
 export class RecruitImportError extends Error {
@@ -21,8 +23,13 @@ export class RecruitImportError extends Error {
 }
 const invalidWorkbook = () => new RecruitImportError('This Excel file is unsupported or damaged. Save a plain .xlsx workbook and try again.');
 
-export function emptyRecruitDraft() { return { firstName: '', lastName: '', phone: '', email: '' }; }
-export function recruitDraftIsBlank(row) { return FIELDS.every(field => !String(row?.[field] ?? '').trim()); }
+export function emptyRecruitDraft() { return { firstName: '', lastName: '', phone: '', email: '', recruitingPath: '' }; }
+export function recruitDraftIsBlank(row) { return CONTACT_FIELDS.every(field => !String(row?.[field] ?? '').trim()); }
+export function normalizeImportedRecruitingPath(value) {
+  const text = String(value ?? '').trim();
+  const key = text.toLowerCase().replace(/[\s_-]+/g, '');
+  return key === 'genpop' ? 'genpop' : key === 'massrecruiting' ? 'mass_recruiting' : text;
+}
 
 /** RFC 4180-style quoted fields; values are data, never formulas or instructions. */
 export function parseRecruitCsv(text) {
@@ -74,7 +81,7 @@ export function recruitRowsFromCells(cells) {
   header.forEach((value, index) => {
     const key = HEADERS.get(cellText(value).toLowerCase().replace(/[^a-z0-9]/g, ''));
     if (!key) return;
-    if (columns.has(key)) throw new RecruitImportError(`The file has more than one ${key === 'firstName' ? 'First Name' : key === 'lastName' ? 'Last Name' : key === 'phone' ? 'Phone Number' : 'Email'} column. Keep one and try again.`);
+    if (columns.has(key)) throw new RecruitImportError(`The file has more than one ${key === 'firstName' ? 'First Name' : key === 'lastName' ? 'Last Name' : key === 'phone' ? 'Phone Number' : key === 'recruitingPath' ? 'Recruiting Path' : 'Email'} column. Keep one and try again.`);
     columns.set(key, index);
   });
   if (['firstName', 'lastName', 'phone'].some(key => !columns.has(key))) throw new RecruitImportError('Include First Name, Last Name and Phone Number headers. Email is optional.');
@@ -83,6 +90,7 @@ export function recruitRowsFromCells(cells) {
     const cellsInRow = cells[index];
     if (!Array.isArray(cellsInRow)) throw new RecruitImportError('A row in the file could not be read.');
     const draft = Object.fromEntries(FIELDS.map(key => [key, columns.has(key) ? cellText(cellsInRow[columns.get(key)]) : '']));
+    draft.recruitingPath = normalizeImportedRecruitingPath(draft.recruitingPath);
     if (recruitDraftIsBlank(draft)) continue;
     drafts.push(draft);
     if (drafts.length > MAX_INTAKE_ROWS) throw new RecruitImportError('Import at most 500 recruits at a time. Split this file into smaller files.');

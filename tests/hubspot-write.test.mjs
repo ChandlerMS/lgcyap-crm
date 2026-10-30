@@ -51,7 +51,7 @@ function sequence(responses) {
 }
 
 test('validation allows exactly the editable properties and preserves independent name/title edits', () => {
-  assert.equal(EDITABLE_PROPERTIES.length, 12);
+  assert.equal(EDITABLE_PROPERTIES.length, 14);
   assert.deepEqual(input({ recruit_name: '  Revised Name  ' }).changes, { recruit_name: 'Revised Name' });
   assert.deepEqual(input({ orientation_registered: '', orientation_date: '' }).changes, { orientation_date: '', orientation_registered: '' });
   for (const changes of [{ hs_pipeline: '0' }, { email: 'forbidden' }, { hs_pipeline_stage: '4' }, { orientation_date: '2026-02-31' }, { orientation_office: 'MIAMI' }, { orientation_registered: true }, { recruit_name: '' }, { subject: 'Bad\nTitle' }, {}]) {
@@ -64,10 +64,104 @@ test('validation allows exactly the editable properties and preserves independen
 });
 
 test('stage edits accept the migrated pipeline and reject retired or foreign stages', () => {
-  const ids = ['1473225367', '1473225368', '1416243212', '1416243213', '1416243216', '1416243214', '1416243217', '1416243218'];
+  const ids = ['1473318768', '1473318769', '1473225368', '1473318770', '1473318771', '1473318772', '1416243216', '1416243217', '1416243218', '1473318773'];
   assert.deepEqual(EDIT_FIELDS.find(field => field.property === 'hs_pipeline_stage').options.map(option => option.value), ids);
   for (const stageId of ids) assert.equal(input({ hs_pipeline_stage: stageId }).changes.hs_pipeline_stage, stageId);
-  for (const stageId of ['1416243215', '1416243219', '4', 'Recruits']) assert.throws(() => input({ hs_pipeline_stage: stageId }));
+  for (const stageId of ['1473225367', '1416243212', '1416243213', '1416243214', '1416243215', '1416243219', '4', 'Recruits']) assert.throws(() => input({ hs_pipeline_stage: stageId }));
+});
+
+const flowInput = (before, changes) => validateWriteInput('101', {
+  ...rawInput(changes),
+  expectedValues: Object.fromEntries(Object.keys(changes).map(property => [property, String(before.properties[property] ?? '')])),
+});
+
+test('fresh stage validation follows the chosen recruiting path rather than the board display order', async () => {
+  const cases = [
+    ['genpop', '1473318768', '1473318769', true],
+    ['mass_recruiting', '1473318768', '1473318769', false],
+    ['mass_recruiting', '1473225368', '1473318768', true],
+    ['genpop', '1473225368', '1473318768', false],
+  ];
+  for (const [recruiting_path, current, next, allowed] of cases) {
+    const before = record({ hs_pipeline_stage: current, recruiting_path });
+    const changes = { hs_pipeline_stage: next };
+    const provider = sequence(allowed ? [json(before), json({ id: '101' }), json(record({ ...before.properties, ...changes, hs_lastmodifieddate: afterTime }))] : [json(before)]);
+    const opts = options(provider.fetchImpl);
+    if (allowed) assert.equal((await saveRecruit(flowInput(before, changes), opts)).status, 'saved');
+    else await assert.rejects(saveRecruit(flowInput(before, changes), opts), { code: 'INVALID_FLOW_TRANSITION' });
+    assert.equal(provider.calls.filter(call => call.init.method === 'PATCH').length, allowed ? 1 : 0);
+  }
+});
+
+test('Offer branch moves require an explicit matching route and cannot infer one from intake status', async () => {
+  for (const [stageId, licensing_branch] of [['1416243216', 'licensed'], ['1473318771', 'not_licensed']]) {
+    const before = record({ hs_pipeline_stage: '1473318770', recruiting_path: 'genpop', intake_license_status: 'already_licensed' });
+    const changes = { hs_pipeline_stage: stageId, licensing_branch };
+    const provider = sequence([json(before), json({ id: '101' }), json(record({ ...before.properties, ...changes, hs_lastmodifieddate: afterTime }))]);
+    assert.equal((await saveRecruit(flowInput(before, changes), options(provider.fetchImpl))).status, 'saved');
+  }
+  const before = record({ hs_pipeline_stage: '1473318770', recruiting_path: 'genpop', intake_license_status: 'already_licensed' });
+  const provider = sequence([json(before)]);
+  await assert.rejects(saveRecruit(flowInput(before, { hs_pipeline_stage: '1416243216' }), options(provider.fetchImpl)), { code: 'LICENSE_ROUTE_REQUIRED' });
+  assert.equal(provider.calls.length, 1);
+});
+
+test('Not Licensed must pass Licensed w/ NPN, without inventing an NPN format or verification gate', async () => {
+  const before = record({ hs_pipeline_stage: '1473318771', recruiting_path: 'mass_recruiting', licensing_branch: 'not_licensed' });
+  const denied = sequence([json(before)]);
+  await assert.rejects(saveRecruit(flowInput(before, { hs_pipeline_stage: '1416243216' }), options(denied.fetchImpl)), { code: 'INVALID_FLOW_TRANSITION' });
+  assert.equal(denied.calls.length, 1);
+  const changes = { hs_pipeline_stage: '1473318772' };
+  const allowed = sequence([json(before), json({ id: '101' }), json(record({ ...before.properties, ...changes, hs_lastmodifieddate: afterTime }))]);
+  assert.equal((await saveRecruit(flowInput(before, changes), options(allowed.fetchImpl))).status, 'saved');
+});
+
+test('branch-aware backward moves and shared terminal reversals do not invent legacy metadata', async () => {
+  const before = record({ hs_pipeline_stage: '1416243216' });
+  const denied = sequence([json(before)]);
+  await assert.rejects(saveRecruit(flowInput(before, { hs_pipeline_stage: '1473318770' }), options(denied.fetchImpl)), { code: 'LICENSE_ROUTE_REQUIRED' });
+  for (const [next, licensing_branch] of [['1473318770', 'licensed'], ['1473318772', 'not_licensed']]) {
+    const changes = { hs_pipeline_stage: next, licensing_branch };
+    const provider = sequence([json(before), json({ id: '101' }), json(record({ ...before.properties, ...changes, hs_lastmodifieddate: afterTime }))]);
+    assert.equal((await saveRecruit(flowInput(before, changes), options(provider.fetchImpl))).status, 'saved');
+  }
+  const completed = record({ hs_pipeline_stage: '1416243218' });
+  const changes = { hs_pipeline_stage: '1416243217' };
+  const shared = sequence([json(completed), json({ id: '101' }), json(record({ ...completed.properties, ...changes, hs_lastmodifieddate: afterTime }))]);
+  const result = await saveRecruit(flowInput(completed, changes), options(shared.fetchImpl));
+  assert.equal(result.recruit.recruitingPath, ''); assert.equal(result.recruit.licenseRoute, '');
+});
+
+test('path assignment is deliberate and existing paths cannot be changed even without a stage edit', async () => {
+  const legacy = record({ hs_pipeline_stage: '1416243218' });
+  const changes = { recruiting_path: 'mass_recruiting' };
+  const allowed = sequence([json(legacy), json({ id: '101' }), json(record({ ...legacy.properties, ...changes, hs_lastmodifieddate: afterTime }))]);
+  assert.equal((await saveRecruit(flowInput(legacy, changes), options(allowed.fetchImpl))).status, 'saved');
+  const assigned = record({ hs_pipeline_stage: '1473318768', recruiting_path: 'genpop' });
+  for (const recruiting_path of ['mass_recruiting', '']) {
+    const denied = sequence([json(assigned)]);
+    await assert.rejects(saveRecruit(flowInput(assigned, { recruiting_path }), options(denied.fetchImpl)), { code: 'RECRUITING_PATH_CHANGE_NOT_ALLOWED' });
+    assert.equal(denied.calls.length, 1);
+  }
+});
+
+test('license route re-choice is allowed at Offer and denied in downstream stages', async () => {
+  const changes = { licensing_branch: 'not_licensed' };
+  for (const [hs_pipeline_stage, allowed] of [['1473318770', true], ['1416243217', false]]) {
+    const before = record({ hs_pipeline_stage, recruiting_path: 'genpop', licensing_branch: 'licensed' });
+    const provider = sequence(allowed ? [json(before), json({ id: '101' }), json(record({ ...before.properties, ...changes, hs_lastmodifieddate: afterTime }))] : [json(before)]);
+    if (allowed) assert.equal((await saveRecruit(flowInput(before, changes), options(provider.fetchImpl))).status, 'saved');
+    else await assert.rejects(saveRecruit(flowInput(before, changes), options(provider.fetchImpl)), { code: 'LICENSE_ROUTE_CHANGE_NOT_ALLOWED' });
+    assert.equal(provider.calls.filter(call => call.init.method === 'PATCH').length, allowed ? 1 : 0);
+  }
+});
+
+test('stage decisions use fresh server routing metadata even when the caller reviewed only the stage', async () => {
+  const reviewed = record({ hs_pipeline_stage: '1473318768', recruiting_path: 'genpop' });
+  const fresh = record({ hs_pipeline_stage: '1473318768', recruiting_path: 'mass_recruiting' });
+  const provider = sequence([json(fresh)]);
+  await assert.rejects(saveRecruit(flowInput(reviewed, { hs_pipeline_stage: '1473318769' }), options(provider.fetchImpl)), { code: 'INVALID_FLOW_TRANSITION' });
+  assert.equal(provider.calls.length, 1);
 });
 
 test('only the explicitly allowed trusted identity with enabled writes and a database can edit', () => {

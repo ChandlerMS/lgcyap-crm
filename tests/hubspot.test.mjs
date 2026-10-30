@@ -25,7 +25,8 @@ const signedIn = () => ({ userId: 'synthetic-user' });
 test('normalization keeps only allowlisted recruiting facts with truthful nullable flags', () => {
   const recruit = normalizeRecruit(fixture('101', { email: 'do-not-include@example.invalid', bank_account: 'do-not-include', appointments_created: '', unknown_field: 'do-not-include' }));
   assert.equal(recruit.office, 'Orlando');
-  assert.equal(recruit.stage, 'Orientation');
+  assert.equal(recruit.stage, 'Orientation (legacy)');
+  assert.equal(recruit.stageKey, '');
   assert.equal(recruit.intake, 'Unlicensed');
   assert.deepEqual(recruit.flags, { orientationRegistered: true, orientationCheckedIn: false, licensingStarted: null, contractingRegistered: null, appointmentsCreated: null });
   assert.equal(recruit.orientationDate, '2026-10-31');
@@ -44,6 +45,25 @@ test('missing facts are not fabricated and invalid calendar dates remain null', 
   assert.equal(recruit.enteredStageAt, null);
 });
 
+test('routing metadata uses only explicit canonical choices and never infers from intake or recruit type', () => {
+  const selected = normalizeRecruit(fixture('103', { recruiting_path: 'mass_recruiting', licensing_branch: 'not_licensed', intake_license_status: 'already_licensed' }));
+  assert.equal(selected.recruitingPath, 'mass_recruiting');
+  assert.equal(selected.licenseRoute, 'not_licensed');
+  for (const values of [{}, { recruiting_path: 'Mass Recruiting', licensing_branch: 'licensed_with_npn' }, { recruiting_path: 'constructor', licensing_branch: '__proto__' }]) {
+    const legacy = normalizeRecruit(fixture('103', { intake_license_status: 'already_licensed', recruit_type: 'in-house_recruit', ...values }));
+    assert.equal(legacy.recruitingPath, ''); assert.equal(legacy.licenseRoute, '');
+  }
+});
+
+test('only bound stage IDs normalize to semantic flow keys', () => {
+  assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1473318768' })).stageKey, 'hiring-event');
+  assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1473318769' })).stageKey, 'application');
+  assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1416243218' })).stageKey, 'completed');
+  assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1473318773' })).stageKey, 'withdrawn');
+  assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1416243212' })).stageKey, '');
+  assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: 'unknown' })).stageKey, '');
+});
+
 test('editable values preserve separate name and ticket title and canonical blank, flag and date values', () => {
   const recruit = normalizeRecruit(fixture('104', { recruit_name: 'Example Person', subject: 'An independent ticket title', orientation_date: '1793404800000' }));
   assert.equal(recruit.editValues.recruit_name, 'Example Person');
@@ -52,7 +72,7 @@ test('editable values preserve separate name and ticket title and canonical blan
   assert.equal(recruit.editValues.orientation_checked_in, 'false');
   assert.equal(recruit.editValues.licensing_started, '');
   assert.equal(recruit.editValues.orientation_date, '2026-10-31');
-  assert.equal(Object.keys(recruit.editValues).length, 12);
+  assert.equal(Object.keys(recruit.editValues).length, 14);
 });
 
 test('a signed-in account outside the server allowlist cannot read recruiting data', async () => {

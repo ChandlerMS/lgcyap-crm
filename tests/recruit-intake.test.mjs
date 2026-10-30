@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHmac } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { createRecruitIntakePostgresLedger, createRecruitIntake, checkRecruitIntakeCapability, handleRecruitIntakeRequest } from '../lib/recruit-intake.mjs';
 import { normalizeRecruitIntakeRow, validateRecruitIntakeInput } from '../lib/recruit-intake-input.mjs';
@@ -8,7 +9,7 @@ import { normalizeRecruitIntakeRow, validateRecruitIntakeInput } from '../lib/re
 const migration = await readFile(new URL('../migrations/0003_recruit_intake.sql', import.meta.url), 'utf8');
 const one = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', two = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', three = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const user = { userId: 'synthetic-user', email: 'editor@example.invalid' };
-const input = { requestId: one, firstName: 'Synthetic', lastName: 'Recruit', phone: '(407) 555-0123', email: 'example@example.invalid' };
+const input = { requestId: one, firstName: 'Synthetic', lastName: 'Recruit', phone: '(407) 555-0123', email: 'example@example.invalid', recruitingPath: 'genpop' };
 const secret = 'synthetic-only-recruit-intake-hmac-key-0123456789';
 const origin = 'https://recruiting.example.invalid';
 const clock = () => 1700000000000;
@@ -16,7 +17,7 @@ const scopes = ['crm.objects.contacts.read', 'crm.objects.contacts.write', 'crm.
 const access = { hubId: 50894788, appId: 59264745, scopes };
 const labels = { results: [{ category: 'HUBSPOT_DEFINED', label: null, typeId: 16 }, { category: 'USER_DEFINED', label: 'Synthetic custom label', typeId: 999 }] };
 const contact = (id = '123', overrides = {}) => ({ id, properties: { firstname: 'Synthetic', lastname: 'Recruit', phone: '+14075550123', mobilephone: null, email: input.email, ...overrides } });
-const ticket = (id = '456', overrides = {}) => ({ id, properties: { subject: 'Recruiting: Synthetic Recruit', recruit_name: 'Synthetic Recruit', hs_pipeline: '924992938', hs_pipeline_stage: '1473225367', ...overrides }, associations: { contacts: { results: [{ id: '123', type: 'ticket_to_contact' }] } } });
+const ticket = (id = '456', overrides = {}) => ({ id, properties: { subject: 'Recruiting: Synthetic Recruit', recruit_name: 'Synthetic Recruit', hs_pipeline: '924992938', hs_pipeline_stage: '1473318768', recruiting_path: 'genpop', ...overrides }, associations: { contacts: { results: [{ id: '123', type: 'ticket_to_contact' }] } } });
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 async function fixture() { const db = new PGlite(); await db.exec(migration); return { db, ledger: createRecruitIntakePostgresLedger(db) }; }
 function options(ledger, fetchImpl) { return { userId: user.userId, accessToken: 'synthetic-token', hmacSecret: secret, ledger, fetchImpl, now: clock }; }
@@ -33,11 +34,46 @@ function provider(replies) {
 }
 function newReplies() { return [json(access), json(labels), json({ total: 0, results: [] }), json({ total: 0, results: [] }), json({ id: '123' }, 201), json(contact()), json({ results: [] }), json({ id: '456' }, 201), json(ticket())]; }
 
-test('intake input normalizes only names, phone and optional email; rejects unsupported authority', () => {
-  assert.deepEqual(normalizeRecruitIntakeRow({ firstName: ' Synthetic ', lastName: 'Recruit', phone: '407.555.0123', email: ' EXAMPLE@Example.Invalid ' }), { firstName: 'Synthetic', lastName: 'Recruit', phone: '+14075550123', email: 'example@example.invalid' });
+test('intake input normalizes contact fields and an explicitly selected recruiting path; rejects unsupported authority', () => {
+  assert.deepEqual(normalizeRecruitIntakeRow({ firstName: ' Synthetic ', lastName: 'Recruit', phone: '407.555.0123', email: ' EXAMPLE@Example.Invalid ', recruitingPath: 'genpop' }), { firstName: 'Synthetic', lastName: 'Recruit', phone: '+14075550123', email: 'example@example.invalid', recruitingPath: 'genpop' });
   assert.equal(validateRecruitIntakeInput({ ...input, email: '' }).email, '');
   for (const change of [{ email: 'bad\nmail@example.invalid' }, { firstName: '' }, { firstName: 'a'.repeat(101) }, { phone: '4075550123 ext2' }, { email: true }, { hs_pipeline_stage: '4' }, { licensed: true }, { requestId: 'bad' }]) assert.throws(() => validateRecruitIntakeInput({ ...input, ...change }), { code: 'INVALID_INTAKE' });
   assert.throws(() => normalizeRecruitIntakeRow({ ...input }), { code: 'INVALID_INTAKE' });
+});
+
+test('every intake row requires a canonical path and never guesses a default', () => {
+  for (const recruitingPath of [undefined, null, '', 'GenPop', 'genpop ', 'mass recruiting', 'in-house_recruit', true]) {
+    assert.throws(() => validateRecruitIntakeInput({ ...input, recruitingPath }), error =>
+      error.code === 'INVALID_INTAKE' && error.fieldErrors.recruitingPath === 'Choose GenPop or Mass Recruiting for this recruit.');
+  }
+  assert.equal(validateRecruitIntakeInput({ ...input, recruitingPath: 'mass_recruiting' }).recruitingPath, 'mass_recruiting');
+});
+
+test('payload HMAC binds the selected path in v2 while identity indexes and key fingerprints stay v1', async () => {
+  const claims = [];
+  const ledger = { claim: async claim => { claims.push(claim); return { acquired: false, status: 'pending' }; }, finish: async () => true };
+  for (const recruitingPath of ['genpop', 'mass_recruiting']) {
+    await assert.rejects(createRecruitIntake({ ...input, recruitingPath }, options(ledger, () => { throw Error('No provider calls expected'); })), { code: 'INTAKE_IN_PROGRESS' });
+  }
+  assert.notEqual(claims[0].hash, claims[1].hash);
+  assert.equal(claims[0].hash, createHmac('sha256', secret).update('legacy-recruit-intake:payload:v2\0').update(JSON.stringify(['Synthetic', 'Recruit', '+14075550123', 'example@example.invalid', 'genpop'])).digest('hex'));
+  for (const claim of claims) {
+    assert.equal(claim.phoneHash, createHmac('sha256', secret).update('legacy-recruit-intake:phone:v1\0').update('+14075550123').digest('hex'));
+    assert.equal(claim.emailHash, createHmac('sha256', secret).update('legacy-recruit-intake:email:v1\0').update('example@example.invalid').digest('hex'));
+    assert.equal(claim.keyHash, createHmac('sha256', secret).update('legacy-recruit-intake:key:v1\0').update('singleton').digest('hex'));
+  }
+});
+
+test('legacy payloads require reconciliation and cannot acquire a path through replay or resume', async () => {
+  for (const status of ['created', 'needs_ticket']) {
+    for (const source of ['request', 'identity']) {
+      const oldHash = createHmac('sha256', secret).update('legacy-recruit-intake:payload:v1\0').update(JSON.stringify(['Synthetic', 'Recruit', '+14075550123', 'example@example.invalid'])).digest('hex');
+      let providerCalls = 0, finishes = 0;
+      const ledger = { claim: async () => ({ acquired: false, source, hash: oldHash, status, contactId: '123', ticketId: status === 'created' ? '456' : null }), finish: async () => { finishes++; return true; } };
+      await assert.rejects(createRecruitIntake(input, options(ledger, () => { providerCalls++; throw Error('No writes expected'); })), { code: 'INTAKE_RECONCILIATION_REQUIRED', status: 409 });
+      assert.equal(providerCalls, 0); assert.equal(finishes, 0);
+    }
+  }
 });
 
 test('intake migration repeats and atomically claims both phone and email without storing PII', async () => {
@@ -75,9 +111,39 @@ test('one submission confirms Contact, creates Ticket with discovered associatio
     const duplicate = await createRecruitIntake({ ...input, requestId: two }, { ...options(ledger, fetchImpl), userId: 'other-user' });
     assert.equal(duplicate.status, 'already_exists'); assert.equal(calls.length, 9);
     await assert.rejects(createRecruitIntake({ ...input, lastName: 'Changed' }, options(ledger, fetchImpl)), { code: 'REQUEST_ID_REUSED' });
+    await assert.rejects(createRecruitIntake({ ...input, recruitingPath: 'mass_recruiting' }, options(ledger, fetchImpl)), { code: 'REQUEST_ID_REUSED' });
+    assert.equal(calls.length, 9);
     const metadata = JSON.stringify((await db.query('SELECT * FROM recruit_intake_requests')).rows);
     for (const privateValue of ['Synthetic', '4075550123', 'example@example.invalid', 'synthetic-token']) assert.equal(metadata.includes(privateValue), false);
   } finally { await db.close(); }
+});
+
+test('each explicitly chosen intake path starts in its bound entry stage without inventing a license branch', async () => {
+  for (const [recruitingPath, stageId] of [['genpop', '1473318768'], ['mass_recruiting', '1473318769']]) {
+    const { db, ledger } = await fixture();
+    try {
+      const replies = newReplies(); replies[8] = json(ticket('456', { hs_pipeline_stage: stageId, recruiting_path: recruitingPath }));
+      const { fetchImpl, calls } = provider(replies);
+      await createRecruitIntake({ ...input, recruitingPath }, options(ledger, fetchImpl));
+      const properties = JSON.parse(calls.find(call => new URL(call.url).pathname === '/crm/v3/objects/tickets').body).properties;
+      assert.equal(properties.hs_pipeline_stage, stageId);
+      assert.equal(properties.recruiting_path, recruitingPath);
+      assert.equal(Object.hasOwn(properties, 'licensing_branch'), false);
+      assert.equal(Object.hasOwn(properties, 'intake_license_status'), false);
+    } finally { await db.close(); }
+  }
+});
+
+test('intake cannot report success if fresh Ticket confirmation lacks the selected path or entry stage', async () => {
+  for (const mismatch of [{ recruiting_path: '' }, { recruiting_path: 'mass_recruiting' }, { hs_pipeline_stage: '1473318769' }]) {
+    const { db, ledger } = await fixture();
+    try {
+      const replies = newReplies(); replies[8] = json(ticket('456', mismatch));
+      const { fetchImpl, calls } = provider(replies);
+      await assert.rejects(createRecruitIntake(input, options(ledger, fetchImpl)), { code: 'INTAKE_UNCERTAIN' });
+      assert.equal(calls.filter(call => new URL(call.url).pathname === '/crm/v3/objects/tickets').length, 1);
+    } finally { await db.close(); }
+  }
 });
 
 test('exact existing Contact and recruiting association return already_exists without overwrites or stage moves', async () => {
@@ -91,6 +157,19 @@ test('exact existing Contact and recruiting association return already_exists wi
     assert.equal(result.status, 'already_exists');
     assert.equal(calls.filter(call => new URL(call.url).pathname === '/crm/v3/objects/contacts' || new URL(call.url).pathname === '/crm/v3/objects/tickets').length, 0);
     assert.equal((await db.query('SELECT status FROM recruit_intake_requests')).rows[0].status, 'already_exists');
+  } finally { await db.close(); }
+});
+
+test('an existing recruiting Ticket keeps its different assigned path and legacy stage untouched', async () => {
+  const { db, ledger } = await fixture();
+  try {
+    const existing = ticket('456', { hs_pipeline_stage: '1473225367', recruiting_path: 'mass_recruiting', licensing_branch: 'not_licensed' });
+    const { fetchImpl, calls } = provider([
+      json(access), json(labels), json({ total: 1, results: [contact()] }), json({ total: 1, results: [contact()] }), json(contact()),
+      json({ results: [{ toObjectId: 456 }] }), json({ status: 'COMPLETE', results: [existing] }), json(existing),
+    ]);
+    assert.equal((await createRecruitIntake(input, options(ledger, fetchImpl))).status, 'already_exists');
+    assert.equal(calls.some(call => ['PATCH', 'PUT'].includes(call.method) || ['/crm/v3/objects/contacts', '/crm/v3/objects/tickets'].includes(new URL(call.url).pathname)), false);
   } finally { await db.close(); }
 });
 

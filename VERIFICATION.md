@@ -1,4 +1,4 @@
-# Vercel migration verification — 2026-10-29
+# Vercel migration verification — 2026-10-30
 
 Status: user-approved editing cutover complete. Vercel Production remains the active
 editor at the canonical hostname below; Preview and the Sites backup remain
@@ -7,7 +7,56 @@ No real CRM field value was changed during verification. Individual coworker
 logins have not been exercised. The expanded-account deployment is READY and
 the hosted checks below passed.
 
-## Add Recruits and full-pipeline Follow-up
+## Branching recruiting workflow and Today pipeline — 2026-10-30
+
+- User selected one shared Recruiting pipeline with a Path field and one path
+  choice per manual/imported recruit. The approved schema adds `recruiting_path`
+  (genpop / mass_recruiting) and `licensing_branch` (licensed / not_licensed).
+  Native HubSpot identity was verified as chandler@lgcyap.com in portal 50894788;
+  the MCP identity section remains unavailable and its field-creation tool failed
+  with Unknown tool. Both optional/no-default fields were therefore created in
+  native settings and independently verified with get_properties.
+- Six new stage IDs were created without reusing an old stage's meaning:
+  Hiring Event 1473318768, Application 1473318769, Offer 1473318770,
+  Licensing Reminders 1473318771, Licensed w/ NPN 1473318772, Withdrawn 1473318773.
+  Phone Interview 1473225368, Contracting 1416243216, Training 1416243217 and
+  Completed 1416243218 retain their IDs. Completed and Withdrawn are terminal.
+  The user approved removal of the four unused Recruits/Orientation/Licensing/
+  Transfers definitions only after a fresh zero-record check. Release checkpoint
+  records final retirement and live-deployment evidence.
+- Sidebar queues follow GenPop Hiring Event → Application → Phone Interview and
+  Mass Recruiting Application → Phone Interview → Hiring Event, merging at Offer.
+  An explicit license-route choice leads directly to Contracting, or through
+  Licensing Reminders → Licensed w/ NPN → Contracting. Training branches to
+  Completed/Withdrawn. Backward controls follow actual edges, including outcomes.
+  Multi-choice junctions never select an arbitrary successor or predecessor.
+- Today begins with the horizontal branching pipeline, all ten stage totals
+  including zeros, path-specific early cards and shared downstream counts once.
+  Unclassified legacy records remain visible. Current counts are distinguished
+  from lifetime-throughput counts and partial reads are labeled.
+- New intake requires its path on each row. Optional Path/Recruiting Path import
+  headers fill it; missing choices remain editable in the preview. New tickets
+  store the source and start at its entry stage; existing matches preserve all
+  path/stage values. Payload HMAC v2 binds source, while phone/email/key v1
+  domains remain unchanged. Legacy claims require reconciliation; no claim reset,
+  inferred source, automatic retry or new schema migration was introduced.
+- The actual write route validates the merged proposed routing state against a
+  fresh scoped HubSpot read before PATCH, covering UI and direct API requests.
+  Assigned paths cannot silently change, branch changes return to Offer, and
+  unrelated legacy edits preserve unrecorded metadata. Licensed w/ NPN records
+  staff confirmation; no invented NPN format or external verification gate exists.
+- Grok's bounded design review completed and was independently checked. Separate
+  backend/frontend reviews found no release blocker. All 144 tests, TypeScript,
+  lint, production build and HTTP smoke passed. Actual pipeline-component SSR
+  covered 22 synthetic rows / 21 unique recruits, all ten totals, both sources at
+  the same early stages, shared counts once, unknown metadata and zero/partial
+  states. Provider-write tests are synthetic; no real CRM test records were made.
+- HubSpot's board retains one shared order. The stored fields represent branch
+  choices; the app enforces the graph. Native privileged edits, other APIs and
+  workflows can bypass app validation. Global no-skip/no-backward rules would
+  conflict with the two entry orders and were not enabled.
+
+## Previous Add Recruits and full-pipeline Follow-up release
 
 - Add Recruits is between Today and Recruits, with a cosmetic gold divider below
   it. The entry grid has ten rows and four requested fields: First Name, Last

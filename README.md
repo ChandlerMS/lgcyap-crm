@@ -18,7 +18,7 @@ Vercel builds from the repository root with Node.js 24, `npm ci`, and
 `npm run build`. Production credentials stay in Vercel environment settings;
 ordinary Git builds do not apply database migrations.
 
-The black-and-gold recruiting interface, logo, read filters, twelve editable
+The black-and-gold recruiting interface, logo, read filters, fourteen editable
 properties, and explicit Edit → Review → Save flow are retained. Hosting changes:
 
 - Standard Next.js 16 on Node.js 24, with Vercel Node route handlers.
@@ -31,46 +31,54 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
   RECRUITING_WRITES_ENABLED=true. Local and Preview environments cannot save.
   Do not manually spoof platform variables.
 
-## Recruiting stage pages
+## Branching recruiting stages
 
-Today and Add Recruits sit above a cosmetic sidebar divider. Below it are
-Recruits, Phone Interview, Orientation, Licensing,
-Contracting, Transfers, Training and Completed. Each page shows only its exact
-HubSpot Recruiting ticket stage; Recruits is the initial stage, not an all-stage
-list. Office and license filters, stage-scoped search, communication shortcuts,
-and the reviewed editor remain available. The All stages filter is removed.
+One shared HubSpot Recruiting ticket pipeline (`924992938`) stores the canonical
+stages. The sidebar groups the two entry paths and the two licensing routes:
 
-HubSpot pipeline `924992938` has the same eight stages in this order. Existing
-stage IDs were retained where possible; the two new IDs and labels are in the
-shared `lib/recruiting-config.mjs`, also used by editor options and server validation.
-Completed remains closed. All five existing tickets retained their stage ID.
+- GenPop: Hiring Event → Application → Phone Interview → Offer.
+- Mass Recruiting: Application → Phone Interview → Hiring Event → Offer.
+- Offer / Licensed: Contracting.
+- Offer / Not Licensed: Licensing Reminders → Licensed w/ NPN → Contracting.
+- Contracting → Training → Completed or Withdrawn.
 
-The Stage column is now an editable dropdown. Up moves a recruit back one stage;
-Down advances one stage. These deliberate controls save immediately through the
-existing guarded sparse-update API, with no optimistic move or automatic retry.
-The first/last arrows, read-only accounts, missing snapshots and busy controls are
-disabled. Failures require a fresh read before another deliberate attempt.
+`recruiting_path` explicitly stores `genpop` or `mass_recruiting` per recruit;
+`licensing_branch` stores `licensed` or `not_licensed` when staff choose the route
+at Offer. Historical intake status and recruit type are preserved separately.
+Existing blank paths/branches are never inferred. Assigned paths cannot silently
+switch, and branch changes return to Offer. Licensed w/ NPN is a staff-confirmed
+stage, not an automatic license verification or an invented NPN-format gate.
 
-Click the recruit's name for one profile containing details and inline
-Edit / Review changes / Save to HubSpot. Search and header Refresh are disabled
-while this local draft is open; a missing-record reload preserves that draft.
-There is no separate Review action column or modal editor in the workspace.
+Stage arrows, dropdowns and profile edits offer connected forward/backward moves.
+Offer, Training and ambiguous Contracting-back moves require an explicit choice.
+The server validates the merged state against a fresh HubSpot record before its
+sparse PATCH. Ordinary field edits and common backward moves remain available on
+legacy records without guessing their history. Each stage has one CRM ID;
+sidebar path queues filter the stored path/branch instead of duplicating stages.
+
+HubSpot's native board still has one shared display order. Its stored path and
+branch fields represent the routing; the custom app enforces the conditional
+transition graph. Native privileged edits, other integrations and workflows can
+bypass that app validation. Do not enable global no-skip/no-backward rules across
+the two conflicting entry orders. See [HubSpot pipeline rules](https://knowledge.hubspot.com/object-settings/set-up-pipeline-rules).
 
 ## Add Recruits
 
-`#add-recruits` starts with ten rows for First Name, Last Name, Phone Number and
-optional Email, plus a gold Submit button. Bulk import previews CSV and Excel
-`.xlsx` files in the browser (first worksheet only); limits are 2 MB and 500 rows.
-The page validates all populated rows before sending them sequentially. The new
-`POST /api/recruit-intake` creates or safely reuses a Contact, then creates and
-confirms an associated Recruiting ticket in Recruits (`1473225367`). Existing
-recruiting tickets keep their stage; matching records are not overwritten.
+`#add-recruits` starts with ten rows for First Name, Last Name, Phone Number,
+optional Email, and a required per-recruit GenPop/Mass Recruiting path. Bulk import
+previews CSV and Excel `.xlsx` files (first worksheet only), up to 2 MB/500 rows.
+A `Path` or `Recruiting Path` column can provide each choice; missing choices stay
+in the preview for staff to select. Path-only blank rows do not create records.
 
-This uses Production-only `RECRUITING_INTAKE_ENABLED=true` plus the existing write,
-identity and scope checks. Migration `0003_recruit_intake.sql` holds only request
-metadata, keyed identity/payload hashes and CRM IDs. Partial and uncertain results
-are shown per row; potentially sent creates are never automatically retried.
-See [RECRUIT-INTAKE-API.md](RECRUIT-INTAKE-API.md) for matching and resume behavior.
+The gold Submit validates populated rows before sending them sequentially.
+`POST /api/recruit-intake` creates or safely reuses a Contact, then creates and
+confirms an associated ticket in Hiring Event for GenPop or Application for Mass
+Recruiting. The new ticket stores the chosen path. Existing recruiting tickets
+retain their stage and path; matching records are not overwritten. Production
+flags, exact Google authorization, four scoped provider grants and durable
+identity claims remain required. The payload HMAC v2 includes path; phone/email
+and singleton-key digests remain v1. Pre-path claims require reconciliation and
+cannot silently gain a path on replay or resume. See [RECRUIT-INTAKE-API.md](RECRUIT-INTAKE-API.md).
 
 ## Retired contact-only entry
 
@@ -115,8 +123,13 @@ See [COMMUNICATIONS-API.md](COMMUNICATIONS-API.md) for the navigation contract.
 
 ## Today and follow-up
 
-Today includes every loaded recruiting pipeline record, including Completed,
-under Follow-up, with the same List/Board selector, filters and row controls as
+Today begins with a black-and-gold branching pipeline and current totals for all
+ten stages, including zeros. Shared stages count each recruit once; entry cards
+show each path's subset, and unclassified legacy records remain visible. Counts
+cover loaded records and are marked when the data is partial.
+
+Today includes every loaded recruiting pipeline record, including Completed and
+Withdrawn, under Follow-up, with the same List/Board selector, filters and row controls as
 stage pages. Search on Today covers the pipeline. Upcoming orientations appear
 below this full-width collection. Follow-up has no separate menu item; existing
 `#follow-up` links normalize to `#today`. Suggested reviews keep the existing
