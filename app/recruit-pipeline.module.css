@@ -8,12 +8,12 @@
 .partial { margin: -10px 0 16px; color: var(--muted, #b5b1a7); font-size: 12px; }
 .slider { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #887237 #11110f; padding: 5px 2px 22px; outline-offset: 5px; cursor: grab; touch-action: pan-y; scroll-snap-type: x proximity; }
 .dragging { cursor: grabbing; user-select: none; scroll-snap-type: none; }
-.flow { display: flex; align-items: flex-start; width: max-content; min-width: 100%; }
+.flow { display: flex; align-items: center; justify-content: center; width: max-content; min-width: 100%; margin-inline: auto; }
 .entryPaths, .licensePaths { display: flex; flex-direction: column; gap: 30px; }
 .entryPath h3, .licensingRoute h3 { margin: 0 0 12px; color: var(--gold, #d4af37); font-size: 14px; font-weight: 500; letter-spacing: -.01em; }
 .licensingRoute h3 a { color: inherit; text-decoration: none; }
 .stageRow { display: flex; align-items: flex-start; }
-.singleStage { padding-top: 100px; }
+.singleStage { padding-top: 0; }
 .stage { position: relative; flex: 0 0 302px; width: 302px; min-height: 102px; padding: 15px; border: 0; border-radius: 7px; background: #11110e; color: var(--text, #f4f1e9); scroll-snap-align: start; scroll-margin-inline: 2px; cursor: pointer; }
 .occupied { background: #15140f; }
 .stageHeading { margin: 0; }
@@ -51,7 +51,7 @@
 .cardFooter :global(.communication-button) { width: 31px; height: 31px; border: 0; background: transparent; }
 .cardFooter :global(.communication-tooltip) { left: auto; right: 0; transform: none; }
 .arrow { display: flex; align-items: center; justify-content: center; flex: 0 0 29px; min-width: 29px; padding-top: 39px; color: #a68e45; font-size: 18px; }
-.merge, .split { position: relative; flex: 0 0 43px; width: 43px; height: 190px; margin-top: 43px; }
+.merge, .split { position: relative; flex: 0 0 43px; width: 43px; height: 190px; margin-top: 0; }
 .merge::before { content: ""; position: absolute; left: 7px; top: 0; bottom: 0; width: 20px; border: solid #73612d; border-width: 1px 1px 1px 0; }
 .merge::after { content: "→"; position: absolute; left: 23px; top: calc(50% - 13px); color: #a68e45; font-size: 18px; }
 .split { transform: rotate(180deg); }

@@ -63,10 +63,26 @@ test('All message history includes independent active and archived chains', asyn
   assert.deepEqual(phases, ['false', 'true']); assert.equal(archived.complete, true); assert.equal(archived.phase, 'archived'); assert.equal(archived.archive, 'all'); assert.equal(archived.selectedThreadId, '123');
 });
 
-test('empty repeated cursor never claims completeness and loaded pages remain usable', async () => {
+test('observed empty unchanged-position bookmark exhausts the current active or archived phase', async () => {
   const first = await readInboxPage({ archive: 'active' }, { ...context, fetchImpl: async () => json([thread('101')], 'next%3D') });
   const second = await readInboxPage({ archive: 'active', continuation: first.continuation }, { ...context, fetchImpl: async () => json([], 'next%3D') });
-  assert.equal(second.complete, false); assert.equal(second.partial, true); assert.equal(second.continuation, null); assert.equal(second.paginationWarning.code, 'CURSOR_REPEATED');
+  assert.equal(second.complete, true); assert.equal(second.partial, false); assert.equal(second.continuation, null); assert.equal(second.paginationWarning, undefined);
+  for (const input of [{ archive: 'all' }, { archive: 'all', threadId: '123' }]) {
+    const first = await readInboxPage(input, { ...context, fetchImpl: async () => json(input.threadId ? [{ id: 'message-a', text: 'Synthetic' }] : [thread('101')], 'active%3D') });
+    const activeEnd = await readInboxPage({ ...input, continuation: first.continuation }, { ...context, fetchImpl: async url => { assert.equal(new URL(url).searchParams.get('after'), 'active='); assert.equal(new URL(url).searchParams.get('archived'), 'false'); return json([], 'active%3D'); } });
+    assert.equal(activeEnd.complete, false); assert.ok(activeEnd.continuation); assert.equal(activeEnd.paginationWarning, undefined);
+    const archived = await readInboxPage({ ...input, continuation: activeEnd.continuation }, { ...context, fetchImpl: async url => { assert.equal(new URL(url).searchParams.get('archived'), 'true'); assert.equal(new URL(url).searchParams.get('after'), null); return json(input.threadId ? [{ id: 'message-b', text: 'Synthetic archive' }] : [thread('102')], 'archived%3D'); } });
+    const archivedEnd = await readInboxPage({ ...input, continuation: archived.continuation }, { ...context, fetchImpl: async () => json([], 'archived%3D') });
+    assert.equal(archivedEnd.complete, true); assert.equal(archivedEnd.partial, false); assert.equal(archivedEnd.continuation, null);
+  }
+});
+
+test('nonempty repeated pages block and empty pages with a new cursor keep reading', async () => {
+  const first = await readInboxPage({ archive: 'active' }, { ...context, fetchImpl: async () => json([thread('101')], 'next%3D') });
+  const repeated = await readInboxPage({ archive: 'active', continuation: first.continuation }, { ...context, fetchImpl: async () => json([thread('101')], 'next%3D') });
+  assert.equal(repeated.complete, false); assert.equal(repeated.paginationWarning.code, 'CURSOR_REPEATED');
+  const advance = await readInboxPage({ archive: 'active', continuation: first.continuation }, { ...context, fetchImpl: async () => json([], 'new%3D') });
+  assert.equal(advance.complete, false); assert.ok(advance.continuation); assert.equal(advance.paginationWarning, undefined);
 });
 
 test('rate or transport failures retain a signed same-page resume and never retry automatically', async () => {
