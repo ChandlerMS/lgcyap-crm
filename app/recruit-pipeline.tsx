@@ -26,7 +26,7 @@ type Props = {
 type Key = "hiring-event" | "application" | "phone-interview" | "offer" | "licensing-reminders" | "licensed-npn" | "contracting" | "training" | "completed" | "withdrawn";
 type Target = { stageId: string; recruitingPath?: string; licenseRoute?: string; allowDrop?: boolean };
 type Item = { recruit: PipelineRecruit; key: string };
-type CardOptions = { path?: string; route?: string; records?: PipelineRecruit[]; view?: string; subtitle?: string; allowDrop?: boolean };
+type CardOptions = { titleLabel?: string; nodeKey?: string; path?: string; route?: string; records?: PipelineRecruit[]; view?: string; subtitle?: string; allowDrop?: boolean };
 const LABELS: Record<Key, string> = {
   "hiring-event": "Hiring Event", application: "Application", "phone-interview": "Phone Interview", offer: "Offer",
   "licensing-reminders": "Licensing Reminders", "licensed-npn": "Licensed w/ NPN", contracting: "Contracting", training: "Training", completed: "Completed", withdrawn: "Withdrawn",
@@ -86,9 +86,9 @@ function PipelineConnectors() {
         const edges = [
           ["genpop-hiring-event", "genpop-application"], ["genpop-application", "genpop-phone-interview"], ["genpop-phone-interview", "offer"],
           ["mass-application", "mass-phone-interview"], ["mass-phone-interview", "mass-hiring-event"], ["mass-hiring-event", "offer"],
-          ["offer", "licensed-contracting"], ["offer", "licensing-reminders"], ["licensing-reminders", "licensed-npn"],
+          ["offer", "licensed-branch"], ["licensed-branch", "licensed-contracting"], ["offer", "licensing-reminders"], ["licensing-reminders", "licensed-npn"],
           ["licensed-npn", "unlicensed-contracting"], ["licensed-contracting", "training"], ["unlicensed-contracting", "training"],
-          ["training", "completed"], ["training", "withdrawn"],
+          ["training", "completed"],
         ];
         setPaths(edges.flatMap(([from, to]) => {
           const a = nodes.get(from), b = nodes.get(to);
@@ -258,15 +258,15 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   const card = (key: Key, options: CardOptions = {}) => {
     const { path, route } = options;
     const recruits = options.records ?? inStage(key).filter(record => (!path || record.recruitingPath === path) && (!route || record.licenseRoute === route));
-    const title = label(key), view = options.view ?? (path ? `${path === "genpop" ? "genpop" : "mass"}-${key}` : key);
+    const title = options.titleLabel ?? label(key), view = options.view ?? (path ? `${path === "genpop" ? "genpop" : "mass"}-${key}` : key);
     const target: Target = { stageId: stageId(key), allowDrop: options.allowDrop, ...(path ? { recruitingPath: path } : {}), ...(route ? { licenseRoute: route } : {}) };
-    const targetKey = `${view}-${options.records ? "unassigned" : "stage"}`;
+    const targetKey = options.nodeKey ?? `${view}-${options.records ? "unassigned" : "stage"}`;
     const open = expanded[targetKey] === true, contentId = `${pipelineId}-${targetKey}`;
     const sort = sorts[targetKey] ?? { key: "firstName", direction: "asc" as const };
     const sorted = sortPipelineRecruits(recruits, sort.key, sort.direction) as PipelineRecruit[];
     const validDrop = dragged && editable(dragged) && pipelineDropChoice(dragged, target);
     return <section key={targetKey} className={`${styles.stage} ${open ? styles.expanded : ""} ${Object.keys(LABELS).indexOf(key) % 2 ? styles.warm : styles.cool} ${recruits.length ? styles.occupied : ""} ${validDrop ? styles.dropAvailable : ""} ${dropHover === targetKey && validDrop ? styles.dropHover : ""}`} aria-label={`${title}${options.subtitle ? `, ${options.subtitle}` : path ? `, ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}: ${recruits.length} recruits`}
-      onClick={event => toggleFromBlock(event, targetKey)} data-stage-view={options.records && options.allowDrop === false ? undefined : view} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
+      onClick={event => toggleFromBlock(event, targetKey)} data-stage-view={options.nodeKey ?? (options.records && options.allowDrop === false ? undefined : view)} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
       {validDrop && <span className={styles.dropHint}>Drop here</span>}
       <header className={styles.stageHeading}><h4><span className={styles.stageToggle}><a className={styles.stageTitle} href={`#${view}`} onClick={event => navigate(event, view)}>{title}{options.subtitle && <small>{options.subtitle}</small>}</a><span className={styles.count}>{recruits.length}</span><button type="button" className={styles.expandButton} aria-label={`${open ? "Collapse" : "Expand"} ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded(value => ({ ...value, [targetKey]: !value[targetKey] }))}><span aria-hidden="true">{open ? "⌃" : "⌄"}</span></button></span></h4></header>
       <div id={contentId} className={styles.stageContent}>{open && <>
@@ -285,12 +285,12 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     </div>,
     <div className={styles.singleStage} key="offer">{card("offer")}</div>,
     <div className={styles.licensePaths} key="licensing">
-      <section className={styles.licensingRoute} aria-label="Licensed"><h3><a href="#licensed-contracting" draggable={false} onClick={event => navigate(event, "licensed-contracting")}>Licensed</a></h3><div className={styles.directRoute}><span>Offer</span>{arrow}{card("contracting", { route: "licensed", view: "licensed-contracting", subtitle: "Licensed" })}</div></section>
+      <section className={styles.licensingRoute} aria-label="Licensed"><h3><a href="#licensed-contracting" draggable={false} onClick={event => navigate(event, "licensed-contracting")}>Licensed</a></h3><div className={styles.stageRow}>{card("contracting", { route: "licensed", view: "licensed-contracting", nodeKey: "licensed-branch", titleLabel: "Licensed", subtitle: "Branch to Contracting", allowDrop: false })}{arrow}{card("contracting", { route: "licensed", view: "licensed-contracting", subtitle: "Licensed" })}</div></section>
       <section className={styles.licensingRoute} aria-label="Not Licensed"><h3><a href="#licensing-reminders" draggable={false} onClick={event => navigate(event, "licensing-reminders")}>Not Licensed</a></h3><div className={styles.stageRow}>{card("licensing-reminders", { route: "not_licensed", records: inStage("licensing-reminders") })}{arrow}{card("licensed-npn", { route: "not_licensed", records: inStage("licensed-npn") })}{arrow}{card("contracting", { route: "not_licensed", view: "unlicensed-contracting", subtitle: "Not Licensed" })}</div></section>
       {unassignedContracting.length > 0 && card("contracting", { records: unassignedContracting, subtitle: "Branch not recorded", allowDrop: false })}
     </div>,
     <div className={styles.singleStage} key="training">{card("training")}</div>,
-    <div className={styles.outcomes} key="outcomes">{card("completed")}{card("withdrawn")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <RecruitStack>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</RecruitStack>}</div></section>}</div>,
+    <div className={styles.outcomes} key="outcomes">{card("completed")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <RecruitStack>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</RecruitStack>}</div></section>}</div>,
   ];
   return <section className={styles.pipeline} aria-labelledby="recruit-pipeline-title">
     <div className={styles.heading}><h2 id="recruit-pipeline-title">Recruiting pipeline</h2><div className={styles.carouselControls} aria-label="Pipeline slider controls"><button type="button" data-carousel-scroll="-1" aria-label="Previous pipeline stages" title={draggedId ? "Hold the recruit here to scroll left" : "Slide left"} onClick={() => shiftCarousel(-1)}>←</button><button type="button" data-carousel-scroll="1" aria-label="Next pipeline stages" title={draggedId ? "Hold the recruit here to scroll right" : "Slide right"} onClick={() => shiftCarousel(1)}>→</button></div></div>

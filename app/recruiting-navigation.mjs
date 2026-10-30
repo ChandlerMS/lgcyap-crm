@@ -25,7 +25,7 @@ export const WORKSPACE_NAV_GROUPS = Object.freeze([
     page('unlicensed-contracting', 'contracting', { licenseRoute: 'not_licensed' }),
   ] },
   { id: 'training', label: 'Both branches meet', branch: false, items: [page('training', 'training')] },
-  { id: 'outcomes', label: 'Outcomes', branch: false, items: [page('completed', 'completed'), page('withdrawn', 'withdrawn')] },
+  { id: 'outcomes', label: 'Outcomes', branch: false, items: [page('completed', 'completed')] },
 ].map(group => Object.freeze({ ...group, items: Object.freeze(group.items) })));
 export const WORKSPACE_NAV = Object.freeze([
   Object.freeze({ id: 'today', label: 'Today', icon: 'home' }),
