@@ -2,6 +2,8 @@
 
 import { useId } from "react";
 import { communicationAction } from "./recruit-communication-links.mjs";
+import { communicationPhone } from "./ringcentral-bridge.mjs";
+import { useRingCentral } from "./ringcentral-panel";
 
 function CommunicationIcon({ action }: { action: "call" | "text" | "email" }) {
   return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{action === "call"
@@ -10,17 +12,23 @@ function CommunicationIcon({ action }: { action: "call" | "text" | "email" }) {
     : <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>}</svg>;
 }
 
-export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, isDemo = false }: { recruitName: string; recruitId: string; hubspotUrl: string; isDemo?: boolean }) {
+export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, phone, isDemo = false }: { recruitName: string; recruitId: string; hubspotUrl: string; phone?: string | null; isDemo?: boolean }) {
   const id = useId();
-  return <div className="recruit-communications" role="group" aria-label={`HubSpot tools for ${recruitName}`}>
+  const ringCentral = useRingCentral();
+  const number = communicationPhone(phone);
+  return <div className="recruit-communications" role="group" aria-label={`Contact tools for ${recruitName}`}>
     {(["call", "text", "email"] as const).map(action => {
       const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
-      const label = action === "call" ? `Open HubSpot calling tools for ${recruitName}` : action === "text" ? `Texting not connected for ${recruitName}` : `Email ${recruitName} in HubSpot`;
+      const ringAction = action !== "email";
+      const available = !isDemo && ringCentral.configured && Boolean(number);
+      const reason = !ringAction ? result.reason : isDemo ? "Demo contacts cannot call or text." : !ringCentral.configured ? "RingCentral is not configured." : !number ? "Add a valid phone number to use RingCentral." : action === "call" ? "Prepare a call in RingCentral. You choose when to dial." : "Open a text conversation in RingCentral. You choose when to send.";
+      const label = action === "email" ? `Email ${recruitName} in HubSpot` : `${action === "call" ? "Call" : "Text"} ${recruitName} with RingCentral`;
       const descriptionId = `${id}-${action}`;
       return <span className="communication-item" key={action}>
-        {result.href ? <a className="communication-button" href={result.href} target="_blank" rel="noopener noreferrer" aria-label={label} aria-describedby={descriptionId} title={result.reason}><CommunicationIcon action={action} /></a>
-          : <button className="communication-button" type="button" aria-disabled="true" aria-label={label} aria-describedby={descriptionId} title={result.reason}><CommunicationIcon action={action} /></button>}
-        <span className="communication-tooltip" role="tooltip" id={descriptionId}>{result.reason}</span>
+        {ringAction ? <button className="communication-button" type="button" disabled={!available} aria-label={label} aria-describedby={descriptionId} title={reason} onClick={() => { if (available && number) ringCentral.open({ action, phone: number, name: recruitName }); }}><CommunicationIcon action={action} /></button>
+          : result.href ? <a className="communication-button" href={result.href} target="_blank" rel="noopener noreferrer" aria-label={label} aria-describedby={descriptionId} title={reason}><CommunicationIcon action={action} /></a>
+          : <button className="communication-button" type="button" disabled aria-label={label} aria-describedby={descriptionId} title={reason}><CommunicationIcon action={action} /></button>}
+        <span className="communication-tooltip" role="tooltip" id={descriptionId}>{reason}</span>
       </span>;
     })}
   </div>;

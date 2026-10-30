@@ -5,5 +5,5 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   await requireAppUser("/");
-  return <RecruitingWorkspace />;
+  return <RecruitingWorkspace ringCentralClientId={process.env.RINGCENTRAL_CLIENT_ID ?? ""} />;
 }

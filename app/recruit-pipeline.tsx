@@ -242,7 +242,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     const name = [recruit.firstName, recruit.lastName].filter(Boolean).join(" ") || recruit.name || `Recruit ${recruit.id}`;
     return <article key={recruit.id} data-recruit-card className={`${styles.recruit} ${draggedId === recruit.id ? styles.draggingRecruit : ""}`} aria-label={name}>
       {details && editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a connected stage`} title="Drag to a highlighted stage. Hold at an edge or over the arrows to scroll, or use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Use the lifecycle stage menu on this card to move a recruit with your keyboard.")}>⠿</button>}
-      <div className={styles.recruitSummary}><a href={recordHref(recruit)} draggable={false}>{name}</a><RecruitCommunications recruitName={name} recruitId={recruit.id} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
+      <div className={styles.recruitSummary}><a href={recordHref(recruit)} draggable={false}>{name}</a><RecruitCommunications recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
       {details && <dl className={styles.recruitDetails}>
         <div><dt>First name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.firstName || "Not recorded"}</a></dd></div>
         <div><dt>Last name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.lastName || "Not recorded"}</a></dd></div>
