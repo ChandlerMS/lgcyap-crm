@@ -34,6 +34,22 @@ the hosted checks below passed.
   Text behavior. TypeScript, lint, production build and HTTP smoke passed.
   New provider-facing stage mutations were tested with mocks; real recruiting
   records were not moved merely to exercise the controls.
+- Production deployment `dpl_2tw2pagWPBCLV3VujWPDTcotxGvD` is READY from runtime
+  source `e89976eb17648de9673557c023396a8b315001f0`. Hosted DOM and visual checks
+  confirm five Call / unavailable Text / Email groups in the rightmost table
+  cells, five eight-option Stage dropdowns, Up/back buttons and disabled Down
+  buttons for Completed. There are no Review links in that list.
+- Name navigation opened the correct profile. Its embedded editor has no modal
+  dialog; search and header Refresh were disabled. One local Office draft was
+  reviewed on that same profile, then explicitly discarded without pressing Save.
+  Search and Refresh were restored, and the profile still showed Miami/Completed.
+  Returning to Completed showed all five records still at stage `1416243218`.
+- Fresh hosted anonymous read/edit/contact-create requests returned 401 with
+  private/no-store headers. Root still redirects to sign-in, the old project
+  hostname redirects to the canonical hostname, and Preview/generated URLs remain
+  Vercel-protected. No credentials or environment settings changed in this release.
+- Screenshots: `../../output/recruit-stage-actions-right-tools-live.png` and
+  `../../output/recruit-profile-inline-editor-live.png`.
 
 ## Earlier contact entry rollout
 
