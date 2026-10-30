@@ -335,6 +335,7 @@ export default function RecruitingWorkspace() {
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={activeView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
   const navigation = <>
     {navigationLink(NAV[0])}
+    {WORKSPACE_EXTRA_PAGES.map(navigationLink)}
     <details className="nav-pipeline">
       <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
       <div className="pipeline-pages">
@@ -343,7 +344,7 @@ export default function RecruitingWorkspace() {
     </details>
     {navigationLink(NAV[1])}
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
-    {[...HUBSPOT_TOOLS, ...WORKSPACE_EXTRA_PAGES].map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
+    {HUBSPOT_TOOLS.map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
 
   function savedRecruit(recruit: Recruit, replayed: boolean) {
@@ -415,9 +416,9 @@ export default function RecruitingWorkspace() {
     }
     if (route.view === "today") return <>
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} />
-      <RecruitFollowUp records={all} now={timestamp} partial={data.partial} />
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
+      <RecruitFollowUp records={all} now={timestamp} partial={data.partial} />
     </>;
     return <>{heading(stagePage?.label ?? "Recruits", `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;
   }

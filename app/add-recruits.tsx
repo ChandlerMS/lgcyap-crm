@@ -31,7 +31,7 @@ function stateLabel(row: Entry) {
 }
 
 export default function AddRecruits({ canCreate, checkingAccess, onCreated, onUnauthorized, onBusyChange, onDraftChange }: Props) {
-  const [rows, setRows] = useState<Entry[]>(() => Array.from({ length: PAGE_SIZE }, (_, id) => ({ id, values: emptyRecruitDraft() as Draft, status: "draft" })));
+  const [rows, setRows] = useState<Entry[]>(() => Array.from({ length: 1 }, (_, id) => ({ id, values: emptyRecruitDraft() as Draft, status: "draft" })));
   const [page, setPage] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -40,7 +40,7 @@ export default function AddRecruits({ canCreate, checkingAccess, onCreated, onUn
   const [error, setError] = useState<string | null>(null);
   const [retryAt, setRetryAt] = useState(0);
   const rowsRef = useRef(rows);
-  const nextIdRef = useRef(PAGE_SIZE);
+  const nextIdRef = useRef(1);
   const busyRef = useRef(false);
   const requestRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -59,7 +59,7 @@ export default function AddRecruits({ canCreate, checkingAccess, onCreated, onUn
   function replaceRows(next: Entry[]) { rowsRef.current = next; setRows(next); }
   function updateRow(id: number, patch: Partial<Entry>) { replaceRows(rowsRef.current.map(row => row.id === id ? { ...row, ...patch } : row)); }
   function blankEntry(): Entry { return { id: nextIdRef.current++, values: emptyRecruitDraft() as Draft, status: "draft" }; }
-  function padRows(next: Entry[]) { while (next.length < PAGE_SIZE) next.push(blankEntry()); return next; }
+  function padRows(next: Entry[]) { while (next.length < 1) next.push(blankEntry()); return next; }
 
   useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
   useEffect(() => { onDraftChange?.(dirty); return () => onDraftChange?.(false); }, [dirty, onDraftChange]);
@@ -82,6 +82,11 @@ export default function AddRecruits({ canCreate, checkingAccess, onCreated, onUn
     const row = rowsRef.current.find(item => item.id === id);
     if (!row || row.locked) return;
     updateRow(id, { values: { ...row.values, [key]: value }, status: "draft", message: undefined, requestId: undefined, sentValues: undefined, canResume: false, retryAt: undefined });
+    if (rowsRef.current.at(-1)?.id === id && rowsRef.current.length < MAX_INTAKE_ROWS) {
+      try { normalizeRecruitIntakeRow(rowsRef.current.at(-1)!.values); }
+      catch { return; }
+      replaceRows([...rowsRef.current, blankEntry()]);
+    }
   }
   function removeRow(id: number) {
     const row = rowsRef.current.find(item => item.id === id);
@@ -96,7 +101,7 @@ export default function AddRecruits({ canCreate, checkingAccess, onCreated, onUn
   function addRows() {
     if (busyRef.current || rowsRef.current.length >= MAX_INTAKE_ROWS) return;
     const next = [...rowsRef.current];
-    const count = Math.min(PAGE_SIZE, MAX_INTAKE_ROWS - next.length);
+    const count = Math.min(1, MAX_INTAKE_ROWS - next.length);
     for (let index = 0; index < count; index++) next.push(blankEntry());
     replaceRows(next); setPage(Math.ceil(next.length / PAGE_SIZE));
   }
@@ -188,11 +193,11 @@ export default function AddRecruits({ canCreate, checkingAccess, onCreated, onUn
         const rowIndex = (currentPage - 1) * PAGE_SIZE + index;
         const rowErrors = showIssues ? issues[rowIndex] : {};
         const allowRemove = !row.locked || ["created", "already_exists"].includes(row.status) || row.checkedHubSpot;
-        return <tr key={row.id} className={`intake-row intake-row-${row.status}`}><th scope="row">{rowIndex + 1}</th>{FIELDS.map(field => <td key={field.key}><input type={field.type} inputMode={field.type === "tel" ? "tel" : undefined} name={`${field.key}-${row.id}`} aria-label={`${field.label}, row ${rowIndex + 1}`} aria-invalid={Boolean(rowErrors[field.key]) || undefined} aria-describedby={rowErrors[field.key] ? `intake-${row.id}-${field.key}-error` : undefined} maxLength={field.max} value={row.values[field.key]} disabled={busy || row.locked} onChange={event => changeField(row.id, field.key, event.target.value)} />{rowErrors[field.key] && <span className="contact-field-error" id={`intake-${row.id}-${field.key}-error`}>{rowErrors[field.key]}</span>}</td>)}<td className="intake-path"><select aria-label={`Recruiting Path, row ${rowIndex + 1}`} value={row.values.recruitingPath} disabled={busy || row.locked} aria-invalid={Boolean(rowErrors.recruitingPath) || undefined} aria-describedby={rowErrors.recruitingPath ? `intake-${row.id}-path-error` : undefined} onChange={event => changeField(row.id, "recruitingPath", event.target.value)}><option value="">Choose path</option>{!["", "genpop", "mass_recruiting"].includes(row.values.recruitingPath) && <option value={row.values.recruitingPath}>Unrecognized: {row.values.recruitingPath}</option>}<option value="genpop">Referrals</option><option value="mass_recruiting">Recruiters</option></select>{rowErrors.recruitingPath && <span className="contact-field-error" id={`intake-${row.id}-path-error`}>{rowErrors.recruitingPath}</span>}</td><td className="intake-status"><strong>{recruitDraftIsBlank(row.values) && row.status === "draft" ? "—" : stateLabel(row)}</strong>{row.message && <span>{row.message}</span>}{verifiedLink(row.recruit, "0-5") && <a className="text-link" href={verifiedLink(row.recruit, "0-5")} target="_blank" rel="noopener noreferrer">Open recruiting record</a>}{verifiedLink(row.contact, "0-1") && <a className="text-link" href={verifiedLink(row.contact, "0-1")} target="_blank" rel="noopener noreferrer">Open Contact</a>}{["partial", "uncertain"].includes(row.status) && <><a className="text-link" href="https://app.hubspot.com/contacts/50894788/objects/0-1/views/all/list" target="_blank" rel="noopener noreferrer">Check HubSpot Contacts</a><label className="intake-reconcile-check"><input type="checkbox" checked={row.checkedHubSpot === true} disabled={busy} onChange={event => updateRow(row.id, { checkedHubSpot: event.target.checked })} /><span>I checked HubSpot and understand this row will not be retried.</span></label></>}{row.status === "partial" && row.canResume && <button className="btn btn-secondary" type="button" disabled={busy || !canCreate || retryAt > 0} onClick={() => void submitRows(undefined, row.id)}>Finish setup</button>}</td><td><button className="btn btn-quiet intake-remove" type="button" aria-label={`Remove row ${rowIndex + 1}`} disabled={busy || !allowRemove} title={!allowRemove ? "Check HubSpot before clearing this row." : "Remove this row from the local form."} onClick={() => removeRow(row.id)}>×</button></td></tr>;
+        return <tr key={row.id} className={`intake-row intake-row-${row.status}`}><th scope="row">{rowIndex + 1}</th>{FIELDS.map(field => <td key={field.key} data-label={field.label}><input type={field.type} inputMode={field.type === "tel" ? "tel" : undefined} name={`${field.key}-${row.id}`} aria-label={`${field.label}, row ${rowIndex + 1}`} aria-invalid={Boolean(rowErrors[field.key]) || undefined} aria-describedby={rowErrors[field.key] ? `intake-${row.id}-${field.key}-error` : undefined} maxLength={field.max} value={row.values[field.key]} disabled={busy || row.locked} onChange={event => changeField(row.id, field.key, event.target.value)} />{rowErrors[field.key] && <span className="contact-field-error" id={`intake-${row.id}-${field.key}-error`}>{rowErrors[field.key]}</span>}</td>)}<td className="intake-path" data-label="Recruiting Path"><select aria-label={`Recruiting Path, row ${rowIndex + 1}`} value={row.values.recruitingPath} disabled={busy || row.locked} aria-invalid={Boolean(rowErrors.recruitingPath) || undefined} aria-describedby={rowErrors.recruitingPath ? `intake-${row.id}-path-error` : undefined} onChange={event => changeField(row.id, "recruitingPath", event.target.value)}><option value="">Choose path</option>{!["", "genpop", "mass_recruiting"].includes(row.values.recruitingPath) && <option value={row.values.recruitingPath}>Unrecognized: {row.values.recruitingPath}</option>}<option value="genpop">Referrals</option><option value="mass_recruiting">Recruiters</option></select>{rowErrors.recruitingPath && <span className="contact-field-error" id={`intake-${row.id}-path-error`}>{rowErrors.recruitingPath}</span>}</td><td className="intake-status" data-label="Status"><strong>{recruitDraftIsBlank(row.values) && row.status === "draft" ? "—" : stateLabel(row)}</strong>{row.message && <span>{row.message}</span>}{verifiedLink(row.recruit, "0-5") && <a className="text-link" href={verifiedLink(row.recruit, "0-5")} target="_blank" rel="noopener noreferrer">Open recruiting record</a>}{verifiedLink(row.contact, "0-1") && <a className="text-link" href={verifiedLink(row.contact, "0-1")} target="_blank" rel="noopener noreferrer">Open Contact</a>}{["partial", "uncertain"].includes(row.status) && <><a className="text-link" href="https://app.hubspot.com/contacts/50894788/objects/0-1/views/all/list" target="_blank" rel="noopener noreferrer">Check HubSpot Contacts</a><label className="intake-reconcile-check"><input type="checkbox" checked={row.checkedHubSpot === true} disabled={busy} onChange={event => updateRow(row.id, { checkedHubSpot: event.target.checked })} /><span>I checked HubSpot and understand this row will not be retried.</span></label></>}{row.status === "partial" && row.canResume && <button className="btn btn-secondary" type="button" disabled={busy || !canCreate || retryAt > 0} onClick={() => void submitRows(undefined, row.id)}>Finish setup</button>}</td><td><button className="btn btn-quiet intake-remove" type="button" aria-label={`Remove row ${rowIndex + 1}`} disabled={busy || !allowRemove} title={!allowRemove ? "Check HubSpot before clearing this row." : "Remove this row from the local form."} onClick={() => removeRow(row.id)}>×</button></td></tr>;
       })}</tbody></table></div>
       <div className="intake-pagination"><span>Rows {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, rows.length)} of {rows.length}</span><div><button className="btn btn-secondary" type="button" disabled={busy || currentPage <= 1} onClick={() => setPage(value => value - 1)}>Previous</button><button className="btn btn-secondary" type="button" disabled={busy || currentPage >= pageCount} onClick={() => setPage(value => value + 1)}>Next</button></div></div>
-      <div className="intake-submit-bar"><button type="button" className="btn btn-secondary" disabled={busy || rows.length >= MAX_INTAKE_ROWS} onClick={addRows}>Add 10 rows</button><button className="btn btn-primary intake-submit" type="submit" disabled={busy || !canCreate || checkingAccess || !ready.length || retryAt > 0}>{submitting ? "Submitting…" : "Submit"}</button></div>
-      <p className="helper intake-submit-note">Submit sends the populated rows to HubSpot one at a time. Existing records are checked before creating anything. Keep this tab open until submission finishes; unconfirmed rows are never retried automatically.</p>
+      <div className="intake-submit-bar"><button type="button" className="btn btn-secondary" disabled={busy || rows.length >= MAX_INTAKE_ROWS} onClick={addRows}>Add row</button><button className="btn btn-primary intake-submit" type="submit" disabled={busy || !canCreate || checkingAccess || !ready.length || retryAt > 0}>{submitting ? "Submitting…" : "Submit"}</button></div>
+      <p className="helper intake-submit-note">A new row appears when the last row’s required details and path are complete. Email is optional. Submit sends the populated rows to HubSpot one at a time. Existing records are checked before creating anything. Keep this tab open until submission finishes; unconfirmed rows are never retried automatically.</p>
     </form>
   </section>;
 }

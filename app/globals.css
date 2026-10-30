@@ -92,8 +92,8 @@ svg { flex-shrink: 0; }
 .pipeline-pages .nav-link { min-height: 44px; font-size: 15px; padding: 10px 22px; gap: 12px; }
 .pipeline-pages .nav-branch { margin: 0 0 0 7px; }
 .pipeline-pages .nav-flow-caption { margin: 14px 22px 4px; font-size: 15px; letter-spacing: 0; text-transform: none; }
-.nav-hubspot-tool { min-height: 44px; padding-top: 10px; padding-bottom: 10px; font-size: 15px; gap: 13px; }
-.nav-hubspot-tool > .icon:last-of-type { width: 12px; height: 12px; margin-left: auto; color: #a8a294; }
+.nav-hubspot-tool { justify-content: center; text-align: center; min-height: 44px; padding-top: 10px; padding-bottom: 10px; font-size: 15px; gap: 13px; }
+.nav-hubspot-tool > .icon { width: 20px; height: 20px; margin-left: 0; }
 .desktop-sidebar-close { position: absolute; top: 6px; right: 6px; min-height: 32px; padding: 6px; color: var(--muted); }
 .desktop-sidebar-toggle { padding: 8px; min-height: 40px; color: var(--muted); }
 @media (min-width: 801px) {
@@ -602,6 +602,18 @@ input.task-check { display: inline-block; width: 22px; height: 22px; margin: 0; 
 
 .follow-up-section { margin: 0 0 42px; }
 .follow-up-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.follow-up-heading h2 { margin: 0; font-size: 24px; letter-spacing: -.025em; }
+.follow-up-heading h2 { margin: 0; font-size: clamp(28px, 3vw, 34px); letter-spacing: -.025em; }
 .follow-up-heading h2 span { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .follow-up-age { display: block; margin-top: 6px; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .intake-grid { display: block; min-width: 0; table-layout: auto; }
+  .intake-grid thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .intake-grid tbody { display: block; }
+  .intake-grid .intake-row { display: grid; grid-template-columns: minmax(0, 1fr); padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .intake-grid .intake-row > th, .intake-grid .intake-row > td { display: block; width: 100%; padding: 8px 0; border: 0; }
+  .intake-grid td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
+  .intake-grid input:not([type="checkbox"]), .intake-grid select { font-size: 16px; width: 100%; min-height: 44px; }
+  .intake-toolbar, .intake-toolbar > div { flex-wrap: wrap; gap: 12px; }
+  .content, .workspace, .follow-up-section { min-width: 0; }
+}
