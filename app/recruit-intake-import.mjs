@@ -28,7 +28,7 @@ export function recruitDraftIsBlank(row) { return CONTACT_FIELDS.every(field => 
 export function normalizeImportedRecruitingPath(value) {
   const text = String(value ?? '').trim();
   const key = text.toLowerCase().replace(/[\s_-]+/g, '');
-  return key === 'genpop' ? 'genpop' : key === 'massrecruiting' ? 'mass_recruiting' : text;
+  return ['genpop', 'referrals'].includes(key) ? 'genpop' : ['massrecruiting', 'recruiters'].includes(key) ? 'mass_recruiting' : text;
 }
 
 /** RFC 4180-style quoted fields; values are data, never formulas or instructions. */

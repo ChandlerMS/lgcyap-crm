@@ -55,6 +55,95 @@ test('routing metadata uses only explicit canonical choices and never infers fro
   }
 });
 
+test('last contacted comes only from the verified ticket contact timestamp', () => {
+  const recruit = normalizeRecruit(fixture('103', {
+    hs_lastcontacted: '2026-10-28T18:23:00Z',
+    hs_lastactivitydate: '2026-10-29T12:00:00Z',
+    hs_lastmodifieddate: '2026-10-30T09:00:00Z',
+  }));
+  assert.equal(recruit.lastContactedAt, '2026-10-28T18:23:00.000Z');
+  for (const value of [undefined, '', 'not-a-date', '2026-02-31']) {
+    assert.equal(normalizeRecruit(fixture('103', { hs_lastcontacted: value, hs_lastactivitydate: '2026-10-29T12:00:00Z' })).lastContactedAt, null);
+  }
+  assert.ok(RECRUIT_PROPERTIES.includes('hs_lastcontacted'));
+});
+
+test('owner identifiers stay nullable and owner names are never inferred from other ticket fields', () => {
+  const assigned = normalizeRecruit(fixture('103', { hubspot_owner_id: '901', recruit_type: 'in-house_recruit' }));
+  assert.equal(assigned.ownerId, '901');
+  assert.equal(assigned.recruiter, null);
+  assert.equal(assigned.recruiterStatus, 'unavailable');
+  for (const value of [undefined, '', 'constructor', '../901', '0']) {
+    const recruit = normalizeRecruit(fixture('103', { hubspot_owner_id: value }));
+    assert.equal(recruit.ownerId, null);
+    assert.equal(recruit.recruiterStatus, 'unassigned');
+  }
+});
+
+test('owner labels use fixed scoped requests, include archived owners, omit emails and reuse a short cache', async () => {
+  const calls = [];
+  let current = clock();
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith('/tickets/search')) return response([fixture('101', { hubspot_owner_id: '901' }), fixture('102', { hubspot_owner_id: '902' })]);
+    assert.equal(options.method, 'GET');
+    assert.equal(options.redirect, 'manual');
+    assert.equal(options.headers.Authorization, `Bearer ${token}`);
+    return new Response(JSON.stringify({ results: url.includes('archived=true')
+      ? [{ id: '902', firstName: 'Former', lastName: 'Recruiter', email: 'private-owner@example.invalid', teams: [{ name: 'Do not expose' }] }]
+      : [{ id: '901', firstName: 'Active', lastName: 'Recruiter', email: 'private-owner@example.invalid' }] }));
+  };
+  const first = await readRecruitingData({ accessToken: token, now: () => current, fetchImpl });
+  assert.equal(first.recruits[0].recruiter, 'Active Recruiter');
+  assert.equal(first.recruits[1].recruiter, 'Former Recruiter');
+  assert.ok(first.recruits.every(row => row.recruiterStatus === 'available'));
+  assert.equal(calls[1].url, 'https://api.hubapi.com/crm/v3/owners/?limit=100&archived=false');
+  assert.equal(calls[2].url, 'https://api.hubapi.com/crm/v3/owners/?limit=100&archived=true');
+  assert.doesNotMatch(JSON.stringify(first), /private-owner|Do not expose/);
+  await readRecruitingData({ accessToken: token, now: () => current, fetchImpl });
+  assert.equal(calls.length, 4);
+  current += 300001;
+  await readRecruitingData({ accessToken: token, now: () => current, fetchImpl });
+  assert.equal(calls.length, 7);
+  await readRecruitingData({ accessToken: 'other-synthetic-token', now: () => current, fetchImpl: async (url, options) => {
+    if (url.endsWith('/tickets/search')) return response([fixture('101', { hubspot_owner_id: '901' })]);
+    assert.equal(options.headers.Authorization, 'Bearer other-synthetic-token');
+    return new Response(null, { status: 403 });
+  } });
+});
+
+test('missing owner scope or failed owner reads preserve ticket availability without fabricated names', async () => {
+  for (const status of [401, 403, 429, 500, 302]) {
+    let ownerCalls = 0;
+    const result = await readRecruitingData({ accessToken: token, now: clock, fetchImpl: async url => {
+      if (url.endsWith('/tickets/search')) return response([fixture('101', { hubspot_owner_id: '901' })]);
+      ownerCalls++;
+      return new Response('secret-provider-detail', { status });
+    } });
+    assert.equal(result.loadedCount, 1);
+    assert.equal(result.partial, false);
+    assert.equal(result.recruits[0].recruiter, null);
+    assert.equal(result.recruits[0].recruiterStatus, 'unavailable');
+    assert.equal(ownerCalls, 1);
+    assert.doesNotMatch(JSON.stringify(result), /secret-provider-detail/);
+  }
+});
+
+test('owners pagination is bounded, follows only opaque cursors on fixed endpoint and exposes unresolved owners honestly', async () => {
+  let ownerCalls = 0;
+  const result = await readRecruitingData({ accessToken: token, now: clock, fetchImpl: async url => {
+    if (url.endsWith('/tickets/search')) return response([fixture('101', { hubspot_owner_id: '999' })]);
+    assert.ok(url.startsWith('https://api.hubapi.com/crm/v3/owners/?limit=100&archived=false'));
+    ownerCalls++;
+    return new Response(JSON.stringify({ results: [{ id: String(ownerCalls), firstName: 'Synthetic' }], paging: { next: { after: `cursor_${ownerCalls}`, link: 'https://attacker.invalid' } } }));
+  } });
+  assert.equal(ownerCalls, 5);
+  assert.equal(result.recruits[0].recruiterStatus, 'unavailable');
+  const complete = await readRecruitingData({ accessToken: token, now: clock, fetchImpl: async url => url.endsWith('/tickets/search')
+    ? response([fixture('101', { hubspot_owner_id: '999' })]) : new Response(JSON.stringify({ results: [] })) });
+  assert.equal(complete.recruits[0].recruiterStatus, 'not-found');
+});
+
 test('only bound stage IDs normalize to semantic flow keys', () => {
   assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1473318768' })).stageKey, 'hiring-event');
   assert.equal(normalizeRecruit(fixture('103', { hs_pipeline_stage: '1473318769' })).stageKey, 'application');

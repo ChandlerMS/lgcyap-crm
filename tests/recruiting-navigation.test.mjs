@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { STAGE_PAGES, STAGES, TERMINAL_STAGE_IDS } from '../lib/recruiting-config.mjs';
 import {
-  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, resolveWorkspaceRoute, stagePageForRecord,
+  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
   recordsForStagePage, unmappedStageRecords,
 } from '../app/recruiting-navigation.mjs';
 
@@ -16,6 +16,15 @@ test('canonical stages are shared while each entry path has its own sidebar orde
   for (const page of STAGE_PAGES) assert.equal(STAGES[page.stageId], page.label);
   assert.deepEqual(TERMINAL_STAGE_IDS, ['1416243218', '1473318773']);
   assert.equal(STAGE_PAGES.find(page => page.id === 'completed').stageId, '1416243218');
+});
+
+test('native HubSpot tools use the verified portal and exact requested order', () => {
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Customer Success', 'Inbox', 'Tickets', 'Calls', 'Contacts', 'Tasks', 'Calendar', 'Meetings']);
+  for (const tool of HUBSPOT_TOOLS) {
+    assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
+    assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');
+    assert.match(new URL(tool.href).pathname, /(?:^|\/)50894788(?:\/|$)/);
+  }
 });
 
 test('each stage page includes only its exact HubSpot stage ID', () => {

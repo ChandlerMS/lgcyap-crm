@@ -8,9 +8,12 @@ import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
 import RecruitStageControls from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
+import HubSpotWorkspace from "./hubspot-workspace";
+import RecruitingPeriodControls from "./recruiting-period-controls";
+import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting-period.mjs";
 import { saveRecruitStage, StageSaveError } from "./recruit-stage-save.mjs";
 import { STAGE_PAGES, TERMINAL_STAGE_IDS } from "../lib/recruiting-config.mjs";
-import { WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
+import { WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
 import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 
 type View = string;
@@ -21,6 +24,7 @@ type Recruit = {
   stageKey: string; recruitingPath: string; licenseRoute: string;
   enteredStageAt: string | null; updatedAt: string | null; createdAt: string | null;
   orientationDate: string | null; recruitType: string;
+  recruiter?: string | null; ownerId?: string | null; recruiterStatus?: string; lastContactedAt?: string | null;
   flags: { orientationRegistered: Flag; orientationCheckedIn: Flag; licensingStarted: Flag; contractingRegistered: Flag; appointmentsCreated: Flag };
   hubspotUrl: string;
   editValues?: Record<string, string>;
@@ -32,7 +36,6 @@ const NAV = WORKSPACE_NAV;
 const PATH_LABELS: Record<string, string> = RECRUITING_PATHS;
 const LICENSE_LABELS: Record<string, string> = LICENSE_ROUTES;
 const TERMINAL_IDS = new Set<string>(TERMINAL_STAGE_IDS);
-const HIRING_EVENT_ID = STAGE_PAGES.find(page => page.id === "hiring-event")?.stageId;
 const ZONE = "America/New_York";
 const PAGE_SIZE = 8;
 
@@ -52,6 +55,8 @@ function Icon({ name }: { name: string }) {
     back: <path d="m12 5-7 7 7 7M5 12h14" />,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></>,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+    folder: <path d="M3 7V4h7l2 3h9v14H3V7z" />,
+    inbox: <><path d="M3 4h18v16H3zM3 13h5l2 3h4l2-3h5" /></>,
     close: <path d="m6 6 12 12M6 18 18 6" />,
   };
   return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name] || shapes.file}</svg>;
@@ -60,11 +65,6 @@ function parseDate(value: string | null) {
   if (!value) return null;
   const date = new Date(/^\d+$/.test(value) ? Number(value) : /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00Z` : value);
   return Number.isFinite(date.getTime()) ? date : null;
-}
-function localDay(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
-  const value = (type: string) => parts.find(part => part.type === type)?.value;
-  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 function dateLabel(value: string | null) {
   const date = parseDate(value);
@@ -107,6 +107,10 @@ function Person({ recruit, office = true }: { recruit: Recruit; office?: boolean
   return <a className="person" href={`#recruit/${encodeURIComponent(recruit.id)}`}><span className="avatar" aria-hidden="true">{initials(recruit.name)}</span><span><span className="person-name">{recruit.name}</span><span className="person-meta">{office ? `${recruit.office} · ` : ""}{PATH_LABELS[recruit.recruitingPath] ?? "Path not recorded"}</span></span></a>;
 }
 function Empty({ title, children }: { title: string; children: ReactNode }) { return <div className="empty-state"><h2>{title}</h2><p>{children}</p></div>; }
+function preserveRecruiter(before: Recruit, after: Recruit): Recruit {
+  return before.ownerId && before.ownerId === after.ownerId && !after.recruiter && before.recruiter
+    ? { ...after, recruiter: before.recruiter, recruiterStatus: before.recruiterStatus } : after;
+}
 function Flags({ recruit }: { recruit: Recruit }) {
   const rows: [keyof Recruit["flags"], string][] = [["orientationRegistered", "Registered for orientation"], ["orientationCheckedIn", "Checked in at orientation"], ["licensingStarted", "Licensing started"], ["contractingRegistered", "Registered for contracting"], ["appointmentsCreated", "Carrier appointments created"]];
   return <dl className="flag-list">{rows.map(([key, label]) => <div key={key}><dt>{label}</dt><dd className={recruit.flags[key] === true ? "flag-yes" : "muted"}>{recruit.flags[key] === true ? "Yes" : recruit.flags[key] === false ? "No" : "Not recorded"}</dd></div>)}</dl>;
@@ -123,6 +127,8 @@ export default function RecruitingWorkspace() {
   const [listView, setListView] = useState<"list" | "board">("list");
   const [page, setPage] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [periodSelection, setPeriodSelection] = useState<{preset:string;startDate?:string;endDate?:string}>({preset:"today"});
   const [now, setNow] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
@@ -140,6 +146,7 @@ export default function RecruitingWorkspace() {
   const mainRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
+  const desktopMenuRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef<AbortController | null>(null);
   const busyRef = useRef(false);
   const restoreMenuFocus = useRef(false);
@@ -211,7 +218,7 @@ export default function RecruitingWorkspace() {
     function keydown(event: KeyboardEvent) {
       if (event.key === "Escape") { event.preventDefault(); restoreMenuFocus.current = true; setMenuOpen(false); }
       if (event.key === "Tab") {
-        const controls = sidebar?.querySelectorAll<HTMLElement>("a[href],button:not([disabled])");
+        const controls = Array.from(sidebar?.querySelectorAll<HTMLElement>("a[href],button:not([disabled]),summary") ?? []).filter(control => control.getClientRects().length > 0);
         if (!controls?.length) return;
         const first = controls[0], last = controls[controls.length - 1];
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -235,6 +242,10 @@ export default function RecruitingWorkspace() {
   }, [stageSaveError?.retryAt]);
   useEffect(() => () => { stageWriteRequestRef.current?.abort(); }, []);
   useEffect(() => {
+    const clock = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(clock);
+  }, []);
+  useEffect(() => {
     if (!stageSavingId) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
@@ -247,11 +258,8 @@ export default function RecruitingWorkspace() {
   const canEdit = data?.capabilities?.canEdit === true;
   const writeAccessPending = data?.capabilities?.writeAccessPending === true;
   const officeRecords = all.filter(recruit => office === "All offices" || recruit.office === office);
-  const active = officeRecords.filter(recruit => !TERMINAL_IDS.has(recruit.stageId));
-  const review = active.filter(recruit => reviewSuggested(recruit, timestamp)).sort((a, b) => (daysInStage(b, timestamp) ?? 0) - (daysInStage(a, timestamp) ?? 0));
-  const atHiringEvent = active.filter(recruit => recruit.stageId === HIRING_EVENT_ID);
-  const today = now === null ? "" : localDay(new Date(now));
-  const upcoming = officeRecords.filter(recruit => { const date = parseDate(recruit.orientationDate); return !TERMINAL_IDS.has(recruit.stageId) && date && localDay(date) >= today; }).sort((a, b) => (a.orientationDate ?? "").localeCompare(b.orientationDate ?? ""));
+  const periodSource = query.trim() ? all.filter(recruit => [recruit.name, recruit.office, recruit.stage, recruit.recruiter ?? ""].some(value => value.toLowerCase().includes(query.trim().toLowerCase()))) : all;
+  const periodRecords = recordsInRecruitingPeriod(periodSource, resolveRecruitingPeriod(periodSelection, timestamp || undefined)) as Recruit[];
   const stagePage = stagePageForView(route.view);
   const stageRecords = route.view === "today" ? officeRecords : recordsForStagePage(officeRecords, route.view) as Recruit[];
   const unmapped = unmappedStageRecords(officeRecords) as Recruit[];
@@ -262,7 +270,8 @@ export default function RecruitingWorkspace() {
   const selected = route.id ? all.find(recruit => recruit.id === route.id) : undefined;
   const selectedPage = selected ? stagePageForRecord(selected) : undefined;
   const activeView = selectedPage?.id ?? route.view;
-  const pageName = route.id ? selected?.name ?? "Recruit" : NAV.find(item => item.id === route.view)?.label ?? "Today";
+  const hubspotTool = HUBSPOT_TOOLS.find(item => item.id === route.view);
+  const pageName = route.id ? selected?.name ?? "Recruit" : hubspotTool?.label ?? NAV.find(item => item.id === route.view)?.label ?? "Today";
   const filteredSuffix = data?.partial ? " loaded" : "";
   const closeMenu = () => { restoreMenuFocus.current = true; setMenuOpen(false); };
   const navigateFromMenu = () => { if (menuOpen) focusPageAfterNav.current = true; setMenuOpen(false); setQuery(""); };
@@ -271,14 +280,20 @@ export default function RecruitingWorkspace() {
   const heading = (title: string, subtitle: string, actions: ReactNode = officeFilter) => <div className="page-head"><div><h1 id="page-title" className="page-title" tabIndex={-1}>{title}</h1><p className="subheading">{subtitle}</p></div><div className="header-actions">{actions}</div></div>;
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={activeView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
   const navigation = <>
-    {NAV.slice(0, 2).map(navigationLink)}
-    <div className="pipeline-nav-divider" role="separator" aria-label="Recruiting pipeline pages" />
-    <p className="nav-flow-caption">Entry paths</p>
-    {WORKSPACE_NAV_GROUPS.map(group => <Fragment key={group.id}>{group.branch ? <details className="nav-branch" open={group.items.some(item => item.id === activeView)}><summary><Icon name={group.id === "licensed" ? "check" : group.id === "not-licensed" ? "file" : "people"} /><span>{group.label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary><div className="nav-branch-stages">{group.items.map(navigationLink)}</div></details> : <><p className="nav-flow-caption">{group.label}</p>{group.items.map(navigationLink)}</>}</Fragment>)}
+    {navigationLink(NAV[0])}
+    <details className="nav-pipeline">
+      <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
+      <div className="pipeline-pages">
+        {WORKSPACE_NAV_GROUPS.map(group => <Fragment key={group.id}>{group.branch ? <details className="nav-branch"><summary><Icon name={group.id === "licensed" ? "check" : group.id === "not-licensed" ? "file" : "people"} /><span>{group.label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary><div className="nav-branch-stages">{group.items.map(navigationLink)}</div></details> : <><p className="nav-flow-caption">{group.label}</p>{group.items.map(navigationLink)}</>}</Fragment>)}
+      </div>
+    </details>
+    {navigationLink(NAV[1])}
+    <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
+    {HUBSPOT_TOOLS.map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
 
   function savedRecruit(recruit: Recruit, replayed: boolean) {
-    setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? recruit : item) } : null);
+    setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? preserveRecruiter(item, recruit) : item) } : null);
     setNow(Date.now()); setEditingId(null);
     setSaveNotice(`${replayed ? "Save already completed. Record refreshed from HubSpot" : "Saved to HubSpot"} · ${updatedLabel(new Date().toISOString())}`);
   }
@@ -287,7 +302,7 @@ export default function RecruitingWorkspace() {
     setError({ message: "Sign in again before opening recruiting records.", signInPath: "/sign-in" });
   }
 
-  async function changeStage(recruit: Recruit, targetStageId: string, flowChanges?: { licensing_branch?: "licensed" | "not_licensed" }) {
+  const changeStage = useCallback(async (recruit: Recruit, targetStageId: string, flowChanges?: { licensing_branch?: "licensed" | "not_licensed" }) => {
     if (stageWriteBusyRef.current || editingIdRef.current || loading || error || !canEdit
       || stageBlockedIds.includes(recruit.id) || (stageSaveError?.retryAt ?? 0) > Date.now()) return;
     stageWriteBusyRef.current = true; setStageSavingId(recruit.id); setStageSaveError(null); setSaveNotice(null);
@@ -295,7 +310,7 @@ export default function RecruitingWorkspace() {
     const timer = window.setTimeout(() => controller.abort(), 45_000);
     try {
       const result = await saveRecruitStage(recruit, targetStageId, { signal: controller.signal, flowChanges });
-      setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? result.recruit as Recruit : item) } : null);
+      setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? preserveRecruiter(item, result.recruit as Recruit) : item) } : null);
       setNow(Date.now());
       setSaveNotice(`${recruit.name} moved to ${STAGE_PAGES.find(page => page.stageId === targetStageId)?.label ?? "the selected stage"}. Saved to HubSpot.`);
     } catch (caught) {
@@ -307,7 +322,7 @@ export default function RecruitingWorkspace() {
     } finally {
       window.clearTimeout(timer); stageWriteRequestRef.current = null; stageWriteBusyRef.current = false; setStageSavingId(null);
     }
-  }
+  }, [loading, error, canEdit, stageBlockedIds, stageSaveError?.retryAt]);
   const stageControlsDisabled = Boolean(stageSavingId || editingId || loading || error || stageSaveError?.retryAt);
 
   function collectionContent() {
@@ -321,6 +336,7 @@ export default function RecruitingWorkspace() {
   }
 
   function content() {
+    if (hubspotTool && !route.id) return <HubSpotWorkspace key={hubspotTool.id} tool={hubspotTool.id} onUnauthorized={expiredSignIn} />;
     if (route.view === "add-recruits") return <AddRecruits canCreate={data?.capabilities?.canCreateRecruit === true && !error}
       checkingAccess={loading} onUnauthorized={expiredSignIn} onCreated={() => { void refresh(); }}
       onBusyChange={updateIntakeBusy} onDraftChange={updateIntakeDraft} />;
@@ -330,25 +346,14 @@ export default function RecruitingWorkspace() {
       return <><a className="text-link back-link" href={`#${selectedPage?.id ?? "recruits"}`}><Icon name="back" />{selectedPage?.label ?? "Recruits"}</a><div className="profile-header"><div className="person"><span className="avatar avatar-large" aria-hidden="true">{initials(selected.name)}</span><div><h1 id="page-title" className="page-title" tabIndex={-1}>{selected.name}</h1><p className="subheading">{selected.office} / {selected.stage}</p></div></div><div className="profile-actions"><RecruitCommunications recruitName={selected.name} recruitId={selected.id} hubspotUrl={selected.hubspotUrl} />{(canEdit || writeAccessPending) && <button className="btn btn-primary" disabled={!selected.editValues || !selected.updatedAt || loading || Boolean(stageSavingId)} onClick={() => { setSaveNotice(null); setEditingId(selected.id); }}>Edit recruit</button>}<HubSpotLink recruit={selected} /></div></div>{editingRecruit && <RecruitEditor embedded recruit={editingRecruit} canEdit={canEdit} writeAccessPending={writeAccessPending} onClose={() => setEditingId(null)} onSaved={savedRecruit} onUnauthorized={expiredSignIn} onReload={async () => { const latest = await refresh(); return latest?.recruits.find(recruit => recruit.id === editingId) ?? null; }} />}<div className="profile-grid"><div><section className="profile-section"><p className="muted">Current stage</p><h2 className="stage-headline">{selected.stage}</h2><p className="helper">{stageAge(selected, timestamp)}</p>{reviewSuggested(selected, timestamp) && <p className="review-note">Review suggested: at least five days in this stage.</p>}</section><section className="profile-section"><h2 className="section-title">Recruiting progress</h2><Flags recruit={selected} /><p className="helper">These are the values recorded in HubSpot. Intake status is not license verification, and appointment creation is not carrier approval.</p></section></div><aside className="profile-aside"><h2 className="section-title">Recruit details</h2><dl className="details-list"><dt>Office</dt><dd>{selected.office}</dd><dt>Recruiting path</dt><dd>{PATH_LABELS[selected.recruitingPath] ?? "Not recorded"}</dd><dt>Licensing branch</dt><dd>{LICENSE_LABELS[selected.licenseRoute] ?? "Not chosen"}</dd><dt>License status at intake</dt><dd>{selected.intake}</dd><dt>Recruit type</dt><dd>{selected.recruitType}</dd><dt>Orientation date</dt><dd>{dateLabel(selected.orientationDate)}</dd><dt>Entered current stage</dt><dd>{dateLabel(selected.enteredStageAt)}</dd><dt>Last updated in HubSpot</dt><dd>{dateLabel(selected.updatedAt)}</dd></dl><p className="helper">{canEdit ? "Use Edit recruit to save updates directly to HubSpot. Open HubSpot for tasks and other record details." : writeAccessPending ? "Saving is disabled in this workspace. You can preview the editor." : "This workspace is read-only. Open HubSpot to update a recruit or create a task."}</p></aside></div></>;
     }
     if (route.view === "today") return <>
-      <RecruitPipeline records={all} stages={STAGE_PAGES} partial={data.partial} />
-      {heading("Today", now === null ? "Your recruiting workspace" : new Intl.DateTimeFormat("en-US", { timeZone: ZONE, weekday: "long", month: "long", day: "numeric" }).format(new Date(now)), null)}
-      <div className="stat-row">{[[active.length, `Active recruits${data.partial ? " shown" : ""}`], [review.length, "Suggested for review"], [atHiringEvent.length, "At hiring event"]].map(([value, label]) => <div className="stat" key={label}><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div>)}</div>
-      <section className="today-pipeline-collection" aria-labelledby="today-follow-up-title">
-        <div className="section-head"><h2 id="today-follow-up-title" className="section-title">Follow-up</h2><span className="muted">{filtered.length}{filteredSuffix} recruit{filtered.length === 1 ? "" : "s"}</span></div>
-        <p className="section-description">Every recruiting stage, including Completed and Withdrawn. Use filters or search to narrow the list.</p>
-        {collectionContent()}
-        <p className="helper footer-note">Open a recruit in HubSpot to view or create follow-up tasks.</p>
-      </section>
-      <section className="today-upcoming" aria-labelledby="today-upcoming-title">
-        <h2 id="today-upcoming-title" className="section-title">Coming up</h2>
-        <div className="today-upcoming-events">{upcoming.length ? upcoming.slice(0, 3).map(recruit => <div className="calendar-event" key={recruit.id}><Icon name="calendar" /><div><a href={`#recruit/${recruit.id}`} className="person-name">{recruit.name}</a><p>Orientation · {dateLabel(recruit.orientationDate)}</p><p>{recruit.office}</p></div></div>) : <p className="muted">No upcoming orientation dates are recorded for this office.</p>}</div>
-        <p className="helper">Dates shown as recorded in HubSpot.</p>
-      </section>
+      <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} />
+      {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
+      <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
     </>;
     return <>{heading(stagePage?.label ?? "Recruits", `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;
   }
 
-  return <div className="app-shell"><a href="#main" className="skip-link sr-only" onClick={event => { event.preventDefault(); mainRef.current?.focus(); }}>Skip to content</a><aside ref={sidebarRef} className={`sidebar ${menuOpen ? "is-open" : ""}`} id="main-sidebar" aria-label="Main navigation"><a className="brand" href="#today" onClick={navigateFromMenu}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners home" width="164" height="107" /></a><button className="mobile-close btn btn-quiet" onClick={closeMenu} aria-label="Close navigation"><Icon name="close" /></button><nav aria-label="Recruiting workspace">{navigation}</nav><div className="sidebar-bottom"><a className="signout-link" href="/sign-out" target="_top">Sign out</a><p className="sidebar-note">Legacy Agency Partners<br />Private recruiting workspace</p></div></aside>{menuOpen && <button className="mobile-backdrop" onClick={closeMenu} aria-label="Close navigation" tabIndex={-1} />}<div className="workspace" inert={menuOpen}><header className="topbar"><div className="breadcrumb"><button className="btn btn-quiet mobile-toggle" aria-label="Open navigation" aria-controls="main-sidebar" aria-expanded={menuOpen} ref={menuRef} onClick={() => setMenuOpen(true)}><Icon name="menu" /></button><span>Recruiting workspace</span></div>{route.view !== "add-recruits" && <label className="global-search"><Icon name="search" /><span className="sr-only">{route.view === "today" ? "Search pipeline" : `Search ${NAV.find(item => item.id === activeView)?.label ?? "recruits"}`}</span><input type="search" className="search-input" disabled={Boolean(editingId || stageSavingId)} placeholder={route.view === "today" ? "Search pipeline" : "Search this stage"} value={query} onChange={event => { setQuery(event.target.value); if (route.id) { const target = (selectedPage?.id ?? "recruits") as View; window.history.replaceState(null, "", `#${target}`); setRoute({ view: target }); } }} /></label>}</header><div className="source-bar"><div className="source-summary"><span className="live-badge"><span aria-hidden="true" />Private · {route.view === "add-recruits" ? (data?.capabilities?.canCreateRecruit ? "Recruit entry enabled" : "Read-only") : (canEdit ? "Editing enabled" : "Read-only")}</span><span>HubSpot Recruiting</span>{data && <span className="updated-at">Updated {updatedLabel(data.fetchedAt)}</span>}</div><button className="btn refresh-button" disabled={loading || Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty)} onClick={() => void refresh()}><Icon name="refresh" />{loading ? "Loading…" : "Refresh"}</button></div>{error && <div className={`connection-alert ${data ? "stale-alert" : ""}`} role="alert"><strong>{data ? "Showing previously loaded data" : "Live data unavailable"}</strong><p>{error.message}{data && ` Last successful refresh: ${updatedLabel(data.fetchedAt)}.`}</p>{error.retryAt && <p>Try again after {new Intl.DateTimeFormat("en-US", { timeZone: ZONE, hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(error.retryAt))}.</p>}{error.signInPath && <a className="btn btn-primary" href={error.signInPath} target="_top">Sign in</a>}</div>}{stageSavingId && <div className="save-notice" role="status">Saving stage to HubSpot…</div>}{stageSaveError && <div className="connection-alert" role="alert"><strong>Stage change needs attention</strong><p>{stageSaveError.message}</p><p>Use Refresh to load the latest record before another attempt.</p></div>}{saveNotice && <div className="save-notice" role="status"><span>{saveNotice}</span><button className="btn btn-quiet" aria-label="Dismiss save notification" onClick={() => setSaveNotice(null)}>×</button></div>}{data?.partial && <p className="partial-notice" role="status">Showing {data.loadedCount} of {data.total} recruiting records. Counts and filters below cover the loaded records.</p>}{unmapped.length > 0 && <div className="connection-alert" role="status"><strong>{unmapped.length} recruiting record{unmapped.length === 1 ? " has" : "s have"} an unrecognized stage</strong><p>These records use a retired or unrecognized stage. Review their path and stage in HubSpot before moving them.</p><div className="unmapped-record-links">{unmapped.map(recruit => <a className="text-link" href={`#recruit/${recruit.id}`} key={recruit.id}>Review {recruit.name}</a>)}</div></div>}<main id="main" className="content" ref={mainRef} tabIndex={-1} aria-busy={loading}>{content()}</main></div></div>;
+  return <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}><a href="#main" className="skip-link sr-only" onClick={event => { event.preventDefault(); mainRef.current?.focus(); }}>Skip to content</a><aside ref={sidebarRef} className={`sidebar ${menuOpen ? "is-open" : ""}`} id="main-sidebar" aria-label="Main navigation"><button className="desktop-sidebar-close btn btn-quiet" aria-label="Collapse sidebar" aria-controls="main-sidebar" onClick={() => { desktopMenuRef.current?.focus(); setSidebarCollapsed(true); }}><Icon name="back" /></button><a className="brand" href="#today" onClick={navigateFromMenu}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners home" width="164" height="107" /></a><button className="mobile-close btn btn-quiet" onClick={closeMenu} aria-label="Close navigation"><Icon name="close" /></button><nav aria-label="Recruiting workspace">{navigation}</nav><div className="sidebar-bottom"><a className="signout-link" href="/sign-out" target="_top">Sign out</a><p className="sidebar-note">Legacy Agency Partners<br />Private recruiting workspace</p></div></aside>{menuOpen && <button className="mobile-backdrop" onClick={closeMenu} aria-label="Close navigation" tabIndex={-1} />}<div className="workspace" inert={menuOpen}><header className="topbar"><div className="breadcrumb"><button className="btn btn-quiet desktop-sidebar-toggle" ref={desktopMenuRef} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-controls="main-sidebar" aria-expanded={!sidebarCollapsed} onClick={() => setSidebarCollapsed(value => !value)}><Icon name="menu" /></button><button className="btn btn-quiet mobile-toggle" aria-label="Open navigation" aria-controls="main-sidebar" aria-expanded={menuOpen} ref={menuRef} onClick={() => setMenuOpen(true)}><Icon name="menu" /></button><span>Recruiting workspace</span></div>{route.view !== "add-recruits" && !hubspotTool && <label className="global-search"><Icon name="search" /><span className="sr-only">{route.view === "today" ? "Search pipeline" : `Search ${NAV.find(item => item.id === activeView)?.label ?? "recruits"}`}</span><input type="search" className="search-input" disabled={Boolean(editingId || stageSavingId)} placeholder={route.view === "today" ? "Search pipeline" : "Search this stage"} value={query} onChange={event => { setQuery(event.target.value); if (route.id) { const target = (selectedPage?.id ?? "recruits") as View; window.history.replaceState(null, "", `#${target}`); setRoute({ view: target }); } }} /></label>}</header><div className="source-bar"><div className="source-summary"><span className="live-badge"><span aria-hidden="true" />Private · {hubspotTool ? "Connected HubSpot workspace" : route.view === "add-recruits" ? (data?.capabilities?.canCreateRecruit ? "Recruit entry enabled" : "Read-only") : (canEdit ? "Editing enabled" : "Read-only")}</span><span>{hubspotTool ? `HubSpot ${hubspotTool.label}` : "HubSpot Recruiting"}</span>{!hubspotTool && data && <span className="updated-at">Updated {updatedLabel(data.fetchedAt)}</span>}</div>{!hubspotTool && <button className="btn refresh-button" disabled={loading || Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty)} onClick={() => void refresh()}><Icon name="refresh" />{loading ? "Loading…" : "Refresh"}</button>}</div>{(!hubspotTool || error?.signInPath) && error && <div className={`connection-alert ${data ? "stale-alert" : ""}`} role="alert"><strong>{data ? "Showing previously loaded data" : "Live data unavailable"}</strong><p>{error.message}{data && ` Last successful refresh: ${updatedLabel(data.fetchedAt)}.`}</p>{error.retryAt && <p>Try again after {new Intl.DateTimeFormat("en-US", { timeZone: ZONE, hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(error.retryAt))}.</p>}{error.signInPath && <a className="btn btn-primary" href={error.signInPath} target="_top">Sign in</a>}</div>}{stageSavingId && <div className="save-notice" role="status">Saving stage to HubSpot…</div>}{stageSaveError && <div className="connection-alert" role="alert"><strong>Stage change needs attention</strong><p>{stageSaveError.message}</p><p>Use Refresh to load the latest record before another attempt.</p></div>}{saveNotice && <div className="save-notice" role="status"><span>{saveNotice}</span><button className="btn btn-quiet" aria-label="Dismiss save notification" onClick={() => setSaveNotice(null)}>×</button></div>}{!hubspotTool && data?.partial && <p className="partial-notice" role="status">Showing {data.loadedCount} of {data.total} recruiting records. Counts and filters below cover the loaded records.</p>}{!hubspotTool && unmapped.length > 0 && <div className="connection-alert" role="status"><strong>{unmapped.length} recruiting record{unmapped.length === 1 ? " has" : "s have"} an unrecognized stage</strong><p>These records use a retired or unrecognized stage. Review their path and stage in HubSpot before moving them.</p><div className="unmapped-record-links">{unmapped.map(recruit => <a className="text-link" href={`#recruit/${recruit.id}`} key={recruit.id}>Review {recruit.name}</a>)}</div></div>}<main id="main" className="content" ref={mainRef} tabIndex={-1} aria-busy={loading}>{content()}</main></div></div>;
 }
 
 

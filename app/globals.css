@@ -77,6 +77,26 @@ svg { flex-shrink: 0; }
 .reset-demo { border: 0; background: transparent; color: var(--muted); min-height: 44px; padding: 10px 0; }
 .reset-demo:hover { color: var(--gold); }
 .workspace { margin-left: var(--sidebar-width); min-width: 0; }
+.nav-pipeline > summary { display: flex; align-items: center; gap: 17px; min-height: 56px; padding: 14px 28px; color: #d3d0c9; cursor: pointer; list-style: none; font-size: 15px; font-weight: 500; }
+.nav-pipeline > summary::-webkit-details-marker { display: none; }
+.nav-pipeline > summary:hover { background: #11110f; color: var(--gold); }
+.nav-pipeline > summary .icon { width: 22px; height: 22px; }
+.nav-pipeline[open] > summary .nav-branch-chevron { transform: rotate(180deg); }
+.pipeline-pages { margin: 0 10px 12px; border-left: 1px solid #5a4b28; }
+.pipeline-pages .nav-link { min-height: 42px; font-size: 13px; padding: 10px 22px; gap: 12px; }
+.pipeline-pages .nav-branch { margin: 0 0 0 7px; }
+.pipeline-pages .nav-flow-caption { margin: 14px 22px 4px; font-size: 10px; letter-spacing: 0; text-transform: none; }
+.nav-hubspot-tool { min-height: 44px; padding-top: 10px; padding-bottom: 10px; font-size: 14px; gap: 13px; }
+.nav-hubspot-tool > .icon:last-of-type { width: 12px; height: 12px; margin-left: auto; color: #a8a294; }
+.desktop-sidebar-close { position: absolute; top: 6px; right: 6px; min-height: 32px; padding: 6px; color: var(--muted); }
+.desktop-sidebar-toggle { padding: 8px; min-height: 40px; color: var(--muted); }
+@media (min-width: 801px) {
+  .sidebar-collapsed .sidebar { display: none; }
+  .sidebar-collapsed .workspace { margin-left: 0; }
+}
+@media (max-width: 800px) {
+  .desktop-sidebar-close, .desktop-sidebar-toggle { display: none; }
+}
 .topbar { min-height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 48px; border-bottom: 1px solid var(--line); }
 .breadcrumb { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--muted); font-size: 14px; }
 .breadcrumb a:hover { color: var(--gold); }

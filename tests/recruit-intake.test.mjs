@@ -42,9 +42,9 @@ test('intake input normalizes contact fields and an explicitly selected recruiti
 });
 
 test('every intake row requires a canonical path and never guesses a default', () => {
-  for (const recruitingPath of [undefined, null, '', 'GenPop', 'genpop ', 'mass recruiting', 'in-house_recruit', true]) {
+  for (const recruitingPath of [undefined, null, '', 'Referrals', 'genpop ', 'mass recruiting', 'in-house_recruit', true]) {
     assert.throws(() => validateRecruitIntakeInput({ ...input, recruitingPath }), error =>
-      error.code === 'INVALID_INTAKE' && error.fieldErrors.recruitingPath === 'Choose GenPop or Mass Recruiting for this recruit.');
+      error.code === 'INVALID_INTAKE' && error.fieldErrors.recruitingPath === 'Choose Referrals or Recruiters for this recruit.');
   }
   assert.equal(validateRecruitIntakeInput({ ...input, recruitingPath: 'mass_recruiting' }).recruitingPath, 'mass_recruiting');
 });

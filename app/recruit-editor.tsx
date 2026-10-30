@@ -221,7 +221,7 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
               disabled={busy} aria-required={field.required || undefined} autoComplete="off"
               onChange={event => setDraft(value => ({ ...value, [field.property]: event.target.value }))} />}
             {isStage && <span className="helper" id={helpId}>Only connected steps are available. Branch choices are included in your review.</span>}
-            {isPath && <span className="helper" id={helpId}>{pathLocked ? "This recruiting path is already assigned." : "Choose GenPop or Mass Recruiting for this recruit."}</span>}
+            {isPath && <span className="helper" id={helpId}>{pathLocked ? "This recruiting path is already assigned." : "Choose Referrals or Recruiters for this recruit."}</span>}
             {isBranch && <span className="helper" id={helpId}>{branchLocked ? "The recorded branch can be changed at Offer." : "Choose the license branch explicitly; intake status does not choose it."}</span>}
           </label>;
         })}</div><p className="helper editor-field-help">Recruit name and ticket name are separate fields. Intake status is not license verification; appointment creation is not carrier approval.</p></form>}

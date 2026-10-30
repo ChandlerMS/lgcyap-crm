@@ -8,16 +8,16 @@ const keys = choices => choices.map(choice => choice.stageKey);
 
 test('new intake has two exact sources and starts at the source-specific entry', () => {
   const { RECRUITING_PATHS, LICENSE_ROUTES, FLOW_STAGES, entryStageKey } = requireFlow();
-  assert.deepEqual(RECRUITING_PATHS, { genpop: 'GenPop', mass_recruiting: 'Mass Recruiting' });
+  assert.deepEqual(RECRUITING_PATHS, { genpop: 'Referrals', mass_recruiting: 'Recruiters' });
   assert.deepEqual(LICENSE_ROUTES, { licensed: 'Licensed', not_licensed: 'Not Licensed' });
   assert.equal(entryStageKey('genpop'), 'hiring-event');
   assert.equal(entryStageKey('mass_recruiting'), 'application');
-  for (const path of ['', null, undefined, 'mass', 'GenPop', '__proto__']) assert.equal(entryStageKey(path), null);
+  for (const path of ['', null, undefined, 'mass', 'Referrals', '__proto__']) assert.equal(entryStageKey(path), null);
   assert.deepEqual(FLOW_STAGES.filter(stage => stage.terminal).map(stage => stage.key), ['completed', 'withdrawn']);
   assert.equal(FLOW_STAGES.find(stage => stage.key === 'licensed-npn').label, 'Licensed w/ NPN');
 });
 
-test('GenPop and Mass Recruiting follow different early orders through the same stages', () => {
+test('Referrals and Recruiters follow different early orders through the same stages', () => {
   const { forwardStageChoices, backwardStageChoices, validateFlowTransition } = requireFlow();
   for (const [path, steps] of [
     ['genpop', ['hiring-event', 'application', 'phone-interview', 'offer']],

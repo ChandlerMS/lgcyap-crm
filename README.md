@@ -36,8 +36,8 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
 One shared HubSpot Recruiting ticket pipeline (`924992938`) stores the canonical
 stages. The sidebar groups the two entry paths and the two licensing routes:
 
-- GenPop: Hiring Event → Application → Phone Interview → Offer.
-- Mass Recruiting: Application → Phone Interview → Hiring Event → Offer.
+- Referrals: Hiring Event → Application → Phone Interview → Offer.
+- Recruiters: Application → Phone Interview → Hiring Event → Offer.
 - Offer / Licensed: Contracting.
 - Offer / Not Licensed: Licensing Reminders → Licensed w/ NPN → Contracting.
 - Contracting → Training → Completed or Withdrawn.
@@ -62,17 +62,40 @@ transition graph. Native privileged edits, other integrations and workflows can
 bypass that app validation. Do not enable global no-skip/no-backward rules across
 the two conflicting entry orders. See [HubSpot pipeline rules](https://knowledge.hubspot.com/object-settings/set-up-pipeline-rules).
 
+## Today and HubSpot workspaces
+
+Today starts with a selectable reporting period: Today, Weekly (Monday–Sunday),
+Monthly, Quarterly, Yearly, a date, or an inclusive date range. Counts describe the
+current lifecycle stages of recruits created in that America/New_York period;
+they are not historical stage-entry or conversion metrics. Missing dates and
+partial loaded cohorts are disclosed. Search filters both totals and cards.
+
+The pipeline is a five-section rotating 3D carousel. Empty-space dragging rotates;
+recruit grips choose connected stage moves. Stage menus provide a keyboard
+alternative. Names open recruit profiles; stage blocks open their exact queues.
+Only the front section is interactive, and reduced motion uses flat section
+switching. Recruit cards show recorded owner, office, dates and contact tools.
+Text remains disabled until a sending service is connected.
+
+The Pipeline folder and its branches start collapsed. The full sidebar can also
+be collapsed. Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar
+and Meetings are connected read-only pages inside the app, using the existing
+approved-user session. Calendar shows CRM meetings rather than a Google Calendar
+or marketing-calendar mirror; Inbox reads plain-text messages, without replies
+or attachments. Advanced actions remain in HubSpot. See
+[the read contract and scope requirements](HUBSPOT-TOOLS-API.md).
+
 ## Add Recruits
 
 `#add-recruits` starts with ten rows for First Name, Last Name, Phone Number,
-optional Email, and a required per-recruit GenPop/Mass Recruiting path. Bulk import
+optional Email, and a required per-recruit Referrals/Recruiters path. Bulk import
 previews CSV and Excel `.xlsx` files (first worksheet only), up to 2 MB/500 rows.
 A `Path` or `Recruiting Path` column can provide each choice; missing choices stay
 in the preview for staff to select. Path-only blank rows do not create records.
 
 The gold Submit validates populated rows before sending them sequentially.
 `POST /api/recruit-intake` creates or safely reuses a Contact, then creates and
-confirms an associated ticket in Hiring Event for GenPop or Application for Mass
+confirms an associated ticket in Hiring Event for Referrals or Application for Recruiters
 Recruiting. The new ticket stores the chosen path. Existing recruiting tickets
 retain their stage and path; matching records are not overwritten. Production
 flags, exact Google authorization, four scoped provider grants and durable
@@ -341,7 +364,7 @@ capabilities. GET cannot read CRM records.
 
 POST /api/recruits/{numeric-id} accepts expectedUpdatedAt, expectedValues, requestId
 (UUID), and changes. Changes and reviewed old values require the same supported keys.
-Twelve properties are defined in lib/recruit-edit-config.mjs. Pipeline, credentials,
+Fourteen properties are defined in lib/recruit-edit-config.mjs. Pipeline, credentials,
 contact information, and system timestamps cannot be edited. Only changed fields
 are patched.
 

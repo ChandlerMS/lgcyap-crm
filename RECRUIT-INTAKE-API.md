@@ -37,8 +37,8 @@ against other integrations or HubSpot indexing delay.
 
 A new Contact is confirmed by GET, checkpointed, and used in a Ticket create with
 the native association. The Ticket is created with `hs_pipeline=924992938`,
-`hs_pipeline_stage=1473318768` (Hiring Event) for GenPop, or `1473318769`
-(Application) for Mass Recruiting, plus `recruiting_path`, `recruit_name` and
+`hs_pipeline_stage=1473318768` (Hiring Event) for Referrals, or `1473318769`
+(Application) for Recruiters, plus `recruiting_path`, `recruit_name` and
 `subject`. It does not invent a licensing branch. Its path, entry stage, properties
 and Contact association are confirmed by GET before reporting success.
 

@@ -53,6 +53,8 @@ test('duplicate detection uses canonical phone and lowercased email and marks bo
 test('imports normalize optional recruiting paths while leaving missing choices for manual review', () => {
   const rows = recruitRowsFromCells([...[[...header, 'Recruiting Path']], ['Avery', 'Example', '4075550123', '', 'GenPop'], ['Another', 'Example', '4075550188', '', 'Mass Recruiting'], ['Missing', 'Path', '4075550199', '', '']]);
   assert.deepEqual(rows.map(row => row.recruitingPath), ['genpop', 'mass_recruiting', '']);
+  const renamed = recruitRowsFromCells([[...header, 'Path'], ['Avery', 'Example', '4075550123', '', 'Referrals'], ['Another', 'Example', '4075550188', '', 'Recruiters']]);
+  assert.deepEqual(renamed.map(row => row.recruitingPath), ['genpop', 'mass_recruiting']);
   assert.equal(recruitRowIssues(rows)[0].recruitingPath, undefined);
   assert.equal(recruitRowIssues(rows)[1].recruitingPath, undefined);
   assert.ok(recruitRowIssues(rows)[2].recruitingPath);

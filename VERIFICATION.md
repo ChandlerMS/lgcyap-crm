@@ -7,6 +7,34 @@ No real CRM field value was changed during verification. Individual coworker
 logins have not been exercised. The expanded-account deployment is READY and
 the hosted checks below passed.
 
+## Interactive workspace and connected HubSpot pages — 2026-10-30
+
+- Referrals/Recruiters display labels retain stored `genpop`/`mass_recruiting`
+  values. The native HubSpot property was saved and reopened to verify both.
+- Created-in-period reporting uses Eastern calendar dates, including DST and
+  inclusive custom ranges. Current-stage totals retain zeros and disclose partial
+  or missing-date cohorts. Search filters totals and carousel together.
+- Five-section 3D rotation preserves branch blocks, front-panel-only interaction,
+  reduced motion and keyboard stage menus. Synthetic browser QA verified blank
+  drag rotation, block navigation, a legal recruit drag and rejection of a stage
+  skip. The temporary fixture route was removed before the production build.
+- Cards use recorded ticket owner and last-contact data. Owner lookup failures
+  remain distinct from unassigned owners. Text remains disabled.
+- Pipeline and nested branches start collapsed; desktop/sidebar and mobile
+  navigation retain restore controls and visible focus handling.
+- Eight in-app HubSpot views use fixed read-only endpoints and existing exact
+  user/session/origin restrictions. Limits and unsupported native actions are
+  explicit in [HUBSPOT-TOOLS-API.md](HUBSPOT-TOOLS-API.md).
+- Approved owner/company/conversation read scopes were deployed in HubSpot build
+  8 and the existing app connection completed successfully. No credentials were
+  rotated or exposed; the original contact/ticket grants were retained.
+- Local verification: **183 tests passed**, full TypeScript and ESLint passed,
+  production build passed, and production HTTP smoke rejected anonymous/forged
+  identities on all eight new reads as well as existing endpoints.
+- No real recruit, contact, task, call, meeting or message was created, moved or
+  sent during these checks. Live read results are recorded in the deployment
+  checkpoint after Vercel releases this commit.
+
 ## Branching recruiting workflow and Today pipeline — 2026-10-30
 
 - User selected one shared Recruiting pipeline with a Path field and one path

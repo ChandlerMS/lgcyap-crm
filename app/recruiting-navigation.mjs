@@ -6,12 +6,12 @@ const page = (id, stageKey, filter = {}) => {
   return Object.freeze({ ...stage, id, stageKey, ...filter });
 };
 export const WORKSPACE_NAV_GROUPS = Object.freeze([
-  { id: 'genpop', label: 'GenPop', branch: true, items: [
+  { id: 'genpop', label: 'Referrals', branch: true, items: [
     page('genpop-hiring-event', 'hiring-event', { recruitingPath: 'genpop' }),
     page('genpop-application', 'application', { recruitingPath: 'genpop' }),
     page('genpop-phone-interview', 'phone-interview', { recruitingPath: 'genpop' }),
   ] },
-  { id: 'mass-recruiting', label: 'Mass Recruiting', branch: true, items: [
+  { id: 'mass-recruiting', label: 'Recruiters', branch: true, items: [
     page('mass-application', 'application', { recruitingPath: 'mass_recruiting' }),
     page('mass-phone-interview', 'phone-interview', { recruitingPath: 'mass_recruiting' }),
     page('mass-hiring-event', 'hiring-event', { recruitingPath: 'mass_recruiting' }),
@@ -33,13 +33,25 @@ export const WORKSPACE_NAV = Object.freeze([
   ...WORKSPACE_NAV_GROUPS.flatMap(group => group.items),
 ]);
 
+// Destinations read from this portal's native HubSpot navigation.
+export const HUBSPOT_TOOLS = Object.freeze([
+  { id: 'customer-success', label: 'Customer Success', icon: 'check', path: '/customer-success/50894788' },
+  { id: 'inbox', label: 'Inbox', icon: 'inbox', path: '/live-messages/50894788' },
+  { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
+  { id: 'calls', label: 'Calls', icon: 'phone', path: '/contacts/50894788/objects/0-48' },
+  { id: 'contacts', label: 'Contacts', icon: 'people', path: '/contacts/50894788/objects/0-1' },
+  { id: 'tasks', label: 'Tasks', icon: 'check', path: '/contacts/50894788/objects/0-27' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar', path: '/calendar/50894788' },
+  { id: 'meetings', label: 'Meetings', icon: 'calendar', path: '/contacts/50894788/objects/0-47' },
+].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
+
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (value === 'follow-up') return { view: 'today' };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['recruits', 'orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
   if (value.startsWith('recruit/')) return { view: 'today', id: value.slice(8) };
-  return { view: WORKSPACE_NAV.some(item => item.id === value) || STAGE_PAGES.some(item => item.id === value) ? value : 'today' };
+  return { view: WORKSPACE_NAV.some(item => item.id === value) || STAGE_PAGES.some(item => item.id === value) || HUBSPOT_TOOLS.some(item => item.id === value) ? value : 'today' };
 }
 
 export function stagePageForView(view) {

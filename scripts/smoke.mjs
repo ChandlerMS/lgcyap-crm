@@ -35,7 +35,7 @@ try {
   assert.match(signIn.headers.get('cache-control') ?? '', /no-store/);
   assert.equal(signIn.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(signIn.headers.get('x-frame-options'), 'DENY');
-  for (const path of ['/api/recruits', '/api/recruits/101', '/api/contacts', '/api/recruit-intake']) {
+  for (const path of ['/api/recruits', '/api/recruits/101', '/api/contacts', '/api/recruit-intake', ...['customer-success', 'inbox', 'tickets', 'calls', 'contacts', 'tasks', 'calendar', 'meetings'].map(tool => `/api/hubspot-tools/${tool}`)]) {
     for (const forged of [false, true]) {
       const headers = { Origin: base, 'Content-Type': 'application/json' };
       if (forged) Object.assign(headers, {
