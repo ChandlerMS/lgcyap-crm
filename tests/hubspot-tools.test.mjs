@@ -194,6 +194,22 @@ test('Inbox unusable or repeated pagination preserves valid loaded threads with 
   assert.equal(calls, 2); assert.equal(repeated.paginationWarning.validationReason, 'CURSOR_REPEATED'); assert.equal(repeated.loadedCount, 1); assert.equal(repeated.partial, true);
 });
 
+test('Inbox pagination diagnostics reveal encoding/count facts only and never cursor or message values', async () => {
+  const originalWarn = console.warn, originalEnvironment = process.env.NODE_ENV, warnings = [];
+  console.warn = (...values) => warnings.push(values); process.env.NODE_ENV = 'production';
+  try {
+    let calls = 0;
+    const result = await readHubSpotTool('inbox', {}, { accessToken: token, now, fetchImpl: async () => {
+      calls++;
+      return new Response(JSON.stringify({ results: calls === 1 ? [{ id: '123' }] : [], paging: { next: { after: '%2B%3Dprivate-cursor', link: 'https://api.hubapi.com/conversations/v3/conversations/threads?after=%2B%3Dprivate-cursor' } } }));
+    } });
+    assert.equal(result.partial, true); assert.equal(warnings.length, 1);
+    const diagnostic = warnings[0][1];
+    assert.equal(diagnostic.cursorContainsPercentEncoding, true); assert.equal(diagnostic.encodedSequenceCount, 2); assert.equal(diagnostic.linkAfterEqualsCursor, false); assert.equal(diagnostic.linkAfterEqualsDecodedCursor, true); assert.equal(diagnostic.resultsCount, 0); assert.equal(diagnostic.newRowsCount, 0); assert.equal(diagnostic.page, 2);
+    assert.doesNotMatch(JSON.stringify(warnings), /private-cursor|%2B|%3D|synthetic-owner-only-token/);
+  } finally { console.warn = originalWarn; if (originalEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = originalEnvironment; }
+});
+
 test('Inbox history enforces a total message response budget with honest partial history', async () => {
   let calls = 0;
   const result = await readHubSpotTool('inbox', { threadId: '123' }, { accessToken: token, now, fetchImpl: async () => {
