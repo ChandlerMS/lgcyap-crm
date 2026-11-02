@@ -20,8 +20,8 @@ export default function RecruitCommunications({ recruitName, recruitId, hubspotU
     {(["call", "text", "email"] as const).map(action => {
       const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
       const ringAction = action !== "email";
-      const available = !isDemo && ringCentral.configured && Boolean(number);
-      const reason = !ringAction ? result.reason : isDemo ? "Demo contacts cannot call or text." : !ringCentral.configured ? "RingCentral is not configured." : !number ? "Add a valid phone number to use RingCentral." : action === "call" ? "Prepare a call in RingCentral. You choose when to dial." : "Open a text conversation in RingCentral. You choose when to send.";
+      const available = action === "call" && !isDemo && ringCentral.configured && Boolean(number);
+      const reason = action === "text" ? "Texting is paused while messaging approval is pending." : !ringAction ? result.reason : isDemo ? "Demo contacts cannot call or text." : !ringCentral.configured ? "RingCentral is not configured." : !number ? "Add a valid phone number to use RingCentral." : "Prepare a call in RingCentral. You choose when to dial.";
       const label = action === "email" ? `Email ${recruitName} in HubSpot` : `${action === "call" ? "Call" : "Text"} ${recruitName} with RingCentral`;
       const descriptionId = `${id}-${action}`;
       return <span className="communication-item" key={action}>

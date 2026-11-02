@@ -7,6 +7,7 @@ test('provider URL is pinned to the official PKCE iframe with no secret', () => 
   assert.equal(url.origin, RINGCENTRAL_ORIGIN);
   assert.equal(url.pathname, '/integration/ringcentral-embeddable/3.0.0/app.html');
   assert.equal(url.searchParams.get('redirectUri'), `${RINGCENTRAL_ORIGIN}/integration/ringcentral-embeddable/3.0.0/redirect.html`);
+  assert.equal(url.searchParams.get('disableReadText'), '1');
   for (const key of ['clientSecret','jwt','authorizationCode']) assert.equal(url.searchParams.has(key), false);
   assert.equal(ringCentralUrl('https://foreign.invalid'), null);
   assert.equal(ringCentralUrl(''), null);
@@ -20,7 +21,7 @@ test('numbers normalize and reject commands, extensions, invalid lengths, and UR
 
 test('communication actions only prefill; demo records and unsupported actions never generate commands', () => {
   assert.deepEqual(communicationCommand('call','2025550123'), { type:'rc-adapter-new-call',phoneNumber:'+12025550123',toCall:false });
-  assert.deepEqual(communicationCommand('text','2025550123'), { type:'rc-adapter-new-sms',phoneNumber:'+12025550123',conversation:true });
+  assert.equal(communicationCommand('text','2025550123'), null, 'Texting is paused even for a valid live number');
   for (const action of ['call','text','send','ringcx']) assert.equal(communicationCommand(action,'2025550123',true),null);
   assert.equal(communicationCommand('ringcx','2025550123'),null);
   assert.equal(communicationCommand('call','911'),null);

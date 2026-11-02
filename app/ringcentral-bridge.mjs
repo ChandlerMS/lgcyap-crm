@@ -4,7 +4,7 @@ const BASE = `${RINGCENTRAL_ORIGIN}/integration/ringcentral-embeddable/3.0.0/`;
 export function ringCentralUrl(clientId) {
   if (typeof clientId !== 'string' || !/^[A-Za-z0-9_-]{10,100}$/.test(clientId)) return null;
   const url = new URL('app.html', BASE);
-  for (const [key, value] of Object.entries({ clientId, redirectUri: `${BASE}redirect.html`, defaultCallWith: 'browser', disableMeeting: '1', disableGlip: '1', disableMinimize: '1', enableAnalytics: '0', enableSMSTemplate: '0', enableLoadMoreCalls: '1' })) url.searchParams.set(key, value);
+  for (const [key, value] of Object.entries({ clientId, redirectUri: `${BASE}redirect.html`, defaultCallWith: 'browser', disableMeeting: '1', disableGlip: '1', disableReadText: '1', disableMinimize: '1', enableAnalytics: '0', enableSMSTemplate: '0', enableLoadMoreCalls: '1' })) url.searchParams.set(key, value);
   return url.toString();
 }
 
@@ -24,7 +24,7 @@ export function communicationCommand(action, phone, isDemo = false) {
   const phoneNumber = communicationPhone(phone);
   if (isDemo || !phoneNumber) return null;
   if (action === 'call') return { type: 'rc-adapter-new-call', phoneNumber, toCall: false };
-  if (action === 'text') return { type: 'rc-adapter-new-sms', phoneNumber, conversation: true };
+  // Texting remains paused until the agency explicitly enables it after approval.
   return null;
 }
 

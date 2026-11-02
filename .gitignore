@@ -48,3 +48,4 @@ yarn-error.log*
 /.serena/
 /test-results/
 !.env.example
+.vercel
