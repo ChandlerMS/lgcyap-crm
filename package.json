@@ -26,6 +26,7 @@
   "dependencies": {
     "@next/env": "16.4.3",
     "@vercel/functions": "3.6.1",
+    "@vercel/speed-insights": "^2.0.0",
     "better-auth": "1.7.14",
     "fflate": "0.8.3",
     "next": "16.4.3",
