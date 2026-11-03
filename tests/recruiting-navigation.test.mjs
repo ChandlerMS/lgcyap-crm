@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { STAGE_PAGES, STAGES, TERMINAL_STAGE_IDS } from '../lib/recruiting-config.mjs';
 import {
-  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, RECRUITS_PAGE_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
+  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
   recordsForStagePage, unmappedStageRecords,
 } from '../app/recruiting-navigation.mjs';
 
@@ -16,6 +17,15 @@ test('canonical stages are shared while each entry path has its own sidebar orde
   for (const page of STAGE_PAGES) assert.equal(STAGES[page.stageId], page.label);
   assert.deepEqual(TERMINAL_STAGE_IDS, ['1416243218', '1473318773']);
   assert.equal(STAGE_PAGES.find(page => page.id === 'completed').stageId, '1416243218');
+});
+
+test('Recruiting Dashboard opens the pipeline and Add Recruits is its own sidebar page', () => {
+  assert.deepEqual(SIDEBAR_RECRUITING_PAGES.map(page => [page.label, page.id]), [['Recruiting Dashboard', 'today'], ['Add Recruits', 'add-recruits']]);
+  for (const page of SIDEBAR_RECRUITING_PAGES) assert.deepEqual(resolveWorkspaceRoute(`#${page.id}`), { view: page.id });
+  // Both are direct links, so neither sits behind a row that only opens and closes.
+  const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
+  assert.match(workspace, /SIDEBAR_RECRUITING_PAGES\.map\(navigationLink\)/);
+  assert.doesNotMatch(workspace, /nav-recruits|recruit-pages/);
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {

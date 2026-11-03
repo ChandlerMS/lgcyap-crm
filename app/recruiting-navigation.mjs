@@ -33,6 +33,9 @@ export const WORKSPACE_NAV = Object.freeze([
   ...WORKSPACE_NAV_GROUPS.flatMap(group => group.items),
 ]);
 
+// Recruiting pages with their own sidebar links. The stage queues open from the pipeline page instead.
+export const SIDEBAR_RECRUITING_PAGES = Object.freeze(WORKSPACE_NAV.slice(0, 2));
+
 // Destinations read from this portal's native HubSpot navigation.
 export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'inbox', label: 'Inbox', icon: 'inbox', path: '/live-messages/50894788' },
