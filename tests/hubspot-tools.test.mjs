@@ -9,8 +9,8 @@ const provider = (results = [], total = results.length, after) => new Response(J
 const request = (body = '{}', headers = {}, method = 'POST') => new Request('https://private.example/api/hubspot-tools/contacts', { method, headers: { Origin: 'https://private.example', 'Content-Type': 'application/json', ...headers }, ...(method === 'GET' ? {} : { body }) });
 const deps = { getUser: () => ({ userId: 'synthetic-user' }), authorizeUser: () => true, allowedOrigin: 'https://private.example', readData: async () => ({ records: [] }) };
 
-test('tool selection accepts only nine fixed tools and inbox thread selection, without caller authority', () => {
-  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 9);
+test('tool selection accepts only ten fixed tools and inbox thread selection, without caller authority', () => {
+  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 10);
   for (const tool of Object.keys(HUBSPOT_TOOL_CONFIG)) assert.deepEqual(validateToolInput(tool, {}), {});
   assert.deepEqual(validateToolInput('inbox', { threadId: '123' }), { threadId: '123' });
   for (const tool of ['constructor', '../contacts', 'companies', 'https://attacker.invalid']) assert.throws(() => validateToolInput(tool, {}));
@@ -276,4 +276,18 @@ test('Help Desk searches only the verified Support Pipeline and rejects non-supp
   assert.equal(mismatch.status, 'unavailable');
   assert.deepEqual(mismatch.records, []);
   assert.throws(() => validateToolInput('help-desk', { filters: [{ hs_pipeline: '924992938' }] }));
+});
+
+test('Contract Agents reads the custom object and excludes unrelated properties', async () => {
+  const result = await readHubSpotTool('contract-agents', {}, { accessToken: token, now, fetchImpl: async (url, options) => {
+    assert.equal(url, 'https://api.hubapi.com/crm/v3/objects/2-64481801/search');
+    assert.ok(JSON.parse(options.body).properties.includes('agent_status'));
+    return provider([row('101', { full_name: 'Example Agent', email: 'agent@example.invalid', phone: '2025550101', agent_status: 'Active', npn: '000123', private_notes: 'exclude' })]);
+  } });
+  assert.equal(result.status, 'available'); assert.equal(result.records[0].title, 'Example Agent');
+  assert.equal(result.records[0].subtitle, 'NPN: 000123'); assert.equal(result.records[0].status, 'Active');
+  assert.match(result.records[0].hubspotUrl, /record\/2-64481801\/101/);
+  assert.equal(JSON.stringify(result).includes('exclude'), false);
+  assert.equal(result.capabilities.canEdit, false);
+  assert.deepEqual(result.requiredScopes, ['crm.objects.custom.read']);
 });

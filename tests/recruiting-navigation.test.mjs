@@ -19,7 +19,7 @@ test('canonical stages are shared while each entry path has its own sidebar orde
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
-  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contacts', 'Help Desk', 'Tickets']);
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contract Agents', 'Help Desk', 'Tickets']);
   for (const tool of HUBSPOT_TOOLS) {
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
     assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');
@@ -82,3 +82,5 @@ test('stage routes and shared record links remain addressable after removing old
   for (const retired of ['recruits', 'orientation', 'licensing', 'transfers']) assert.deepEqual(resolveWorkspaceRoute(`#${retired}`), { view: 'today' });
   assert.deepEqual(resolveWorkspaceRoute('#unsupported'), { view: 'today' });
 });
+
+test('legacy Contacts route opens Contract Agents', () => { assert.deepEqual(resolveWorkspaceRoute('#contacts'), { view: 'contract-agents' }); assert.match(HUBSPOT_TOOLS.find(tool => tool.id === 'contract-agents').href, /objects\/2-64481801$/); });

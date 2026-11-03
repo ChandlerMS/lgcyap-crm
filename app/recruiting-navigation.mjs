@@ -37,7 +37,7 @@ export const WORKSPACE_NAV = Object.freeze([
 export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'inbox', label: 'Inbox', icon: 'inbox', path: '/live-messages/50894788' },
   { id: 'calls', label: 'Calls', icon: 'phone', path: '/contacts/50894788/objects/0-48' },
-  { id: 'contacts', label: 'Contacts', icon: 'people', path: '/contacts/50894788/objects/0-1' },
+  { id: 'contract-agents', label: 'Contract Agents', icon: 'people', path: '/contacts/50894788/objects/2-64481801' },
   { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
   { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
@@ -52,6 +52,7 @@ export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderb
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (value === 'queue' || value === 'ringcx') return { view: value };
+  if (value === 'contacts') return { view: 'contract-agents' };
   if (value === 'follow-up') return { view: 'today' };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['recruits', 'orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
