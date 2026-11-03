@@ -99,7 +99,7 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
   return <div className="queue-page">
     <header className="queue-top">
       <Image unoptimized className="queue-logo" src="/legacy-logo.png" alt="Legacy Agency Partners" width="164" height="107" priority />
-      <div className="queue-title"><h1>Queue</h1><p>Legacy Agency Partners</p></div>
+      <div className="queue-title"><h1>Shopper</h1><p>Legacy Agency Partners</p></div>
       <div className="queue-top-right">
         <span className="queue-state" data-state={state} role="status"><span className="queue-pulse" aria-hidden="true" />{stateText}</span>
         <time className="queue-clock">{tick === null ? "" : new Date(tick).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
