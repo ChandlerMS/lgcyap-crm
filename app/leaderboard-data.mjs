@@ -1,7 +1,7 @@
 const collator = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true });
 export const LEADERBOARD_BOARDS = Object.freeze([
-  { id: 'sp', label: 'Standard vs. Preferred' },
   { id: 'shopper', label: 'Shopper' },
+  { id: 'sp', label: 'Standard vs. Preferred' },
   { id: 'source', label: 'Source Performance' },
   { id: 'whatsapp', label: 'WhatsApp Sales' },
 ]);
@@ -60,10 +60,10 @@ export function sourceLeaderboardValue(row, field) {
   return null;
 }
 
-/** Columns the ranked list can be re-sorted by. Labels follow each board's own metric names. */
+/** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
 export function leaderboardSortFields(board) {
-  const keys = leaderboardMetrics(board), byName = board === 'source' ? 'Source' : 'Agent', calls = board === 'source' ? 'Leads' : 'Calls';
-  return [{ field: 'rank', label: 'Rank' }, { field: 'name', label: byName }, { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, { field: 'production', label: keys.secondLabel }];
+  const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : 'Calls';
+  return [{ field: 'production', label: keys.secondLabel }, { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, { field: 'name', label: 'Alphabetical' }];
 }
 
 /** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
@@ -91,6 +91,38 @@ export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', d
     const result = typeof first === 'number' && typeof second === 'number' ? first - second : collator.compare(first, second);
     return result ? result * direction : a.rank - b.rank;
   });
+}
+
+/**
+ * The rows as shown (sorted and searched) as CSV. Numbers stay unformatted so spreadsheets can total them;
+ * missing values are blank, never zero. Names that start like a formula are prefixed with ' so they open as text.
+ */
+export function leaderboardCsv(rows, board) {
+  const keys = leaderboardMetrics(board), source = board === 'source';
+  const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
+  const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
+  const cell = value => {
+    const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  };
+  const header = ['Rank', source ? 'Source' : 'Agent', source ? 'Leads' : 'Calls', 'Close rate', keys.firstLabel, keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
+  const lines = rows.map(row => [
+    row.attributed === false ? '' : row.rank ?? '',
+    typeof row.name === 'string' ? row.name : '',
+    fixed(leaderboardSortValue(row, board, 'calls'), 0),
+    percent(leaderboardSortValue(row, board, 'closeRate')),
+    fixed(nonnegative(row[keys.first]), 0),
+    fixed(signedNumber(row[keys.second]), 2),
+    ...(source ? [fixed(nonnegative(row.spend), 2), fixed(sourceLeaderboardValue(row, 'roas'), 2)] : []),
+  ]);
+  return [header, ...lines].map(line => line.map(cell).join(',')).join('\r\n') + '\r\n';
+}
+
+/** e.g. leaderboard-standard-vs-preferred-2026-11-01-to-2026-11-03.csv */
+export function leaderboardCsvFilename(boardLabel, startDate, endDate) {
+  const slug = String(boardLabel).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'leaderboard';
+  const dates = startDate ? endDate && endDate !== startDate ? `-${startDate}-to-${endDate}` : `-${startDate}` : '';
+  return `leaderboard-${slug}${dates}.csv`;
 }
 
 /** Case- and accent-insensitive name search; every word typed must appear in the name. */

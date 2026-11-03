@@ -100,8 +100,34 @@ test('ranked rows re-sort by name, calls, close rate and production per board, k
   assert.deepEqual(whatsapp.map(row => row.name), ['B', 'A']);
   const shopper = sortLeaderboardRows([{ name: 'A', submitted: 1, premium: 10, leads: 10 }, { name: 'B', submitted: 3, premium: 5, leads: 6 }], 'shopper', { field: 'closeRate', direction: 'desc' });
   assert.deepEqual(shopper.map(row => row.name), ['B', 'A']);
-  assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Rank', 'Source', 'Leads', 'Close rate', 'Submitted premium']);
-  assert.deepEqual(leaderboardSortFields('whatsapp').at(-1).label, 'Total production');
+  assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Calls', 'Close rate', 'Alphabetical']);
+  assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Submitted premium', 'Leads', 'Close rate', 'Alphabetical']);
+  assert.deepEqual(leaderboardSortFields('whatsapp').map(option => option.field), ['production', 'calls', 'closeRate', 'name']);
+  assert.equal(leaderboardSortFields('whatsapp')[0].label, 'Total production');
+});
+
+import { LEADERBOARD_BOARDS, leaderboardCsv, leaderboardCsvFilename } from '../app/leaderboard-data.mjs';
+test('Standard vs. Preferred sits right of Shopper in the board tabs', () => {
+  assert.deepEqual(LEADERBOARD_BOARDS.map(value => value.label), ['Shopper', 'Standard vs. Preferred', 'Source Performance', 'WhatsApp Sales']);
+});
+test('the export is the rows as shown, with raw numbers, blanks for missing values and safe text', () => {
+  const rows = sortLeaderboardRows([
+    { name: 'Bravo, Jr. "BJ"', sales: 3, annualPremium: 1234.567, inboundCalls: 12, soldPerInboundLog: .25 },
+    { name: '=HYPERLINK("x")', sales: 1, annualPremium: 50, inboundCalls: null, soldPerInboundLog: null },
+    { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 10 },
+  ], 'sp', { field: 'production', direction: 'desc' });
+  assert.equal(leaderboardCsv(rows, 'sp'), [
+    'Rank,Agent,Calls,Close rate,Policies sold,Annual premium',
+    '1,"Bravo, Jr. ""BJ""",12,25%,3,1234.57',
+    `2,"'=HYPERLINK(""x"")",,,1,50`,
+    ',Writing agent not recorded,,,1,10',
+  ].join('\r\n') + '\r\n');
+  const source = leaderboardCsv([{ name: 'Web', rank: 1, leads: 8, submitted: 2, premium: 900, spend: 300 }], 'source').split('\r\n');
+  assert.equal(source[0], 'Rank,Source,Leads,Close rate,Submitted,Submitted premium,Spend,ROAS');
+  assert.equal(source[1], '1,Web,8,25%,2,900,300,3');
+  assert.equal(leaderboardCsvFilename('Standard vs. Preferred', '2026-11-03', '2026-11-03'), 'leaderboard-standard-vs-preferred-2026-11-03.csv');
+  assert.equal(leaderboardCsvFilename('WhatsApp Sales', '2026-11-01', '2026-11-03'), 'leaderboard-whatsapp-sales-2026-11-01-to-2026-11-03.csv');
+  assert.equal(leaderboardCsvFilename('Shopper'), 'leaderboard-shopper.csv');
 });
 test('agent search ignores case, accents and word order', () => {
   const rows = [{ name: 'José Álvarez' }, { name: 'Joseph King' }, { name: 'Ann Lee' }];
