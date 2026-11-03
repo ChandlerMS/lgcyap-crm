@@ -7,7 +7,7 @@ import {
 } from '../app/recruiting-navigation.mjs';
 
 test('canonical stages are shared while each entry path has its own sidebar order', () => {
-  assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Today', 'Add Recruits']);
+  assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Recruits', 'Add Recruits']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'genpop').items.map(page => page.label), ['Hiring Event', 'Application', 'Phone Interview']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'mass-recruiting').items.map(page => page.label), ['Application', 'Phone Interview', 'Hiring Event']);
   assert.equal(new Set(STAGE_PAGES.map(page => page.id)).size, 10);
