@@ -101,21 +101,31 @@
 .expanded .stageContent { padding-inline: 20px; }
 @media (max-width: 700px) { .stage.expanded { width: calc(100vw - 48px); flex-basis: calc(100vw - 48px); } .expanded .recruits { grid-template-columns: minmax(0, 1fr); } .expanded .stageContent { padding-inline: 12px; } }
 
-/* Fit the pipeline to its content area; stages wrap vertically on narrow screens. */
+/* Keep the connected tree fitted; recruit details open below at normal size. */
 .pipeline { width: 100%; min-width: 0; container-type: inline-size; }
 .slider { overflow: visible; cursor: auto; touch-action: pan-y; scroll-snap-type: none; padding-inline: 0; }
-.flow { display: flex; flex-direction: column; align-items: stretch; width: 100%; min-width: 0; gap: 28px; }
-.entryPaths, .licensePaths, .outcomes { width: 100%; min-width: 0; gap: 28px; }
+.flow { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 18px; width: 100%; min-width: 0; }
+.entryPaths, .licensePaths, .outcomes { width: 100%; min-width: 0; gap: 32px; }
 .entryPath, .licensingRoute, .singleStage { width: 100%; min-width: 0; }
-.stageRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.stage, .stage.expanded { width: 100%; min-width: 0; flex-basis: auto; }
-.stage.expanded { grid-column: 1 / -1; }
-.stageHeading { padding: 16px; }
-.stageTitle { overflow-wrap: anywhere; }
-.stageToggle { gap: 8px; font-size: 17px; }
-.arrow, .merge, .split, .connectors { display: none; }
-.expanded .recruits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-@container (max-width: 700px) {
-  .stageRow { grid-template-columns: minmax(0, 1fr); }
-  .expanded .recruits { grid-template-columns: minmax(0, 1fr); }
+.entryPath h3, .licensingRoute h3 { font-size: 13px; line-height: 1.4; }
+.stageRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.licensingRoute:first-child .stageRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stage, .stage.expanded { width: 100%; min-width: 0; flex-basis: auto; min-height: 106px; }
+.stageHeading { padding: 8px; border-radius: 7px; }
+.stageToggle { display: grid; grid-template-columns: minmax(0, 1fr) 28px; gap: 4px; min-height: 90px; font-size: 13px; }
+.stageTitle { grid-column: 1 / -1; overflow-wrap: anywhere; line-height: 1.35; }
+.stageToggle small { font-size: 10px; }
+.count { font-size: 16px; }
+.expandButton { width: 28px; height: 32px; font-size: 18px; }
+.arrow, .merge, .split { display: none; }
+.connectors { display: block; }
+.detailPanel { margin-top: 28px; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.detailPanel h3 { margin: 0; font-size: 20px; }
+.detailPanel .recruits { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+@container (max-width: 899px) {
+  .flow { width: 900px; zoom: calc(100cqw / 900px); }
+}
+@container (max-width: 620px) {
+  .detailPanel { padding: 12px; }
+  .detailPanel .recruits { grid-template-columns: minmax(0, 1fr); }
 }
