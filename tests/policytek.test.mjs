@@ -143,3 +143,27 @@ test('Custom reads isolate both board and dates, retain timestamps overnight and
     assert.deepEqual(await policytekSyncPlan(db, closed), []);
   } finally { await db.close(); }
 });
+
+
+test('same-name source rows retain independent metrics and totals without merging', async () => {
+  const c = capture('source');
+  c.table.push(['Synthetic Alpha', '1', '0', '1', '$20', '$5']);
+  const parsed = parsePolicytekCapture(c, now);
+  assert.equal(parsed.rows.length, 2);
+  assert.deepEqual(parsed.rows.map(row => row.premium), [1200.1, 20]);
+  assert.equal(parsed.reportTotals.premium, 1200.1);
+  assert.equal(parsed.partial, true);
+  const db = new PGlite();
+  try {
+    await db.exec(schema); await savePolicytekSnapshot(db, parsed);
+    const read = await readPolicytekLeaderboard({board:'source',period:'day'}, {db,now});
+    assert.equal(read.rows.length, 2);
+    assert.match(read.notice, /Each provider row is kept separately/);
+    assert.match(read.notice, /rankings may be incomplete/);
+  } finally { await db.close(); }
+  c.table[3][3] = '-';
+  assert.throws(() => parsePolicytekCapture(c, now));
+  const shopper = capture(); shopper.table.push(shopper.table[2]);
+  assert.throws(() => parsePolicytekCapture(shopper, now));
+});
+

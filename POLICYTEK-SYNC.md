@@ -47,3 +47,6 @@ Use one bounded recovery per affected job, only in the dedicated report tab:
 ## Verification
 
 `tests/policytek.test.mjs` covers auth, Origin rejection, bounded requests, report scope, malformed/empty tables, partial totals, DST, replay ordering, durable storage, queued dates and stale status using PGlite. Existing full tests, typecheck, lint and build remain release gates. Live browser capture and production publication must be checked separately from those tests.
+
+## Repeated Source display labels
+Source Performance may render different source rows with the same name. Preserve every original row and its metrics; do not merge, rename, or drop them. The parser accepts repeated Source labels and the report displays an identity warning. Shopper duplicate-name rejection, independent report totals, validation, timestamp guards, and the refresh schedule remain unchanged.
