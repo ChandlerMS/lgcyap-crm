@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS svp_ringcx_windows (
   PRIMARY KEY (call_date, slot)
 );
 
--- A day joins the board once every window that has started has been read, and stays on it.
+-- A day joins the board once every window that has started has been read, and stays on it (lib/svp-ringcx-calls.mjs).
 CREATE TABLE IF NOT EXISTS svp_ringcx_days (
   call_date date PRIMARY KEY,
   ready_at timestamptz NOT NULL
@@ -26,5 +26,5 @@ CREATE TABLE IF NOT EXISTS svp_ringcx_sync (
   succeeded_at timestamptz,
   error_code text,
   error_detail text,
-  last_reads jsonb
+  last_run jsonb
 );

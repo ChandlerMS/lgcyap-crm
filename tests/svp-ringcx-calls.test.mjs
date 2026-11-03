@@ -63,7 +63,7 @@ const fakeRingCx = (handler = range => [
   { agentName: 'Agent Two', queue: 100, dateTimeFrom: range.startDate, answIxnCnt: 1 },
   { agentName: 'Other Queue', queue: 999, dateTimeFrom: range.startDate, answIxnCnt: 50 },
 ]) => {
-  const client = { ranges: [], svpQueueIds: async () => new Set(['100']), agentQueueReport: async range => { client.ranges.push(range); return handler(range); } };
+  const client = { ranges: [], svpQueues: async () => ({ ids: new Set(['100']), answeredToday: 40 }), agentQueueReport: async range => { client.ranges.push(range); return handler(range); } };
   return client;
 };
 const SHA = 'a'.repeat(64);
@@ -127,15 +127,34 @@ test('the sync catches up within its read budget, then the board uses RingCX fro
   } finally { await db.close(); }
 });
 
-test('a new day joins the board as soon as it begins, at zero, rather than falling back to HubSpot logs', async () => {
+test('a new day joins the board at zero once its first minutes are read, because the day before already proved the report matches', async () => {
   const db = await database();
   try {
     await db.query(`INSERT INTO svp_ringcx_windows (call_date, slot, counts, read_through, settled, read_at)
       SELECT d::date, s, '{"agent one": 1}'::jsonb, (s + 1) * 120, true, now() FROM generate_series('2026-11-02'::date, '2026-11-03'::date, interval '1 day') d, generate_series(0, 11) s`);
-    const now = at('2026-11-04T05:05:00Z');
-    assert.equal((await syncSvpRingcxCalls(db, fakeRingCx(), now)).status, 'ok');
-    const calls = await readSvpCalls(db, { startDate: '2026-11-04', endDate: '2026-11-04' }, now);
+    const empty = fakeRingCx(() => []), midnight = at('2026-11-04T05:05:00Z');
+    assert.deepEqual((await syncSvpRingcxCalls(db, empty, midnight)).reads, [], 'at 12:05 nothing of the new day is readable');
+    assert.equal((await readSvpCalls(db, { startDate: '2026-11-04', endDate: '2026-11-04' }, midnight)).status, 'not-covered');
+    await syncSvpRingcxCalls(db, empty, midnight + FIVE_MINUTES);
+    const calls = await readSvpCalls(db, { startDate: '2026-11-04', endDate: '2026-11-04' }, midnight + FIVE_MINUTES);
     assert.deepEqual([calls.status, calls.total, calls.ringcx.from], ['available', 0, '2026-11-04']);
+  } finally { await db.close(); }
+});
+
+test('a report that matches nothing never puts zeros on the board, and the status view shows why', async () => {
+  const db = await database();
+  try {
+    await importSvpCallsReports(db, [november]);
+    const client = fakeRingCx(range => [{ agentName: 'Agent One', queue: 777, dateTimeFrom: range.startDate, answIxnCnt: 9 }]);
+    let now = at('2026-11-03T19:23:00Z');
+    for (let run = 0; run < 40; run++) { assert.equal((await syncSvpRingcxCalls(db, client, now)).status, 'ok'); now += FIVE_MINUTES; }
+    assert.equal((await db.query('SELECT count(*)::int AS windows FROM svp_ringcx_windows')).rows[0].windows >= 20, true, 'every window was read');
+    assert.equal((await db.query('SELECT count(*)::int AS days FROM svp_ringcx_days')).rows[0].days, 0);
+    const calls = await readSvpCalls(db, { startDate: '2026-11-03', endDate: '2026-11-03' }, now);
+    assert.deepEqual([calls.total, calls.ringcx], [3, null], 'the workbook number stays');
+    const { lastRun } = await readSvpRingcxStatus(db);
+    assert.deepEqual([lastRun.answeredToday, lastRun.reportToday], [40, 0]);
+    assert.deepEqual([lastRun.reads[0].rows, lastRun.reads[0].inScope, /^2026-11-03 /.test(lastRun.reads[0].firstInterval)], [1, 0, true]);
   } finally { await db.close(); }
 });
 
@@ -156,7 +175,7 @@ test('failures keep earlier counts, record why for the status view, and clear af
     assert.deepEqual([empty.status, empty.code], ['failed', 'EMPTY_AGENT_REPORT'], 'an empty report must not wipe counts already read');
     assert.equal((await db.query("SELECT counts->>'agent one' AS calls, read_through FROM svp_ringcx_windows WHERE call_date = '2026-11-03' AND slot = 7")).rows[0].read_through, 855);
 
-    const unexpected = await syncSvpRingcxCalls(db, { svpQueueIds: async () => { throw new Error('postgres://secret'); } }, start + 3 * FIVE_MINUTES);
+    const unexpected = await syncSvpRingcxCalls(db, { svpQueues: async () => { throw new Error('postgres://secret'); } }, start + 3 * FIVE_MINUTES);
     assert.deepEqual([unexpected.code, unexpected.detail], ['SYNC_FAILED', null]);
 
     assert.equal((await syncSvpRingcxCalls(db, good, start + 4 * FIVE_MINUTES)).status, 'ok');

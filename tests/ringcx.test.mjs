@@ -69,7 +69,8 @@ test('agent queue report uses the RingCentral account id and stays within the gr
   const calls=[];
   const bodies=[{access_token:'rc-secret'},{accessToken:'cx-secret'},[{gateId:7,gateGroupId:1973,connected:0,accepted:0},{gateId:8,gateGroupId:1803,connected:0,accepted:0}],{id:980634004,name:'private'},[{agentName:'Agent One',queue:7,answIxnCnt:1}],[]];
   const client=createRingCx({clientId:'c',clientSecret:'s',jwt:'j',fetch:async(url,init)=>{calls.push({url,init});return Response.json(bodies.shift());}});
-  assert.deepEqual([...await client.svpQueueIds()],['7']);
+  const queues=await client.svpQueues();
+  assert.deepEqual([[...queues.ids],queues.answeredToday],[['7'],0]);
   assert.deepEqual(await client.agentQueueReport({startDate:'2026-11-03 10:00:00',endDate:'2026-11-03 12:00:00'}),[{agentName:'Agent One',queue:7,answIxnCnt:1}]);
   assert.equal(calls[3].url,'https://platform.ringcentral.com/restapi/v1.0/account/~'); assert.equal(calls[3].init.headers.Authorization,'Bearer rc-secret');
   assert.equal(calls[4].url,'https://ringcx.ringcentral.com/voice/api/cx/integration/v1/accounts/980634004/sub-accounts/50560001/agg-agent-extended-stats');
