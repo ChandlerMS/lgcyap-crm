@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeAgents, summarizeQueues, onCallAgents, availableAgents, averageWaitSeconds, createRingCx, ringCxResponse } from '../lib/ringcx.mjs';
+import { summarizeAgents, summarizeQueues, onCallAgents, availableAgents, busyAgents, averageWaitSeconds, createRingCx, ringCxResponse } from '../lib/ringcx.mjs';
 const agent = (agentId, agentState, agentGroupId = 2498) => ({ agentId, agentState, agentGroupId, callAni: 'private' });
 test('unique target agents only; wrap and other states never count as available', () => {
   assert.deepEqual(summarizeAgents([agent(1,'AVAILABLE'),agent(1,'AVAILABLE'),agent(2,'ON_CALL'),agent(3,'WRAP_UP'),agent(4,'AVAILABLE',2044)]), {loggedIn:3,available:1,onCalls:1,other:1});
@@ -20,7 +20,7 @@ test('on-call roster shares count scope, deduplicates and only exposes allowed f
   const held = {...agent(1,'ENGAGED'),firstName:' Alex ',lastName:'Example',onHoldDts:'2026-11-03T15:00:00Z',email:'private@example.com',callUii:'private-call'};
   const rows=[held,held,agent(2,'ON_CALL'),agent(3,'AVAILABLE'),agent(4,'PENDING-DISP'),agent(5,'ENGAGED',2044)];
   const roster=onCallAgents(rows);
-  assert.deepEqual(roster,[{id:'2',name:'Agent 2',status:'On call',sessionCalls:null,stateSeconds:null},{id:'1',name:'Alex Example',status:'On hold',sessionCalls:null,stateSeconds:null}]);
+  assert.deepEqual(roster,[{id:'2',name:'Agent 2',status:'On call',todayCalls:null,todaySales:null,sessionCalls:null,stateSeconds:null},{id:'1',name:'Alex Example',status:'On hold',todayCalls:null,todaySales:null,sessionCalls:null,stateSeconds:null}]);
   assert.equal(roster.length,summarizeAgents(rows).onCalls);
   assert.doesNotMatch(JSON.stringify(roster),/private|email|callUii|callAni/);
   assert.deepEqual(onCallAgents([]),[]);
@@ -28,7 +28,7 @@ test('on-call roster shares count scope, deduplicates and only exposes allowed f
 });
 test('available roster excludes busy, wrap, working and other groups', () => {
   const rows=[agent(1,'AVAILABLE'),agent(1,'AVAILABLE'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'AVAILABLE',2044)];
-  assert.deepEqual(availableAgents(rows),[{id:'1',name:'Agent 1',status:'Available',sessionCalls:null,stateSeconds:null}]);
+  assert.deepEqual(availableAgents(rows),[{id:'1',name:'Agent 1',status:'Available',todayCalls:null,todaySales:null,sessionCalls:null,stateSeconds:null}]);
   assert.equal(availableAgents(rows).length,summarizeAgents(rows).available);
 });
 test('unauthenticated requests never invoke RingCX; private no-store headers', async () => {
@@ -64,3 +64,10 @@ test('upstream failures are sanitized and trigger cooldown', async () => {
  const invalid=availableAgents([{...agent(1,'AVAILABLE'),callsHandled:-1,stateTime:'30'}])[0];
  assert.equal(invalid.sessionCalls,null); assert.equal(invalid.stateSeconds,null);
  });
+
+test('busy includes all non-available logged-in states without changing active call count', () => {
+ const rows=[agent(1,'AVAILABLE'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'BREAK'),agent(6,'LUNCH',2044)];
+ assert.equal(busyAgents(rows).length,4); assert.equal(summarizeAgents(rows).onCalls,1);
+ assert.deepEqual(busyAgents(rows).map(row=>row.status),['On call','Working','Pending disp','Break']);
+ assert.equal(busyAgents(rows)[0].todayCalls,null);
+});

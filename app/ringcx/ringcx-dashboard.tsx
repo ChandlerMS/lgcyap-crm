@@ -3,9 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import styles from './ringcx.module.css';
 
-type Agent = {id: string; name: string; status: string; sessionCalls: number | null; stateSeconds: number | null};
+type Agent = {id: string; name: string; status: string; todayCalls: number | null; todaySales: number | null; stateSeconds: number | null};
 const duration = (seconds: number | null | undefined) => { if (seconds == null) return "—"; const total = Math.max(0, Math.floor(seconds)); return `${Math.floor(total / 3600).toString().padStart(2,"0")}:${Math.floor(total / 60 % 60).toString().padStart(2,"0")}:${(total % 60).toString().padStart(2,"0")}`; };
-type Snapshot = { observedAt: string; agents: { available: number; onCalls: number; loggedIn: number; other: number }; availableAgents: Agent[]; onCallAgents: Agent[]; averageWaitSeconds: number | null; queues: number; calls: { connected: number | null; answered: number | null; activeConnected: number; status: string } };
+type Snapshot = { observedAt: string; agents: { available: number; onCalls: number; loggedIn: number; other: number }; availableAgents: Agent[]; onCallAgents: Agent[]; busyAgents: Agent[]; dailyPerformance: {sales: number | null; closeRate: number | null}; averageWaitSeconds: number | null; queues: number; calls: { connected: number | null; answered: number | null; activeConnected: number; status: string } };
 const initials = (name: string) => { const parts = name.split(/\s+/).filter(Boolean); return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase(); };
 export default function RingCxDashboard() {
   const [data, setData] = useState<Snapshot | null>(null);
@@ -20,7 +20,7 @@ export default function RingCxDashboard() {
       const response = await fetch('/api/ringcx', { cache: 'no-store', signal: controller.signal });
       if (!response.ok) { if (response.status === 401) setData(null); throw new Error(response.status === 401 ? 'Sign in to the CRM to view this dashboard.' : 'RingCX could not refresh. Last received data is shown below.'); }
       const result = await response.json();
-      if (!result?.agents || !Array.isArray(result.onCallAgents) || !Array.isArray(result.availableAgents) || !Number.isFinite(Date.parse(result.observedAt))) throw new Error('RingCX returned an incomplete update.');
+      if (!result?.agents || !Array.isArray(result.busyAgents) || !Array.isArray(result.availableAgents) || !Number.isFinite(Date.parse(result.observedAt))) throw new Error('RingCX returned an incomplete update.');
       setData(result); setError(''); setNow(Date.now());
     } catch (failure) {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'RingCX could not refresh.');
@@ -42,22 +42,23 @@ export default function RingCxDashboard() {
       <article><h2>Agents Available</h2><p className={styles.available}>{value(data?.agents.available)}</p><span>Ready to take a call</span></article>
       <article><h2>On calls</h2><p className={styles.onCalls}>{value(data?.agents.onCalls)}</p><span>Agents in an active call state</span></article>
       <article><h2>Average wait</h2><p className={styles.waitValue}>{duration(data?.averageWaitSeconds)}</p><span>Before answer · today’s inbound calls</span></article>
+      <article><h2>Close rate</h2><p className={styles.waitValue}>{data?.dailyPerformance?.closeRate == null ? "—" : `${(data.dailyPerformance.closeRate * 100).toFixed(1)}%`}</p><span>Today · sales ÷ answered inbound calls</span></article>
       <aside><strong>{value(data?.agents.loggedIn)}</strong><span>Logged in</span><p>{value(data?.agents.other)} in other states</p></aside>
     </section>
     <div className={styles.rosterGrid}>
     <section className={styles.roster} aria-labelledby="available-title"><div className={styles.rosterHead}><div><h2 id="available-title">Agents Available</h2><p>{stale ? 'Last received roster · updates unavailable' : 'Ready to take a call · Standard vs Preferred'}</p></div><span className={styles.rosterCount}>{value(data?.availableAgents.length)}</span></div>
-      <ol className={styles.agentList}>{data?.availableAgents.map(agent => <li className={styles.agentRow} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.sessionCalls)} session calls · {duration(agent.stateSeconds)} in {agent.status === "Available" ? "available" : "active"} state</span></span><span className={styles.callStatus}>{agent.status}</span></li>)}</ol>
+      <ol className={styles.agentList}>{data?.availableAgents.map(agent => <li className={styles.agentRow} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.todayCalls)} calls today · {value(agent.todaySales)} sales today · {duration(agent.stateSeconds)} in {agent.status === "On call" || agent.status === "On hold" ? "active" : agent.status.toLowerCase()} state</span></span><span className={styles.callStatus}>{agent.status}</span></li>)}</ol>
       {!data && <p className={styles.empty}>{error ? 'Agent list unavailable.' : 'Connecting to RingCX…'}</p>}
       {data && !data.availableAgents.length && <p className={styles.empty}>{stale ? 'No agents were available at the last update.' : 'No agents are currently available.'}</p>}
     </section>
-    <section className={styles.roster} aria-labelledby="on-call-title"><div className={styles.rosterHead}><div><h2 id="on-call-title">On Live Calls</h2><p>{stale ? 'Last received roster · updates unavailable' : 'Standard vs Preferred agents · including calls on hold'}</p></div><span className={styles.rosterCount}>{value(data?.onCallAgents.length)}</span></div>
-      <ol className={styles.agentList}>{data?.onCallAgents.map(agent => <li className={styles.agentRow} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.sessionCalls)} session calls · {duration(agent.stateSeconds)} in {agent.status === "Available" ? "available" : "active"} state</span></span><span className={styles.callStatus}>{agent.status}</span></li>)}</ol>
+    <section className={styles.roster} aria-labelledby="on-call-title"><div className={styles.rosterHead}><div><h2 id="on-call-title">On Live Calls or Busy</h2><p>{stale ? 'Last received roster · updates unavailable' : 'All logged-in agents not in Available'}</p></div><span className={styles.rosterCount}>{value(data?.busyAgents.length)}</span></div>
+      <ol className={styles.agentList}>{data?.busyAgents.map(agent => <li className={styles.agentRow} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.todayCalls)} calls today · {value(agent.todaySales)} sales today · {duration(agent.stateSeconds)} in {agent.status === "On call" || agent.status === "On hold" ? "active" : agent.status.toLowerCase()} state</span></span><span className={styles.callStatus}>{agent.status}</span></li>)}</ol>
       {!data && <p className={styles.empty}>{error ? 'Agent list unavailable.' : 'Connecting to RingCX…'}</p>}
-      {data && !data.onCallAgents.length && <p className={styles.empty}>{stale ? 'No agents were on calls at the last update.' : 'No one is on a live call.'}</p>}
+      {data && !data.busyAgents.length && <p className={styles.empty}>{stale ? 'No busy agents at the last update.' : 'No agents are currently busy.'}</p>}
     </section>
     </div>
     <section className={styles.daily} aria-label="Today's inbound calls"><div className={styles.sectionHeading}><h2>Today’s inbound calls</h2><span>Resets at midnight Eastern</span></div><p className={styles.subtitle}>Standard vs Preferred queues only</p><div className={styles.totals}><article><h3>Connected today</h3><strong>{value(data?.calls.connected)}</strong></article><article><h3>Answered today</h3><strong>{value(data?.calls.answered)}</strong></article></div><p className={styles.note}>Answered matches RingCX “Answered Inbound.” The daily connected total is awaiting historical-report verification.</p><p className={styles.note}>Connected right now: <strong>{value(data?.calls.activeConnected)}</strong> calls across these queues. This is a live count, not today’s total.</p></section>
-    <p className={styles.note}>Session calls reset at logout and include all call directions. State durations refresh every 15 seconds; active state includes hold time.</p>
+    <p className={styles.note}>Daily calls, sales dispositions and close rate are pending verified daily reporting and sales-disposition mapping. Dashes mean unavailable, not zero. State durations refresh every 15 seconds; active state includes hold time.</p>
     <footer><span>{data ? `${stale ? 'Last received' : 'Updated'} ${new Date(data.observedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York' })} Eastern` : 'Waiting for the first RingCX update'}</span><span>{data ? `${data.queues} queues · ` : ''}Refreshes every 15 seconds</span></footer>
   </main>;
 }
