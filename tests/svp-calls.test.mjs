@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { applySvpCalls, importSvpCallsReports, parseSvpCallsReport, readSvpCalls, SvpCallsImportError } from '../lib/svp-calls.mjs';
 
-const schema = await readFile(new URL('../migrations/0007_svp_calls.sql', import.meta.url), 'utf8');
+const schema = await readFile(new URL('../migrations/0007_svp_calls.sql', import.meta.url), 'utf8') + await readFile(new URL('../migrations/0008_svp_ringcx_calls.sql', import.meta.url), 'utf8');
 const SHA = 'a'.repeat(64);
 const file = month => `Agent_Daily_Calls_${month}_Synthetic_2026.xlsx`;
 const day = (date, rows, total = true) => ({ sheet: date, data: [[`Daily Connected Calls Report — ${date}`], ['Source: synthetic'], [], ['Date', 'Agent Full Name', 'Total Calls Connected'], ...rows.map(([name, calls]) => [date, name, calls]), ...(total ? [['Total', `${rows.length} Active Agents`, null]] : [])] });
@@ -42,7 +42,7 @@ test('imported calls replace HubSpot call logs on covered ranges, with close = s
     assert.match(result.callNotice, /answered/); assert.match(result.callNotice, /One agent with calls but no Sold deals/);
     assert.equal(applySvpCalls(spResult([], { salesComplete: false }), calls).calls.soldPerInboundLog, null);
     const straddle = await readSvpCalls(db, { startDate: '2026-09-25', endDate: '2026-10-01' });
-    assert.equal(straddle.partial, true); assert.match(applySvpCalls(spResult([]), straddle).callNotice, /outside the imported call reports/);
+    assert.equal(straddle.partial, true); assert.match(applySvpCalls(spResult([]), straddle).callNotice, /has no call data/);
     const outside = await readSvpCalls(db, { startDate: '2026-11-05', endDate: '2026-11-05' });
     assert.equal(outside.status, 'not-covered'); assert.equal(applySvpCalls(spResult([]), outside).callNotice, 'HubSpot logs');
     const smaller = parseSvpCallsReport({ fileName: file('2026-10'), sha256: 'b'.repeat(64), sheets: [day('2026-10-02', [['Agent Two', 3]])] });

@@ -65,6 +65,25 @@ test('upstream failures are sanitized and trigger cooldown', async () => {
  assert.equal(invalid.sessionCalls,null); assert.equal(invalid.stateSeconds,null);
  });
 
+test('agent queue report uses the RingCentral account id and stays within the group queues; failures explain themselves', async () => {
+  const calls=[];
+  const bodies=[{access_token:'rc-secret'},{accessToken:'cx-secret'},[{gateId:7,gateGroupId:1973,connected:0,accepted:0},{gateId:8,gateGroupId:1803,connected:0,accepted:0}],{id:980634004,name:'private'},[{agentName:'Agent One',queue:7,answIxnCnt:1}],[]];
+  const client=createRingCx({clientId:'c',clientSecret:'s',jwt:'j',fetch:async(url,init)=>{calls.push({url,init});return Response.json(bodies.shift());}});
+  assert.deepEqual([...await client.svpQueueIds()],['7']);
+  assert.deepEqual(await client.agentQueueReport({startDate:'2026-11-03 10:00:00',endDate:'2026-11-03 12:00:00'}),[{agentName:'Agent One',queue:7,answIxnCnt:1}]);
+  assert.equal(calls[3].url,'https://platform.ringcentral.com/restapi/v1.0/account/~'); assert.equal(calls[3].init.headers.Authorization,'Bearer rc-secret');
+  assert.equal(calls[4].url,'https://ringcx.ringcentral.com/voice/api/cx/integration/v1/accounts/980634004/sub-accounts/50560001/agg-agent-extended-stats');
+  assert.equal(calls[4].init.method,'POST'); assert.equal(calls[4].init.headers.Authorization,'Bearer cx-secret');
+  assert.deepEqual(JSON.parse(calls[4].init.body),{startDate:'2026-11-03 10:00:00',endDate:'2026-11-03 12:00:00',timeInterval:15,timeZone:'US/Eastern'});
+  await client.agentQueueReport({startDate:'a',endDate:'b'}); assert.equal(calls.length,6,'the account id is looked up once');
+  const reject=status=>createRingCx({clientId:'c',clientSecret:'s',jwt:'j',fetch:async url=>/oauth\/token/.test(url)?Response.json({access_token:'rc'}):/accesstoken/.test(url)?Response.json({accessToken:'cx'}):/account\/~/.test(url)?Response.json({id:1}):new Response('WEM Access required',{status})});
+  await assert.rejects(reject(403).agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_ACCESS_DENIED'&&error.detail==='HTTP 403 WEM Access required');
+  const limited=reject(429);
+  await assert.rejects(limited.agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_RATE_LIMITED');
+  await assert.rejects(limited.agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_RATE_LIMITED'&&error.detail==='','a cooldown makes no further request');
+  await assert.rejects(createRingCx().agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_NOT_CONFIGURED');
+});
+
 test('busy includes all non-available logged-in states without changing active call count', () => {
  const rows=[agent(1,'AVAILABLE'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'BREAK'),agent(6,'LUNCH',2044)];
  assert.equal(busyAgents(rows).length,4); assert.equal(summarizeAgents(rows).onCalls,1);
