@@ -101,7 +101,7 @@
 .expanded .stageContent { padding-inline: 20px; }
 @media (max-width: 700px) { .stage.expanded { width: calc(100vw - 48px); flex-basis: calc(100vw - 48px); } .expanded .recruits { grid-template-columns: minmax(0, 1fr); } .expanded .stageContent { padding-inline: 12px; } }
 
-/* Keep the connected tree fitted; recruit details open below at normal size. */
+/* Keep recruits inside their stages while the connected tree fits the content width. */
 .pipeline { width: 100%; min-width: 0; container-type: inline-size; }
 .slider { overflow: visible; cursor: auto; touch-action: pan-y; scroll-snap-type: none; padding-inline: 0; }
 .flow { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 18px; width: 100%; min-width: 0; }
@@ -119,13 +119,24 @@
 .expandButton { width: 28px; height: 32px; font-size: 18px; }
 .arrow, .merge, .split { display: none; }
 .connectors { display: block; }
-.detailPanel { margin-top: 28px; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
-.detailPanel h3 { margin: 0; font-size: 20px; }
-.detailPanel .recruits { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+
+.stage .stageContent, .stage.expanded .stageContent { padding: 0 6px; min-width: 0; }
+.stage .recruits, .stage.expanded .recruits { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.stage .recruit { padding: 10px 0; }
+.stage .recruit:has(.grip) { padding-top: 32px; }
+.stage .recruitSummary { flex-direction: column; align-items: stretch; gap: 6px; padding-right: 0; }
+.stage .recruitSummary > a { font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.stage .recruitSummary :global(.recruit-communications) { display: none; }
+.stage.expanded .recruitSummary :global(.recruit-communications) { display: flex; flex-wrap: wrap; gap: 2px; }
+.stage .grip, .stage.expanded .grip { top: 3px; right: 0; }
+.stage .recruitDetails { gap: 10px; padding-top: 10px; }
+.stage .recruitDetails > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.stage .recruitDetails dt, .stage .recruitDetails dd { font-size: 12px; }
+.stage .stageToolbar { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 12px 0; }
+.stage .sort { min-width: 0; font-size: 11px; }
+.stage .sort select, .stage .recruitDetails :global(.stage-select) { font-size: 12px; min-width: 0; }
+.stage .sortDirection { width: 100%; text-align: left; font-size: 12px; }
+
 @container (max-width: 899px) {
   .flow { width: 900px; zoom: calc(100cqw / 900px); }
-}
-@container (max-width: 620px) {
-  .detailPanel { padding: 12px; }
-  .detailPanel .recruits { grid-template-columns: minmax(0, 1fr); }
 }

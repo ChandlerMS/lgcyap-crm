@@ -59,9 +59,9 @@ function RecruitStack({ children }: { children: ReactNode }) {
     if (!list) return;
     const resize = () => {
       const entries = [...list.children] as HTMLElement[];
-      if (entries.length <= 10) { list.style.maxHeight = "none"; return; }
+      if (entries.length <= 10) { list.style.maxHeight = "360px"; return; }
       const first = entries[0].getBoundingClientRect(), tenth = entries[9].getBoundingClientRect();
-      list.style.maxHeight = `${Math.ceil(tenth.bottom - first.top + 2)}px`;
+      list.style.maxHeight = `${Math.min(360, Math.ceil(tenth.bottom - first.top + 2))}px`;
     };
     const observer = new ResizeObserver(resize);
     [...list.children].slice(0, 10).forEach(child => observer.observe(child));
@@ -262,7 +262,6 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       </dl>}
     </article>;
   };
-  const detailPanels: ReactNode[] = [];
   const card = (key: Key, options: CardOptions = {}) => {
     const { path, route } = options;
     const recruits = options.records ?? inStage(key).filter(record => (!path || record.recruitingPath === path) && (!route || record.licenseRoute === route));
@@ -273,18 +272,17 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     const sort = sorts[targetKey] ?? { key: "firstName", direction: "asc" as const };
     const sorted = sortPipelineRecruits(recruits, sort.key, sort.direction) as PipelineRecruit[];
     const validDrop = dragged && editable(dragged) && pipelineDropChoice(dragged, target);
-    if (open) detailPanels.push(<section key={targetKey}>
-      <div id={contentId} className={`${styles.stageContent} ${styles.detailPanel}`} role="region" aria-label={`${title} recruit details`}><h3>{title}{path ? ` - ${path === "genpop" ? "Referrals" : "Recruiters"}` : options.subtitle ? ` - ${options.subtitle}` : ""}</h3>
-        <>
-        <div className={styles.stageToolbar}><label className={styles.sort}><span>Sort by<span className="sr-only"> {title}{options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}</span></span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label><button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "↑" : "↓"}</button></div>
-      </>
-        {sorted.length ? <RecruitStack>{sorted.map(record => recruitCard(record, title, true))}</RecruitStack> : open ? <p className={styles.empty}>No recruits</p> : null}
-      </div>
-    </section>);
     return <section key={targetKey} className={`${styles.stage} ${open ? styles.expanded : ""} ${Object.keys(LABELS).indexOf(key) % 2 ? styles.warm : styles.cool} ${recruits.length ? styles.occupied : ""} ${validDrop ? styles.dropAvailable : ""} ${dropHover === targetKey && validDrop ? styles.dropHover : ""}`} aria-label={`${title}${options.subtitle ? `, ${options.subtitle}` : path ? `, ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}: ${recruits.length} recruits`}
       onClick={event => toggleFromBlock(event, targetKey)} data-stage-view={options.nodeKey ?? (options.records && options.allowDrop === false ? undefined : view)} data-pipeline-stage-target data-target-key={targetKey} data-stage-id={target.stageId} data-recruiting-path={path} data-license-route={route} data-allow-drop={target.allowDrop !== false}>
       {validDrop && <span className={styles.dropHint}>Drop here</span>}
       <header className={styles.stageHeading}><h4><span className={styles.stageToggle}><a className={styles.stageTitle} href={`#${view}`} onClick={event => navigate(event, view)}>{title}{options.subtitle && <small>{options.subtitle}</small>}</a><span className={styles.count}>{recruits.length}</span><button type="button" className={styles.expandButton} aria-label={`${open ? "Collapse" : "Expand"} ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded(value => ({ ...value, [targetKey]: !value[targetKey] }))}><span aria-hidden="true">{open ? "⌃" : "⌄"}</span></button></span></h4></header>
+      <div id={contentId} className={styles.stageContent}>
+        {open && <div className={styles.stageToolbar}>
+          <label className={styles.sort}><span>Sort by<span className="sr-only"> {title}</span></span><select aria-label={`Sort ${title}${options.subtitle ? ` ${options.subtitle}` : path ? ` ${path === "genpop" ? "Referrals" : "Recruiters"}` : ""}`} value={sort.key} onChange={event => setSorts(value => ({ ...value, [targetKey]: { ...sort, key: event.target.value } }))}>{SORT_FIELDS.map(([field, text]) => <option key={field} value={field}>{text}</option>)}</select></label>
+          <button type="button" className={styles.sortDirection} aria-label={`${sort.direction === "asc" ? "Sort descending" : "Sort ascending"} in ${title}`} onClick={() => setSorts(value => ({ ...value, [targetKey]: { ...sort, direction: sort.direction === "asc" ? "desc" : "asc" } }))}>{sort.direction === "asc" ? "Up" : "Down"}</button>
+        </div>}
+        {sorted.length ? <RecruitStack>{sorted.map(record => recruitCard(record, title, open))}</RecruitStack> : open ? <p className={styles.empty}>No recruits</p> : null}
+      </div>
 
     </section>;
   };
@@ -311,7 +309,6 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       onKeyDown={event => { if (event.target === event.currentTarget && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); shiftCarousel(event.key === "ArrowRight" ? 1 : -1); } }}
       onClickCapture={event => { if (suppressClickRef.current) { suppressClickRef.current = false; if (event.detail > 0) { event.preventDefault(); event.stopPropagation(); } } }}>
       <div className={styles.flow}><PipelineConnectors />{panels[0]}{panels[1]}{panels[2]}{panels[3]}{panels[4]}</div>
-      {detailPanels}
     </div>
     {dragged && dragOrigin && <div ref={ghostRef} className={styles.dragGhost} style={{ transform: `translate3d(${dragOrigin.x + 14}px, ${dragOrigin.y + 14}px, 0)` }} aria-hidden="true">{dragged.name || "Recruit"}</div>}
     <span className="sr-only" role="status" aria-live="polite">{announcement}</span>
