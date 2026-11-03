@@ -49,7 +49,8 @@ Existing blank paths/branches are never inferred. Assigned paths cannot silently
 switch, and branch changes return to Offer. Licensed w/ NPN is a staff-confirmed
 stage, not an automatic license verification or an invented NPN-format gate.
 
-Stage arrows, dropdowns and profile edits offer connected forward/backward moves.
+Stage arrows and dropdowns offer connected forward/backward shortcuts. Dragging
+names or grips, and profile edits, also allow direct moves with skipped stages.
 Offer, Training and ambiguous Contracting-back moves require an explicit choice.
 The server validates the merged state against a fresh HubSpot record before its
 sparse PATCH. Ordinary field edits and common backward moves remain available on
@@ -72,7 +73,9 @@ partial loaded cohorts are disclosed. Search filters both totals and cards.
 
 The pipeline slides horizontally using arrows or empty-space dragging. Stage
 blocks expand downward to reveal sortable recruit details. Recruit grips move
-records along connected stage edges; stage menus offer a keyboard alternative.
+records directly forward or backward between compatible stages, including when
+the cards are collapsed. Names also start drags; clicking a name opens its profile.
+Stage menus offer connected-step keyboard shortcuts.
 Names open detailed profiles. Cards show first/last name, phone, email, recruiter,
 stage, time in stage and last contact. Text stays disabled until a sender connects.
 

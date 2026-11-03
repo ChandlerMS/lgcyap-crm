@@ -1,15 +1,17 @@
-import { stageTransitionChoices } from './recruit-stage-save.mjs';
+import { stageSnapshotAvailable } from './recruit-stage-save.mjs';
+import { stageKeyForStageId } from '../lib/recruiting-config.mjs';
+import { FLOW_STAGES, validateFlowTransition } from '../lib/recruiting-flow.mjs';
 
-/** A drop selects a connected edge, never an inferred source or licensing branch. */
+/** A drop explicitly selects a destination, preserving the source and recorded branch. */
 export function pipelineDropChoice(recruit, target) {
-  if (!target || target.allowDrop === false || typeof target.stageId !== 'string' || target.stageId === recruit?.stageId
+  if (!stageSnapshotAvailable(recruit) || !target || target.allowDrop === false || typeof target.stageId !== 'string' || target.stageId === recruit?.stageId
     || target.recruitingPath && target.recruitingPath !== recruit?.recruitingPath) return null;
-  const choices = [...stageTransitionChoices(recruit, 'back'), ...stageTransitionChoices(recruit, 'forward')]
-    .filter(choice => choice.stageId === target.stageId
-      && (!target.licenseRoute || (choice.licenseRoute ?? recruit.licenseRoute) === target.licenseRoute)
-      && (!choice.flowChanges?.licensing_branch || choice.flowChanges.licensing_branch === target.licenseRoute));
-  const unique = [...new Map(choices.map(choice => [JSON.stringify([choice.stageId, choice.flowChanges ?? {}]), choice])).values()];
-  return unique.length === 1 ? unique[0] : null;
+  const stageKey = stageKeyForStageId(target.stageId);
+  const licenseRoute = target.licenseRoute ?? recruit.licenseRoute;
+  if (recruit.licenseRoute && licenseRoute !== recruit.licenseRoute) return null;
+  if (!validateFlowTransition(recruit, { ...recruit, stageKey, licenseRoute }, { allowDirect: true }).ok) return null;
+  return { stageKey, stageId: target.stageId, label: FLOW_STAGES.find(stage => stage.key === stageKey)?.label,
+    ...(licenseRoute !== recruit.licenseRoute ? { flowChanges: { licensing_branch: licenseRoute } } : {}) };
 }
 
 export function pipelineAge(enteredStageAt, now) {

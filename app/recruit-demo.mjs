@@ -72,7 +72,7 @@ export function applyDemoStage(recruit, targetStageId, flowChanges = {}, now) {
     || Object.keys(flowChanges).some(key => key !== 'licensing_branch') || Object.hasOwn(flowChanges, 'licensing_branch') && !['licensed', 'not_licensed'].includes(flowChanges.licensing_branch)) throw new DemoRecruitError('INVALID_DEMO_STAGE', 'Choose a different connected demo stage.');
   const licenseRoute = flowChanges.licensing_branch ?? recruit.licenseRoute;
   const after = { ...recruit, stageKey, licenseRoute };
-  const result = validateFlowTransition(recruit, after);
+  const result = validateFlowTransition(recruit, after, { allowDirect: true });
   if (!result.ok) throw new DemoRecruitError(result.code, result.message);
   const stage = STAGE_PAGES.find(item => item.stageId === targetStageId);
   return { ...after, stage: stage.label, stageId: targetStageId, enteredStageAt: new Date(time).toISOString(), updatedAt: new Date(time).toISOString(), editValues: { ...recruit.editValues, hs_pipeline_stage: targetStageId, licensing_branch: licenseRoute } };

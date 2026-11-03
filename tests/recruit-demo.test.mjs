@@ -49,20 +49,20 @@ test('demo stage changes use the real graph and preserve the input snapshot', ()
   assert.equal(changed.enteredStageAt, new Date(NOW + 1000).toISOString());
   assert.equal(stageSnapshotAvailable(changed), true); assert.notEqual(changed.editValues, source.editValues);
   assert.deepEqual(source, before);
-  assert.throws(() => applyDemoStage(source, stageIdForKey('completed'), {}, NOW + 1000), /connected/);
+  assert.equal(applyDemoStage(source, stageIdForKey('completed'), {}, NOW + 1000).stageKey, 'completed');
   assert.throws(() => applyDemoStage({ ...source, isDemo: false }, stageIdForKey('phone-interview'), {}, NOW + 1000), /isolated/);
   assert.throws(() => applyDemoStage({ ...source, id: '123' }, stageIdForKey('phone-interview'), {}, NOW + 1000), /isolated/);
   assert.throws(() => applyDemoStage(source, stageIdForKey('phone-interview'), { recruiting_path: 'mass_recruiting' }, NOW + 1000), /different connected/);
 });
 
-test('demo Offer requires an explicit licensing branch and terminal moves stay connected', () => {
+test('demo Offer requires an explicit licensing branch and terminal stages support direct reversals', () => {
   const records = createDemoRecruits(NOW), offer = records.find(record => record.stageKey === 'offer');
   assert.throws(() => applyDemoStage(offer, stageIdForKey('contracting'), {}, NOW + 1000), /license route/);
   const changed = applyDemoStage(offer, stageIdForKey('contracting'), { licensing_branch: 'licensed' }, NOW + 1000);
   assert.equal(changed.licenseRoute, 'licensed'); assert.equal(changed.editValues.licensing_branch, 'licensed');
   const completed = records.find(record => record.stageKey === 'completed');
   assert.equal(applyDemoStage(completed, stageIdForKey('training'), {}, NOW + 1000).stageKey, 'training');
-  assert.throws(() => applyDemoStage(completed, stageIdForKey('offer'), {}, NOW + 1000), /connected/);
+  assert.equal(applyDemoStage(completed, stageIdForKey('offer'), {}, NOW + 1000).stageKey, 'offer');
 });
 
 test('local demo edits validate contact fields and keep communication tools disconnected', () => {

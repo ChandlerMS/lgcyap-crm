@@ -170,13 +170,12 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     setExpanded(value => ({ ...value, [key]: !value[key] }));
   };
   const finishRecordDrag = () => { recordDragRef.current = null; setDraggedId(null); setDragOrigin(null); setDropHover(null); };
-  const beginRecordDrag = (event: PointerEvent<HTMLButtonElement>, recruit: PipelineRecruit) => {
-    if (event.button !== 0 || !editable(recruit)) return;
-    event.preventDefault(); event.stopPropagation(); suppressClickRef.current = false;
+  const beginRecordDrag = (event: PointerEvent<HTMLElement>, recruit: PipelineRecruit) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || !editable(recruit)) return;
+    event.stopPropagation(); suppressClickRef.current = false;
     const surface = event.currentTarget.closest<HTMLElement>("[data-pipeline-carousel]");
     if (!surface) return;
     recordDragRef.current = { pointerId: event.pointerId, id: recruit.id, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moved: false };
-    surface.setPointerCapture(event.pointerId);
   };
   const dropRecord = (id: string, destination: { key: string; target: Target } | null) => {
     const recruit = unique.find(record => record.id === id);
@@ -186,7 +185,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       if (destination) setExpanded(value => ({ ...value, [destination.key]: true }));
       setAnnouncement(recruit.isDemo ? `Updating ${recruit.name || "recruit"} locally to ${choice.label}. HubSpot will not change.` : `Saving ${recruit.name || "recruit"} to ${choice.label}.`);
       onStageChange(recruit, choice.stageId, choice.flowChanges);
-    } else setAnnouncement("That move is unavailable. Choose a connected step or use the recruit’s stage menu.");
+    } else setAnnouncement("That move is unavailable. Choose a highlighted stage on this recruit’s path.");
   };
   const panStart = (event: PointerEvent<HTMLDivElement>) => {
     suppressClickRef.current = false;
@@ -204,8 +203,8 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       if (!recordDrag.moved && Math.hypot(event.clientX - recordDrag.startX, event.clientY - recordDrag.startY) < 6) return;
       event.preventDefault();
       if (!recordDrag.moved) {
-        recordDrag.moved = true; setDraggedId(recordDrag.id); setDragOrigin({ x: event.clientX, y: event.clientY });
-        setAnnouncement(`Moving ${recruit.name || "recruit"}. Hold at an edge or over Previous or Next to scroll. Highlighted stages are connected steps.`);
+        recordDrag.moved = true; event.currentTarget.setPointerCapture(event.pointerId); setDraggedId(recordDrag.id); setDragOrigin({ x: event.clientX, y: event.clientY });
+        setAnnouncement(`Moving ${recruit.name || "recruit"}. Hold at an edge or over Previous or Next to scroll. Drop on a highlighted stage to move directly forward or backward.`);
       }
       if (ghostRef.current) ghostRef.current.style.transform = `translate3d(${event.clientX + 14}px, ${event.clientY + 14}px, 0)`;
       const destination = stageAtPoint(event.clientX, event.clientY);
@@ -241,8 +240,8 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   const recruitCard = (recruit: PipelineRecruit, stageLabel: string, details = true) => {
     const name = [recruit.firstName, recruit.lastName].filter(Boolean).join(" ") || recruit.name || `Recruit ${recruit.id}`;
     return <article key={recruit.id} data-recruit-card className={`${styles.recruit} ${draggedId === recruit.id ? styles.draggingRecruit : ""}`} aria-label={name}>
-      {details && editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a connected stage`} title="Drag to a highlighted stage. Hold at an edge or over the arrows to scroll, or use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Use the lifecycle stage menu on this card to move a recruit with your keyboard.")}>⠿</button>}
-      <div className={styles.recruitSummary}><a href={recordHref(recruit)} draggable={false}>{name}</a><RecruitCommunications recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
+      {editable(recruit) && <button className={styles.grip} type="button" aria-label={`Drag ${name} to a stage`} title="Drag to a highlighted stage. Hold at an edge or over the arrows to scroll, or expand the card to use the stage menu." onPointerDown={event => beginRecordDrag(event, recruit)} onClick={() => setAnnouncement("Expand this stage and use the lifecycle stage menu to move a recruit with your keyboard.")}>⠿</button>}
+      <div className={`${styles.recruitSummary} ${editable(recruit) ? styles.draggableSummary : ""}`}><a href={recordHref(recruit)} draggable={false} className={editable(recruit) ? styles.draggableName : undefined} onPointerDown={event => beginRecordDrag(event, recruit)}>{name}</a><RecruitCommunications recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
       {details && <dl className={styles.recruitDetails}>
         <div><dt>First name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.firstName || "Not recorded"}</a></dd></div>
         <div><dt>Last name</dt><dd><a href={recordHref(recruit)} draggable={false}>{recruit.lastName || "Not recorded"}</a></dd></div>
@@ -295,7 +294,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   return <section className={styles.pipeline} aria-label="Recruiting stages">
     <div className={styles.heading}><div className={styles.carouselControls} aria-label="Pipeline slider controls"><button type="button" data-carousel-scroll="-1" aria-label="Previous pipeline stages" title={draggedId ? "Hold the recruit here to scroll left" : "Slide left"} onClick={() => shiftCarousel(-1)}>←</button><button type="button" data-carousel-scroll="1" aria-label="Next pipeline stages" title={draggedId ? "Hold the recruit here to scroll right" : "Slide right"} onClick={() => shiftCarousel(1)}>→</button></div></div>
     {partial && <p className={styles.partial} role="status">Counts cover loaded records only.</p>}
-    <div ref={viewportRef} data-pipeline-carousel className={`${styles.slider} ${panning || draggedId ? styles.dragging : ""}`} role="region" aria-roledescription="carousel" aria-label="Recruiting logic tree. Drag empty space to slide left or right. Expand a stage to see prospects; drag a recruit’s grip to a highlighted connected stage." tabIndex={0}
+    <div ref={viewportRef} data-pipeline-carousel className={`${styles.slider} ${panning || draggedId ? styles.dragging : ""}`} role="region" aria-roledescription="carousel" aria-label="Recruiting logic tree. Drag empty space to slide left or right. Drag a recruit’s name or grip to a highlighted stage to move directly forward or backward." tabIndex={0}
       onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={cancelPointerGesture} onLostPointerCapture={event => { if (event.target === event.currentTarget) cancelPointerGesture(); }}
       onKeyDown={event => { if (event.target === event.currentTarget && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); shiftCarousel(event.key === "ArrowRight" ? 1 : -1); } }}
       onClickCapture={event => { if (suppressClickRef.current) { suppressClickRef.current = false; if (event.detail > 0) { event.preventDefault(); event.stopPropagation(); } } }}>

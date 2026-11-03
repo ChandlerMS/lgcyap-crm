@@ -68,13 +68,12 @@ test('an explicit Offer branch is sent atomically with its captured expected val
   } });
 });
 
-test('illegal skips, absent decisions and unsupported flow fields fail before any request', async () => {
+test('absent decisions and unsupported flow fields fail before any request', async () => {
   let calls = 0;
   const options = { requestId, fetchImpl: async () => { calls++; assert.fail('Invalid stage action reached the server.'); } };
   const training = recruitAt('training');
   for (const [before, target, flowChanges] of [
     [training, training.stageId], [training, 'foreign'], [recruitAt('application'), stageIdForKey('contracting')],
-    [recruitAt('phone-interview', 'mass_recruiting'), stageIdForKey('offer')],
     [recruitAt('phone-interview', ''), stageIdForKey('offer')], [recruitAt('offer'), stageIdForKey('contracting')],
     [recruitAt('offer'), stageIdForKey('licensing-reminders'), { licensing_branch: 'licensed' }],
     [recruitAt('contracting', ''), stageIdForKey('offer')],
@@ -85,6 +84,21 @@ test('illegal skips, absent decisions and unsupported flow fields fail before an
     [training, stageIdForKey('completed'), null],
   ]) await assert.rejects(saveRecruitStage(before, target, { ...options, flowChanges }), { code: 'INVALID_STAGE_CHANGE' });
   assert.equal(calls, 0);
+});
+
+test('direct stage skips and reversals send one reviewed save and preserve lifecycle sync status', async () => {
+  for (const [source, destination] of [['application', 'completed'], ['completed', 'application'], ['phone-interview', 'offer']]) {
+    const before = recruitAt(source, 'mass_recruiting');
+    const saved = { ...savedAt(before, destination), lifecycleSync: { status: 'synced' } };
+    let calls = 0;
+    const result = await saveRecruitStage(before, saved.stageId, { requestId, fetchImpl: async (_url, options) => {
+      calls++;
+      assert.deepEqual(JSON.parse(options.body).changes, { hs_pipeline_stage: saved.stageId });
+      return json({ status: 'saved', requestId, recruit: saved });
+    } });
+    assert.equal(calls, 1);
+    assert.equal(result.recruit.lifecycleSync.status, 'synced');
+  }
 });
 
 test('a chosen legacy Contracting predecessor and terminal Back save without classifying the source', async () => {

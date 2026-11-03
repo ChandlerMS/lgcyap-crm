@@ -34,6 +34,19 @@ test('ticket edit propagates once and the next run performs no echo write', asyn
   assert.deepEqual(await reconcileLifecycle('101', h), { status: 'synced' });
   assert.equal(h.writes(), 1);
 });
+
+test('direct forward skips and backward drops sync every mapped Contact stage exactly once', async () => {
+  for (const from of LIFECYCLE_STAGES) for (const to of LIFECYCLE_STAGES) {
+    if (from.value === to.value) continue;
+    const baseline = { ...initial(), ticketStage: from.stageId, contactStage: from.value };
+    const h = harness({ ...baseline, ticketStage: to.stageId }, { ...baseline, status: 'synced' });
+    assert.equal((await reconcileLifecycle('101', h)).direction, 'ticket_to_contact');
+    assert.equal(h.state().contactStage, to.value);
+    assert.equal(h.state().ticketStage, to.stageId);
+    assert.deepEqual(await reconcileLifecycle('101', h), { status: 'synced' });
+    assert.equal(h.writes(), 1);
+  }
+});
 test('Contact edit moves ticket, including a backward move', async () => {
   const h = harness({ ...initial(), contactStage: 'hiring_event' });
   assert.equal((await reconcileLifecycle('101', h)).direction, 'contact_to_ticket');

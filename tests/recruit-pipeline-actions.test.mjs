@@ -7,12 +7,13 @@ function recruit(stageKey, path = 'genpop', route = '') {
   return { id: '123', stageKey, stageId: stageIdForKey(stageKey), recruitingPath: path, licenseRoute: route,
     updatedAt: '2026-10-30T12:00:00.000Z', editValues: { hs_pipeline_stage: stageIdForKey(stageKey), recruiting_path: path, licensing_branch: route } };
 }
-test('record drops obey source order and cannot reassign a path or skip stages', () => {
+test('record drops allow direct forward and backward moves without reassigning a path', () => {
   const record = recruit('phone-interview');
   assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('offer') })?.stageKey, 'offer');
-  assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('hiring-event') }), null);
+  assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('hiring-event') })?.stageKey, 'hiring-event');
   assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('application'), recruitingPath: 'mass_recruiting' }), null);
-  assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('completed') }), null);
+  assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('completed') })?.stageKey, 'completed');
+  assert.equal(pipelineDropChoice(recruit('completed'), { stageId: stageIdForKey('application'), recruitingPath: 'genpop' })?.stageKey, 'application');
   assert.equal(pipelineDropChoice({ ...record, updatedAt: null }, { stageId: stageIdForKey('offer') }), null);
 });
 test('license branch drops require a named branch and carry exactly its edge metadata', () => {
@@ -20,7 +21,7 @@ test('license branch drops require a named branch and carry exactly its edge met
   assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('contracting') }), null);
   assert.deepEqual(pipelineDropChoice(record, { stageId: stageIdForKey('contracting'), licenseRoute: 'licensed' })?.flowChanges, { licensing_branch: 'licensed' });
   assert.deepEqual(pipelineDropChoice(record, { stageId: stageIdForKey('licensing-reminders'), licenseRoute: 'not_licensed' })?.flowChanges, { licensing_branch: 'not_licensed' });
-  assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('contracting'), licenseRoute: 'not_licensed' }), null);
+  assert.deepEqual(pipelineDropChoice(record, { stageId: stageIdForKey('contracting'), licenseRoute: 'not_licensed' })?.flowChanges, { licensing_branch: 'not_licensed' });
   assert.equal(pipelineDropChoice(recruit('offer', 'genpop', 'licensed'), { stageId: stageIdForKey('licensing-reminders'), licenseRoute: 'not_licensed' }), null);
 });
 test('blank legacy sources stay blank while shared edges remain usable', () => {

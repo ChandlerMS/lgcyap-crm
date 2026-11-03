@@ -52,7 +52,10 @@ without writing; divergent edits pause. Clearing a configured Contact stage also
 pauses, rather than clearing a ticket stage. Contact changes can select any of the
 nine valid stages, except licensing steps on an explicitly licensed branch. Path
 and license branch values are preserved, never inferred. App movement controls
-retain their existing connected-stage rules.
+allow direct forward and backward drops, including skipped stages, while preserving
+the assigned recruiting path and license branch. Collapsed names and visible grips
+both start a drag. Menus and arrows retain their connected-step shortcuts. These
+drops use the same authenticated, version-checked ticket save and Contact sync.
 
 Before PATCH, re-read the whole pair. Commit an intent before sending a mutation.
 Verify both values and branch fields afterward. Timeouts/partial outcomes retain

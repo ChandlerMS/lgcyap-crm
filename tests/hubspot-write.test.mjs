@@ -75,12 +75,12 @@ const flowInput = (before, changes) => validateWriteInput('101', {
   expectedValues: Object.fromEntries(Object.keys(changes).map(property => [property, String(before.properties[property] ?? '')])),
 });
 
-test('fresh stage validation follows the chosen recruiting path rather than the board display order', async () => {
+test('fresh stage validation allows direct moves in both source orders', async () => {
   const cases = [
     ['genpop', '1473318768', '1473318769', true],
-    ['mass_recruiting', '1473318768', '1473318769', false],
+    ['mass_recruiting', '1473318768', '1473318769', true],
     ['mass_recruiting', '1473225368', '1473318768', true],
-    ['genpop', '1473225368', '1473318768', false],
+    ['genpop', '1473225368', '1473318768', true],
   ];
   for (const [recruiting_path, current, next, allowed] of cases) {
     const before = record({ hs_pipeline_stage: current, recruiting_path });
@@ -106,12 +106,9 @@ test('Offer branch moves require an explicit matching route and cannot infer one
   assert.equal(provider.calls.length, 1);
 });
 
-test('Not Licensed must pass Licensed w/ NPN, without inventing an NPN format or verification gate', async () => {
+test('direct Not Licensed moves may skip Licensed w/ NPN and preserve the recorded branch', async () => {
   const before = record({ hs_pipeline_stage: '1473318771', recruiting_path: 'mass_recruiting', licensing_branch: 'not_licensed' });
-  const denied = sequence([json(before)]);
-  await assert.rejects(saveRecruit(flowInput(before, { hs_pipeline_stage: '1416243216' }), options(denied.fetchImpl)), { code: 'INVALID_FLOW_TRANSITION' });
-  assert.equal(denied.calls.length, 1);
-  const changes = { hs_pipeline_stage: '1473318772' };
+  const changes = { hs_pipeline_stage: '1416243216' };
   const allowed = sequence([json(before), json({ id: '101' }), json(record({ ...before.properties, ...changes, hs_lastmodifieddate: afterTime }))]);
   assert.equal((await saveRecruit(flowInput(before, changes), options(allowed.fetchImpl))).status, 'saved');
 });
@@ -157,10 +154,10 @@ test('license route re-choice is allowed at Offer and denied in downstream stage
 });
 
 test('stage decisions use fresh server routing metadata even when the caller reviewed only the stage', async () => {
-  const reviewed = record({ hs_pipeline_stage: '1473318768', recruiting_path: 'genpop' });
-  const fresh = record({ hs_pipeline_stage: '1473318768', recruiting_path: 'mass_recruiting' });
+  const reviewed = record({ hs_pipeline_stage: '1416243217', recruiting_path: 'genpop', licensing_branch: 'not_licensed' });
+  const fresh = record({ hs_pipeline_stage: '1416243217', recruiting_path: 'genpop', licensing_branch: 'licensed' });
   const provider = sequence([json(fresh)]);
-  await assert.rejects(saveRecruit(flowInput(reviewed, { hs_pipeline_stage: '1473318769' }), options(provider.fetchImpl)), { code: 'INVALID_FLOW_TRANSITION' });
+  await assert.rejects(saveRecruit(flowInput(reviewed, { hs_pipeline_stage: '1473318771' }), options(provider.fetchImpl)), { code: 'LICENSE_ROUTE_CONFLICT' });
   assert.equal(provider.calls.length, 1);
 });
 

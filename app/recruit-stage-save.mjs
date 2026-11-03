@@ -82,7 +82,7 @@ export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fet
     throw new StageSaveError('INVALID_STAGE_CHANGE', 'Refresh the recruit and choose a different valid stage.');
   }
   const nextRoute = flowChanges.licensing_branch ?? recruit.licenseRoute;
-  const transition = validateFlowTransition(recruit, { ...recruit, stageKey: stageKeyForStageId(targetStageId), licenseRoute: nextRoute });
+  const transition = validateFlowTransition(recruit, { ...recruit, stageKey: stageKeyForStageId(targetStageId), licenseRoute: nextRoute }, { allowDirect: true });
   if (!transition.ok) throw new StageSaveError('INVALID_STAGE_CHANGE', transition.message);
   if (signal?.aborted) throw new StageSaveError('SAVE_CANCELLED', 'The stage change was cancelled before saving.');
   const id = requestId.toLowerCase();
