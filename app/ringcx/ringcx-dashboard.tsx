@@ -42,7 +42,6 @@ export default function RingCxDashboard() {
       <article><h2>Agents Available</h2><p className={styles.available}>{value(data?.agents.available)}</p><span>Ready to take a call</span></article>
       <article><h2>On calls</h2><p className={styles.onCalls}>{value(data?.agents.onCalls)}</p><span>Agents in an active call state</span></article>
       <article><h2>Average wait</h2><p className={styles.waitValue}>{duration(data?.averageWaitSeconds)}</p><span>Before answer · today’s inbound calls</span></article>
-      <article><h2>Close rate</h2><p className={styles.waitValue}>{data?.dailyPerformance?.closeRate == null ? "—" : `${(data.dailyPerformance.closeRate * 100).toFixed(1)}%`}</p><span>Today · Sold ÷ answered inbound calls</span></article>
       <aside><strong>{value(data?.agents.loggedIn)}</strong><span>Logged in</span><p>{value(data?.agents.other)} in other states</p></aside>
     </section>
     <div className={styles.rosterGrid}>
@@ -57,8 +56,8 @@ export default function RingCxDashboard() {
       {data && !data.busyAgents.length && <p className={styles.empty}>{stale ? 'No busy agents at the last update.' : 'No agents are currently busy.'}</p>}
     </section>
     </div>
-    <section className={styles.daily} aria-label="Today's inbound calls"><div className={styles.sectionHeading}><h2>Today’s inbound calls</h2><span>Resets at midnight Eastern</span></div><p className={styles.subtitle}>Standard vs Preferred queues only</p><div className={styles.totals}><article><h3>Connected today</h3><strong>{value(data?.calls.connected)}</strong></article><article><h3>Answered today</h3><strong>{value(data?.calls.answered)}</strong></article></div><p className={styles.note}>Answered matches RingCX “Answered Inbound.” The daily connected total is awaiting historical-report verification.</p><p className={styles.note}>Connected right now: <strong>{value(data?.calls.activeConnected)}</strong> calls across these queues. This is a live count, not today’s total.</p></section>
-    <p className={styles.note}>Daily calls, Sold dispositions and close rate are pending verified daily reporting. Only Sold counts as a sale. Dashes mean unavailable, not zero. State durations refresh every 15 seconds; active state includes hold time.</p>
+    <section className={styles.daily} aria-label="Today's inbound calls"><div className={styles.sectionHeading}><h2>Today’s inbound calls</h2><span>Resets at midnight Eastern</span></div><p className={styles.subtitle}>Standard vs Preferred queues only</p><div className={styles.totals}><article><h3>Answered today</h3><strong>{value(data?.calls.answered)}</strong></article></div><p className={styles.note}>Answered matches RingCX “Answered Inbound.”</p><p className={styles.note}>Connected right now: <strong>{value(data?.calls.activeConnected)}</strong> calls across these queues. This is a live count, not today’s total.</p></section>
+    <p className={styles.note}>Daily calls and Sold dispositions are pending verified daily reporting. Only Sold counts as a sale. Dashes mean unavailable, not zero. State durations refresh every 15 seconds; active state includes hold time.</p>
     <footer><span>{data ? `${stale ? 'Last received' : 'Updated'} ${new Date(data.observedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York' })} Eastern` : 'Waiting for the first RingCX update'}</span><span>{data ? `${data.queues} queues · ` : ''}Refreshes every 15 seconds</span></footer>
   </main>;
 }
