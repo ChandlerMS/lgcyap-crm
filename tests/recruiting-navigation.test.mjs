@@ -7,7 +7,7 @@ import {
 } from '../app/recruiting-navigation.mjs';
 
 test('canonical stages are shared while each entry path has its own sidebar order', () => {
-  assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Recruits', 'Add Recruits']);
+  assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Recruiting Dashboard', 'Add Recruits']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'genpop').items.map(page => page.label), ['Hiring Event', 'Application', 'Phone Interview']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'mass-recruiting').items.map(page => page.label), ['Application', 'Phone Interview', 'Hiring Event']);
   assert.equal(new Set(STAGE_PAGES.map(page => page.id)).size, 10);
@@ -19,7 +19,7 @@ test('canonical stages are shared while each entry path has its own sidebar orde
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
-  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contract Agents', 'Help Desk', 'Tickets']);
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Recruits', 'Contract Agents', 'Help Desk', 'Tickets']);
   for (const tool of HUBSPOT_TOOLS) {
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
     assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');
@@ -81,7 +81,7 @@ test('stage routes and shared record links remain addressable after removing old
   assert.deepEqual(resolveWorkspaceRoute('#follow-up'), { view: 'today' });
   assert.deepEqual(resolveWorkspaceRoute('#add-recruit'), { view: 'add-recruits' });
   assert.deepEqual(resolveWorkspaceRoute('#recruit/123'), { view: 'today', id: '123' });
-  for (const retired of ['recruits', 'orientation', 'licensing', 'transfers']) assert.deepEqual(resolveWorkspaceRoute(`#${retired}`), { view: 'today' });
+  for (const retired of ['orientation', 'licensing', 'transfers']) assert.deepEqual(resolveWorkspaceRoute(`#${retired}`), { view: 'today' });
   assert.deepEqual(resolveWorkspaceRoute('#unsupported'), { view: 'today' });
 });
 

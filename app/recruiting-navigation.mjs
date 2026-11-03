@@ -37,6 +37,7 @@ export const WORKSPACE_NAV = Object.freeze([
 export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'inbox', label: 'Inbox', icon: 'inbox', path: '/live-messages/50894788' },
   { id: 'calls', label: 'Calls', icon: 'phone', path: '/contacts/50894788/objects/0-48' },
+  { id: 'recruits', label: 'Recruits', icon: 'people', path: '/contacts/50894788/objects/0-5' },
   { id: 'contract-agents', label: 'Contract Agents', icon: 'people', path: '/contacts/50894788/objects/2-64481801' },
   { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
   { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
@@ -55,7 +56,7 @@ export function resolveWorkspaceRoute(hash) {
   // Tasks and the full Follow Up list left the Recruits page; saved links still open it.
   if (value === 'follow-up' || value === 'tasks') return { view: 'today' };
   if (value === 'add-recruit') return { view: 'add-recruits' };
-  if (['recruits', 'orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
+  if (['orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
   if (RECRUITS_PAGE_TOOLS.some(tool => tool.id === value)) return { view: 'today' };
   if (value.startsWith('recruit/')) return { view: 'today', id: value.slice(8) };
   return { view: WORKSPACE_NAV.some(item => item.id === value) || STAGE_PAGES.some(item => item.id === value) || HUBSPOT_TOOLS.some(item => item.id === value) || WORKSPACE_EXTRA_PAGES.some(item => item.id === value) ? value : 'today' };

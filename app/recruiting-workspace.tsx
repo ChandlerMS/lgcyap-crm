@@ -338,7 +338,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const periodSource = query.trim() ? all.filter(recruit => [recruit.name, recruit.office, recruit.stage, recruit.firstName ?? "", recruit.lastName ?? "", recruit.phone ?? "", recruit.email ?? "", recruit.recruiter ?? ""].some(value => value.toLowerCase().includes(query.trim().toLowerCase()))) : all;
   const periodRecords = recordsInRecruitingPeriod(periodSource, resolveRecruitingPeriod(periodSelection, timestamp || undefined)) as Recruit[];
   const stagePage = stagePageForView(route.view);
-  const stageRecords = route.view === "today" ? officeRecords : recordsForStagePage(officeRecords, route.view) as Recruit[];
+  const stageRecords = ["today", "recruits"].includes(route.view) ? officeRecords : recordsForStagePage(officeRecords, route.view) as Recruit[];
   const unmapped = unmappedStageRecords(officeRecords) as Recruit[];
   const filtered = sortRecruitRows(stageRecords.filter(recruit => (intake === "All license statuses" || recruit.intake === intake) && (!query.trim() || [recruit.name, recruit.office, recruit.stage, recruit.phone ?? "", recruit.email ?? "", recruit.recruiter ?? ""].some(value => value.toLowerCase().includes(query.trim().toLowerCase())))), listSort) as Recruit[];
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -351,8 +351,8 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const queueView = route.view === "queue";
   const ringcxView = route.view === "ringcx";
   const embeddedView = queueView || ringcxView;
-  const hubspotTool = HUBSPOT_TOOLS.find(item => item.id === route.view);
-  const pageName = route.id ? selected?.name ?? "Recruit" : hubspotTool?.label ?? NAV.find(item => item.id === route.view)?.label ?? "Today";
+  const hubspotTool = HUBSPOT_TOOLS.find(item => item.id === route.view && item.id !== "recruits");
+  const pageName = route.id ? selected?.name ?? "Recruit" : hubspotTool?.label ?? NAV.find(item => item.id === route.view)?.label ?? (route.view === "recruits" ? "Recruits" : "Today");
   const filteredSuffix = data?.partial ? " loaded" : "";
   const closeMenu = () => { restoreMenuFocus.current = true; setMenuOpen(false); };
   const navigateFromMenu = () => { if (menuOpen) focusPageAfterNav.current = true; setMenuOpen(false); setQuery(""); };
@@ -474,7 +474,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         {recruitsPagePanel("calendar")}
       </div>
     </>;
-    return <>{heading(stagePage?.label ?? "Recruits", `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;
+    return <>{heading(stagePage?.label ?? "Recruits", route.view === "recruits" ? "Recruiting records connected to your HubSpot recruiting pipeline." : `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;
   }
 
   // Queue shares the hash navigation and unsaved-edit protection of other workspace pages.
