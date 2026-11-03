@@ -451,7 +451,7 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
 ## Queue (PolicyTek live calls and availability)
 
-Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows Available and On Live Calls under two totals, Total Calls Today (sales agents' PolicyTek calls since midnight Eastern, read once a minute) and Average Wait Time (the average wait of the agents in Available), polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
+Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows Available and On Live Calls under two totals, Total Calls Today (sales agents' PolicyTek calls since midnight Eastern, read once a minute; past PolicyTek's 999-call page the day is read in halves until each part fits, and the total shows a + if PolicyTek would not split it further) and Average Wait Time (the average wait of the agents in Available), polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
 
 Set these **server-only** environment variables in the Vercel project before deploying:
 
