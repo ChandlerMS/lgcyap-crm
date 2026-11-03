@@ -106,7 +106,7 @@ with reserved fictional phones and example.invalid email addresses. Demo edits
 and stage moves live only in browser memory and reset on reload. They never write
 to HubSpot. Live tools and intake cannot mount beneath a demo label.
 
-The entire Recruits row toggles its keyboard-accessible disclosure, with Overview,
+The entire Recruits row toggles its keyboard-accessible disclosure, with only
 Add Recruits and the nested Pipeline folder underneath. Recruits starts collapsed
 on app opening; nested destinations reveal their parent menus. The Pipeline
 folder and its branches start collapsed; following a stage link opens its parent

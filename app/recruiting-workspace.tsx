@@ -364,7 +364,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     <details className="nav-recruits">
       <summary><Icon name={NAV[0].icon} /><span>{NAV[0].label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
       <div className="recruit-pages">
-        {navigationLink({ ...NAV[0], label: "Overview" })}
         {navigationLink(NAV[1])}
         <details className="nav-pipeline">
           <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
