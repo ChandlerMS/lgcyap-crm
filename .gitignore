@@ -47,5 +47,6 @@ yarn-error.log*
 /.vercel/
 /.serena/
 /test-results/
+/lib/generated/onboard-runtime.mjs
 !.env.example
 .vercel

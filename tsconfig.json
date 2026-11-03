@@ -40,6 +40,8 @@
     "**/*.mts"
   ],
   "exclude": [
+    "vendor",
+    "lib/generated",
     "node_modules",
     "examples",
     "dist",

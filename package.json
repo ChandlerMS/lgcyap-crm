@@ -6,6 +6,10 @@
     "node": "24.x"
   },
   "scripts": {
+    "predev": "node scripts/build-onboard.mjs",
+    "prebuild": "node scripts/build-onboard.mjs",
+    "pretest": "node scripts/build-onboard.mjs",
+    "precheck": "node scripts/build-onboard.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -37,6 +41,7 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "esbuild": "0.28.2",
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.3",
     "typescript": "5.9.3"

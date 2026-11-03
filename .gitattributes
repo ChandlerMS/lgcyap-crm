@@ -1,0 +1,2 @@
+# Keep the uploaded source byte-for-byte on every platform.
+vendor/lgcy-onboard/** -text

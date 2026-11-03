@@ -1,0 +1,30 @@
+{
+  "name": "lgcy-onboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LGCY Onboard: Legacy Agency Partners' recruiting CRM, deployed on Vercel (one shared, versioned record in Postgres).",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "extract": "node scripts/extract-shared.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "google:team": "node scripts/authorize-calendar.mjs",
+    "google:inbox": "node scripts/authorize-inbox.mjs"
+  },
+  "dependencies": {
+    "@vercel/functions": "3.6.1",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.13",
+    "@types/node": "22.19.19",
+    "@types/pg": "8.23.1",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  }
+}

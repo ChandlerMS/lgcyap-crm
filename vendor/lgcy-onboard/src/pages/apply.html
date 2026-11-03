@@ -1,0 +1,92 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Legacy Agent Application</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root { --bg:#f4eee2; --card:#fbf8f1; --well:#efe7d6; --line:#e2d7bf; --line2:#cdbf9f; --fg:#2b2416; --muted:#5c513e; --gold:#b08a24; --gold2:#7a5a0e; --ink:#2b1f05; --bad:#b83232; --ok:#1d7f4a; --field:#fffdf8;
+  --chrome: linear-gradient(180deg, #e3c063 0%, #f3dc93 50%, #c99f37 100%); color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15.5px/1.5 Inter, system-ui, sans-serif; font-weight: 500; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 22px 16px 60px; }
+.brand { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid var(--gold); margin-bottom: 18px; }
+.brand img { height: 34px; width: auto; }
+.brand b { display: block; font: 400 15px/1 Michroma, sans-serif; letter-spacing: .12em; color: var(--ink); }
+.brand small { display: block; margin-top: 4px; font: 400 8px/1 Michroma, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0 0 6px; font: 400 22px/1.25 Michroma, sans-serif; letter-spacing: .03em; color: var(--ink); }
+.lede { color: var(--muted); margin: 0 0 14px; }
+.note { background: #fbf3dc; border: 1px solid #e6cf8a; border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0; padding: 10px 14px; font-size: 14px; margin: 0 0 18px; }
+.sec { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(80,60,20,.08); }
+.sec h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--ink); display: flex; gap: 10px; align-items: baseline; }
+.sec h2 i { font: 400 11px/1 Michroma, sans-serif; letter-spacing: .12em; color: var(--gold2); }
+.sec .n { font-size: 13.5px; color: var(--muted); margin: 0 0 10px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 14px; }
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.f.wide { grid-column: 1 / -1; }
+.f > label, .f > .lbl { font-size: 13px; color: var(--muted); font-weight: 600; }
+.f .req::after { content: " *"; color: var(--bad); }
+input, textarea, select { font: inherit; font-weight: 500; color: var(--fg); background: var(--field); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 11px; width: 100%; box-shadow: inset 0 1px 2px rgba(80,60,20,.12); }
+input:focus, textarea:focus { outline: none; border-color: var(--gold); }
+textarea { min-height: 86px; resize: vertical; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt { border: 1px solid var(--line2); background: var(--field); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: center; box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(80,60,20,.12); }
+.opt::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--line2); flex: none; }
+.opt.on { border-color: var(--gold); background: #fbf3dc; } .opt.on::before { background: var(--gold); border-color: var(--gold); box-shadow: inset 0 0 0 3px #fbf3dc; }
+.chk { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; } .chk input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--gold); flex: none; box-shadow: none; }
+.err { color: var(--bad); font-size: 13px; }
+.f.bad input, .f.bad textarea { border-color: var(--bad); }
+button.go { width: 100%; margin-top: 6px; background: var(--chrome); color: var(--ink); border: 1px solid #b8902c; border-radius: 10px; padding: 13px 16px; font: 700 15.5px Inter, system-ui, sans-serif; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 2px 4px rgba(80,60,20,.25); }
+button.go:disabled { opacity: .6; cursor: wait; }
+.done { text-align: center; padding: 30px 10px; }
+.done h2 { font: 400 20px/1.3 Michroma, sans-serif; color: var(--ink); margin: 0 0 10px; }
+.foot { margin-top: 18px; font-size: 12px; color: var(--muted); text-align: center; }
+.hp { position: absolute; left: -9999px; }
+[hidden] { display: none !important; }
+</style></head><body><div class="wrap">
+<div class="brand"><img src="/brand/legacy-mark-dark.png" alt="" onerror="this.style.display='none'"><span><b>LEGACY</b><small>Agency Partners</small></span></div>
+<div id="app">
+<h1>Agent Application</h1>
+<p class="lede">Inbound Life Insurance Sales · Orlando and Miami · Lgcy Agency Partners LLC</p>
+<p class="lede">Thank you for your interest in joining Legacy Agency Partners. We hire both licensed agents and people who are ready to get licensed; a license is a plus, not a requirement. This takes about eight minutes. Licensed agents also complete Part 2.</p>
+<div class="note">Please answer every question marked *. Do not enter a Social Security number, date of birth, or banking information on this form.</div>
+<form id="f" novalidate></form>
+<div class="foot">Lgcy Agency Partners LLC · Confidential applicant information · Agent Application v3.1</div>
+</div>
+<script>
+const FORM = __FORM__; const PREFILL = __PREFILL__; const TOKEN = __TOKEN__;
+const A = Object.assign({}, PREFILL); const $ = (s, el = document) => el.querySelector(s); const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const licensed = () => A.everLicensed === 'yes' || /licensed/i.test(A.licenseStatus || '');
+const shown = it => { if (it.showIf) { const v = A[it.showIf.id] || ''; if (!(it.showIf.in ? it.showIf.in.includes(v) : v === it.showIf.eq)) return false; } return true; };
+function render() {
+  const f = $('#f'); const sections = FORM.filter(s => !s.part2 || licensed());
+  f.innerHTML = sections.map((s, si) => '<div class="sec"><h2><i>' + String(si + 1).padStart(2, '0') + '</i>' + esc(s.title) + '</h2>' + (s.note ? '<p class="n">' + esc(s.note) + '</p>' : '') + '<div class="grid">' + s.items.filter(shown).map(it => field(it)).join('') + '</div></div>').join('')
+    + '<input class="hp" name="website" tabindex="-1" autocomplete="off"><button class="go" type="submit" id="go">Submit my application</button><p class="err" id="formErr" style="text-align:center;margin-top:8px"></p>';
+}
+function field(it) {
+  const v = A[it.id] === undefined ? '' : A[it.id]; const wide = it.type === 'long' || it.type === 'check' || it.type === 'yesno' || it.type === 'choice' ? ' wide' : '';
+  const lab = '<span class="lbl' + (it.req || it.essential ? ' req' : '') + '">' + esc(it.label) + '</span>';
+  if (it.type === 'yesno') return '<div class="f' + wide + '" data-id="' + it.id + '">' + lab + '<div class="opts">' + ['yes', 'no'].map(o => '<button type="button" class="opt ' + (v === o ? 'on' : '') + '" data-set="' + it.id + '" data-v="' + o + '">' + (o === 'yes' ? 'Yes' : 'No') + '</button>').join('') + '</div><span class="err"></span></div>';
+  if (it.type === 'choice') return '<div class="f' + wide + '" data-id="' + it.id + '">' + lab + '<div class="opts">' + it.options.map(o => '<button type="button" class="opt ' + (v === o ? 'on' : '') + '" data-set="' + it.id + '" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div><span class="err"></span></div>';
+  if (it.type === 'check') return '<div class="f' + wide + '" data-id="' + it.id + '"><label class="chk"><input type="checkbox" data-chk="' + it.id + '" ' + (v === 'yes' ? 'checked' : '') + '><span' + (it.req ? ' class="req"' : '') + '>' + esc(it.label) + '</span></label><span class="err"></span></div>';
+  if (it.type === 'long') return '<div class="f' + wide + '" data-id="' + it.id + '">' + lab + '<textarea data-in="' + it.id + '">' + esc(v) + '</textarea><span class="err"></span></div>';
+  return '<div class="f" data-id="' + it.id + '">' + lab + '<input type="' + (it.type === 'number' ? 'number' : it.type === 'date' ? 'date' : it.type === 'email' ? 'email' : it.type === 'tel' ? 'tel' : 'text') + '" data-in="' + it.id + '" value="' + esc(v) + '" ' + (it.id === 'email' ? 'autocomplete="email"' : it.id === 'phone' ? 'autocomplete="tel"' : it.id === 'legalName' ? 'autocomplete="name"' : '') + '><span class="err"></span></div>';
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-set]'); if (!b) return; A[b.dataset.set] = b.dataset.v; if (b.dataset.set === 'licenseStatus' && /licensed/i.test(b.dataset.v)) A.everLicensed = 'yes'; render(); });
+document.addEventListener('input', e => { const t = e.target; if (t.dataset.in) A[t.dataset.in] = t.value; });
+document.addEventListener('change', e => { const t = e.target; if (t.dataset.chk) { A[t.dataset.chk] = t.checked ? 'yes' : 'no'; if (t.dataset.chk === 'everLicensed') render(); } });
+$('#f').addEventListener('submit', async e => {
+  e.preventDefault(); let first = null; document.querySelectorAll('.f').forEach(x => x.classList.remove('bad'));
+  const items = FORM.filter(s => !s.part2 || licensed()).flatMap(s => s.items).filter(shown);
+  for (const it of items) { const v = A[it.id]; const miss = (it.req || it.essential) && (v === undefined || v === '' || (it.type === 'check' && v !== 'yes')); const badEmail = it.type === 'email' && v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v); if (miss || badEmail) { const el = document.querySelector('.f[data-id="' + it.id + '"]'); if (el) { el.classList.add('bad'); el.querySelector('.err').textContent = badEmail ? 'That email does not look right.' : it.type === 'check' ? 'Please tick this to continue.' : 'Please answer this one.'; if (!first) first = el; } } }
+  if (first) { $('#formErr').textContent = 'A few answers are missing. They are marked in red.'; first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  $('#go').disabled = true; $('#go').textContent = 'Sending…'; $('#formErr').textContent = '';
+  try {
+    const r = await fetch('/api/apply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: TOKEN, answers: A, website: $('.hp').value }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.why || 'Could not send');
+    const first = (A.preferred || A.legalName || '').trim().split(' ')[0] || 'there';
+    $('#app').innerHTML = d.pass
+      ? '<div class="done"><h2>Thank you, ' + esc(first) + '.</h2><p>Your application is in. Next is a short phone call with a Legacy recruiter, about 15 minutes, to walk through the role and hear a bit about you. Expect the call within one business day' + (d.recruiter ? ' from ' + esc(d.recruiter) : '') + '.</p><p class="lede" style="margin-top:14px">A confirmation is on its way to ' + esc(A.email || 'your email') + '.</p></div>'
+      : '<div class="done"><h2>Thank you, ' + esc(first) + '.</h2><p>We reviewed your answers and we are not able to move forward at this time, because the role requires ' + esc((d.failed || []).join('; ')) + '.</p><p class="lede" style="margin-top:14px">If that changes, you are welcome to apply again. We have emailed you a copy of this note.</p></div>';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) { $('#go').disabled = false; $('#go').textContent = 'Submit my application'; $('#formErr').textContent = 'Could not send your application (' + esc(err.message) + '). Please try again in a moment.'; }
+});
+render();
+</script></div></body></html>

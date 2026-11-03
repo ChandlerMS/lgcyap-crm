@@ -35,6 +35,18 @@ try {
   assert.match(signIn.headers.get('cache-control') ?? '', /no-store/);
   assert.equal(signIn.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(signIn.headers.get('x-frame-options'), 'DENY');
+  for (const path of ['/v2', '/v2/app']) {
+    const page = await fetch(base + path, { redirect: 'manual' });
+    assert.equal(page.status, 307, `${path} requires the existing CRM sign-in`);
+    assert.match(page.headers.get('location') ?? '', /^\/sign-in\?return_to=%2Fv2$/);
+    assert.match(page.headers.get('cache-control') ?? '', /no-store/);
+    assert.equal(page.headers.get('x-frame-options'), path === '/v2/app' ? 'SAMEORIGIN' : 'DENY');
+  }
+  for (const path of ['/api/v2/me', '/api/v2/state', '/api/v2/state/version']) {
+    const response = await fetch(base + path, { headers: { Cookie: 'better-auth.session_token=forged.invalid', 'oai-authenticated-user-email': 'forged@example.invalid' } });
+    assert.equal(response.status, 401, `${path} rejects forged identity before storage access`);
+    assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+  }
   for (const path of ['/api/recruits', '/api/recruits/101', '/api/contacts', '/api/recruit-intake', '/api/leaderboard', ...['customer-success', 'inbox', 'tickets', 'calls', 'contacts', 'tasks', 'calendar', 'meetings'].flatMap(tool => [`/api/hubspot-tools/${tool}`, `/api/hubspot-tools/${tool}/101`])]) {
     for (const forged of [false, true]) {
       const headers = { Origin: base, 'Content-Type': 'application/json' };
