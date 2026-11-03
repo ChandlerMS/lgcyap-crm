@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeAgents, summarizeQueues, onCallAgents, createRingCx, ringCxResponse } from '../lib/ringcx.mjs';
+import { summarizeAgents, summarizeQueues, onCallAgents, availableAgents, createRingCx, ringCxResponse } from '../lib/ringcx.mjs';
 const agent = (agentId, agentState, agentGroupId = 2498) => ({ agentId, agentState, agentGroupId, callAni: 'private' });
 test('unique target agents only; wrap and other states never count as available', () => {
   assert.deepEqual(summarizeAgents([agent(1,'AVAILABLE'),agent(1,'AVAILABLE'),agent(2,'ON_CALL'),agent(3,'WRAP_UP'),agent(4,'AVAILABLE',2044)]), {loggedIn:3,available:1,onCalls:1,other:1});
@@ -25,6 +25,11 @@ test('on-call roster shares count scope, deduplicates and only exposes allowed f
   assert.doesNotMatch(JSON.stringify(roster),/private|email|callUii|callAni/);
   assert.deepEqual(onCallAgents([]),[]);
   assert.throws(()=>onCallAgents([held,agent(1,'AVAILABLE')]));
+});
+test('available roster excludes busy, wrap, working and other groups', () => {
+  const rows=[agent(1,'AVAILABLE'),agent(1,'AVAILABLE'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'AVAILABLE',2044)];
+  assert.deepEqual(availableAgents(rows),[{id:'1',name:'Agent 1',status:'Available'}]);
+  assert.equal(availableAgents(rows).length,summarizeAgents(rows).available);
 });
 test('unauthenticated requests never invoke RingCX; private no-store headers', async () => {
   const result = await ringCxResponse({getUser:async()=>null,client:{snapshot:()=>{throw Error('must not call');}}});

@@ -1,7 +1,7 @@
 import { getAppUser, requireAppUser } from '../app-auth';
 import RingCxDashboard from './ringcx-dashboard';
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'RingCX | Legacy Agency Partners' };
+export const metadata = { title: 'Standard vs Preferred | Legacy Agency Partners' };
 export default async function RingCxPage({ searchParams }: { searchParams: Promise<{ embedded?: string }> }) {
   if ((await searchParams).embedded === '1') {
     let user;
