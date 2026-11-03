@@ -505,19 +505,24 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .follow-up-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .follow-up-heading h2 { margin: 0; font-size: clamp(28px, 3vw, 34px); letter-spacing: -.025em; }
 .follow-up-heading h2 span { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; }
-/* Follow Up chips beside the Today totals: fixed 44px rows, density from tight gaps. */
-.follow-up-chips { --chip-rows: 2; min-width: 0; }
-.follow-up-chips-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--space-3); margin-bottom: var(--space-1); font-size: 14px; }
-.follow-up-chips-heading h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.5; }
-.follow-up-chips-heading h2 span { margin-left: var(--space-1); color: var(--gold); font-variant-numeric: tabular-nums; }
-.follow-up-chips-empty { margin: 0; font-size: 14px; }
-.follow-up-chip-list { position: relative; display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.follow-up-chip-list > li { display: flex; min-width: 0; max-width: 100%; }
-.follow-up-chip-list > .is-overflow { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; }
-.follow-up-chip { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; max-width: 100%; min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--control-line); border-radius: 999px; background: var(--panel); color: var(--text); font-size: 14px; white-space: nowrap; }
-a.follow-up-chip:hover { border-color: var(--gold); }
-.follow-up-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.follow-up-chip-days, .follow-up-chip-more { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Tasks and Follow Up chips beside the Today totals: fixed 44px rows, density from tight gaps. Tasks is the smaller box, on the left. */
+.today-summaries { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-4) var(--space-6); }
+.today-summaries > .task-chips { flex: 1 1 200px; }
+.today-summaries > :not(.task-chips) { flex: 2 1 300px; }
+.summary-chips { --chip-rows: 2; min-width: 0; }
+.summary-chips-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--space-3); margin-bottom: var(--space-1); font-size: 14px; }
+.summary-chips-heading h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.5; }
+.summary-chips-heading h2 span { margin-left: var(--space-1); color: var(--gold); font-variant-numeric: tabular-nums; }
+.summary-chips-empty { margin: 0; font-size: 14px; }
+.summary-chip-list { position: relative; display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.summary-chip-list > li { display: flex; min-width: 0; max-width: 100%; }
+.summary-chip-list > .is-overflow { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; }
+.summary-chip { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; max-width: 100%; min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--control-line); border-radius: 999px; background: var(--panel); color: var(--text); font-size: 14px; white-space: nowrap; }
+a.summary-chip:hover { border-color: var(--gold); }
+.summary-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Task titles run long; capping them fits more chips in the small box. The full title is in the hover and screen-reader text. */
+.task-chips .summary-chip-name { max-width: 160px; }
+.summary-chip-badge, .summary-chip-more { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 700px) {
   .intake-grid { display: block; min-width: 0; table-layout: auto; }

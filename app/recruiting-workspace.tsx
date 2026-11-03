@@ -10,6 +10,7 @@ import RingCentralPanel from "./ringcentral-panel";
 import RecruitStageControls from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
 import RecruitFollowUpChips from "./recruit-follow-up-chips";
+import RecruitTaskChips from "./recruit-task-chips";
 import RecruitActivity from "./recruit-activity";
 import DemoRecruitEditor from "./demo-recruit-editor";
 import { createDemoRecruits, applyDemoStage } from "./recruit-demo.mjs";
@@ -467,7 +468,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     }
     if (route.view === "today") return <>
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
-      <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} aside={<RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} />} />
+      <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} aside={<div className="today-summaries"><RecruitTaskChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} /><RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} /></div>} />
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
       <div className="today-overview">
         {recruitsPagePanel("meetings")}
