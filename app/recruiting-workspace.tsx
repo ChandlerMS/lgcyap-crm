@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AddRecruits from "./add-recruits";
 import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
@@ -21,7 +21,7 @@ import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting
 import { saveRecruitStageWithRefresh, StageSaveError } from "./recruit-stage-save.mjs";
 import { sortRecruitRows } from "./recruit-list-view.mjs";
 import { STAGE_PAGES, TERMINAL_STAGE_IDS } from "../lib/recruiting-config.mjs";
-import { WORKSPACE_NAV, HUBSPOT_TOOLS, WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
+import { WORKSPACE_NAV, HUBSPOT_TOOLS, RECRUITS_PAGE_TOOLS, WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
 import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 
 import { lifecycleStatusLabel } from "../lib/recruit-lifecycle.mjs";
@@ -163,6 +163,16 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const currentRouteRef = useRef<Route>({view:"today"});
   const updateToolDirty = useCallback((dirty: boolean) => { toolDirtyRef.current = dirty; setToolDirty(dirty); }, []);
   const updateToolBusy = useCallback((busy: boolean) => { toolBusyRef.current = busy; setToolBusy(busy); }, []);
+  // Recruits-page panels report separately; the page stays guarded while any one has an open edit.
+  const panelReports = useMemo(() => {
+    const dirty = new Set<string>(), busy = new Set<string>();
+    const reports: Record<string, { onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }> = {};
+    for (const { id } of RECRUITS_PAGE_TOOLS) reports[id] = {
+      onDirtyChange: value => { if (value) dirty.add(id); else dirty.delete(id); updateToolDirty(dirty.size > 0); },
+      onBusyChange: value => { if (value) busy.add(id); else busy.delete(id); updateToolBusy(busy.size > 0); },
+    };
+    return reports;
+  }, [updateToolDirty, updateToolBusy]);
   const [office, setOffice] = useState("All offices");
   const [intake, setIntake] = useState("All license statuses");
   const [query, setQuery] = useState("");
@@ -434,6 +444,14 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     return <><div className="filterbar">{officeFilter}<label className="filter-field"><span className="sr-only">License status at intake</span><select className="select" value={intake} onChange={event => setIntake(event.target.value)}><option>All license statuses</option>{["Already Licensed", "In Progress", "Unlicensed", "Not recorded"].map(value => <option key={value}>{value}</option>)}</select></label>{(office !== "All offices" || intake !== "All license statuses" || query) && <button className="text-link" onClick={resetFilters}>Clear filters</button>}</div><div className="results-line"><span>{filtered.length}{filteredSuffix} recruit{filtered.length === 1 ? "" : "s"}{query && ` matching “${query}”`}</span><div className="view-switch" aria-label={route.view === "today" ? "Follow-up view" : "Recruit view"}><button className={`btn btn-quiet ${listView === "list" ? "selected" : ""}`} aria-pressed={listView === "list"} onClick={() => setListView("list")}>List</button><button className={`btn btn-quiet ${listView === "board" ? "selected" : ""}`} aria-pressed={listView === "board"} onClick={() => setListView("board")}>Board</button></div></div>{!filtered.length ? <Empty title="No matching recruits">No loaded recruits match these filters. Try another office, license status, or search. <button className="text-link" onClick={resetFilters}>Clear filters</button></Empty> : listView === "board" ? <div className="board">{boardStages.map(stage => <section className="board-column" key={stage.id}><h2>{stage.label}<span>{stage.records.length}</span></h2>{stage.records.map(recruit => <a className="board-item" href={`#recruit/${recruit.id}`} key={recruit.id}><strong>{recruit.name}</strong><span>{recruit.office}</span><small>{stageAge(recruit, timestamp)}</small></a>)}</section>)}</div> : <><div className="table-wrap"><table className="data-table"><thead><tr>{[["name","Recruit"],["phone","Phone"],["email","Email"],["recruiter","Recruiter"],["stage","Stage"],["timeInStage","Time in stage"],["lastContactedAt","Last contacted"]].map(([field,label]) => <th key={field} aria-sort={listSort.field === field ? listSort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="column-sort" onClick={() => { setListSort(value => ({field,direction:value.field === field && value.direction === "asc" ? "desc" : "asc"})); setPage(1); }}>{label}{listSort.field === field && <span aria-hidden="true">{listSort.direction === "asc" ? " ↑" : " ↓"}</span>}</button></th>)}<th><span className="sr-only">Move stage</span></th><th className="communication-cell"><span className="sr-only">Contact tools</span></th></tr></thead><tbody>{shown.map(recruit => <tr key={recruit.id}><td><div className="recruit-row-person"><Person recruit={recruit} office={false} /></div></td><td>{recruit.phone || "Not recorded"}</td><td>{recruit.email || "Not recorded"}</td><td>{recruit.recruiter || (recruit.recruiterStatus === "unassigned" ? "Not assigned" : "Unavailable")}</td><td><RecruitStageControls recruit={recruit} mode="select" canEdit={canEdit} disabled={stageControlsDisabled || stageBlockedIds.includes(recruit.id)} onChange={(stageId, flowChanges) => void changeStage(recruit, stageId, flowChanges)} /></td><td className="next-step">{stageAge(recruit, timestamp)}</td><td>{dateLabel(recruit.lastContactedAt ?? null)}</td><td><RecruitStageControls recruit={recruit} mode="arrows" canEdit={canEdit} disabled={stageControlsDisabled || stageBlockedIds.includes(recruit.id)} onChange={(stageId, flowChanges) => void changeStage(recruit, stageId, flowChanges)} /></td><td className="communication-cell"><RecruitCommunications recruitName={recruit.name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl} isDemo={recruit.isDemo} /></td></tr>)}</tbody></table></div><div className="pagination"><span>Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}{filteredSuffix}</span><div><button className="btn btn-secondary" disabled={currentPage <= 1} onClick={() => setPage(value => value - 1)}>Previous</button><button className="btn btn-secondary" disabled={currentPage >= pageCount} onClick={() => setPage(value => value + 1)}>Next</button></div></div></>}</>;
   }
 
+  // Live HubSpot panels under the pipeline. Demo data leaves them unloaded so fictional recruits never sit beside live records.
+  function recruitsPagePanel(id: string) {
+    const tool = RECRUITS_PAGE_TOOLS.find(item => item.id === id);
+    if (!tool) return null;
+    if (demoMode) return <section className="today-panel" aria-labelledby={`today-${id}-title`}><div className="follow-up-heading"><h2 id={`today-${id}-title`}>{tool.label}</h2></div><p className="helper">This panel shows live HubSpot records. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section>;
+    return <HubSpotWorkspace compact tool={tool.id} label={tool.label} onUnauthorized={expiredSignIn} {...panelReports[tool.id]} />;
+  }
+
   function content() {
     if (ringcxView) return <iframe className="queue-workspace-frame" src="/ringcx?embedded=1" title="RingCX live dashboard" />;
     if (queueView) return <iframe className="queue-workspace-frame" src="/queue?embedded=1" title="Live call queue" allow="fullscreen; screen-wake-lock" />;
@@ -454,7 +472,10 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} aside={<RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} />} />
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
       <div className="today-overview">
-      <RecruitFollowUp records={all} now={timestamp} partial={data.partial} />
+        {recruitsPagePanel("tasks")}
+        <RecruitFollowUp records={all} now={timestamp} partial={data.partial} />
+        {recruitsPagePanel("meetings")}
+        {recruitsPagePanel("calendar")}
       </div>
     </>;
     return <>{heading(stagePage?.label ?? "Recruits", `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;
