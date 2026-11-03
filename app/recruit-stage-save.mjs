@@ -67,14 +67,14 @@ function responseError(response, result) {
 }
 
 /**
- * Uses the existing reviewed-write contract; never retries a potentially sent mutation.
+ * Validate the intended move without performing any I/O.
  * @param {object} recruit
  * @param {string} targetStageId
- * @param {{fetchImpl?: typeof fetch, requestId?: string, signal?: AbortSignal,flowChanges?:StageFlowChanges}} [options]
+ * @param {StageFlowChanges} flowChanges
  */
-export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fetch, requestId = crypto.randomUUID(), signal, flowChanges = {} } = {}) {
+function validateStageIntent(recruit, targetStageId, flowChanges) {
   if (!stageSnapshotAvailable(recruit) || !stageKeyForStageId(targetStageId)
-    || targetStageId === recruit.stageId || typeof requestId !== 'string' || !UUID.test(requestId)
+    || targetStageId === recruit.stageId
     || !flowChanges || typeof flowChanges !== 'object' || Array.isArray(flowChanges)
     || Object.keys(flowChanges).some(key => key !== 'licensing_branch')
     || (Object.hasOwn(flowChanges, 'licensing_branch') && (typeof flowChanges.licensing_branch !== 'string'
@@ -84,6 +84,18 @@ export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fet
   const nextRoute = flowChanges.licensing_branch ?? recruit.licenseRoute;
   const transition = validateFlowTransition(recruit, { ...recruit, stageKey: stageKeyForStageId(targetStageId), licenseRoute: nextRoute }, { allowDirect: true });
   if (!transition.ok) throw new StageSaveError('INVALID_STAGE_CHANGE', transition.message);
+  return nextRoute;
+}
+
+/**
+ * Uses the existing reviewed-write contract; never retries a potentially sent mutation.
+ * @param {object} recruit
+ * @param {string} targetStageId
+ * @param {{fetchImpl?: typeof fetch, requestId?: string, signal?: AbortSignal,flowChanges?:StageFlowChanges}} [options]
+ */
+export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fetch, requestId = crypto.randomUUID(), signal, flowChanges = {} } = {}) {
+  const nextRoute = validateStageIntent(recruit, targetStageId, flowChanges);
+  if (typeof requestId !== 'string' || !UUID.test(requestId)) throw new StageSaveError('INVALID_STAGE_CHANGE', 'Choose a valid stage change.');
   if (signal?.aborted) throw new StageSaveError('SAVE_CANCELLED', 'The stage change was cancelled before saving.');
   const id = requestId.toLowerCase();
   const changes = { hs_pipeline_stage: targetStageId, ...(nextRoute !== recruit.licenseRoute ? { licensing_branch: nextRoute } : {}) };
@@ -113,4 +125,46 @@ export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fet
     throw uncertainError();
   }
   return { recruit: result.recruit, replayed: result.replayed === true };
+}
+
+/**
+ * Refresh one ticket before sending one version-checked save. Never retry a mutation.
+ * A newer stage/path/branch is shown to the user, not silently replaced by the old drag intent.
+ * @param {object} recruit
+ * @param {string} targetStageId
+ * @param {{fetchImpl?: typeof fetch, requestId?: string, signal?: AbortSignal, flowChanges?:StageFlowChanges, onRefreshed?:(recruit:any)=>void}} [options]
+ */
+export async function saveRecruitStageWithRefresh(recruit, targetStageId, { fetchImpl = fetch, requestId = crypto.randomUUID(), signal, flowChanges = {}, onRefreshed } = {}) {
+  validateStageIntent(recruit, targetStageId, flowChanges);
+  if (typeof requestId !== 'string' || !UUID.test(requestId)) throw new StageSaveError('INVALID_STAGE_CHANGE', 'Choose a valid stage change.');
+  const refreshFailed = () => new StageSaveError('STAGE_REFRESH_FAILED', 'The latest recruit data could not be loaded. Nothing was saved; try dragging again.');
+  if (signal?.aborted) throw new StageSaveError('SAVE_CANCELLED', 'The stage change was cancelled before saving.');
+  let response, result;
+  try {
+    response = await fetchImpl(`/api/recruits/${encodeURIComponent(recruit.id)}/snapshot`, {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+      headers: { 'Content-Type': 'application/json' }, body: '{}', signal,
+    });
+  } catch { throw refreshFailed(); }
+  try { result = await response.json(); } catch {
+    if (response.status === 401) throw new StageSaveError('UNAUTHORIZED', 'Sign in again before changing recruiting stages.', { status: 401 });
+    throw refreshFailed();
+  }
+  if (!response.ok) {
+    if ([401, 403, 429].includes(response.status)) throw responseError(response, result);
+    throw refreshFailed();
+  }
+  const fresh = result?.recruit;
+  if (!stageSnapshotAvailable(fresh) || fresh.id !== recruit.id) throw refreshFailed();
+  onRefreshed?.(fresh);
+  if (['stageId', 'recruitingPath', 'licenseRoute'].some(key => fresh[key] !== recruit[key])) {
+    throw new StageSaveError('STAGE_CHANGED_BEFORE_SAVE', 'HubSpot changed this recruit’s stage or routing. The latest data is now shown; review it before dragging again.');
+  }
+  try { return await saveRecruitStage(fresh, targetStageId, { fetchImpl, requestId, signal, flowChanges }); }
+  catch (error) {
+    if (error instanceof StageSaveError && error.code === 'RECORD_CHANGED') {
+      throw new StageSaveError('RECORD_CHANGED', 'HubSpot changed the recruit again before saving. Nothing was overwritten. Drag again to load its latest data.', { status: error.status });
+    }
+    throw error;
+  }
 }

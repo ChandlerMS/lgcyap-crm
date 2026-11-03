@@ -22,6 +22,20 @@ Recruiters and Licensed are branch choices, not additional stages.
 
 ## Contract
 
+- POST `/api/recruits/:id/snapshot` with `{}` refreshes exactly one ticket before a
+  live stage move. It uses the same session, editor allowlist, configured-origin,
+  JSON/body-size checks and private/no-store headers as the recruiting read API.
+  It accepts no filters or fields, scopes the ID to this Recruiting pipeline, and
+  sends only a no-store HubSpot GET. It never claims a write ledger or changes CRM data.
+- A live drag (and the shared stage controls) first reads this snapshot. If its
+  stage, recruiting path or license route changed, the UI displays the new record
+  and stops the old move. Otherwise it saves the intended destination with the
+  fresh `expectedUpdatedAt` and sparse `expectedValues`, preserving unrelated edits.
+  The existing server read/version check still rejects edits made after this refresh.
+  No mutation is automatically retried. Known refresh failures or rejected conflicts
+  permit another deliberate drag, which refreshes again; uncertain saves remain blocked
+  for inspection. Demo moves remain local and never call the snapshot endpoint.
+
 - Existing authenticated POST `/api/recruits` adds optional `lifecycleSync` to each
   recruit: `status`, `checkedAt`, `syncedAt`. This is the last checked state, not a
   promise that an external editor has made no later change.
