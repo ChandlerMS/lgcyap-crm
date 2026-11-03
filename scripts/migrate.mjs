@@ -11,7 +11,7 @@ if (process.argv[2] !== '--apply') {
   let pool;
   try {
     pool = getPool();
-    for (const filename of ['0001_recruiting_ledger.sql', '0002_contact_creation_ledger.sql', '0003_recruit_intake.sql']) {
+    for (const filename of ['0001_recruiting_ledger.sql', '0002_contact_creation_ledger.sql', '0003_recruit_intake.sql', '0004_recruit_lifecycle_sync.sql']) {
       const sql = await readFile(new URL(`../migrations/${filename}`, import.meta.url), 'utf8');
       await pool.query(sql);
     }
