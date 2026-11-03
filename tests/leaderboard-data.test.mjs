@@ -1,7 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { leaderboardBarWidth, leaderboardTotals, rankLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from '../app/leaderboard-data.mjs';
+import { leaderboardBarWidth, leaderboardCallsRefreshActive, leaderboardCallsRefreshDelay, leaderboardSpCallLabel, leaderboardTotals, rankLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from '../app/leaderboard-data.mjs';
 import { WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute } from '../app/recruiting-navigation.mjs';
+
+test('Standard vs. Preferred reloads a minute after each sync, and only while its range can still gain calls', () => {
+  assert.equal(leaderboardCallsRefreshActive('day', '', '2026-11-03'), true);
+  assert.equal(leaderboardCallsRefreshActive('month', '', '2026-11-03'), true);
+  assert.equal(leaderboardCallsRefreshActive('custom', '2026-11-03', '2026-11-03'), true);
+  assert.equal(leaderboardCallsRefreshActive('custom', '2026-11-02', '2026-11-03'), false);
+  const at = value => Date.parse(`2026-11-03T14:${value}Z`);
+  assert.equal(leaderboardCallsRefreshDelay(at('05:30')), 30000);
+  assert.equal(leaderboardCallsRefreshDelay(at('06:00')), 300000);
+  assert.equal(leaderboardCallsRefreshDelay(at('06:30')), 270000);
+});
+
+test('Standard vs. Preferred row label names the call source', () => {
+  assert.equal(leaderboardSpCallLabel('ringcx'), 'Calls (answered, RingCX)');
+  assert.equal(leaderboardSpCallLabel('mixed'), 'Calls (answered, RingCX and Agent Daily Calls reports)');
+  assert.equal(leaderboardSpCallLabel('spreadsheet'), 'Calls (answered, Agent Daily Calls reports)');
+  assert.equal(leaderboardSpCallLabel(undefined), 'Calls (inbound logs attributed through deal owner)');
+});
 
 test('agent rankings use selected metric, secondary metric and stable names without mutating source rows', () => {
   const rows = [{ name: 'Zed', sales: 3, annualPremium: 200 }, { name: 'Alex', sales: 3, annualPremium: 500 }, { name: 'Blair', sales: 1, annualPremium: 700 }];

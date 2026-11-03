@@ -3,5 +3,8 @@
   "framework": "nextjs",
   "buildCommand": "node scripts/verify-production-source.mjs && npm run build && node scripts/verify-production-source.mjs",
   "installCommand": "npm ci",
-  "crons": [{ "path": "/api/cron/recruit-lifecycle", "schedule": "* * * * *" }]
+  "crons": [
+    { "path": "/api/cron/recruit-lifecycle", "schedule": "* * * * *" },
+    { "path": "/api/cron/svp-ringcx-calls", "schedule": "*/5 * * * *" }
+  ]
 }

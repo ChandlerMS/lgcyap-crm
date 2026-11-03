@@ -46,3 +46,7 @@ Agent metrics: sessionCalls = callsHandled (all session calls, reset on logout);
 Busy roster includes every logged-in non-AVAILABLE agent in group2498, preserving the separate active-call count. Per-agent todayCalls/todaySales and dailyPerformance.sales/closeRate are nullable pending daily source reconciliation and user sales-disposition mapping. Session counts are no longer displayed as the requested daily counts. Historical Analytics still unavailable on recheck.
 
 User confirmed sale disposition: exact label Sold. Close rate = Sold / answered inbound calls for Standard vs Preferred for the Eastern calendar day. Historical daily source remains unvalidated; never substitute successDispositions without proving its mapping.
+
+## Daily calls per agent
+
+The Standard vs. Preferred leaderboard's daily per-agent counts come from the reporting API, not these real-time counters. See `SVP-CALLS-IMPORT.md`, section RingCX sync. The `/ringcx` dashboard's Connected Today stays unavailable.
