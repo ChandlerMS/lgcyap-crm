@@ -42,10 +42,11 @@ export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
   { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
-// HubSpot views shown as panels on the Recruits page; their old page links open Recruits.
+// HubSpot views shown as panels on the Recruits page. Those without a sidebar page (Meetings, Calendar) send their old links to Recruits; Calls keeps its own page too.
 export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'meetings', label: 'Meetings' },
   { id: 'calendar', label: 'Calendar' },
+  { id: 'calls', label: 'Calls' },
 ].map(tool => Object.freeze(tool)));
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' })]);
 
@@ -57,7 +58,7 @@ export function resolveWorkspaceRoute(hash) {
   if (value === 'follow-up' || value === 'tasks') return { view: 'today' };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
-  if (RECRUITS_PAGE_TOOLS.some(tool => tool.id === value)) return { view: 'today' };
+  if (RECRUITS_PAGE_TOOLS.some(tool => tool.id === value) && !HUBSPOT_TOOLS.some(tool => tool.id === value)) return { view: 'today' };
   if (value.startsWith('recruit/')) return { view: 'today', id: value.slice(8) };
   return { view: WORKSPACE_NAV.some(item => item.id === value) || STAGE_PAGES.some(item => item.id === value) || HUBSPOT_TOOLS.some(item => item.id === value) || WORKSPACE_EXTRA_PAGES.some(item => item.id === value) ? value : 'today' };
 }

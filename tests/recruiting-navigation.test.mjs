@@ -27,12 +27,13 @@ test('native HubSpot tools use the verified portal and exact requested order', (
   }
 });
 
-test('Meetings and Calendar live on the Recruits page instead of the sidebar', () => {
-  assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Meetings', 'Calendar']);
-  for (const tool of RECRUITS_PAGE_TOOLS) {
+test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls keeps a sidebar page', () => {
+  assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Meetings', 'Calendar', 'Calls']);
+  for (const tool of RECRUITS_PAGE_TOOLS.filter(item => item.id !== 'calls')) {
     assert.equal(HUBSPOT_TOOLS.some(item => item.id === tool.id), false);
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: 'today' });
   }
+  assert.deepEqual(resolveWorkspaceRoute('#calls'), { view: 'calls' });
   // Tasks and the full Follow Up list were removed; saved links still open Recruits.
   for (const hash of ['#tasks', '#follow-up']) assert.deepEqual(resolveWorkspaceRoute(hash), { view: 'today' });
 });
