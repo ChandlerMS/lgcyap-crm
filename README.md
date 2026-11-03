@@ -202,13 +202,12 @@ ten stages, including zeros. Shared stages count each recruit once; entry cards
 show each path's subset, and unclassified legacy records remain visible. Counts
 cover loaded records and are marked when the data is partial.
 
-Today includes every loaded recruiting pipeline record, including Completed and
-Withdrawn, under Follow-up, with the same List/Board selector, filters and row controls as
-stage pages. Search on Today covers the pipeline. Upcoming orientations appear
-below this full-width collection. Follow-up has no separate menu item; existing
-`#follow-up` links normalize to `#today`. Suggested reviews keep the existing
-five-day open-stage rule for the Suggested for review statistic, independently
-of the complete Follow-up collection.
+Beside the totals, Follow up chips name the recruits waiting more than 15 days
+since their last contact (or creation, if never contacted), longest first, and
+count the rest as "+N more". Under the pipeline, Meetings and Calendar show live
+HubSpot records side by side. Search on Today covers the pipeline. Tasks and the
+full Follow Up list are no longer on the page and have no menu item; existing
+`#tasks` and `#follow-up` links open Recruits.
 
 Typography uses native Apple system fonts on Apple platforms and Segoe UI Variable
 on supported Windows systems, with standard fallbacks. Body, headings and controls

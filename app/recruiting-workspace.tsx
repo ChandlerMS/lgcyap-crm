@@ -9,7 +9,6 @@ import RecruitCommunications from "./recruit-communications";
 import RingCentralPanel from "./ringcentral-panel";
 import RecruitStageControls from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
-import RecruitFollowUp from "./recruit-follow-up";
 import RecruitFollowUpChips from "./recruit-follow-up-chips";
 import RecruitActivity from "./recruit-activity";
 import DemoRecruitEditor from "./demo-recruit-editor";
@@ -471,8 +470,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} aside={<RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} />} />
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
       <div className="today-overview">
-        {recruitsPagePanel("tasks")}
-        <RecruitFollowUp records={all} now={timestamp} partial={data.partial} />
         {recruitsPagePanel("meetings")}
         {recruitsPagePanel("calendar")}
       </div>

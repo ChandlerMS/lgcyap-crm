@@ -43,7 +43,6 @@ export const HUBSPOT_TOOLS = Object.freeze([
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
 // HubSpot views shown as panels on the Recruits page; their old page links open Recruits.
 export const RECRUITS_PAGE_TOOLS = Object.freeze([
-  { id: 'tasks', label: 'Tasks' },
   { id: 'meetings', label: 'Meetings' },
   { id: 'calendar', label: 'Calendar' },
 ].map(tool => Object.freeze(tool)));
@@ -53,7 +52,8 @@ export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (value === 'queue' || value === 'ringcx') return { view: value };
   if (value === 'contacts') return { view: 'contract-agents' };
-  if (value === 'follow-up') return { view: 'today' };
+  // Tasks and the full Follow Up list left the Recruits page; saved links still open it.
+  if (value === 'follow-up' || value === 'tasks') return { view: 'today' };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['recruits', 'orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
   if (RECRUITS_PAGE_TOOLS.some(tool => tool.id === value)) return { view: 'today' };
