@@ -7,6 +7,26 @@ function recruit(stageKey, path = 'genpop', route = '') {
   return { id: '123', stageKey, stageId: stageIdForKey(stageKey), recruitingPath: path, licenseRoute: route,
     updatedAt: '2026-10-30T12:00:00.000Z', editValues: { hs_pipeline_stage: stageIdForKey(stageKey), recruiting_path: path, licensing_branch: route } };
 }
+
+test('every compatible stage pair supports direct drops in both source paths and licensing branches', () => {
+  const stages = ['hiring-event', 'application', 'phone-interview', 'offer', 'licensing-reminders', 'licensed-npn', 'contracting', 'training', 'completed'];
+  const early = new Set(['hiring-event', 'application', 'phone-interview']);
+  const branchStages = new Set(['licensing-reminders', 'licensed-npn', 'contracting']);
+  let checked = 0;
+  for (const path of ['genpop', 'mass_recruiting']) for (const route of ['licensed', 'not_licensed']) {
+    const compatible = stages.filter(key => route !== 'licensed' || !['licensing-reminders', 'licensed-npn'].includes(key));
+    for (const from of compatible) for (const to of compatible) {
+      if (from === to) continue;
+      const before = recruit(from, path, route);
+      const target = { stageId: stageIdForKey(to), ...(early.has(to) ? { recruitingPath: path } : {}), ...(branchStages.has(to) ? { licenseRoute: route } : {}) };
+      const choice = pipelineDropChoice(before, target);
+      assert.equal(choice?.stageKey, to, `${path}/${route}: ${from} → ${to}`);
+      assert.equal(choice.flowChanges, undefined, 'A direct move must preserve its recorded branch.');
+      checked++;
+    }
+  }
+  assert.equal(checked, 228);
+});
 test('record drops allow direct forward and backward moves without reassigning a path', () => {
   const record = recruit('phone-interview');
   assert.equal(pipelineDropChoice(record, { stageId: stageIdForKey('offer') })?.stageKey, 'offer');
