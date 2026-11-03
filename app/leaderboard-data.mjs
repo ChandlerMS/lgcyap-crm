@@ -19,7 +19,7 @@ export function leaderboardMetrics(board) {
 export function rankLeaderboardRows(rows, board, metric) {
   const keys = leaderboardMetrics(board), primary = metric === 'ap' ? keys.second : keys.first, secondary = metric === 'ap' ? keys.first : keys.second;
   return rows.map((row, index) => ({ ...row, name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : 'Name not recorded', [keys.first]: nonnegative(row[keys.first]), [keys.second]: signedNumber(row[keys.second]), index }))
-    .filter(row => row[primary] !== null && (row[primary] !== 0 || (metricNumber(row[secondary], secondary) ?? 0) !== 0))
+    .filter(row => (board !== 'shopper' || row[keys.first] > 0) && row[primary] !== null && (row[primary] !== 0 || (metricNumber(row[secondary], secondary) ?? 0) !== 0))
     .sort((a, b) => Number(a.attributed === false) - Number(b.attributed === false) || descending(a[primary], b[primary]) || descending(a[secondary], b[secondary]) || collator.compare(a.name, b.name) || a.index - b.index);
 }
 

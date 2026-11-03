@@ -42,9 +42,7 @@ deals or the read budget. Incomplete pagination, changing result counts, and
 missing attribution/premium are marked partial with a notice. Rankings from
 partial data are not complete account totals. HubSpot search indexing can lag.
 
-Shopper and Source require PolicyTek data, which is not connected. They return
-`connection-required`, an empty array, and a short connection notice. They do
-not generate sample financial values or use Google Sheets.
+Shopper and Source read stored PolicyTek browser captures. See `POLICYTEK-SYNC.md` for the five-minute local bridge, publisher contract, date semantics and freshness limits. Report totals and incomplete named rankings remain distinct. Missing date ranges are queued; no financial values are fabricated.
 
 Validation: 12 mocked tests cover exact schema/grants, aggregation, unknowns,
 pagination, rate limits, privacy, auth/origin/body limits, and Eastern/DST dates.

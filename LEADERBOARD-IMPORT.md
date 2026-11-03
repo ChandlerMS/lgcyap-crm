@@ -17,7 +17,7 @@ Sales retain the existing verified Sold stage / Sales Pipeline / writing-agent g
 
 The export calls inbound logs “calls taken” and their sales ratio “close rate.” Those claims are not established by the data. The app labels them inbound logs and sold/log ratio. Agent rows attribute logs through a unique deal owner only when that owner maps to one writing-agent name within the selected loaded sales period; this is not proof that the owner is the agent or that a call led to a sale. Missing/ambiguous owners show unavailable. Duplicate integration engagements with distinct HubSpot IDs can still inflate log counts; they are not silently deleted or merged.
 
-The ZIP references private Claude blob URLs for `shopper-history.json` and `sources-history.json` but includes neither file. Those boards remain explicitly disconnected. Importing this source does not transfer the Claude hourly automation or establish a PolicyTek feed. No fabricated data or unsupported hourly-refresh claims are displayed.
+The ZIP references private Claude blob URLs for `shopper-history.json` and `sources-history.json` but includes neither file. Those boards were disconnected at initial import; the subsequently authorized local browser bridge is documented in `POLICYTEK-SYNC.md`. Importing this source does not transfer the Claude hourly automation or establish a PolicyTek feed. No fabricated data or unsupported hourly-refresh claims are displayed.
 
 ## Verification
 
