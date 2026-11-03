@@ -21,7 +21,8 @@
     "test:smoke": "node scripts/smoke.mjs",
     "whatsapp:import": "node scripts/whatsapp-import.mjs",
     "db:auth:check": "node --env-file-if-exists=.env.local scripts/auth-migration.mjs --check",
-    "db:auth:migrate": "node --env-file-if-exists=.env.local scripts/auth-migration.mjs --apply"
+    "db:auth:migrate": "node --env-file-if-exists=.env.local scripts/auth-migration.mjs --apply",
+    "svp-calls:import": "node scripts/svp-calls-import.mjs"
   },
   "dependencies": {
     "@next/env": "16.4.3",
