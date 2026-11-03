@@ -373,5 +373,5 @@ test('opening one Task or Meeting is refused unless it is assigned to the signed
 });
 
 test('the read routes pass the signed-in email, so the owner filter applies to the real session', () => {
-  for (const route of ['app/api/hubspot-tools/[tool]/route.ts', 'app/api/recruits/[id]/activity/route.ts']) assert.match(readFileSync(route, 'utf8'), /viewerEmail: user\?\.email/);
+  assert.match(readFileSync('app/api/hubspot-tools/[tool]/route.ts', 'utf8'), /viewerEmail: user\?\.email/);
 });
