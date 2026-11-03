@@ -348,15 +348,15 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   }, [demoRecords.length, refresh]);
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={activeView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
   const navigation = <>
-    {navigationLink(NAV[0])}
     {WORKSPACE_EXTRA_PAGES.map(navigationLink)}
+    {navigationLink(NAV[0])}
+    {navigationLink(NAV[1])}
     <details className="nav-pipeline">
       <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
       <div className="pipeline-pages">
         {WORKSPACE_NAV_GROUPS.map(group => <Fragment key={group.id}>{group.branch ? <details className="nav-branch"><summary><Icon name={group.id === "licensed" ? "check" : group.id === "not-licensed" ? "file" : "people"} /><span>{group.label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary><div className="nav-branch-stages">{group.items.map(navigationLink)}</div></details> : <><p className="nav-flow-caption">{group.label}</p>{group.items.map(navigationLink)}</>}</Fragment>)}
       </div>
     </details>
-    {navigationLink(NAV[1])}
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {HUBSPOT_TOOLS.map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
@@ -418,7 +418,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   function content() {
     if (demoMode && hubspotTool) return <>{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;
     if (leaderboardView) return <Leaderboard onUnauthorized={expiredSignIn} />;
-    if (hubspotTool && !route.id) return <HubSpotWorkspace key={hubspotTool.id} tool={hubspotTool.id} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} />;
+    if (hubspotTool && !route.id) return <HubSpotWorkspace key={hubspotTool.id} tool={hubspotTool.id} label={hubspotTool.label} description={hubspotTool.id === "help-desk" ? "Live support tickets from HubSpot’s Support Pipeline." : undefined} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} />;
     if (route.view === "add-recruits" && demoMode) return <>{heading("Add Recruits", "Switch to live data to add real recruits to HubSpot.", null)}<p className="helper">Demo records are separate from HubSpot.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, "add-recruits")}>Use live data</button></>;
     if (route.view === "add-recruits") return <AddRecruits canCreate={data?.capabilities?.canCreateRecruit === true && !error}
       checkingAccess={loading} onUnauthorized={expiredSignIn} onCreated={() => { void refresh(); }}

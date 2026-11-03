@@ -36,12 +36,13 @@ export const WORKSPACE_NAV = Object.freeze([
 // Destinations read from this portal's native HubSpot navigation.
 export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'inbox', label: 'Inbox', icon: 'inbox', path: '/live-messages/50894788' },
-  { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
   { id: 'calls', label: 'Calls', icon: 'phone', path: '/contacts/50894788/objects/0-48' },
   { id: 'contacts', label: 'Contacts', icon: 'people', path: '/contacts/50894788/objects/0-1' },
   { id: 'tasks', label: 'Tasks', icon: 'check', path: '/contacts/50894788/objects/0-27' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar', path: '/calendar/50894788' },
   { id: 'meetings', label: 'Meetings', icon: 'calendar', path: '/contacts/50894788/objects/0-47' },
+  { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
+  { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' })]);
 

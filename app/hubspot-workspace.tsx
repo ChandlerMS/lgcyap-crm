@@ -22,7 +22,7 @@ type ToolResult = {
   selectedRecordId?: string; fields?: HubspotEditField[]; capabilities?: { canEdit: boolean };
 };
 type ReadFailure = { message: string; retryAt?: number };
-type Props = { tool: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
+type Props = { tool: string; label?: string; description?: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
 type Column = { field: keyof ToolRecord; label: string; date?: boolean; dateOnly?: boolean };
 type Definition = { label: string; description: string; singular: string; columns: Column[] };
 const DEFINITIONS: Record<string, Definition> = {
@@ -57,8 +57,8 @@ export default function HubSpotWorkspace(props: Props) {
   return props.tool === "inbox" ? <InboxWorkspace onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
 }
 
-function CrmWorkspace({ tool, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
-  const definition = DEFINITIONS[tool];
+function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
+  const definition = { ...DEFINITIONS[tool === "help-desk" ? "tickets" : tool], ...(label ? { label } : {}), ...(description ? { description } : {}) };
   const [data, setData] = useState<ToolResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<ReadFailure | null>(null);
@@ -104,7 +104,7 @@ function CrmWorkspace({ tool, onUnauthorized, onDirtyChange, onBusyChange }: Pro
   }, []);
 
   const readRecordDetail = useCallback(async (record: ToolRecord): Promise<ToolRecord | null> => {
-    const sourceTool = tool === "calendar" ? "meetings" : tool;
+    const sourceTool = tool === "calendar" ? "meetings" : tool === "help-desk" ? "tickets" : tool;
     if (!["contacts", "tickets", "tasks", "customer-success", "meetings"].includes(sourceTool) || retryAtRef.current > Date.now()) return null;
     detailRequestRef.current?.abort();
     const controller = new AbortController(); detailRequestRef.current = controller;
@@ -222,14 +222,14 @@ function CrmWorkspace({ tool, onUnauthorized, onDirtyChange, onBusyChange }: Pro
     const recordInfoFields: Column[] = [...definition.columns, ...(detailed.subtitle ? [{ field: "subtitle" as const, label: "Details" }] : []), ...(["createdAt", "updatedAt"] as const).filter(field => !definition.columns.some(column => column.field === field)).map(field => ({ field, label: field === "createdAt" ? "Created" : "Updated", date: true }))];
     return <section className={styles.workspace} aria-labelledby="hubspot-record-title" aria-busy={loading}>
       <button type="button" className={`text-link ${styles.detailBack}`} disabled={editorOpen || editorBusy} onClick={() => { detailRequestRef.current?.abort(); detailRequestRef.current = null; detailRecordIdRef.current = null; setDetailRecord(null); setDetailLoading(false); }}>← Back to {definition.label}</button>
-      <div className={styles.heading}><div><h1 id="hubspot-record-title" tabIndex={-1} ref={detailHeadingRef}>{detailed.title || `Untitled ${definition.singular}`}</h1><p>{definition.singular === "contact" ? "Contact information" : `${definition.label} record details`}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>{detailCanEdit ? "Editing enabled" : "Read-only"}</span>{!editorOpen && <NativeLink href={detailed.hubspotUrl} />}{detailCanEdit && !editorOpen && <button className="btn btn-primary" disabled={detailLoading || Boolean(retryAt) || !hubspotRecordSnapshotAvailable(detailed, detailFields)} onClick={() => { onDirtyChange?.(true); setSaveNotice(null); setEditorOpen(true); }}>Edit record</button>}<button className="btn btn-secondary" disabled={loading || detailLoading || editorOpen || Boolean(failure?.retryAt || retryAt)} onClick={() => { if (["contacts", "tickets", "tasks", "customer-success", "meetings", "calendar"].includes(tool)) void readRecordDetail(detailed); else void load(); }}>{loading || detailLoading ? "Loading…" : "Refresh"}</button></div></div>
+      <div className={styles.heading}><div><h1 id="hubspot-record-title" tabIndex={-1} ref={detailHeadingRef}>{detailed.title || `Untitled ${definition.singular}`}</h1><p>{definition.singular === "contact" ? "Contact information" : `${definition.label} record details`}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>{detailCanEdit ? "Editing enabled" : "Read-only"}</span>{!editorOpen && <NativeLink href={detailed.hubspotUrl} />}{detailCanEdit && !editorOpen && <button className="btn btn-primary" disabled={detailLoading || Boolean(retryAt) || !hubspotRecordSnapshotAvailable(detailed, detailFields)} onClick={() => { onDirtyChange?.(true); setSaveNotice(null); setEditorOpen(true); }}>Edit record</button>}<button className="btn btn-secondary" disabled={loading || detailLoading || editorOpen || Boolean(failure?.retryAt || retryAt)} onClick={() => { if (["contacts", "tickets", "help-desk", "tasks", "customer-success", "meetings", "calendar"].includes(tool)) void readRecordDetail(detailed); else void load(); }}>{loading || detailLoading ? "Loading…" : "Refresh"}</button></div></div>
       {failure && <div className={styles.alert} role="alert"><strong>Showing the last loaded record</strong><p>{failure.message}</p></div>}
       {retryAt && <p className={styles.notice} role="status">HubSpot reads are available after {dateLabel(new Date(retryAt).toISOString())}.</p>}
       {!current?.records.some(record => record.id === detailed.id) && <p className={styles.notice} role="status">This record is outside the latest loaded results. These details are from the snapshot you opened.</p>}
       {detailError && <p className={styles.messageError} role="alert">{detailError}</p>}
       {detailLoading && <p className={styles.notice} role="status">Loading the latest record details…</p>}
       {saveNotice && <p className={styles.searchSummary} role="status">{saveNotice}</p>}
-      {editorOpen && <HubSpotRecordEditor record={detailed} fields={detailFields} endpoint={`/api/hubspot-tools/${tool === "calendar" ? "meetings" : tool}/${detailed.id}`} canEdit={detailCanEdit} onClose={() => { setEditorOpen(false); onDirtyChange?.(false); }} onSaved={(saved, replayed) => { setDetailRecord(saved); setData(value => value ? { ...value, records: value.records.map(item => item.id === saved.id ? saved : item) } : value); setEditorOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "Save already completed. Record refreshed from HubSpot." : "Saved to HubSpot."); }} onReload={() => readRecordDetail(detailed)} onUnauthorized={() => { setData(null); setDetailRecord(null); setEditorOpen(false); onDirtyChange?.(false); unauthorizedRef.current(); }} onBusyChange={reportEditorBusy} />}
+      {editorOpen && <HubSpotRecordEditor record={detailed} fields={detailFields} endpoint={`/api/hubspot-tools/${tool === "calendar" ? "meetings" : tool === "help-desk" ? "tickets" : tool}/${detailed.id}`} canEdit={detailCanEdit} onClose={() => { setEditorOpen(false); onDirtyChange?.(false); }} onSaved={(saved, replayed) => { setDetailRecord(saved); setData(value => value ? { ...value, records: value.records.map(item => item.id === saved.id ? saved : item) } : value); setEditorOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "Save already completed. Record refreshed from HubSpot." : "Saved to HubSpot."); }} onReload={() => readRecordDetail(detailed)} onUnauthorized={() => { setData(null); setDetailRecord(null); setEditorOpen(false); onDirtyChange?.(false); unauthorizedRef.current(); }} onBusyChange={reportEditorBusy} />}
       <dl className={styles.detailGrid}>{recordInfoFields.map(column => <div key={column.field}><dt>{column.label}</dt><dd>{column.dateOnly ? calendarDateLabel(detailed[column.field]) : column.date ? dateLabel(detailed[column.field]) : textLabel(detailed[column.field])}</dd></div>)}<div><dt>HubSpot record ID</dt><dd>{detailed.id}</dd></div></dl>
       {detailed.preview && <p className={styles.detailPreview}>{detailed.preview}</p>}
       <p className={styles.footer}>These details come from the loaded HubSpot record. Additional record activity is available in HubSpot.</p>

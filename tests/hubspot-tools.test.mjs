@@ -9,8 +9,8 @@ const provider = (results = [], total = results.length, after) => new Response(J
 const request = (body = '{}', headers = {}, method = 'POST') => new Request('https://private.example/api/hubspot-tools/contacts', { method, headers: { Origin: 'https://private.example', 'Content-Type': 'application/json', ...headers }, ...(method === 'GET' ? {} : { body }) });
 const deps = { getUser: () => ({ userId: 'synthetic-user' }), authorizeUser: () => true, allowedOrigin: 'https://private.example', readData: async () => ({ records: [] }) };
 
-test('tool selection accepts only eight fixed tools and inbox thread selection, without caller authority', () => {
-  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 8);
+test('tool selection accepts only nine fixed tools and inbox thread selection, without caller authority', () => {
+  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 9);
   for (const tool of Object.keys(HUBSPOT_TOOL_CONFIG)) assert.deepEqual(validateToolInput(tool, {}), {});
   assert.deepEqual(validateToolInput('inbox', { threadId: '123' }), { threadId: '123' });
   for (const tool of ['constructor', '../contacts', 'companies', 'https://attacker.invalid']) assert.throws(() => validateToolInput(tool, {}));
@@ -257,4 +257,23 @@ test('successful read boundary passes only validated input, adds private headers
   assert.equal(result.status, 200); assert.equal(result.headers.get('Retry-After'), '120'); assert.equal(result.headers.get('X-Content-Type-Options'), 'nosniff'); assert.equal(result.headers.get('Referrer-Policy'), 'no-referrer');
   const failed = await handleHubSpotToolRequest(request(), 'contacts', { ...deps, readData: async () => { throw Error('secret-backend-error'); } });
   assert.equal(failed.status, 502); assert.doesNotMatch(await failed.text(), /secret-backend-error/);
+});
+
+
+test('Help Desk searches only the verified Support Pipeline and rejects non-support results', async () => {
+  for (const input of [{}, { query: 'Synthetic support' }]) {
+    const result = await readHubSpotTool('help-desk', input, { accessToken: token, now, fetchImpl: async (url, options) => {
+      assert.equal(url, 'https://api.hubapi.com/crm/v3/objects/tickets/search');
+      const body = JSON.parse(options.body);
+      assert.deepEqual(body.filterGroups, [{ filters: [{ propertyName: 'hs_pipeline', operator: 'EQ', value: '0' }] }]);
+      return provider([row('101', { subject: 'Synthetic support', hs_pipeline: '0', hs_ticket_priority: 'HIGH' })]);
+    } });
+    assert.equal(result.status, 'available');
+    assert.equal(result.records[0].title, 'Synthetic support');
+    assert.equal(result.records[0].subtitle, 'High');
+  }
+  const mismatch = await readHubSpotTool('help-desk', {}, { accessToken: token, now, fetchImpl: async () => provider([row('102', { subject: 'Synthetic recruit', hs_pipeline: '924992938' })]) });
+  assert.equal(mismatch.status, 'unavailable');
+  assert.deepEqual(mismatch.records, []);
+  assert.throws(() => validateToolInput('help-desk', { filters: [{ hs_pipeline: '924992938' }] }));
 });
