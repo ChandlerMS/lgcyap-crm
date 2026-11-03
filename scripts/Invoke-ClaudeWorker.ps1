@@ -5,7 +5,6 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$workerRoot = Join-Path $repoRoot '.claude/worktrees/recruiting-worker'
 $workerBranch = 'worktree-recruiting-worker'
 $projectId = 'prj_tAhuHcbCr3HXxant1EGPbaFLjc6E'
 $teamId = 'team_QQUI11r0DA1T0deViNT5khbf'
@@ -18,6 +17,9 @@ function Get-GitOutput([string]$Directory, [string[]]$GitArgs) {
 
 Get-Command claude -ErrorAction Stop | Out-Null
 Get-Command git -ErrorAction Stop | Out-Null
+$commonDirectory = Get-GitOutput $repoRoot @('rev-parse', '--path-format=absolute', '--git-common-dir')
+$primaryRoot = Split-Path -Parent $commonDirectory
+$workerRoot = Join-Path $primaryRoot '.claude/worktrees/recruiting-worker'
 $branch = Get-GitOutput $repoRoot @('branch', '--show-current')
 if ($branch -ne 'codex/claude-coordination') { throw "Wrong coordinator branch: $branch" }
 $remote = Get-GitOutput $repoRoot @('remote', 'get-url', 'origin')
@@ -38,6 +40,7 @@ if ($ValidateOnly) {
     return
 }
 if (!$TaskFile -or !(Test-Path -LiteralPath $TaskFile -PathType Leaf)) { throw 'Provide an existing task file.' }
+if (Get-GitOutput $repoRoot @('status', '--porcelain')) { throw 'Commit coordinator instructions before dispatch.' }
 $task = Get-Content -Raw -LiteralPath $TaskFile
 if ([string]::IsNullOrWhiteSpace($task)) { throw 'Task file is empty.' }
 $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
@@ -68,13 +71,33 @@ $claudeArgs = @('--print', '--output-format', 'json', '--permission-mode', 'dont
     '--tools', 'Read,Edit,Write,Glob,Grep', '--allowedTools', 'Read,Edit,Write,Glob,Grep',
     '--settings', $settingsPath, '--setting-sources', 'project', '--strict-mcp-config',
     '--mcp-config', $mcpPath, '--disable-slash-commands')
-$launchRoot = $workerRoot
 if (!(Test-Path -LiteralPath $workerRoot)) {
-    $launchRoot = $repoRoot
-    $claudeArgs += @('--worktree', 'recruiting-worker')
+    # Claude creates native worktrees beneath the primary checkout, from the default branch.
+    $excludeFile = Join-Path $commonDirectory 'info/exclude'
+    if (!(Select-String -LiteralPath $excludeFile -SimpleMatch '/.claude/worktrees/' -Quiet)) {
+        Add-Content -LiteralPath $excludeFile -Value '/.claude/worktrees/'
+    }
+    Push-Location $repoRoot
+    try {
+        'Reply READY only. Do not use any tools or edit files.' |
+            & claude --print --output-format json --worktree recruiting-worker --tools '' `
+                --permission-mode dontAsk --settings $settingsPath --setting-sources project `
+                --strict-mcp-config --mcp-config $mcpPath --disable-slash-commands `
+                2> (Join-Path $runRoot 'bootstrap-stderr.log') |
+            Set-Content -LiteralPath (Join-Path $runRoot 'bootstrap.json') -Encoding UTF8
+        if ($LASTEXITCODE -ne 0) { throw 'Native Claude worktree creation failed.' }
+    } finally { Pop-Location }
 }
+if (!(Test-Path -LiteralPath $workerRoot)) { throw 'Native Claude worker checkout was not created at the expected path.' }
+if ((Get-GitOutput $workerRoot @('branch', '--show-current')) -ne $workerBranch) { throw 'Unexpected worker branch.' }
+if (Get-GitOutput $workerRoot @('status', '--porcelain')) { throw 'Worker has pending changes.' }
+# Fail on divergence instead of resetting or silently merging unrelated work.
+Get-GitOutput $workerRoot @('merge', '--ff-only', 'codex/claude-coordination') | Write-Output
+$workerLink = Join-Path $workerRoot '.vercel'
+New-Item -ItemType Directory -Path $workerLink -Force | Out-Null
+Copy-Item -LiteralPath $projectFile -Destination (Join-Path $workerLink 'project.json')
 Write-Output "Run files: $runRoot"
-Push-Location $launchRoot
+Push-Location $workerRoot
 try {
     $prompt | & claude @claudeArgs 2> (Join-Path $runRoot 'stderr.log') |
         Set-Content -LiteralPath (Join-Path $runRoot 'result.json') -Encoding UTF8

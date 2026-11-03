@@ -8,7 +8,7 @@
 - Production branch: `main`. Collaboration setup is local and does not deploy.
 - Coordinator checkout: `C:\Users\Chand\hubspot-front-end\lgcyap-crm-coordinator`
 - Coordinator branch: `codex/claude-coordination`
-- Worker checkout: `.claude/worktrees/recruiting-worker` inside the coordinator checkout.
+- Worker checkout: `C:\Users\Chand\hubspot-front-end\lgcyap-crm\.claude\worktrees\recruiting-worker` (Claude's native location beneath the primary checkout).
 - Worker branch: `worktree-recruiting-worker` (created by Claude Code's native worktree support).
 
 ## Working agreement
@@ -39,9 +39,10 @@ Every task has a unique ignored run folder containing its input, JSON result, an
 
 The launcher refuses dirty worker checkouts. Codex must review and commit or otherwise resolve
 the previous task first. It does not reset files or automatically merge divergent branches.
-It creates the worker with native `claude --worktree` on the first task. Later tasks run in
-the existing worker checkout. Before dispatch, Codex synchronizes reviewed changes when needed
-using a fast-forward merge in the clean worker, or creates a new task worktree for divergent work.
+It creates the worker with native `claude --worktree` on the first task using a tool-free bootstrap.
+Before the actual task, it fast-forwards the clean worker to the coordinator branch so that
+instructions are present. Later tasks reuse that checkout. Divergent branches require Codex review;
+the launcher never resets them. Claude's worktree directory is locally excluded from Git in the primary checkout.
 
 ## Review and integration
 
