@@ -50,3 +50,5 @@ yarn-error.log*
 /lib/generated/onboard-runtime.mjs
 !.env.example
 .vercel
+/.claude/worktrees/
+/.collaboration/runs/
