@@ -52,7 +52,7 @@ properties, and explicit Edit → Review → Save flow are retained. Hosting cha
 ## Branching recruiting stages
 
 One shared HubSpot Recruiting ticket pipeline (`924992938`) stores the canonical
-stages. The sidebar groups the two entry paths and the two licensing routes:
+stages. The main pipeline groups the two entry paths and the two licensing routes:
 
 - Referrals: Hiring Event → Application → Phone Interview → Offer.
 - Recruiters: Application → Phone Interview → Hiring Event → Offer.
@@ -73,7 +73,7 @@ Offer, Training and ambiguous Contracting-back moves require an explicit choice.
 The server validates the merged state against a fresh HubSpot record before its
 sparse PATCH. Ordinary field edits and common backward moves remain available on
 legacy records without guessing their history. Each stage has one CRM ID;
-sidebar path queues filter the stored path/branch instead of duplicating stages.
+path queues filter the stored path/branch instead of duplicating stages.
 
 HubSpot's native board still has one shared display order. Its stored path and
 branch fields represent the routing; the custom app enforces the conditional
@@ -107,10 +107,9 @@ and stage moves live only in browser memory and reset on reload. They never writ
 to HubSpot. Live tools and intake cannot mount beneath a demo label.
 
 The entire Recruits row toggles its keyboard-accessible disclosure, with only
-Add Recruits and the nested Pipeline folder underneath. Recruits starts collapsed
-on app opening; nested destinations reveal their parent menus. The Pipeline
-folder and its branches start collapsed; following a stage link opens its parent
-menus automatically. The full sidebar also collapses.
+Add Recruits and Pipeline links underneath. Pipeline opens the main recruiting
+pipeline page (`#today`), where stage links open their filtered queues. Recruits
+starts collapsed on app opening. The full sidebar also collapses.
 Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar and
 Meetings use the existing approved-user session. CRM tables have sortable columns,
 global search and in-app detail views. Contacts, tickets, tasks, companies and

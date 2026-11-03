@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-import { Fragment, startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import AddRecruits from "./add-recruits";
 import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
@@ -20,7 +20,7 @@ import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting
 import { saveRecruitStage, StageSaveError } from "./recruit-stage-save.mjs";
 import { sortRecruitRows } from "./recruit-list-view.mjs";
 import { STAGE_PAGES, TERMINAL_STAGE_IDS } from "../lib/recruiting-config.mjs";
-import { WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
+import { WORKSPACE_NAV, HUBSPOT_TOOLS, WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
 import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 
 import { lifecycleStatusLabel } from "../lib/recruit-lifecycle.mjs";
@@ -365,12 +365,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <summary><Icon name={NAV[0].icon} /><span>{NAV[0].label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
       <div className="recruit-pages">
         {navigationLink(NAV[1])}
-        <details className="nav-pipeline">
-          <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
-          <div className="pipeline-pages">
-            {WORKSPACE_NAV_GROUPS.map(group => <Fragment key={group.id}>{group.branch ? <details className="nav-branch"><summary><Icon name={group.id === "licensed" ? "check" : group.id === "not-licensed" ? "file" : "people"} /><span>{group.label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary><div className="nav-branch-stages">{group.items.map(navigationLink)}</div></details> : <><p className="nav-flow-caption">{group.label}</p>{group.items.map(navigationLink)}</>}</Fragment>)}
-          </div>
-        </details>
+        {navigationLink({ ...NAV[0], label: "Pipeline", icon: "folder" })}
       </div>
     </details>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
