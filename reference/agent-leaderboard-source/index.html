@@ -1,0 +1,581 @@
+<meta name="dash-one-writer">
+<style>
+#dash-root { --dash-gutter: 0; --lx-bg: #0A0A0A; --lx-panel: #141414; --lx-line: #2A2924; --lx-fg: #F4F1E8; --lx-muted: #B6B2A8; --lx-gold: #D4AF37; --lx-gold-ink: #0A0905; --lx-silver: #A7A9AC; --lx-bronze: #B07A47; --lx-grad: linear-gradient(100deg, #B8862F 0%, #E9CF7A 45%, #D4AF37 70%, #A9782A 100%); }
+.lx { background: var(--lx-bg); color: var(--lx-fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif; letter-spacing: -0.011em; min-height: 100%; padding: 40px clamp(16px, 4vw, 48px) 56px; display: flex; flex-direction: column; gap: 24px; }
+.lx-hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 8px; }
+.lx-logo { width: 180px; max-width: 60%; height: auto; display: block; margin-bottom: 8px; }
+.lx-goldtext { background: var(--lx-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lx-boards { display: flex; justify-content: center; }
+.lx-tablewrap { overflow-x: auto; margin-top: 20px; }
+.lx-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.lx-table th { text-align: right; font-size: 12px; font-weight: 500; color: var(--lx-muted); text-transform: uppercase; letter-spacing: .08em; padding: 8px 10px; border-bottom: 1px solid var(--lx-line); white-space: nowrap; }
+.lx-table td { text-align: right; padding: 10px; border-bottom: 1px solid var(--lx-line); color: var(--lx-fg); white-space: nowrap; }
+.lx-table th:first-child, .lx-table td:first-child { text-align: left; }
+.lx-board-msg { text-align: center; color: var(--lx-muted); font-size: 14px; padding: 48px 16px; }
+.lx-eyebrow { margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; background: var(--lx-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lx-title { margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--lx-fg); }
+.lx-hero-sub { margin: 0; font-size: 16px; color: var(--lx-muted); }
+.lx-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; }
+.lx-seg { display: inline-flex; gap: 4px; border: 1px solid var(--lx-line); border-radius: 8px; padding: 4px; background: var(--lx-panel); }
+.lx-seg button { font: inherit; font-size: 14px; font-weight: 500; border: 0; background: transparent; color: var(--lx-muted); padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+.lx-seg button:hover { color: var(--lx-fg); }
+.lx-seg button[aria-pressed="true"] { background: var(--lx-grad); color: var(--lx-gold-ink); font-weight: 600; }
+.lx-seg button:focus-visible { outline: 2px solid var(--lx-gold); outline-offset: 2px; }
+.lx-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 16px; margin-bottom: 16px; }
+.lx-tile { padding: 4px 4px; min-width: 0; text-align: center; }
+.lx-tile-label { font-size: 12px; color: var(--lx-muted); text-transform: uppercase; letter-spacing: .14em; }
+.lx-tile-val { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; background: var(--lx-grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lx-card { background: var(--lx-panel); border: 1px solid var(--lx-line); border-radius: 10px; padding: 24px; }
+.lx-card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
+.lx-card-title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--lx-fg); }
+.lx-note { font-size: 12px; color: var(--lx-muted); margin: 0; }
+.lx-chart { position: relative; min-height: 220px; }
+.lx-chart svg text { font-family: inherit; }
+.lx-tip { position: absolute; pointer-events: none; background: #1C1B18; color: var(--lx-fg); border: 1px solid var(--lx-line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); padding: 8px 12px; font-size: 12px; white-space: nowrap; z-index: 2; }
+.lx-tip-name { color: var(--lx-gold); font-weight: 600; margin-bottom: 4px; }
+.lx-tip-row { font-variant-numeric: tabular-nums; color: var(--lx-fg); }
+.lx-msg { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 220px; color: var(--lx-muted); font-size: 12px; }
+.lx-dot { width: .375rem; height: .375rem; border-radius: 50%; background: #E5484D; }
+.lx-range { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; align-items: center; margin-top: 16px; }
+.lx-range[hidden] { display: none; }
+.lx-range label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--lx-muted); text-transform: uppercase; letter-spacing: .08em; }
+.lx-range input { font: inherit; font-size: 14px; text-transform: none; letter-spacing: 0; background: var(--lx-panel); color: var(--lx-fg); border: 1px solid var(--lx-line); border-radius: 6px; padding: 6px 8px; color-scheme: dark; }
+.lx-range input:focus-visible { outline: 2px solid var(--lx-gold); outline-offset: 2px; }
+.lx-range .lx-note { width: 100%; text-align: center; }
+.lx-foot { text-align: center; font-size: 12px; color: var(--lx-muted); margin: 8px 0 0; }
+.lx [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+.lx [data-dash-source-state=empty] { opacity: 0; }
+</style>
+
+<div class="lx">
+  <header class="lx-hero">
+    <img class="lx-logo" alt="Legacy Agency Partners" src="data:image/webp;base64,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">
+    <p class="lx-eyebrow">Live sales leaderboard</p>
+    <h1 class="lx-title">Agent Leaderboard</h1>
+    <p class="lx-hero-sub">Sold policies by writing agent.</p>
+  </header>
+
+  <div class="lx-boards">
+    <div class="lx-seg" role="group" aria-label="Leaderboard">
+      <button type="button" data-board="sp" aria-pressed="true">Standard vs. Preferred</button>
+      <button type="button" data-board="shopper" aria-pressed="false">Shopper</button>
+      <button type="button" data-board="source" aria-pressed="false">Source Performance</button>
+    </div>
+  </div>
+
+  <div id="standard-vs-preferred" data-board-section="sp">
+  <div class="lx-controls">
+    <div class="lx-seg" role="group" aria-label="Period">
+      <button type="button" data-period="day" aria-pressed="true">Daily</button>
+      <button type="button" data-period="week" aria-pressed="false">Weekly</button>
+      <button type="button" data-period="month" aria-pressed="false">Monthly</button>
+      <button type="button" data-period="custom" aria-pressed="false">Custom</button>
+    </div>
+    <div class="lx-seg" role="group" aria-label="Rank by">
+      <button type="button" data-metric="sales" aria-pressed="false">Policies sold</button>
+      <button type="button" data-metric="ap" aria-pressed="true">Annual premium</button>
+    </div>
+  </div>
+
+  <section id="daily" data-period-section="day">
+    <div class="lx-tiles">
+      <div class="lx-tile"><div class="lx-tile-label">Policies sold today</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_day" data-field="sales" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Annual premium today</div><div class="lx-tile-val dash-skeleton" data-draw="tot_ap" data-source="tot_day" data-field="ap" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Close rate</div><div class="lx-tile-val dash-skeleton" data-draw="pct" data-source="tot_day" data-field="close" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Calls</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_day" data-field="calls" data-row="0">—</div></div>
+    </div>
+    <div class="lx-card">
+      <div class="lx-card-head"><h2 class="lx-card-title">Standard vs. Preferred · Daily</h2><p class="lx-note">Today, sold deals by close date · calls taken and close rate (sold ÷ inbound calls) beside each name</p></div>
+      <div class="lx-chart dash-skeleton" id="chart-daily" data-source="lb_day calls_day" data-draw="chart" data-lb="lb_day" data-calls="calls_day" data-close="1"></div>
+    </div>
+  </section>
+
+  <section id="weekly" data-period-section="week" hidden>
+    <div class="lx-tiles">
+      <div class="lx-tile"><div class="lx-tile-label">Policies sold this week</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_week" data-field="sales" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Annual premium this week</div><div class="lx-tile-val dash-skeleton" data-draw="tot_ap" data-source="tot_week" data-field="ap" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Close rate</div><div class="lx-tile-val dash-skeleton" data-draw="pct" data-source="tot_week" data-field="close" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Calls</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_week" data-field="calls" data-row="0">—</div></div>
+    </div>
+    <div class="lx-card">
+      <div class="lx-card-head"><h2 class="lx-card-title">Standard vs. Preferred · Weekly</h2><p class="lx-note">Since Monday, sold deals by close date · calls taken and close rate (sold ÷ inbound calls) beside each name</p></div>
+      <div class="lx-chart dash-skeleton" id="chart-weekly" data-source="lb_week calls_week" data-draw="chart" data-lb="lb_week" data-calls="calls_week" data-close="1"></div>
+    </div>
+  </section>
+
+  <section id="monthly" data-period-section="month" hidden>
+    <div class="lx-tiles">
+      <div class="lx-tile"><div class="lx-tile-label">Policies sold this month</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_month" data-field="sales" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Annual premium this month</div><div class="lx-tile-val dash-skeleton" data-draw="tot_ap" data-source="tot_month" data-field="ap" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Close rate</div><div class="lx-tile-val dash-skeleton" data-draw="pct" data-source="tot_month" data-field="close" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Calls</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_month" data-field="calls" data-row="0">—</div></div>
+    </div>
+    <div class="lx-card">
+      <div class="lx-card-head"><h2 class="lx-card-title">Standard vs. Preferred · Monthly</h2><p class="lx-note">Since the 1st, sold deals by close date · calls taken and close rate (sold ÷ inbound calls) beside each name</p></div>
+      <div class="lx-chart dash-skeleton" id="chart-monthly" data-source="lb_month calls_month" data-draw="chart" data-lb="lb_month" data-calls="calls_month" data-close="1"></div>
+    </div>
+  </section>
+
+  <section id="custom-range" data-period-section="custom" hidden>
+    <div class="lx-range">
+      <div class="lx-seg" role="group" aria-label="Quick range">
+        <button type="button" data-quick="yesterday" aria-pressed="false">Yesterday</button>
+        <button type="button" data-quick="lastweek" aria-pressed="false">Last Week</button>
+        <button type="button" data-quick="lastmonth" aria-pressed="false">Last Month</button>
+      </div>
+      <label>From <input class="lx-from" type="date" min="2000-01-01" max="2099-12-31" aria-label="From date"></label>
+      <label>To <input class="lx-to" type="date" min="2000-01-01" max="2099-12-31" aria-label="To date"></label>
+      <p class="lx-note">Pick a quick range, one date, or a From and To date.</p>
+    </div>
+    <div class="lx-tiles" style="margin-top:24px">
+      <div class="lx-tile"><div class="lx-tile-label">Policies sold</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_custom" data-field="sales" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Annual premium</div><div class="lx-tile-val dash-skeleton" data-draw="tot_ap" data-source="tot_custom" data-field="ap" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Close rate</div><div class="lx-tile-val dash-skeleton" data-draw="pct" data-source="tot_custom" data-field="close" data-row="0">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Calls</div><div class="lx-tile-val dash-skeleton" data-draw="tot" data-source="tot_custom" data-field="calls" data-row="0">—</div></div>
+    </div>
+    <div class="lx-card">
+      <div class="lx-card-head"><h2 class="lx-card-title">Standard vs. Preferred · <span data-draw="crange">—</span></h2><p class="lx-note">Sold deals by close date · calls taken and close rate (sold ÷ inbound calls) beside each name</p></div>
+      <div class="lx-chart dash-skeleton" id="chart-custom" data-source="lb_custom calls_custom" data-draw="chart" data-lb="lb_custom" data-calls="calls_custom" data-close="1"></div>
+    </div>
+  </section>
+  </div>
+
+  <div id="shopper" data-board-section="shopper" hidden>
+    <div class="lx-controls">
+      <div class="lx-seg" role="group" aria-label="Period">
+        <button type="button" data-speriod="day" aria-pressed="true">Daily</button>
+        <button type="button" data-speriod="week" aria-pressed="false">Weekly</button>
+        <button type="button" data-speriod="month" aria-pressed="false">Monthly</button>
+        <button type="button" data-speriod="custom" aria-pressed="false">Custom</button>
+      </div>
+      <div class="lx-seg" role="group" aria-label="Rank by">
+        <button type="button" data-metric="sales" aria-pressed="false">Submitted</button>
+        <button type="button" data-metric="ap" aria-pressed="true">Submitted premium</button>
+      </div>
+    </div>
+    <div class="lx-range" data-speriod-show="custom" hidden>
+      <div class="lx-seg" role="group" aria-label="Quick range">
+        <button type="button" data-quick="yesterday" aria-pressed="false">Yesterday</button>
+        <button type="button" data-quick="lastweek" aria-pressed="false">Last Week</button>
+        <button type="button" data-quick="lastmonth" aria-pressed="false">Last Month</button>
+      </div>
+      <label>From <input class="lx-from" type="date" min="2026-10-01" max="2099-12-31" aria-label="From date"></label>
+      <label>To <input class="lx-to" type="date" min="2026-10-01" max="2099-12-31" aria-label="To date"></label>
+      <p class="lx-note">Pick a quick range, one date, or a From and To date. History starts Oct 1, 2026.</p>
+    </div>
+    <div class="lx-tiles" style="margin-top:24px">
+      <div class="lx-tile"><div class="lx-tile-label">Submitted</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="shopper" data-k="submitted">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Submitted premium</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="shopper" data-k="premium">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Close rate</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="shopper" data-k="close">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Calls</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="shopper" data-k="calls">—</div></div>
+    </div>
+    <div class="lx-card">
+      <div class="lx-card-head"><h2 class="lx-card-title">Shopper · <span data-speriod-show="day">Today</span><span data-speriod-show="week" hidden>This week</span><span data-speriod-show="month" hidden>This month</span><span data-speriod-show="custom" hidden data-draw="srange">—</span></h2><p class="lx-note">PolicyTek Agent Report · Submit date · refreshed hourly · agents with no submits hidden · calls taken (PolicyTek leads) and close rate beside each name</p></div>
+      <div class="lx-chart dash-skeleton" id="chart-shopper" data-source="shopper" data-draw="chart" data-lb="shopper" data-hist="1" data-close="1" data-name="agent" data-m1="submitted" data-m2="premium" data-l1="Submitted" data-l2="Submitted premium"></div>
+    </div>
+  </div>
+
+  <div id="source-performance" data-board-section="source" hidden>
+    <div class="lx-controls">
+      <div class="lx-seg" role="group" aria-label="Period">
+        <button type="button" data-speriod="day" aria-pressed="true">Daily</button>
+        <button type="button" data-speriod="week" aria-pressed="false">Weekly</button>
+        <button type="button" data-speriod="month" aria-pressed="false">Monthly</button>
+        <button type="button" data-speriod="custom" aria-pressed="false">Custom</button>
+      </div>
+      <div class="lx-seg" role="group" aria-label="Rank by">
+        <button type="button" data-metric="sales" aria-pressed="false">Submitted</button>
+        <button type="button" data-metric="ap" aria-pressed="true">Submitted premium</button>
+      </div>
+    </div>
+    <div class="lx-range" data-speriod-show="custom" hidden>
+      <div class="lx-seg" role="group" aria-label="Quick range">
+        <button type="button" data-quick="yesterday" aria-pressed="false">Yesterday</button>
+        <button type="button" data-quick="lastweek" aria-pressed="false">Last Week</button>
+        <button type="button" data-quick="lastmonth" aria-pressed="false">Last Month</button>
+      </div>
+      <label>From <input class="lx-from" type="date" min="2026-10-01" max="2099-12-31" aria-label="From date"></label>
+      <label>To <input class="lx-to" type="date" min="2026-10-01" max="2099-12-31" aria-label="To date"></label>
+      <p class="lx-note">Pick a quick range, one date, or a From and To date. History starts Oct 1, 2026.</p>
+    </div>
+    <div class="lx-tiles" style="margin-top:24px">
+      <div class="lx-tile"><div class="lx-tile-label">Calls</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="sources" data-k="calls">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Submitted</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="sources" data-k="submitted">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Submitted premium</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="sources" data-k="premium">—</div></div>
+      <div class="lx-tile"><div class="lx-tile-label">Close rate</div><div class="lx-tile-val dash-skeleton" data-draw="stile" data-source="sources" data-k="close">—</div></div>
+    </div>
+    <div class="lx-card">
+      <div class="lx-card-head"><h2 class="lx-card-title">Source performance · <span data-speriod-show="day">Today</span><span data-speriod-show="week" hidden>This week</span><span data-speriod-show="month" hidden>This month</span><span data-speriod-show="custom" hidden data-draw="srange">—</span></h2><p class="lx-note">PolicyTek Source Performance · Seller sources · refreshed hourly</p></div>
+      <div class="lx-chart dash-skeleton" id="chart-sources" data-source="sources" data-draw="chart" data-lb="sources" data-hist="1" data-name="source" data-m1="submitted" data-m2="premium" data-l1="Submitted" data-l2="Submitted premium"></div>
+      <div class="lx-tablewrap" data-source="sources">
+        <table class="lx-table">
+          <thead><tr><th>Source</th><th>Leads</th><th>Submitted</th><th>Submitted premium</th><th>Close</th><th>Spend</th><th>ROAS</th></tr></thead>
+          <tbody data-draw="srctable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const setDates = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    dash.setParams({ d_start: ymd(today), w_start: ymd(monday), m_start: ymd(first) });
+    const p = dash.params();
+    if (!p.c_from) dash.setParams({ q_from: ymd(today), q_to: ymd(today) });
+  };
+  setDates();
+
+  const ids = { day: 'daily', week: 'weekly', month: 'monthly', custom: 'custom-range' };
+  const byId = { daily: 'day', weekly: 'week', monthly: 'month', 'custom-range': 'custom' };
+  const fromHash = byId[location.hash.slice(1)];
+  if (fromHash) dash.setParams({ period: fromHash });
+
+  const day0 = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+  const plus = (d, k) => { const x = new Date(d); x.setDate(x.getDate() + k); return x; };
+  const quick = (k) => {
+    const t = day0();
+    if (k === 'yesterday') { const y = ymd(plus(t, -1)); return [y, y]; }
+    if (k === 'lastweek') { const mon = plus(t, -((t.getDay() + 6) % 7)); return [ymd(plus(mon, -7)), ymd(plus(mon, -1))]; }
+    if (k === 'lastmonth') return [ymd(new Date(t.getFullYear(), t.getMonth() - 1, 1)), ymd(new Date(t.getFullYear(), t.getMonth(), 0))];
+    return null;
+  };
+  const setRange = (from, to, extra) => {
+    let a = from, b = to || from;
+    if (b < a) [a, b] = [b, a];
+    dash.setParams({ ...(extra || {}), c_from: from, c_to: to || null, q_from: a, q_to: b });
+  };
+  document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => {
+    const r = quick(b.dataset.quick);
+    if (r) setRange(r[0], r[0] === r[1] ? null : r[1]);
+  }));
+  document.querySelectorAll('[data-period]').forEach((b) => b.addEventListener('click', () => {
+    if (b.dataset.period === 'custom' && !dash.params().c_from) setRange(ymd(day0()), null);
+    dash.setParams({ period: b.dataset.period });
+    dash.setLink(ids[b.dataset.period]);
+  }));
+  document.querySelectorAll('[data-board]').forEach((b) => b.addEventListener('click', () => {
+    dash.setParams({ board: b.dataset.board });
+  }));
+  document.querySelectorAll('[data-metric]').forEach((b) => b.addEventListener('click', () => {
+    dash.setParams({ metric: b.dataset.metric });
+  }));
+  const todayYmd = () => { const n = new Date(); return ymd(new Date(n.getFullYear(), n.getMonth(), n.getDate())); };
+  document.querySelectorAll('[data-speriod]').forEach((b) => b.addEventListener('click', () => {
+    const sp = b.dataset.speriod;
+    if (sp === 'custom' && !dash.params().c_from) setRange(todayYmd(), null, { speriod: sp });
+    else dash.setParams({ speriod: sp });
+  }));
+  const ok = (inp) => inp.value && inp.validity.valid && inp.value >= '2000-01-01';
+  document.querySelectorAll('.lx-from').forEach((inp) => {
+    inp.addEventListener('change', () => { if (ok(inp)) setRange(inp.value, dash.params().c_to || null); });
+    inp.addEventListener('blur', () => { inp.value = dash.params().c_from || ''; });
+  });
+  document.querySelectorAll('.lx-to').forEach((inp) => {
+    inp.addEventListener('change', () => {
+      const from = dash.params().c_from || todayYmd();
+      if (!inp.value) setRange(from, null); else if (ok(inp)) setRange(from, inp.value);
+    });
+    inp.addEventListener('blur', () => { inp.value = dash.params().c_to || ''; });
+  });
+
+  dash.onData(() => {
+    const p = dash.params();
+    const period = p.period || 'day';
+    const metric = p.metric || 'ap';
+    const board = p.board || 'sp';
+    document.querySelectorAll('[data-board]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.board === board)));
+    document.querySelectorAll('[data-board-section]').forEach((s) => { s.hidden = s.dataset.boardSection !== board; });
+    document.querySelectorAll('[data-period]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.period === period)));
+    document.querySelectorAll('[data-metric]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.metric === metric)));
+    document.querySelectorAll('[data-period-section]').forEach((s) => { s.hidden = s.dataset.periodSection !== period; });
+    document.querySelectorAll('[data-metric-show]').forEach((e) => { e.hidden = e.dataset.metricShow !== metric; });
+    const sp = p.speriod || 'day';
+    document.querySelectorAll('[data-speriod]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speriod === sp)));
+    document.querySelectorAll('[data-speriod-show]').forEach((e) => { e.hidden = e.dataset.speriodShow !== sp; });
+    document.querySelectorAll('.lx-from').forEach((inp) => { if (inp !== document.activeElement) inp.value = p.c_from || ''; });
+    document.querySelectorAll('.lx-to').forEach((inp) => { if (inp !== document.activeElement) inp.value = p.c_to || ''; });
+    const cur = p.c_from ? [p.c_from, p.c_to || p.c_from].sort() : null;
+    document.querySelectorAll('[data-quick]').forEach((b) => {
+      const r = quick(b.dataset.quick);
+      b.setAttribute('aria-pressed', String(!!(cur && r && cur[0] === r[0] && cur[1] === r[1])));
+    });
+  });
+})();
+</script>
+
+<script>
+(() => {
+  const loader = {
+    description: 'Reads the TSV table inside HubSpot’s answer into rows of agent, sales and ap; an empty report becomes no rows.',
+    fn: ({ answer }) => {
+      let a = answer;
+      if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+      const content = typeof a === 'string' ? a : ((a && a.results) || []).map((r) => r.content || '').join('\n');
+      const cols = ['owner_id', 'agent', 'sales', 'ap'];
+      const at = content.indexOf('Dataset TSV:');
+      if (at < 0) {
+        if (/dataset is empty/i.test(content)) return { columns: cols, rows: [] };
+        throw new Error(content.slice(0, 300) || 'HubSpot returned no table');
+      }
+      const lines = content.slice(at + 12).trim().split('\n').slice(1).filter((l) => l.trim());
+      const rows = lines.map((l) => {
+        const c = l.split('\t');
+        const m = /\((\d+)\)\s*$/.exec(c[0] || '');
+        return { owner_id: m ? m[1] : c[0], agent: c[1], sales: Number(c[2]) || 0, ap: Number(c[3]) || 0 };
+      });
+      return { columns: cols, rows };
+    },
+  };
+  ['lb_day', 'lb_week', 'lb_month', 'lb_custom'].forEach((id) => dash.loader(id, loader));
+  const callsLoader = {
+    description: 'Reads the TSV table inside HubSpot’s answer into rows of owner_id and calls (inbound calls logged per deal owner); an empty report becomes no rows.',
+    fn: ({ answer }) => {
+      let a = answer;
+      if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+      const content = typeof a === 'string' ? a : ((a && a.results) || []).map((r) => r.content || '').join('\n');
+      const cols = ['owner_id', 'calls'];
+      const at = content.indexOf('Dataset TSV:');
+      if (at < 0) {
+        if (/dataset is empty/i.test(content)) return { columns: cols, rows: [] };
+        throw new Error(content.slice(0, 300) || 'HubSpot returned no table');
+      }
+      const lines = content.slice(at + 12).trim().split('\n').slice(1).filter((l) => l.trim());
+      const rows = lines.map((l) => {
+        const c = l.split('\t');
+        const m = /\((\d+)\)\s*$/.exec(c[0] || '');
+        return { owner_id: m ? m[1] : c[0], calls: Number(c[1]) || 0 };
+      });
+      return { columns: cols, rows };
+    },
+  };
+  ['calls_day', 'calls_week', 'calls_month', 'calls_custom'].forEach((id) => dash.loader(id, callsLoader));
+
+  dash.calc('tot_day', { inputs: ['lb_day', 'calls_day'], title: 'Today’s totals', description: 'Sums policies and annual premium across agents today, totals inbound calls for the floor, and divides policies sold by those calls for the floor close rate.',
+    fn: (lb_day, calls_day) => {
+      const sales = lb_day.reduce((s, r) => s + r.sales, 0);
+      const calls = calls_day.reduce((s, r) => s + r.calls, 0);
+      return [{ sales, ap: lb_day.reduce((s, r) => s + r.ap, 0), calls, close: calls ? sales / calls : null }];
+    } });
+  dash.calc('tot_week', { inputs: ['lb_week', 'calls_week'], title: 'This week’s totals', description: 'Sums policies and annual premium across agents since Monday, totals inbound calls for the floor, and divides policies sold by those calls for the floor close rate.',
+    fn: (lb_week, calls_week) => {
+      const sales = lb_week.reduce((s, r) => s + r.sales, 0);
+      const calls = calls_week.reduce((s, r) => s + r.calls, 0);
+      return [{ sales, ap: lb_week.reduce((s, r) => s + r.ap, 0), calls, close: calls ? sales / calls : null }];
+    } });
+  dash.calc('tot_month', { inputs: ['lb_month', 'calls_month'], title: 'This month’s totals', description: 'Sums policies and annual premium across agents since the 1st, totals inbound calls for the floor, and divides policies sold by those calls for the floor close rate.',
+    fn: (lb_month, calls_month) => {
+      const sales = lb_month.reduce((s, r) => s + r.sales, 0);
+      const calls = calls_month.reduce((s, r) => s + r.calls, 0);
+      return [{ sales, ap: lb_month.reduce((s, r) => s + r.ap, 0), calls, close: calls ? sales / calls : null }];
+    } });
+  dash.calc('tot_custom', { inputs: ['lb_custom', 'calls_custom'], title: 'Custom range totals', description: 'Sums policies and annual premium across agents in the chosen date range, totals inbound calls for the floor, and divides policies sold by those calls for the floor close rate.',
+    fn: (lb_custom, calls_custom) => {
+      const sales = lb_custom.reduce((s, r) => s + r.sales, 0);
+      const calls = calls_custom.reduce((s, r) => s + r.calls, 0);
+      return [{ sales, ap: lb_custom.reduce((s, r) => s + r.ap, 0), calls, close: calls ? sales / calls : null }];
+    } });
+
+  const nice = (s) => String(s || '').replace(/\b\w/g, (c) => c.toUpperCase());
+  const fmtN = d3.format(',');
+  const fmtUsd = d3.format('$,.0f');
+  const fmtUsdC = (v) => (v >= 10000 ? new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(v) : fmtUsd(v));
+
+  const ymd2 = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const range = () => {
+    const p = dash.params(), sp = p.speriod || 'day';
+    const n = new Date(), t = new Date(n.getFullYear(), n.getMonth(), n.getDate()), today = ymd2(t);
+    if (sp === 'week') { const m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return [ymd2(m), today]; }
+    if (sp === 'month') return [ymd2(new Date(t.getFullYear(), t.getMonth(), 1)), today];
+    if (sp === 'custom') { let a = p.c_from || today, b = p.c_to || a; if (b < a) [a, b] = [b, a]; return [a, b]; }
+    return [today, today];
+  };
+  const agg = (id, NAME) => {
+    const g = dash.data(id);
+    if (g.status !== 'ok') return { status: g.status, data: [] };
+    const [a, b] = range(), m = new Map(), F = ['leads', 'quoted', 'submitted', 'premium', 'spend'];
+    g.data.forEach((r) => {
+      const d = String(r.date || '').slice(0, 10);
+      if (d < a || d > b) return;
+      const k = r[NAME];
+      const o = m.get(k) || { [NAME]: k, leads: 0, quoted: 0, submitted: 0, premium: 0, spend: 0 };
+      F.forEach((f) => { o[f] += Number(r[f]) || 0; });
+      m.set(k, o);
+    });
+    const data = [...m.values()].map((o) => ({ ...o, premium: Math.round(o.premium * 100) / 100, close: o.leads ? o.submitted / o.leads : null, roas: o.spend ? o.premium / o.spend : null }));
+    return { status: 'ok', data };
+  };
+  const fmtDay = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  dash.draw('crange', (el) => {
+    const p = dash.params(); const a = p.q_from, b = p.q_to;
+    el.textContent = !a ? '—' : (a === b ? fmtDay(a) : fmtDay(a) + ' – ' + fmtDay(b));
+  });
+  dash.draw('srange', (el) => { const [a, b] = range(); el.textContent = a === b ? fmtDay(a) : fmtDay(a) + ' – ' + fmtDay(b); });
+  dash.draw('stile', (el) => {
+    const id = el.dataset.source, NAME = id === 'shopper' ? 'agent' : 'source';
+    const g = agg(id, NAME);
+    el.classList.toggle('dash-skeleton', g.status === 'loading');
+    if (g.status !== 'ok') { el.textContent = '—'; return; }
+    const R = g.data, sum = (k) => R.reduce((s, r) => s + r[k], 0), k = el.dataset.k;
+    const top = (f) => { const r = R.filter((x) => x[f] > 0); return r.length ? nice(r.reduce((x, y) => (y[f] > x[f] ? y : x))[NAME]) : '—'; };
+    let v = '—';
+    if (k === 'leads' || k === 'submitted') v = fmtN(sum(k));
+    else if (k === 'agents') v = fmtN(R.filter((r) => r.submitted > 0).length);
+    else if (k === 'premium') v = fmtUsdC(sum('premium'));
+    else if (k === 'calls') v = fmtN(sum('leads'));
+    else if (k === 'close') { const l = sum('leads'); v = l ? d3.format('.1%')(sum('submitted') / l) : '—'; }
+    else if (k === 'roas') { const s = sum('spend'); v = s ? d3.format('.2f')(sum('premium') / s) + 'x' : '—'; }
+    else if (k === 'top_sub') v = top('submitted');
+    else if (k === 'top_prem') v = top('premium');
+    el.textContent = v;
+  });
+
+  const cell = (el, fmt) => {
+    const g = dash.data(el.dataset.source);
+    el.classList.toggle('dash-skeleton', g.status === 'loading');
+    if (g.status !== 'ok' || !g.data.length) { el.textContent = '—'; return; }
+    const v = g.data[0][el.dataset.field];
+    el.textContent = v == null ? '—' : fmt(v);
+  };
+  dash.draw('tot', (el) => cell(el, fmtN));
+  dash.draw('tot_ap', (el) => cell(el, fmtUsdC));
+  dash.draw('pct', (el) => cell(el, d3.format('.1%')));
+  dash.draw('top', (el) => cell(el, String));
+  dash.draw('roas', (el) => cell(el, (v) => d3.format('.2f')(v) + 'x'));
+  dash.draw('srctable', (tb) => {
+    const g = agg('sources', 'source');
+    tb.replaceChildren();
+    if (g.status !== 'ok') return;
+    const f = { leads: fmtN, submitted: fmtN, premium: (v) => d3.format('$,.2f')(v), close: d3.format('.1%'), spend: fmtUsd, roas: (v) => d3.format('.2f')(v) + 'x' };
+    g.data.slice().sort((a, b) => d3.descending(Number(a.premium), Number(b.premium))).forEach((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = r.source;
+      ['source', 'leads', 'submitted', 'premium', 'close', 'spend', 'roas'].forEach((k) => {
+        const td = document.createElement('td');
+        td.textContent = k === 'source' ? r.source : (r[k] == null || r[k] === '' ? '—' : f[k](Number(r[k])));
+        tr.append(td);
+      });
+      tb.append(tr);
+    });
+  });
+
+  dash.draw('chart', (el) => {
+    const g = el.dataset.hist === '1' ? agg(el.dataset.lb, el.dataset.name) : dash.data(el.dataset.lb);
+    el.replaceChildren();
+    el.classList.toggle('dash-skeleton', g.status === 'loading');
+    if (g.status === 'loading') return;
+    if (g.status !== 'ok') {
+      const m = document.createElement('div'); m.className = 'lx-msg';
+      const dot = document.createElement('span'); dot.className = 'lx-dot';
+      const t = document.createElement('span'); t.textContent = 'Failed to load';
+      m.append(dot, t); el.append(m); return;
+    }
+    const NAME = el.dataset.name || 'agent', M1 = el.dataset.m1 || 'sales', M2 = el.dataset.m2 || 'ap';
+    const L1 = el.dataset.l1 || 'Policies sold', L2 = el.dataset.l2 || 'Annual premium';
+    const pick = dash.params().metric || 'ap';
+    const metric = pick === 'sales' ? M1 : M2;
+    const other = pick === 'sales' ? M2 : M1;
+    const cg = el.dataset.calls ? dash.data(el.dataset.calls) : null;
+    const callsBy = new Map(cg && cg.status === 'ok' ? cg.data.map((c) => [String(c.owner_id), Number(c.calls) || 0]) : []);
+    const withCalls = (r) => {
+      if (!el.dataset.calls) return { calls: r.leads, close: r.close };
+      if (!cg || cg.status !== 'ok') return { calls: null, close: null };
+      const n = callsBy.get(String(r.owner_id)) || 0;
+      return { calls: n, close: n ? (Number(r.sales) || 0) / n : null };
+    };
+    const rows = g.data.map((r) => ({ ...r, ...withCalls(r), agent: r[NAME], [M1]: Number(r[M1]) || 0, [M2]: Number(r[M2]) || 0 })).filter((r) => r[M1] > 0 || r[M2] > 0).sort((a, b) => d3.descending(a[metric], b[metric]) || d3.descending(a[other], b[other]));
+    if (!rows.length) {
+      const m = document.createElement('div'); m.className = 'lx-msg';
+      m.textContent = 'Nothing logged yet for this period.'; el.append(m); return;
+    }
+    const fmtV = pick === 'sales' ? fmtN : fmtUsd;
+    const W = Math.max(280, el.clientWidth || 600);
+    const showClose = el.dataset.close === '1';
+    const rowH = 34, gap = 8, top = showClose ? 22 : 4;
+    const H = top + rows.length * rowH + 4;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Leaderboard');
+
+    const gid = 'lxg-' + el.id;
+    const grad = svg.append('defs').append('linearGradient').attr('id', gid).attr('x1', 0).attr('x2', 1).attr('y1', 0).attr('y2', 0);
+    [['0%', '#B8862F'], ['45%', '#E9CF7A'], ['70%', '#D4AF37'], ['100%', '#A9782A']].forEach(([o, c]) => grad.append('stop').attr('offset', o).attr('stop-color', c));
+    const mgid = 'lxm-' + el.id;
+    const mg = svg.select('defs').append('linearGradient').attr('id', mgid).attr('x1', 0).attr('x2', 1).attr('y1', 0).attr('y2', 1);
+    [['0%', '#E9CF7A'], ['100%', '#B8862F']].forEach(([o, c]) => mg.append('stop').attr('offset', o).attr('stop-color', c));
+    const medal = (i) => (i === 0 ? `url(#${mgid})` : i === 1 ? '#A7A9AC' : i === 2 ? '#B07A47' : 'transparent');
+    // measure labels
+    const probe = svg.append('text').attr('font-size', 13);
+    let maxName = 0;
+    rows.forEach((r) => { probe.text(nice(r.agent)); maxName = Math.max(maxName, probe.node().getComputedTextLength()); });
+    probe.text(fmtV(d3.max(rows, (r) => r[metric])));
+    const valW = probe.node().getComputedTextLength() + 10;
+    probe.remove();
+    const nameW = Math.min(maxName, W * 0.38);
+    const fmtClose = (r) => (r.close == null ? '—' : d3.format('.1%')(r.close));
+    const fmtCalls = (r) => (r.calls == null ? '—' : fmtN(r.calls));
+    let closeW = 0, callsW = 0;
+    if (showClose) {
+      const pr = svg.append('text').attr('font-size', 12).text('100.0%'); closeW = pr.node().getComputedTextLength() + 14;
+      pr.text(fmtN(Math.max(9999, d3.max(rows, (r) => r.calls || 0)))); callsW = Math.max(pr.node().getComputedTextLength(), 30) + 14; pr.remove();
+    }
+    const left = 34 + nameW + 12 + callsW + closeW;
+    const x = d3.scaleLinear([0, d3.max(rows, (r) => r[metric]) || 1], [0, Math.max(40, W - left - valW)]);
+
+    const tip = document.createElement('div'); tip.className = 'lx-tip'; tip.hidden = true; el.append(tip);
+    const showTip = (event, r, i) => {
+      const n = document.createElement('div'); n.className = 'lx-tip-name'; n.textContent = '#' + (i + 1) + ' ' + nice(r.agent);
+      const a = document.createElement('div'); a.className = 'lx-tip-row'; a.textContent = L1 + ': ' + fmtN(r[M1]);
+      const b = document.createElement('div'); b.className = 'lx-tip-row'; b.textContent = L2 + ': ' + fmtUsd(r[M2]);
+      const c = document.createElement('div'); c.className = 'lx-tip-row'; c.textContent = 'Avg premium each: ' + (r[M1] ? fmtUsd(r[M2] / r[M1]) : '—');
+      const extra = [];
+      if (showClose) {
+        const e1 = document.createElement('div'); e1.className = 'lx-tip-row'; e1.textContent = 'Calls taken: ' + fmtCalls(r);
+        const e2 = document.createElement('div'); e2.className = 'lx-tip-row'; e2.textContent = 'Close rate: ' + fmtClose(r) + (r.calls ? ' (' + fmtN(r[M1]) + ' of ' + fmtN(r.calls) + ' calls)' : '');
+        extra.push(e1, e2);
+      }
+      tip.replaceChildren(n, a, b, c, ...extra); tip.hidden = false;
+      const box = el.getBoundingClientRect();
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let tx = event.clientX - box.left + 12, ty = event.clientY - box.top + 12;
+      if (tx + tw > box.width) tx = Math.max(0, event.clientX - box.left - tw - 12);
+      if (ty + th > box.height) ty = Math.max(0, event.clientY - box.top - th - 12);
+      tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
+    };
+
+    const gRow = svg.selectAll('g.r').data(rows).join('g').attr('class', 'r').attr('transform', (d, i) => `translate(0,${top + i * rowH})`);
+    gRow.append('circle').attr('cx', 13).attr('cy', (rowH - gap) / 2).attr('r', 11)
+      .attr('fill', (d, i) => medal(i)).attr('stroke', (d, i) => (i < 3 ? 'none' : '#2A2924'));
+    gRow.append('text').attr('x', 13).attr('y', (rowH - gap) / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
+      .attr('font-size', 11).attr('font-weight', 600).attr('fill', (d, i) => (i < 3 ? '#0A0905' : '#B6B2A8')).text((d, i) => i + 1);
+    gRow.append('text').attr('x', 34).attr('y', (rowH - gap) / 2).attr('dy', '0.35em').attr('font-size', 13)
+      .attr('fill', '#F4F1E8').attr('font-weight', (d, i) => (i === 0 ? 600 : 400))
+      .text((d) => nice(d.agent)).each(function () {
+        let s = this.textContent;
+        while (this.getComputedTextLength() > nameW && s.length > 3) { s = s.slice(0, -2); this.textContent = s + '…'; }
+      });
+    if (showClose) {
+      const hdr = svg.append('g').attr('class', 'hdr');
+      hdr.append('text').attr('x', left - closeW - 10).attr('y', 12).attr('text-anchor', 'end').attr('font-size', 11).attr('fill', '#B6B2A8').attr('letter-spacing', '0.08em').text('CALLS');
+      hdr.append('text').attr('x', left - 10).attr('y', 12).attr('text-anchor', 'end').attr('font-size', 11).attr('fill', '#B6B2A8').attr('letter-spacing', '0.08em').text('CLOSE');
+      gRow.append('text').attr('x', left - closeW - 10).attr('y', (rowH - gap) / 2).attr('dy', '0.35em').attr('text-anchor', 'end')
+        .attr('font-size', 12).attr('fill', '#B6B2A8').style('font-variant-numeric', 'tabular-nums').text((d) => fmtCalls(d));
+      gRow.append('text').attr('x', left - 10).attr('y', (rowH - gap) / 2).attr('dy', '0.35em').attr('text-anchor', 'end')
+        .attr('font-size', 12).attr('fill', '#B6B2A8').style('font-variant-numeric', 'tabular-nums').text((d) => fmtClose(d));
+    }
+    gRow.append('rect').attr('x', left).attr('y', 0).attr('height', rowH - gap).attr('rx', 4)
+      .attr('width', (d) => Math.max(2, x(d[metric])))
+      .attr('fill', `url(#${gid})`)
+      .attr('fill-opacity', (d, i) => (i === 0 ? 1 : 0.6));
+    gRow.append('text').attr('x', (d) => left + Math.max(2, x(d[metric])) + 6).attr('y', (rowH - gap) / 2).attr('dy', '0.35em')
+      .attr('font-size', 12).attr('fill', '#F4F1E8').style('font-variant-numeric', 'tabular-nums').text((d) => fmtV(d[metric]));
+    gRow.append('rect').attr('x', 0).attr('y', -gap / 2).attr('width', W).attr('height', rowH).attr('fill', 'transparent')
+      .on('mousemove', (event, d) => showTip(event, d, rows.indexOf(d)))
+      .on('mouseleave', () => { tip.hidden = true; });
+  });
+})();
+</script>

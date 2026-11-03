@@ -48,5 +48,16 @@
 .sortButton span { color: #aa9250; }
 .sortButton:hover { color: var(--gold); }
 .foot { text-align: center; color: #a49d8b; font-size: 12px; margin: 0; line-height: 1.7; }
+.hero .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.hero .eyebrow, .tiles dd { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.range { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px; }
+.range label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.range input { min-height: 42px; max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #141414; color: var(--text); color-scheme: dark; font: inherit; }
+.range p { width: 100%; margin: 0; text-align: center; font-size: 12px; color: var(--muted); }
+.callMetrics { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 11px; line-height: 1.6; color: var(--muted); margin-top: 3px; white-space: normal; }
+.chart li { min-height: 48px; }
+.chart li:focus-visible, .range input:focus-visible, .boardTabs button:focus-visible, .segment button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.rowDetails { max-width: min(330px, 100%); white-space: normal; }
+@media (forced-colors: active) { .hero .eyebrow, .tiles dd { color: CanvasText; background: none; } }
 @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart li { grid-template-columns: 25px minmax(75px, 30%) minmax(20px, 1fr) auto; gap: 8px; } .card { padding: 19px 15px; } }
 @media (max-width: 480px) { .boardTabs button { font-size: 12px; padding: 9px; } .tiles dd { font-size: 24px; } .chart li { grid-template-columns: 23px minmax(50px, 1fr) minmax(25px, 1fr) auto; } }

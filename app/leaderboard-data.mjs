@@ -4,7 +4,7 @@ export const LEADERBOARD_BOARDS = Object.freeze([
   { id: 'shopper', label: 'Shopper' },
   { id: 'source', label: 'Source Performance' },
 ]);
-export const LEADERBOARD_PERIODS = Object.freeze([{ id: 'day', label: 'Daily' }, { id: 'week', label: 'Weekly' }, { id: 'month', label: 'Monthly' }]);
+export const LEADERBOARD_PERIODS = Object.freeze([{ id: 'day', label: 'Daily' }, { id: 'week', label: 'Weekly' }, { id: 'month', label: 'Monthly' }, { id: 'custom', label: 'Custom' }]);
 const nonnegative = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 const signedNumber = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const metricNumber = (value, key) => ['annualPremium', 'premium', 'roas'].includes(key) ? signedNumber(value) : nonnegative(value);

@@ -1,0 +1,18 @@
+{
+  "description": "Policies sold and annual premium per writing agent, closed today. Reads HubSpot deals in the Sold stage (closed won), grouped by writing agent.",
+  "source": {
+    "args": {
+      "sql": "SELECT hubspot_owner_id, writing_agent_name, COUNT(*), SUM(annual_premium_amount) FROM DEAL WHERE dealstage = 'closedwon' AND closedate >= {{d_start}} AND writing_agent_name IS NOT NULL GROUP BY hubspot_owner_id, writing_agent_name ORDER BY COUNT(*) DESC LIMIT 100",
+      "verbosityLevel": "LOW"
+    },
+    "connector": "HubSpot",
+    "kind": "query",
+    "rules": {
+      "d_start": {
+        "pattern": "^20[0-9]{2}-[01][0-9]-[0-3][0-9]$"
+      }
+    },
+    "tool": "query_crm_data"
+  },
+  "title": "Daily sales by agent"
+}

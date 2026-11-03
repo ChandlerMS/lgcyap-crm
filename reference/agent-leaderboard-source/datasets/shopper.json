@@ -1,0 +1,15 @@
+{
+  "description": "Day-by-day PolicyTek Agent Report (Date Type = Submit Date) since Oct 1, 2026: one row per agent per day with leads, quoted, submitted, submitted premium and spend. The page adds up the days in the chosen period; close rate is submitted \u00f7 leads. Copied from PolicyTek in Sarah's Chrome by an hourly scheduled task.",
+  "schedule": "Every hour, today and yesterday re-copied from PolicyTek Reports \u2192 Agent Report",
+  "source": {
+    "kind": "file",
+    "name": "shopper-history.json",
+    "url": "/_blob/73b085fea8500757a132ca302305c5c4"
+  },
+  "staleAfterHours": 2,
+  "title": "Shopper submits by agent",
+  "updated": {
+    "at": "2026-11-03T02:10:34.000Z",
+    "by": "Hourly PolicyTek refresh"
+  }
+}

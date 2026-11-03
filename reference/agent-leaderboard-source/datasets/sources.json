@@ -1,0 +1,15 @@
+{
+  "description": "Day-by-day PolicyTek Source Performance grouped by Seller Sources since Oct 1, 2026: one row per seller source per day with leads, quoted, submitted, submitted premium and spend. Leads with no seller source aren't listed. The page adds up the days; return on spend is premium \u00f7 spend.",
+  "schedule": "Every hour, today and yesterday re-copied from PolicyTek Reports \u2192 Source Performance (Seller Sources)",
+  "source": {
+    "kind": "file",
+    "name": "sources-history.json",
+    "url": "/_blob/804a9db5122fea3ab17c46b688c28b4d"
+  },
+  "staleAfterHours": 2,
+  "title": "Seller source performance",
+  "updated": {
+    "at": "2026-11-03T02:10:34.000Z",
+    "by": "Hourly PolicyTek refresh"
+  }
+}
