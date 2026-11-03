@@ -3,6 +3,7 @@ export const LEADERBOARD_BOARDS = Object.freeze([
   { id: 'sp', label: 'Standard vs. Preferred' },
   { id: 'shopper', label: 'Shopper' },
   { id: 'source', label: 'Source Performance' },
+  { id: 'whatsapp', label: 'WhatsApp Sales' },
 ]);
 export const LEADERBOARD_PERIODS = Object.freeze([{ id: 'day', label: 'Daily' }, { id: 'week', label: 'Weekly' }, { id: 'month', label: 'Monthly' }, { id: 'custom', label: 'Custom' }]);
 const nonnegative = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
@@ -11,7 +12,7 @@ const metricNumber = (value, key) => ['annualPremium', 'premium', 'roas'].includ
 const descending = (first, second) => first === null || second === null ? first === null && second === null ? 0 : first === null ? 1 : -1 : second - first;
 
 export function leaderboardMetrics(board) {
-  return board === 'sp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
+  return board === 'sp' || board === 'whatsapp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     : { first: 'submitted', second: 'premium', firstLabel: 'Submitted', secondLabel: 'Submitted premium' };
 }
 
