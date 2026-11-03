@@ -1051,7 +1051,7 @@ function vDashboard() {
   const lic = V().filter(c => c.stage === 'license').length;
   const hired = V().filter(c => c.stage === 'cholito').length;
   const overdue = TASKS.filter(t => !t.done && t.due < TODAY).length;
-  const max = Math.max(...STAGES.map(s => V().filter(c => c.stage === s.id).length));
+  const max = Math.max(1, ...STAGES.map(s => V().filter(c => c.stage === s.id).length));
   const srcs = {}; V().forEach(c => srcs[c.source] = (srcs[c.source] || 0) + 1);
   const srcMax = Math.max(...Object.values(srcs));
   const recs = (isAdmin() ? REC : [ME]).map(r => ({ r, open: open.filter(c => c.recruiter === r).length, ps: V().filter(c => c.recruiter === r && c.prescreen && c.prescreen.done).length, hires: V().filter(c => c.recruiter === r && c.stage === 'cholito').length }));
@@ -1068,7 +1068,7 @@ function vDashboard() {
     <div class="kpi" data-go="orientations"><b>${s0.roster.length}<span class="small muted" style="font-size:13px;-webkit-text-fill-color:var(--muted)"> / ${s0.cap}</span></b><span>Next group review · ${sessLabel(s0)}</span><i>${s0.cap - s0.roster.length} seats left</i></div>
     <div class="kpi" data-go="pipeline"><b>${lic}</b><span>License in progress</span><i class="down">${V().filter(c => c.stage === 'license' && daysBetween(c.stageEntered, TODAY) > 30).length} at risk (30+ days)</i></div>
     <div class="kpi" data-go="trainings"><b>${CLASSES[0].roster.length}<span class="small muted" style="font-size:13px;-webkit-text-fill-color:var(--muted)"> / ${CLASSES[0].cap}</span></b><span>Orlando Class 1 · date pending</span><i>${V().filter(c => c.stage === 'licensed').length} need a contracting date</i></div>
-    <div class="kpi" data-go="candidates"><b>${hired}</b><span>Cholitos (passed training, ready to sell)</span><i>${Math.round(100 * hired / V().length)}% of all applicants</i></div>
+    <div class="kpi" data-go="candidates"><b>${hired}</b><span>Cholitos (passed training, ready to sell)</span><i>${V().length ? Math.round(100 * hired / V().length) + '% of all applicants' : 'No applicants yet'}</i></div>
     <div class="kpi" data-go="tasks"><b>${overdue}</b><span>Overdue tasks</span><i class="${overdue ? 'down' : ''}">${TASKS.filter(t => !t.done && daysBetween(t.due, TODAY) === 0).length} due today</i></div>
   </div>
   <div class="grid2">
