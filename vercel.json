@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "buildCommand": "node scripts/verify-production-source.mjs && npm run build && node scripts/verify-production-source.mjs",
   "installCommand": "npm ci",
   "crons": [{ "path": "/api/cron/recruit-lifecycle", "schedule": "* * * * *" }]
 }
