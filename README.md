@@ -106,10 +106,9 @@ with reserved fictional phones and example.invalid email addresses. Demo edits
 and stage moves live only in browser memory and reset on reload. They never write
 to HubSpot. Live tools and intake cannot mount beneath a demo label.
 
-The entire Recruits row toggles its keyboard-accessible disclosure, with only
-Add Recruits and Pipeline links underneath. Pipeline opens the main recruiting
-pipeline page (`#today`), where stage links open their filtered queues. Recruits
-starts collapsed on app opening. The full sidebar also collapses.
+Recruiting Dashboard opens the main recruiting pipeline page (`#today`), where
+stage links open their filtered queues. Add Recruits is its own sidebar page
+(`#add-recruits`). The full sidebar also collapses.
 Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar and
 Meetings use the existing approved-user session. CRM tables have sortable columns,
 global search and in-app detail views. Contacts, tickets, tasks, companies and

@@ -22,7 +22,7 @@ import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting
 import { saveRecruitStageWithRefresh, StageSaveError } from "./recruit-stage-save.mjs";
 import { sortRecruitRows } from "./recruit-list-view.mjs";
 import { STAGE_PAGES, TERMINAL_STAGE_IDS } from "../lib/recruiting-config.mjs";
-import { WORKSPACE_NAV, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, RECRUITS_PAGE_TOOLS, WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
+import { WORKSPACE_NAV, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
 import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 
 import { lifecycleStatusLabel } from "../lib/recruit-lifecycle.mjs";
@@ -273,15 +273,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     mainRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
   }, [route.view, route.id]);
   useEffect(() => {
-    // Reveal nested destinations, but keep Recruits collapsed on its overview page.
-    if (route.view === "today") return;
-    let parent = sidebarRef.current?.querySelector(".recruit-pages .nav-link[aria-current='page']")?.parentElement;
-    while (parent && parent !== sidebarRef.current) {
-      if (parent instanceof HTMLDetailsElement) parent.open = true;
-      parent = parent.parentElement;
-    }
-  }, [route.view, route.id]);
-  useEffect(() => {
     if (!menuOpen) {
       if (restoreMenuFocus.current) { menuRef.current?.focus(); restoreMenuFocus.current = false; }
       else if (focusPageAfterNav.current) mainRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
@@ -374,13 +365,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   }, [demoRecords.length, refresh]);
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={activeView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
   const navigation = <>
-    <details className="nav-recruits">
-      <summary><Icon name={NAV[0].icon} /><span>{NAV[0].label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
-      <div className="recruit-pages">
-        {navigationLink(NAV[1])}
-        {navigationLink({ ...NAV[0], label: "Pipeline", icon: "folder" })}
-      </div>
-    </details>
+    {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {SIDEBAR_HUBSPOT_TOOLS.map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
