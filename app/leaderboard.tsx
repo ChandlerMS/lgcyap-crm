@@ -116,7 +116,7 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
 
   useEffect(() => {
     if (board !== "sp" || !leaderboardCallsRefreshActive(actualPeriod, range.to, leaderboardPeriod("day", Date.now()).startDate)) return;
-    const refresh = () => { if (!document.hidden && !requestRef.current) void load(); };
+    const refresh = () => { if (policytekRefreshActive() && !document.hidden && !requestRef.current) void load(); };
     // Every reload also reads HubSpot, so a returning tab reloads only if its last load is a full sync old.
     const returned = () => { if (Date.now() - loadedAtRef.current >= 300000) refresh(); };
     let timer: number;
