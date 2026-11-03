@@ -8,11 +8,13 @@ export const LEADERBOARD_BOARDS = Object.freeze([
 export const LEADERBOARD_PERIODS = Object.freeze([{ id: 'day', label: 'Daily' }, { id: 'week', label: 'Weekly' }, { id: 'month', label: 'Monthly' }, { id: 'custom', label: 'Custom' }]);
 const nonnegative = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 const signedNumber = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
-const metricNumber = (value, key) => ['annualPremium', 'premium', 'roas'].includes(key) ? signedNumber(value) : nonnegative(value);
+const metricNumber = (value, key) => ['annualPremium', 'premium', 'production', 'roas'].includes(key) ? signedNumber(value) : nonnegative(value);
 const descending = (first, second) => first === null || second === null ? first === null && second === null ? 0 : first === null ? 1 : -1 : second - first;
 
 export function leaderboardMetrics(board) {
-  return board === 'sp' || board === 'whatsapp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
+  return board === 'sp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
+    // The imported daily reports record "Number of Sales" and "Total Production", not annual premium.
+    : board === 'whatsapp' ? { first: 'sales', second: 'production', firstLabel: 'Sales', secondLabel: 'Total production' }
     : { first: 'submitted', second: 'premium', firstLabel: 'Submitted', secondLabel: 'Submitted premium' };
 }
 

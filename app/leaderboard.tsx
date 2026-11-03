@@ -4,15 +4,18 @@ import Image from "next/image";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { LEADERBOARD_BOARDS, LEADERBOARD_PERIODS, leaderboardBarWidth, leaderboardMetrics, leaderboardTotals, rankLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from "./leaderboard-data.mjs";
 import { hubspotRetryDeadline } from "./hubspot-workspace-view.mjs";
-import { leaderboardPeriod, leaderboardCustomPeriod, leaderboardQuickRange } from "../lib/leaderboard-period.mjs";
+import { leaderboardPeriod, leaderboardCustomPeriod, leaderboardQuickRange, leaderboardMonthOptions, leaderboardMonthWeeks, leaderboardMonthRange } from "../lib/leaderboard-period.mjs";
+import MonthWheel from "./leaderboard-month-wheel";
 import { policytekRefreshActive, policytekNextRefreshDelay } from "../lib/policytek-schedule.mjs";
 import styles from "./leaderboard.module.css";
 
 type Board = "sp" | "shopper" | "source" | "whatsapp";
 type Period = "day" | "week" | "month" | "custom";
 type Metric = "sales" | "ap";
-type Row = { name: string; attributed?: boolean; sales?: number | null; annualPremium?: number | null; submitted?: number | null; premium?: number | null; leads?: number | null; spend?: number | null; closeRate?: number | null; roas?: number | null; [key: string]: unknown };
-type Result = { stale?: boolean; reportTotals?: { leads: number; submitted: number; premium: number; spend: number }; calls?: { status: string; total: number | null; partial: boolean; soldPerInboundLog: number | null }; callNotice?: string; board: Board; period: Period; status: "available" | "connection-required" | "unavailable"; rows: Row[]; partial: boolean; source: string; notice?: string; fetchedAt?: string; startDate?: string; endDate?: string; error?: { code?: string; message?: string }; retryAfterSeconds?: number };
+type CustomView = "yesterday" | "lastweek" | "lastmonth" | "choose" | "range";
+const CUSTOM_VIEWS: { id: CustomView; label: string }[] = [{ id: "yesterday", label: "Yesterday" }, { id: "lastweek", label: "Last week" }, { id: "lastmonth", label: "Last month" }, { id: "choose", label: "Choose" }, { id: "range", label: "Range" }];
+type Row = { name: string; attributed?: boolean; sales?: number | null; annualPremium?: number | null; submitted?: number | null; premium?: number | null; leads?: number | null; spend?: number | null; closeRate?: number | null; roas?: number | null; production?: number | null; queueConnected?: number | null; queueSold?: number | null; [key: string]: unknown };
+type Result = { stale?: boolean; reportTotals?: { leads: number; submitted: number; premium: number; spend: number }; calls?: { status: string; total?: number | null; partial?: boolean; soldPerInboundLog?: number | null; connected?: number | null; sold?: number | null; closeRate?: number | null; coverageStart?: string; unmappedConnected?: number | null }; dataThrough?: string | null; callNotice?: string; board: Board; period: Period; status: "available" | "connection-required" | "unavailable"; rows: Row[]; partial: boolean; source: string; notice?: string; fetchedAt?: string; startDate?: string; endDate?: string; error?: { code?: string; message?: string }; retryAfterSeconds?: number };
 const NUMBER = new Intl.NumberFormat("en-US");
 const MONEY = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const MONEY_EXACT = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
@@ -29,6 +32,9 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
   const [range, setRange] = useState({ from: "", to: "" });
   const [draftRange, setDraftRange] = useState({ from: "", to: "" });
   const [rangeError, setRangeError] = useState<string | null>(null);
+  const [pickerNow, setPickerNow] = useState(0);
+  const [monthKey, setMonthKey] = useState("");
+  const [customView, setCustomView] = useState<CustomView>("range");
   const [sourceSort, setSourceSort] = useState({ field: "premium", direction: "desc" });
   const [data, setData] = useState<Result | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,6 +45,7 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
   const unauthorizedRef = useRef(onUnauthorized);
   const actualPeriod = period;
   const selectPeriod = (value: Period, instant: number) => {
+    if (value === "custom") { setPickerNow(instant); if (!monthKey) setMonthKey(leaderboardPeriod("day", instant).startDate.slice(0, 7)); }
     if (value === "custom" && !range.from) { const today = leaderboardPeriod("day", instant).startDate; const initial = { from: today, to: today }; setRange(initial); setDraftRange(initial); }
     setRangeError(null); setPeriod(value);
   };
@@ -46,16 +53,24 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
     const selected = { from: value.from, to: value.to || value.from };
     try { leaderboardCustomPeriod(selected.from, selected.to); } catch { setRangeError("Choose valid dates in order, up to 366 days."); return; }
     setRange(selected); setDraftRange(selected); setRangeError(null); setPeriod("custom");
+    // Keep the month wheel on the month being shown when a range sits inside one offered month.
+    const month = selected.from.slice(0, 7);
+    if (month === selected.to.slice(0, 7) && leaderboardMonthOptions(pickerNow).some(option => option.key === month)) setMonthKey(month);
+  };
+  const months = pickerNow ? leaderboardMonthOptions(pickerNow) : [];
+  const weeks = pickerNow && monthKey ? leaderboardMonthWeeks(monthKey, pickerNow) : [];
+  const wholeMonth = pickerNow && monthKey ? leaderboardMonthRange(monthKey, pickerNow) : null;
+  // Quick ranges load at once; Choose and Range only reveal their controls.
+  const selectCustomView = (value: CustomView) => {
+    setCustomView(value); setRangeError(null);
+    if (value !== "choose" && value !== "range") applyRange(leaderboardQuickRange(value));
+  };
+  const selectMonth = (key: string) => {
+    const whole = leaderboardMonthRange(key, pickerNow);
+    if (whole && (whole.from !== range.from || whole.to !== range.to)) applyRange(whole);
   };
   useEffect(() => { unauthorizedRef.current = onUnauthorized; }, [onUnauthorized]);
   const load = useCallback(async () => {
-    if (board === "whatsapp") {
-      requestRef.current?.abort(); requestRef.current = null;
-      const selected = actualPeriod === "custom" ? leaderboardCustomPeriod(range.from, range.to) : leaderboardPeriod(actualPeriod, Date.now());
-      setData({ board, period: actualPeriod, status: "unavailable", rows: [], partial: false, source: "WhatsApp Sales", startDate: selected.startDate, endDate: selected.endDate });
-      setLoading(false); setError(null);
-      return;
-    }
     if (retryRef.current > Date.now()) { setLoading(false); return; }
     requestRef.current?.abort();
     const controller = new AbortController(); requestRef.current = controller;
@@ -106,8 +121,14 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
   const sourceTableRows = available && board === "source" ? sourceLeaderboardTableRows(current.rows, sourceSort) as Row[] : [];
   const periodLabel = actualPeriod === "day" ? "Today" : actualPeriod === "week" ? "This week" : actualPeriod === "month" ? "This month" : `${range.from} – ${range.to}`;
   const boardLabel = LEADERBOARD_BOARDS.find(value => value.id === board)?.label ?? "Leaderboard";
-  const salesBoard = board === "sp" || board === "whatsapp";
-  const stats = board === "source" ? [
+  const salesBoard = board === "sp";
+  const whatsappCalls = board === "whatsapp" ? current?.calls : undefined;
+  const stats = board === "whatsapp" ? [
+    { label: period === "custom" ? "Sales" : `Sales ${periodLabel.toLowerCase()}`, value: number(totals?.first) },
+    { label: period === "custom" ? "Total production" : `Total production ${periodLabel.toLowerCase()}`, value: number(totals?.second, true) },
+    { label: "Close", value: whatsappCalls?.closeRate != null ? PERCENT.format(whatsappCalls.closeRate) : "—" },
+    { label: "Calls", value: number(whatsappCalls?.connected) },
+  ] : board === "source" ? [
     { label: "Leads", value: number(totals?.leads) }, { label: "Submitted", value: number(totals?.first) }, { label: "Submitted premium", value: number(totals?.second, true) }, { label: "Return on spend", value: totals?.roas == null ? "—" : `${totals.roas.toFixed(2)}x` },
   ] : [
     { label: salesBoard ? (period === "custom" ? "Policies sold" : `Policies sold ${periodLabel.toLowerCase()}`) : "Submitted", value: number(totals?.first) },
@@ -124,7 +145,16 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
       const fields = new FormData(event.currentTarget);
       applyRange({ from: String(fields.get("from") ?? ""), to: String(fields.get("to") ?? "") });
     }}>
-      <div className={styles.segment} role="group" aria-label="Quick range">{[{ id: "yesterday", label: "Yesterday" }, { id: "lastweek", label: "Last week" }, { id: "lastmonth", label: "Last month" }].map(value => <button key={value.id} type="button" onClick={() => applyRange(leaderboardQuickRange(value.id))}>{value.label}</button>)}</div>
+      <div className={styles.segment} role="group" aria-label="Custom range">{CUSTOM_VIEWS.map(value => <button key={value.id} type="button" aria-pressed={customView === value.id} aria-controls={value.id === "choose" ? "leaderboard-month-picker" : value.id === "range" ? "leaderboard-date-range" : undefined} onClick={() => selectCustomView(value.id)}>{value.label}</button>)}</div>
+      {customView === "choose" && months.length > 0 && <div id="leaderboard-month-picker" className={styles.monthPicker}>
+        <h3 id="leaderboard-month-label">Month &amp; week</h3>
+        <MonthWheel months={months} value={monthKey} onChange={selectMonth} labelledBy="leaderboard-month-label" />
+        <div className={styles.weeks} role="group" aria-label={`Weeks of ${months.find(month => month.key === monthKey)?.label ?? "the month"}`}>
+          <button type="button" aria-pressed={Boolean(wholeMonth) && range.from === wholeMonth?.from && range.to === wholeMonth?.to} disabled={!wholeMonth} onClick={() => wholeMonth && applyRange(wholeMonth)}>Full month<small>All weeks</small></button>
+          {weeks.map(week => <button key={week.week} type="button" aria-pressed={range.from === week.from && range.to === week.to} disabled={!week.available} title={week.available ? undefined : "This week has not started yet"} onClick={() => applyRange({ from: week.from, to: week.to })}>Week {week.week}<small>{week.label}</small></button>)}
+        </div>
+      </div>}
+      {customView === "range" && <div id="leaderboard-date-range" className={styles.dateFields}>
       <label>From<input type="date" name="from" min="2000-01-01" max="2099-12-31" aria-label="From date" aria-describedby="leaderboard-range-help" required value={draftRange.from} onInput={event => {
         const from = event.currentTarget.value;
         setDraftRange(value => ({ ...value, from }));
@@ -135,6 +165,7 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
       }} /></label>
       <button type="submit" className="btn btn-primary">Apply dates</button>
       <p id="leaderboard-range-help">One day or a date range, up to 366 days · Eastern time. Leave To blank for one day.</p>
+      </div>}
       {rangeError && <p role="alert">{rangeError}</p>}
     </form>}
     <div className={styles.source}><span>{current?.source ?? (board === "sp" ? "HubSpot" : board === "whatsapp" ? "WhatsApp Sales" : "PolicyTek")}</span>{current?.fetchedAt && <span>Updated {updated(current.fetchedAt)}</span>}{current?.startDate && <span>{current.startDate}{current.endDate && current.endDate !== current.startDate ? ` – ${current.endDate}` : ""} · Eastern time</span>}</div>
@@ -143,13 +174,13 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
     {current?.notice && <p className={styles.notice} role="status">{current.notice}</p>}
     {board === "sp" && current?.callNotice && <p className={styles.notice} role="status">{current.callNotice}</p>}
     {current?.calls?.partial && <p className={styles.alert} role="status">Incomplete call results: the call total covers loaded logs only.</p>}
-    {current?.partial && <p className={styles.alert} role="status">{board === "sp" ? "Incomplete results: totals and rankings below cover the loaded records only." : "Incomplete named rows: report totals may include activity not attributed to the names shown below."}</p>}
+    {current?.partial && <p className={styles.alert} role="status">{board === "sp" ? "Incomplete results: totals and rankings below cover the loaded records only." : board === "whatsapp" ? "Incomplete results: part of this range has not been imported yet, so totals and rankings cover imported days only." : "Incomplete named rows: report totals may include activity not attributed to the names shown below."}</p>}
     {missingMetrics > 0 && <p className={styles.notice}>{missingMetrics} record{missingMetrics === 1 ? " lacks" : "s lack"} the selected metric and {missingMetrics === 1 ? "is" : "are"} not ranked.</p>}
     <dl className={styles.tiles} aria-label={`${boardLabel} totals`}>{stats.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd title={stat.value}>{stat.value}</dd></div>)}</dl>
-    <section className={styles.card} aria-labelledby="leaderboard-chart-title"><div className={styles.cardHeading}><h2 id="leaderboard-chart-title">{boardLabel} · {periodLabel}</h2><p>{board === "whatsapp" ? "WhatsApp sales by date" : board === "sp" ? "HubSpot Sold deals by close date" : board === "shopper" ? "PolicyTek Agent Report by submit date" : "PolicyTek Source Performance"}</p></div>
-      {loading && !current ? <div className={styles.empty} role="status">Loading leaderboard data…</div> : !available ? <div className={styles.empty} role="status"><h3>{board === "whatsapp" ? "No sales data yet" : current?.status === "connection-required" ? "Data connection required" : "Leaderboard data unavailable"}</h3><p>{current?.error?.message ?? current?.notice ?? (board === "whatsapp" ? "This leaderboard is blank until sales data is added." : board === "sp" ? "HubSpot deal access must be connected before rankings can appear." : "The PolicyTek report has not been connected to this app.")}</p></div> : !rows.length ? <div className={styles.empty}>No recorded activity for this period.</div> : <ol className={styles.chart} aria-label={`Ranked by ${metric === "ap" ? keys.secondLabel.toLowerCase() : keys.firstLabel.toLowerCase()}`}>{rows.map((row, index) => <li key={`${row.name}-${index}`} tabIndex={0} className={row.attributed === false ? styles.unattributed : undefined}><span className={`${styles.medal} ${row.attributed !== false && index < 3 ? styles[`medal${index + 1}`] : ""}`} aria-label={row.attributed === false ? "Unattributed, not ranked" : `Rank ${index + 1}`}>{row.attributed === false ? "—" : index + 1}</span><span className={styles.name} title={row.name}>{row.name}{board === "sp" && <span className={styles.callMetrics}><span>Owner logs: {number(row.inboundCalls)}</span><span>Sold / logs: {typeof row.soldPerInboundLog === "number" ? PERCENT.format(row.soldPerInboundLog) : "—"}</span></span>}</span><span className={styles.barTrack}><span className={styles.bar} style={{ width: `${leaderboardBarWidth(row[selectedField], max)}%` }} /></span><strong>{number(row[selectedField], metric === "ap")}</strong><div className={styles.rowDetails}>{board === "sp" && <><span>Inbound logs attributed through deal owner: {number(row.inboundCalls)}</span><span>Sold / inbound logs: {typeof row.soldPerInboundLog === "number" ? PERCENT.format(row.soldPerInboundLog) : "—"}</span></>}<span>{keys.firstLabel}: {number(row[keys.first])}</span><span>{keys.secondLabel}: {number(row[keys.second], true)}</span><span>Average premium each: {typeof row[keys.first] === "number" && (row[keys.first] as number) > 0 && typeof row[keys.second] === "number" ? MONEY.format((row[keys.second] as number) / (row[keys.first] as number)) : "—"}</span></div></li>)}</ol>}
+    <section className={styles.card} aria-labelledby="leaderboard-chart-title"><div className={styles.cardHeading}><h2 id="leaderboard-chart-title">{boardLabel} · {periodLabel}</h2><p>{board === "whatsapp" ? "Daily agent reports by sale date" : board === "sp" ? "HubSpot Sold deals by close date" : board === "shopper" ? "PolicyTek Agent Report by submit date" : "PolicyTek Source Performance"}</p></div>
+      {loading && !current ? <div className={styles.empty} role="status">Loading leaderboard data…</div> : !available ? <div className={styles.empty} role="status"><h3>{board === "whatsapp" ? "No sales data yet" : current?.status === "connection-required" ? "Data connection required" : "Leaderboard data unavailable"}</h3><p>{current?.error?.message ?? current?.notice ?? (board === "whatsapp" ? "WhatsApp sales have not been imported yet." : board === "sp" ? "HubSpot deal access must be connected before rankings can appear." : "The PolicyTek report has not been connected to this app.")}</p></div> : !rows.length ? <div className={styles.empty}>No recorded activity for this period.</div> : <ol className={styles.chart} aria-label={`Ranked by ${metric === "ap" ? keys.secondLabel.toLowerCase() : keys.firstLabel.toLowerCase()}`}>{rows.map((row, index) => <li key={`${row.name}-${index}`} tabIndex={0} className={row.attributed === false ? styles.unattributed : undefined}><span className={`${styles.medal} ${row.attributed !== false && index < 3 ? styles[`medal${index + 1}`] : ""}`} aria-label={row.attributed === false ? "Unattributed, not ranked" : `Rank ${index + 1}`}>{row.attributed === false ? "—" : index + 1}</span><span className={styles.name} title={row.name}>{row.name}{board === "sp" && <span className={styles.callMetrics}><span>Owner logs: {number(row.inboundCalls)}</span><span>Sold / logs: {typeof row.soldPerInboundLog === "number" ? PERCENT.format(row.soldPerInboundLog) : "—"}</span></span>}{board === "whatsapp" && row.queueConnected != null && <span className={styles.callMetrics}><span>Calls: {number(row.queueConnected)}</span><span>Close: {typeof row.closeRate === "number" ? PERCENT.format(row.closeRate) : "—"}</span></span>}</span><span className={styles.barTrack}><span className={styles.bar} style={{ width: `${leaderboardBarWidth(row[selectedField], max)}%` }} /></span><strong>{number(row[selectedField], metric === "ap")}</strong><div className={styles.rowDetails}>{board === "sp" && <><span>Inbound logs attributed through deal owner: {number(row.inboundCalls)}</span><span>Sold / inbound logs: {typeof row.soldPerInboundLog === "number" ? PERCENT.format(row.soldPerInboundLog) : "—"}</span></>}{board === "whatsapp" && row.queueConnected != null && <><span>Calls: {number(row.queueConnected)}</span><span>Queue sold: {number(row.queueSold)}</span><span>Close (queue sold ÷ calls): {typeof row.closeRate === "number" ? PERCENT.format(row.closeRate) : "—"}</span></>}<span>{keys.firstLabel}: {number(row[keys.first])}</span><span>{keys.secondLabel}: {number(row[keys.second], true)}</span><span>{board === "whatsapp" ? "Average production per sale" : "Average premium each"}: {typeof row[keys.first] === "number" && (row[keys.first] as number) > 0 && typeof row[keys.second] === "number" ? MONEY.format((row[keys.second] as number) / (row[keys.first] as number)) : "—"}</span></div></li>)}</ol>}
       {board === "source" && available && sourceTableRows.length > 0 && <div className={styles.tableWrap}><table className={styles.table}><thead><tr>{SOURCE_COLUMNS.map(column => <th key={column.field} scope="col" aria-sort={sourceSort.field === column.field ? sourceSort.direction === "asc" ? "ascending" : "descending" : "none"}><button type="button" className={styles.sortButton} aria-label={`Sort by ${column.label}`} onClick={() => setSourceSort(value => ({ field: column.field, direction: value.field === column.field && value.direction === "asc" ? "desc" : "asc" }))}>{column.label}<span aria-hidden="true">{sourceSort.field === column.field ? sourceSort.direction === "asc" ? "↑" : "↓" : "↕"}</span></button></th>)}</tr></thead><tbody>{sourceTableRows.map((row, index) => { const close = sourceLeaderboardValue(row, "closeRate"), roas = sourceLeaderboardValue(row, "roas"); return <tr key={`${row.name}-${index}`}><th scope="row">{row.name}</th><td>{number(row.leads)}</td><td>{number(row.submitted)}</td><td>{typeof row.premium === "number" ? MONEY_EXACT.format(row.premium) : "—"}</td><td>{close == null ? "—" : PERCENT.format(close)}</td><td>{number(row.spend, true)}</td><td>{roas == null ? "—" : `${roas.toFixed(2)}x`}</td></tr>; })}</tbody></table></div>}
     </section>
-    <p className={styles.foot}>{board === "whatsapp" ? "WhatsApp sales data has not been added. Totals and rankings will appear here when available." : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : "PolicyTek browser sync · every five minutes, 9 AM–9 PM Eastern daily. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, Codex running, and PolicyTek signed in."}</p>
+    <p className={styles.foot}>{board === "whatsapp" ? `Imported from the LAP Daily Agent Reports${current?.dataThrough ? ` · activity through ${current.dataThrough}` : ""}. Total production is the reports' own figure, not HubSpot annual premium. Calls are connected (answered) inbound queue calls and Close is queue sold ÷ calls, recorded from ${whatsappCalls?.coverageStart ?? "2026-06-17"}. Re-run the import after regenerating the reports.` : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : "PolicyTek browser sync · every five minutes, 9 AM–9 PM Eastern daily. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, Codex running, and PolicyTek signed in."}</p>
   </section>;
 }
