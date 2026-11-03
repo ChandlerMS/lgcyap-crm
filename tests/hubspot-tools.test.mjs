@@ -233,6 +233,21 @@ test('provider permissions, rates, redirects, timeout and malformed JSON have sa
   let called = false; const missing = await readHubSpotTool('contacts', {}, { accessToken: '', now, fetchImpl: async () => { called = true; } }); assert.equal(called, false); assert.equal(missing.status, 'unavailable');
 });
 
+test('CRM search retries a page HubSpot limits for a second or two, never a long limit', async () => {
+  const limited = (headers = {}) => new Response('secret-provider-body', { status: 429, headers });
+  let calls = 0, waits = [];
+  const wait = async ms => { waits.push(ms); };
+  const recovered = await readHubSpotTool('calls', {}, { accessToken: token, now, wait, fetchImpl: async () => ++calls === 2 ? limited() : calls === 1 ? provider([row('101')], 2, '1') : provider([row('102')], 2) });
+  assert.equal(recovered.status, 'available'); assert.deepEqual(recovered.records.map(record => record.id), ['101', '102']); assert.equal(recovered.partial, false);
+  assert.equal(calls, 3); assert.deepEqual(waits, [220, 1000]);
+  calls = 0; waits = [];
+  const persistent = await readHubSpotTool('tasks', {}, { accessToken: token, now, wait, fetchImpl: async () => { calls++; return limited({ 'Retry-After': '2' }); } });
+  assert.equal(persistent.error.code, 'HUBSPOT_RATE_LIMITED'); assert.equal(persistent.retryAfterSeconds, 2); assert.equal(calls, 3); assert.deepEqual(waits, [2000, 4000]);
+  calls = 0; waits = [];
+  const long = await readHubSpotTool('tasks', {}, { accessToken: token, now, wait, fetchImpl: async () => { calls++; return limited({ 'Retry-After': '60' }); } });
+  assert.equal(long.error.code, 'HUBSPOT_RATE_LIMITED'); assert.equal(long.retryAfterSeconds, 60); assert.equal(calls, 1); assert.deepEqual(waits, []);
+});
+
 test('request boundary blocks anonymous, non-allowlisted, cross-origin, malformed, oversized and non-POST calls before provider access', async () => {
   let calls = 0;
   const readData = async () => { calls++; return {}; };
