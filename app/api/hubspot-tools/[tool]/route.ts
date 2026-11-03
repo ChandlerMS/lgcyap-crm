@@ -18,7 +18,7 @@ async function handle(request: Request, context: { params: Promise<{ tool: strin
     allowedOrigin: process.env.BETTER_AUTH_URL,
     readData: async (selectedTool: string, input: { threadId?: string; query?: string; recordId?: string; archive?: string; continuation?: string }) => {
       if (selectedTool === 'inbox') return readInboxPage(input, { userId: user?.userId ?? '', hmacSecret: process.env.BETTER_AUTH_SECRET, accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
-      const result = await readHubSpotTool(selectedTool, input, { accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
+      const result = await readHubSpotTool(selectedTool, input, { accessToken: process.env.HUBSPOT_ACCESS_TOKEN, viewerEmail: user?.email });
       result.capabilities.canEdit = result.status === 'available' && Boolean(input.recordId) && await checkToolWriteCapability(selectedTool, user, {
         accessToken: process.env.HUBSPOT_ACCESS_TOKEN, hmacSecret: process.env.BETTER_AUTH_SECRET,
         editorEmails: process.env.RECRUITING_EDITOR_EMAILS, writesEnabled: process.env.RECRUITING_WRITES_ENABLED,

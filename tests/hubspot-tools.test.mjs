@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { HUBSPOT_TOOL_CONFIG, handleHubSpotToolRequest, readHubSpotTool, validateToolInput } from '../lib/hubspot-tools.mjs';
 
 const now = () => Date.parse('2026-10-30T12:00:00Z');
@@ -8,6 +9,10 @@ const row = (id = '101', properties = {}) => ({ id, properties, createdAt: '2026
 const provider = (results = [], total = results.length, after) => new Response(JSON.stringify({ results, total, ...(after ? { paging: { next: { after, link: 'https://never-follow.invalid' } } } : {}) }));
 const request = (body = '{}', headers = {}, method = 'POST') => new Request('https://private.example/api/hubspot-tools/contacts', { method, headers: { Origin: 'https://private.example', 'Content-Type': 'application/json', ...headers }, ...(method === 'GET' ? {} : { body }) });
 const deps = { getUser: () => ({ userId: 'synthetic-user' }), authorizeUser: () => true, allowedOrigin: 'https://private.example', readData: async () => ({ records: [] }) };
+const viewerEmail = 'viewer@example.invalid';
+const VIEWER_OWNED = ['calls', 'tasks', 'meetings', 'calendar'];
+// Answers HubSpot's owner list so Tasks, Calls and Meetings can resolve the signed-in user; everything else goes to fetchImpl.
+const withOwners = (fetchImpl, active = [{ id: '777', email: viewerEmail }], archived = []) => async (url, options) => url.startsWith('https://api.hubapi.com/crm/v3/owners/') ? new Response(JSON.stringify({ results: url.includes('archived=true') ? archived : active })) : fetchImpl(url, options);
 
 test('tool selection accepts only ten fixed tools and inbox thread selection, without caller authority', () => {
   assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 10);
@@ -21,7 +26,7 @@ test('tool selection accepts only ten fixed tools and inbox thread selection, wi
 test('every CRM tool uses fixed search endpoint, selected fields, read scope and truthful empty result', async () => {
   for (const [tool, config] of Object.entries(HUBSPOT_TOOL_CONFIG).filter(([key]) => key !== 'inbox')) {
     let calls = 0;
-    const result = await readHubSpotTool(tool, {}, { accessToken: token, now, fetchImpl: async (url, options) => {
+    const result = await readHubSpotTool(tool, {}, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async (url, options) => {
       calls++; assert.equal(url, `https://api.hubapi.com/crm/v3/objects/${config.object}/search`);
       assert.equal(options.method, 'POST'); assert.equal(options.redirect, 'manual'); assert.equal(options.headers.Authorization, `Bearer ${token}`);
       const body = JSON.parse(options.body);
@@ -29,7 +34,7 @@ test('every CRM tool uses fixed search endpoint, selected fields, read scope and
       assert.deepEqual(body.sorts, [{ propertyName: config.sort ?? 'hs_object_id', direction: 'DESCENDING' }]);
       if (tool === 'customer-success') assert.deepEqual(body.filterGroups, [{ filters: [{ propertyName: 'hs_current_customer', operator: 'EQ', value: 'yes' }] }]);
       return provider();
-    } });
+    }) });
     assert.equal(calls, 1); assert.equal(result.tool, tool); assert.equal(result.status, 'available'); assert.equal(result.total, 0); assert.equal(result.loadedCount, 0); assert.equal(result.partial, false); assert.equal(result.source, 'HubSpot'); assert.equal(result.readOnly, true);
     assert.deepEqual(result.requiredScopes, config.scopes); assert.ok(result.hubspotUrl.startsWith('https://app.hubspot.com/'));
   }
@@ -40,13 +45,13 @@ test('all CRM tools accept a bounded global query while preserving fixed endpoin
   for (const [tool, config] of Object.entries(HUBSPOT_TOOL_CONFIG).filter(([, value]) => value.object)) {
     assert.deepEqual(validateToolInput(tool, { query: '  Synthetic Example  ' }), { query: 'Synthetic Example' });
     let calls = 0;
-    const result = await readHubSpotTool(tool, { query: '  Synthetic Example  ' }, { accessToken: token, now, fetchImpl: async (url, options) => {
+    const result = await readHubSpotTool(tool, { query: '  Synthetic Example  ' }, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async (url, options) => {
       calls++; assert.equal(url, `https://api.hubapi.com/crm/v3/objects/${config.object}/search`); assert.equal(options.method, 'POST');
       const body = JSON.parse(options.body); assert.equal(body.query, 'Synthetic Example'); assert.deepEqual(body.properties, config.fields); assert.equal(body.limit, 100);
       assert.deepEqual(body.sorts, [{ propertyName: config.sort ?? 'hs_object_id', direction: 'DESCENDING' }]);
       if (tool === 'customer-success') assert.deepEqual(body.filterGroups, [{ filters: config.filters }]);
       return provider([], 0);
-    } });
+    }) });
     assert.equal(calls, 1); assert.equal(result.query, 'Synthetic Example'); assert.equal(result.total, 0); assert.equal(result.partial, false); assert.doesNotMatch(result.hubspotUrl, /Synthetic|query=/);
     assert.deepEqual(result.requiredScopes, config.scopes);
   }
@@ -111,14 +116,14 @@ test('Customer Success uses verified current-customer yes value, recorded sentim
 });
 
 test('calls, tasks and meetings expose real activity dates and readable statuses without fabricated times', async () => {
-  const call = await readHubSpotTool('calls', {}, { accessToken: token, now, fetchImpl: async () => provider([row('101', { hs_call_title: 'Synthetic call', hs_call_status: 'NO_ANSWER', hs_call_direction: 'OUTBOUND', hs_call_duration: '125000', hs_timestamp: '2026-10-29T14:00:00Z', hs_call_to_number: '2025550101' })]) });
+  const call = await readHubSpotTool('calls', {}, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async () => provider([row('101', { hs_call_title: 'Synthetic call', hs_call_status: 'NO_ANSWER', hs_call_direction: 'OUTBOUND', hs_call_duration: '125000', hs_timestamp: '2026-10-29T14:00:00Z', hs_call_to_number: '2025550101' })])) });
   assert.equal(call.records[0].status, 'No Answer'); assert.equal(call.records[0].subtitle, 'Outbound · 2m 5s'); assert.equal(call.records[0].scheduledAt, '2026-10-29T14:00:00.000Z');
-  const inbound = await readHubSpotTool('calls', {}, { accessToken: token, now, fetchImpl: async () => provider([row('101', { hs_call_direction: 'INBOUND', hs_call_from_number: '2025550198', hs_call_to_number: '2025550199' })]) });
+  const inbound = await readHubSpotTool('calls', {}, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async () => provider([row('101', { hs_call_direction: 'INBOUND', hs_call_from_number: '2025550198', hs_call_to_number: '2025550199' })])) });
   assert.equal(inbound.records[0].phone, '2025550198');
-  const task = await readHubSpotTool('tasks', {}, { accessToken: token, now, fetchImpl: async () => provider([row('101', { hs_task_subject: 'Synthetic task', hs_task_status: 'NOT_STARTED', hs_task_priority: 'HIGH', hs_task_type: 'CALL', hs_timestamp: '2026-02-31' })]) });
+  const task = await readHubSpotTool('tasks', {}, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async () => provider([row('101', { hs_task_subject: 'Synthetic task', hs_task_status: 'NOT_STARTED', hs_task_priority: 'HIGH', hs_task_type: 'CALL', hs_timestamp: '2026-02-31' })])) });
   assert.equal(task.records[0].status, 'Not Started'); assert.equal(task.records[0].subtitle, 'High · Call'); assert.equal(task.records[0].scheduledAt, null);
   for (const tool of ['calendar', 'meetings']) {
-    const meeting = await readHubSpotTool(tool, {}, { accessToken: token, now, fetchImpl: async () => provider([row('101', { hs_meeting_title: 'Synthetic meeting', hs_meeting_start_time: '2026-10-30T15:00:00Z', hs_meeting_end_time: '2026-10-30T16:00:00Z', hs_meeting_outcome: 'SCHEDULED', hs_meeting_location: 'Office' })]) });
+    const meeting = await readHubSpotTool(tool, {}, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async () => provider([row('101', { hs_meeting_title: 'Synthetic meeting', hs_meeting_start_time: '2026-10-30T15:00:00Z', hs_meeting_end_time: '2026-10-30T16:00:00Z', hs_meeting_outcome: 'SCHEDULED', hs_meeting_location: 'Office' })])) });
     assert.equal(meeting.records[0].scheduledAt, '2026-10-30T15:00:00.000Z'); assert.equal(meeting.records[0].endedAt, '2026-10-30T16:00:00.000Z'); assert.equal(meeting.records[0].status, 'Scheduled');
     assert.match(meeting.notice, /HubSpot CRM meeting/);
   }
@@ -237,14 +242,14 @@ test('CRM search retries a page HubSpot limits for a second or two, never a long
   const limited = (headers = {}) => new Response('secret-provider-body', { status: 429, headers });
   let calls = 0, waits = [];
   const wait = async ms => { waits.push(ms); };
-  const recovered = await readHubSpotTool('calls', {}, { accessToken: token, now, wait, fetchImpl: async () => ++calls === 2 ? limited() : calls === 1 ? provider([row('101')], 2, '1') : provider([row('102')], 2) });
+  const recovered = await readHubSpotTool('calls', {}, { accessToken: token, now, wait, viewerEmail, fetchImpl: withOwners(async () => ++calls === 2 ? limited() : calls === 1 ? provider([row('101')], 2, '1') : provider([row('102')], 2)) });
   assert.equal(recovered.status, 'available'); assert.deepEqual(recovered.records.map(record => record.id), ['101', '102']); assert.equal(recovered.partial, false);
   assert.equal(calls, 3); assert.deepEqual(waits, [220, 1000]);
   calls = 0; waits = [];
-  const persistent = await readHubSpotTool('tasks', {}, { accessToken: token, now, wait, fetchImpl: async () => { calls++; return limited({ 'Retry-After': '2' }); } });
+  const persistent = await readHubSpotTool('tasks', {}, { accessToken: token, now, wait, viewerEmail, fetchImpl: withOwners(async () => { calls++; return limited({ 'Retry-After': '2' }); }) });
   assert.equal(persistent.error.code, 'HUBSPOT_RATE_LIMITED'); assert.equal(persistent.retryAfterSeconds, 2); assert.equal(calls, 3); assert.deepEqual(waits, [2000, 4000]);
   calls = 0; waits = [];
-  const long = await readHubSpotTool('tasks', {}, { accessToken: token, now, wait, fetchImpl: async () => { calls++; return limited({ 'Retry-After': '60' }); } });
+  const long = await readHubSpotTool('tasks', {}, { accessToken: token, now, wait, viewerEmail, fetchImpl: withOwners(async () => { calls++; return limited({ 'Retry-After': '60' }); }) });
   assert.equal(long.error.code, 'HUBSPOT_RATE_LIMITED'); assert.equal(long.retryAfterSeconds, 60); assert.equal(calls, 1); assert.deepEqual(waits, []);
 });
 
@@ -305,4 +310,68 @@ test('Contract Agents reads the custom object and excludes unrelated properties'
   assert.equal(JSON.stringify(result).includes('exclude'), false);
   assert.equal(result.capabilities.canEdit, false);
   assert.deepEqual(result.requiredScopes, ['crm.objects.custom.read']);
+});
+
+test('Tasks, Calls, Meetings and Calendar search only the signed-in user\'s owner records, with or without a query', async () => {
+  for (const tool of VIEWER_OWNED) for (const input of [{}, { query: 'Synthetic' }]) {
+    const bodies = [];
+    const result = await readHubSpotTool(tool, input, { accessToken: token, now, viewerEmail: ' VIEWER@example.invalid ', fetchImpl: withOwners(async (_url, options) => {
+      bodies.push(JSON.parse(options.body));
+      return provider([row('101', { hubspot_owner_id: '777' })]);
+    }, [{ id: '777', email: 'Viewer@Example.invalid' }, { id: '888', email: 'someone-else@example.invalid' }, { id: '889' }], [{ id: '778', email: viewerEmail }]) });
+    assert.deepEqual(bodies[0].filterGroups, [{ filters: [{ propertyName: 'hubspot_owner_id', operator: 'IN', values: ['777', '778'] }] }]);
+    assert.equal(bodies[0].query, input.query);
+    assert.equal(result.status, 'available'); assert.equal(result.assignedToViewer, true); assert.deepEqual(result.records.map(record => record.id), ['101']);
+    assert.match(result.notice, /assigned to you/);
+    assert.doesNotMatch(JSON.stringify(result), /example\.invalid/i);
+  }
+});
+
+test('other HubSpot tools keep every owner and need no signed-in owner', async () => {
+  for (const tool of ['contacts', 'tickets', 'contract-agents']) {
+    const result = await readHubSpotTool(tool, {}, { accessToken: token, now, fetchImpl: async (url, options) => {
+      assert.ok(!url.includes('/owners/')); assert.equal(JSON.parse(options.body).filterGroups, undefined);
+      return provider();
+    } });
+    assert.equal(result.status, 'available'); assert.equal(result.assignedToViewer, undefined);
+  }
+});
+
+test('a sign-in email with no HubSpot owner gets a clear message and no records, never everyone\'s', async () => {
+  for (const tool of VIEWER_OWNED) for (const email of ['nobody@example.invalid', '', undefined]) {
+    const result = await readHubSpotTool(tool, {}, { accessToken: token, now, viewerEmail: email, fetchImpl: withOwners(async () => { throw new Error('search must not run'); }) });
+    assert.equal(result.status, 'unavailable'); assert.equal(result.error.code, 'HUBSPOT_OWNER_NOT_FOUND'); assert.deepEqual(result.records, []);
+    assert.match(result.error.message, /does not match a HubSpot owner/);
+  }
+});
+
+test('a failed owner read shows no records and asks for a retry, unless it already found the signed-in user', async () => {
+  let searched = false;
+  const failed = await readHubSpotTool('tasks', {}, { accessToken: token, now, viewerEmail, fetchImpl: async url => {
+    if (url.includes('/owners/')) return new Response(null, { status: 500 });
+    searched = true; return provider();
+  } });
+  assert.equal(failed.status, 'unavailable'); assert.equal(failed.error.code, 'HUBSPOT_OWNER_UNCONFIRMED'); assert.deepEqual(failed.records, []); assert.equal(searched, false);
+  const partial = await readHubSpotTool('tasks', {}, { accessToken: token, now, viewerEmail, fetchImpl: async url => {
+    if (url.includes('archived=true')) return new Response(null, { status: 500 });
+    if (url.includes('/owners/')) return new Response(JSON.stringify({ results: [{ id: '777', email: viewerEmail }] }));
+    return provider([row('101', { hubspot_owner_id: '777' })]);
+  } });
+  assert.equal(partial.status, 'available'); assert.equal(partial.records[0].id, '101');
+});
+
+test('opening one Task or Meeting is refused unless it is assigned to the signed-in user', async () => {
+  for (const tool of ['tasks', 'meetings']) {
+    const read = ownerId => readHubSpotTool(tool, { recordId: '101' }, { accessToken: token, now, viewerEmail, fetchImpl: withOwners(async () => new Response(JSON.stringify(row('101', { hubspot_owner_id: ownerId })))) });
+    const mine = await read('777');
+    assert.equal(mine.status, 'available'); assert.equal(mine.records[0].id, '101');
+    for (const ownerId of ['888', null]) {
+      const other = await read(ownerId);
+      assert.equal(other.status, 'unavailable'); assert.equal(other.error.code, 'RECORD_NOT_ASSIGNED'); assert.deepEqual(other.records, []);
+    }
+  }
+});
+
+test('the read routes pass the signed-in email, so the owner filter applies to the real session', () => {
+  for (const route of ['app/api/hubspot-tools/[tool]/route.ts', 'app/api/recruits/[id]/activity/route.ts']) assert.match(readFileSync(route, 'utf8'), /viewerEmail: user\?\.email/);
 });
