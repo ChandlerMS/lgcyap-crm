@@ -21,11 +21,11 @@ const nextConfig: NextConfig = {
     const privatePage = [{ key: "Cache-Control", value: "private, no-store, max-age=0" }];
     return [
       { source: "/:path*", headers: security },
-      ...["/queue", "/v2/app"].map(source => ({ source, headers: [
+      ...["/queue", "/v2/app", "/ringcx"].map(source => ({ source, headers: [
         { key: "X-Frame-Options", value: "SAMEORIGIN" },
         { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" },
       ] })),
-      ...["/", "/queue", "/v2/:path*", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
+      ...["/", "/queue", "/ringcx", "/v2/:path*", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
     ];
   },
 };
