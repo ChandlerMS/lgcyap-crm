@@ -138,7 +138,7 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   }, [readRecordDetail]);
 
   const load = useCallback(async (searchOverride?: string | null) => {
-    if (!DEFINITIONS[tool]) return;
+    if (!DEFINITIONS[tool === "help-desk" ? "tickets" : tool]) return;
     if (retryAtRef.current > Date.now()) { setLoading(false); return; }
     requestRef.current?.abort();
     const controller = new AbortController(); requestRef.current = controller;
