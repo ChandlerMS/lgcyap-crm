@@ -79,3 +79,9 @@
 @media (forced-colors: active) { .hero .eyebrow, .tiles dd { color: CanvasText; background: none; } }
 @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart li { grid-template-columns: 25px minmax(75px, 30%) minmax(20px, 1fr) auto; gap: 8px; } .card { padding: 19px 15px; } }
 @media (max-width: 480px) { .boardTabs button { font-size: 12px; padding: 9px; } .tiles dd { font-size: 24px; } .chart li { grid-template-columns: 23px minmax(50px, 1fr) minmax(25px, 1fr) auto; } }
+.rowTools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; margin: -8px 0 20px; }
+.rowTools > p { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.search { display: grid; gap: 6px; flex: 1 1 220px; max-width: 320px; color: var(--muted); font-size: 12px; }
+.search input { font: inherit; font-size: 14px; color: var(--text); background: #141414; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+.search input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (max-width: 640px) { .search { max-width: none; } .rowTools .segment { width: 100%; } }
