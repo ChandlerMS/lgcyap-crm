@@ -59,3 +59,43 @@ export function sourceLeaderboardValue(row, field) {
   if (field === 'closeRate' && nonnegative(row.submitted) !== null && nonnegative(row.leads) !== null && row.leads > 0) return row.submitted / row.leads;
   return null;
 }
+
+/** Columns the ranked list can be re-sorted by. Labels follow each board's own metric names. */
+export function leaderboardSortFields(board) {
+  const keys = leaderboardMetrics(board), byName = board === 'source' ? 'Source' : 'Agent', calls = board === 'source' ? 'Leads' : 'Calls';
+  return [{ field: 'rank', label: 'Rank' }, { field: 'name', label: byName }, { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, { field: 'production', label: keys.secondLabel }];
+}
+
+/** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
+export function leaderboardSortValue(row, board, field) {
+  if (field === 'name') return typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null;
+  if (field === 'production') return signedNumber(row[leaderboardMetrics(board).second]);
+  if (board === 'sp') return nonnegative(field === 'calls' ? row.inboundCalls : field === 'closeRate' ? row.soldPerInboundLog : null);
+  if (board === 'whatsapp') return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
+  return field === 'calls' ? nonnegative(row.leads) : field === 'closeRate' ? sourceLeaderboardValue(row, 'closeRate') : null;
+}
+
+/**
+ * Re-orders already ranked rows. "rank" keeps the ranking order; missing values and unattributed rows always sort last.
+ * Each row keeps its ranked position as `rank` so medals and numbers never change with the sort.
+ */
+export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', direction: 'desc' }) {
+  const rows = rankedRows.map((row, index) => ({ ...row, rank: index + 1 }));
+  if (!['name', 'calls', 'closeRate', 'production'].includes(sort.field)) return rows;
+  const direction = sort.direction === 'asc' ? 1 : -1;
+  return rows.sort((a, b) => {
+    const unattributed = Number(a.attributed === false) - Number(b.attributed === false);
+    if (unattributed) return unattributed;
+    const first = leaderboardSortValue(a, board, sort.field), second = leaderboardSortValue(b, board, sort.field);
+    if (first === null || second === null) return first === null && second === null ? a.rank - b.rank : first === null ? 1 : -1;
+    const result = typeof first === 'number' && typeof second === 'number' ? first - second : collator.compare(first, second);
+    return result ? result * direction : a.rank - b.rank;
+  });
+}
+
+/** Case- and accent-insensitive name search; every word typed must appear in the name. */
+export function filterLeaderboardRows(rows, query) {
+  const fold = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  return words.length ? rows.filter(row => { const name = fold(row.name); return words.every(word => name.includes(word)); }) : rows;
+}

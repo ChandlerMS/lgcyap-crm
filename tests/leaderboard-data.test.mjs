@@ -80,3 +80,33 @@ test('unattributed policies count in totals without inventing an agent or awardi
   assert.equal(leaderboardTotals(rows.slice(0, 1), 'sp').top, null);
   assert.equal(leaderboardTotals(rows.slice(0, 1), 'sp').activeAgents, 0);
 });
+
+import { filterLeaderboardRows, leaderboardSortFields, sortLeaderboardRows } from '../app/leaderboard-data.mjs';
+test('ranked rows re-sort by name, calls, close rate and production per board, keeping ranks and unattributed rows last', () => {
+  const ranked = [
+    { name: 'Bravo Agent', sales: 9, annualPremium: 900, inboundCalls: 30, soldPerInboundLog: .3 },
+    { name: 'alpha agent', sales: 5, annualPremium: 1200, inboundCalls: null, soldPerInboundLog: null },
+    { name: 'Charlie Agent', sales: 2, annualPremium: 100, inboundCalls: 4, soldPerInboundLog: .5 },
+    { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 50, inboundCalls: null, soldPerInboundLog: null },
+  ];
+  const order = (field, direction) => sortLeaderboardRows(ranked, 'sp', { field, direction }).map(row => `${row.rank}:${row.name.split(' ')[0]}`);
+  assert.deepEqual(order('rank', 'desc'), ['1:Bravo', '2:alpha', '3:Charlie', '4:Writing']);
+  assert.deepEqual(order('name', 'asc'), ['2:alpha', '1:Bravo', '3:Charlie', '4:Writing']);
+  assert.deepEqual(order('calls', 'desc'), ['1:Bravo', '3:Charlie', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('calls', 'asc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('closeRate', 'desc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('production', 'desc'), ['2:alpha', '1:Bravo', '3:Charlie', '4:Writing']);
+  const whatsapp = sortLeaderboardRows([{ name: 'A', production: 5, queueConnected: 1, closeRate: .1 }, { name: 'B', production: 9, queueConnected: 7, closeRate: 0 }], 'whatsapp', { field: 'calls', direction: 'desc' });
+  assert.deepEqual(whatsapp.map(row => row.name), ['B', 'A']);
+  const shopper = sortLeaderboardRows([{ name: 'A', submitted: 1, premium: 10, leads: 10 }, { name: 'B', submitted: 3, premium: 5, leads: 6 }], 'shopper', { field: 'closeRate', direction: 'desc' });
+  assert.deepEqual(shopper.map(row => row.name), ['B', 'A']);
+  assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Rank', 'Source', 'Leads', 'Close rate', 'Submitted premium']);
+  assert.deepEqual(leaderboardSortFields('whatsapp').at(-1).label, 'Total production');
+});
+test('agent search ignores case, accents and word order', () => {
+  const rows = [{ name: 'José Álvarez' }, { name: 'Joseph King' }, { name: 'Ann Lee' }];
+  assert.deepEqual(filterLeaderboardRows(rows, '  ALVAREZ ').map(row => row.name), ['José Álvarez']);
+  assert.deepEqual(filterLeaderboardRows(rows, 'alvarez jos').map(row => row.name), ['José Álvarez']);
+  assert.deepEqual(filterLeaderboardRows(rows, 'jos').length, 2);
+  assert.equal(filterLeaderboardRows(rows, '').length, 3);
+});
