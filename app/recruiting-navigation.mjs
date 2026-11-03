@@ -28,7 +28,7 @@ export const WORKSPACE_NAV_GROUPS = Object.freeze([
   { id: 'outcomes', label: 'Outcomes', branch: false, items: [page('completed', 'completed')] },
 ].map(group => Object.freeze({ ...group, items: Object.freeze(group.items) })));
 export const WORKSPACE_NAV = Object.freeze([
-  Object.freeze({ id: 'today', label: 'Recruits', icon: 'home' }),
+  Object.freeze({ id: 'today', label: 'Recruiting Dashboard', icon: 'home' }),
   Object.freeze({ id: 'add-recruits', label: 'Add Recruits', icon: 'add-person' }),
   ...WORKSPACE_NAV_GROUPS.flatMap(group => group.items),
 ]);
