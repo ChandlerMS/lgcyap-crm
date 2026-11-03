@@ -8,6 +8,9 @@
 .tabs a[aria-current="page"] { color: #f1d27a; background: #201c12; border-bottom-color: #e3bf5e; }
 .tabs a:focus-visible { outline: 2px solid #f1d27a; outline-offset: -5px; }
 .note { margin-left: auto; color: #b8b09c; font-size: 12px; }
+:global(html):has(.versionOne) { min-width: 0; }
+.versionOne { width: 100%; min-width: 0; }
+.versionOne :global(.content) { width: 100%; max-width: none; }
 .versionOne :global(.sidebar) { top: 56px; }
 .versionOne :global(.app-shell) { min-height: calc(100dvh - 56px); }
 .versionOne :global(.topbar) { top: 56px; }
