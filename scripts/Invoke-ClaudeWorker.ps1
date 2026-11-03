@@ -28,6 +28,11 @@ if (Test-Path -LiteralPath $workerRoot) {
     $actualBranch = Get-GitOutput $workerRoot @('branch', '--show-current')
     if ($actualBranch -ne $workerBranch) { throw "Unexpected worker branch: $actualBranch" }
     if (Get-GitOutput $workerRoot @('status', '--porcelain')) { throw 'Worker has pending changes; Codex must review them first.' }
+    $existingWorkerLink = Join-Path $workerRoot '.vercel/project.json'
+    if (Test-Path -LiteralPath $existingWorkerLink) {
+        $workerProject = Get-Content -Raw -LiteralPath $existingWorkerLink | ConvertFrom-Json
+        if ($workerProject.projectId -ne $projectId -or $workerProject.orgId -ne $teamId) { throw 'Worker Vercel project mismatch.' }
+    }
 }
 $projectFile = Join-Path $repoRoot '.vercel/project.json'
 if (!(Test-Path -LiteralPath $projectFile)) { throw 'Coordinator Vercel link is missing.' }
@@ -105,9 +110,6 @@ try {
 } finally { Pop-Location }
 if (Test-Path -LiteralPath $workerRoot) {
     if ((Get-GitOutput $workerRoot @('branch', '--show-current')) -ne $workerBranch) { throw 'Worker branch changed unexpectedly.' }
-    $workerLink = Join-Path $workerRoot '.vercel'
-    New-Item -ItemType Directory -Path $workerLink -Force | Out-Null
-    Copy-Item -LiteralPath $projectFile -Destination (Join-Path $workerLink 'project.json')
 }
 if ($claudeExit -ne 0) { throw "Claude exited with code $claudeExit; inspect run files." }
 $result = Get-Content -Raw -LiteralPath (Join-Path $runRoot 'result.json') | ConvertFrom-Json

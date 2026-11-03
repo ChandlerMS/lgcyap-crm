@@ -49,7 +49,8 @@ the launcher never resets them. Claude's worktree directory is locally excluded 
 - Verify the worker branch and changed paths against the task packet.
 - Run appropriate checks from the worker, with its own dependencies installed when needed.
 - Inspect `git diff` and `git diff --check`; do not rely solely on Claude's summary.
-- Commit only the reviewed paths on the worker branch, then cherry-pick that commit into the coordinator branch.
+- Commit only the reviewed paths on the worker branch, then integrate from the coordinator with
+  `git merge --ff-only worktree-recruiting-worker`. If that fails, stop and review the divergence.
 - Never copy `.env` files between checkouts. Fetch only the environment needed for an assigned task.
 - Each checkout's ignored `.vercel/project.json` points to the same project; verify with
   `vercel project inspect --non-interactive` before a Vercel action.
