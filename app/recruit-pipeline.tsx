@@ -110,7 +110,7 @@ function PipelineConnectors() {
   return <svg ref={svgRef} className={styles.connectors} aria-hidden="true">{paths.map((path, i) => <path key={i} d={path} />)}</svg>;
 }
 
-/** The horizontal viewport preserves the graph; recruit dragging chooses validated edges. */
+/** Responsive stage rows preserve recruiting paths and validated recruit moves. */
 export default function RecruitPipeline({ records, stages, partial = false, now = 0, canEdit = false, disabled = false, blockedIds = [], pendingId = null, onNavigate, onStageChange }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ pointerId: number; x: number; y: number; scroll: number; moved: boolean } | null>(null);
@@ -137,6 +137,12 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       const direction = control === "-1" ? -1 : control === "1" ? 1 : drag.y >= bounds.top && drag.y <= bounds.bottom ? drag.x < bounds.left + 55 ? -1 : drag.x > bounds.right - 55 ? 1 : 0 : 0;
       if (direction) {
         viewport.scrollLeft += direction * 12;
+        const destination = stageAtPoint(drag.x, drag.y);
+        setDropHover(destination && pipelineDropChoice(recruit, destination.target) ? destination.key : null);
+      }
+      const verticalDirection = drag.y < 100 ? -1 : drag.y > window.innerHeight - 80 ? 1 : 0;
+      if (verticalDirection) {
+        window.scrollBy(0, verticalDirection * 12);
         const destination = stageAtPoint(drag.x, drag.y);
         setDropHover(destination && pipelineDropChoice(recruit, destination.target) ? destination.key : null);
       }
@@ -189,6 +195,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   };
   const panStart = (event: PointerEvent<HTMLDivElement>) => {
     suppressClickRef.current = false;
+    if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth) return;
     if (event.button !== 0 || draggedId) return;
     const element = event.target as HTMLElement;
     if (element.closest("[data-recruit-card],button,input,select,textarea") || element.closest("a:not([data-pipeline-background])")) return;
@@ -204,7 +211,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       event.preventDefault();
       if (!recordDrag.moved) {
         recordDrag.moved = true; event.currentTarget.setPointerCapture(event.pointerId); setDraggedId(recordDrag.id); setDragOrigin({ x: event.clientX, y: event.clientY });
-        setAnnouncement(`Moving ${recruit.name || "recruit"}. Hold at an edge or over Previous or Next to scroll. Drop on a highlighted stage to move directly forward or backward.`);
+        setAnnouncement(`Moving ${recruit.name || "recruit"}. Hold near the top or bottom of the window to scroll. Drop on a highlighted stage to move directly forward or backward.`);
       }
       if (ghostRef.current) ghostRef.current.style.transform = `translate3d(${event.clientX + 14}px, ${event.clientY + 14}px, 0)`;
       const destination = stageAtPoint(event.clientX, event.clientY);
@@ -292,9 +299,8 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     <div className={styles.outcomes} key="outcomes">{card("completed")}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <RecruitStack>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</RecruitStack>}</div></section>}</div>,
   ];
   return <section className={styles.pipeline} aria-label="Recruiting stages">
-    <div className={styles.heading}><div className={styles.carouselControls} aria-label="Pipeline slider controls"><button type="button" data-carousel-scroll="-1" aria-label="Previous pipeline stages" title={draggedId ? "Hold the recruit here to scroll left" : "Slide left"} onClick={() => shiftCarousel(-1)}>←</button><button type="button" data-carousel-scroll="1" aria-label="Next pipeline stages" title={draggedId ? "Hold the recruit here to scroll right" : "Slide right"} onClick={() => shiftCarousel(1)}>→</button></div></div>
     {partial && <p className={styles.partial} role="status">Counts cover loaded records only.</p>}
-    <div ref={viewportRef} data-pipeline-carousel className={`${styles.slider} ${panning || draggedId ? styles.dragging : ""}`} role="region" aria-roledescription="carousel" aria-label="Recruiting logic tree. Drag empty space to slide left or right. Drag a recruit’s name or grip to a highlighted stage to move directly forward or backward." tabIndex={0}
+    <div ref={viewportRef} data-pipeline-carousel className={`${styles.slider} ${panning || draggedId ? styles.dragging : ""}`} role="region" aria-label="Recruiting stages by path. Drag a recruit’s name or grip to a highlighted stage to move directly forward or backward." tabIndex={0}
       onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={cancelPointerGesture} onLostPointerCapture={event => { if (event.target === event.currentTarget) cancelPointerGesture(); }}
       onKeyDown={event => { if (event.target === event.currentTarget && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); shiftCarousel(event.key === "ArrowRight" ? 1 : -1); } }}
       onClickCapture={event => { if (suppressClickRef.current) { suppressClickRef.current = false; if (event.detail > 0) { event.preventDefault(); event.stopPropagation(); } } }}>
