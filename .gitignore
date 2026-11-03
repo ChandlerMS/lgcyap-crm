@@ -47,3 +47,4 @@ yarn-error.log*
 /.vercel/
 /test-results/
 !.env.example
+.vercel

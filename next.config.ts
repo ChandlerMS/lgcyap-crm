@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     const privatePage = [{ key: "Cache-Control", value: "private, no-store, max-age=0" }];
     return [
       { source: "/:path*", headers: security },
-      ...["/", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
+      ...["/", "/queue", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
     ];
   },
 };
