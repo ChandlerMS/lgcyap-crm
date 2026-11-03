@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
         { key: "X-Frame-Options", value: "SAMEORIGIN" },
         { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" },
       ] },
-      ...["/", "/v2/:path*", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
+      ...["/", "/queue", "/v2/:path*", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
     ];
   },
 };
