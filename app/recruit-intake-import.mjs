@@ -285,3 +285,15 @@ export function recruitRowIssues(rows) {
   });
   return issues;
 }
+
+/** A batch is submittable only when every populated queued row is valid. */
+export function recruitSubmissionState(rows) {
+  const issues = recruitRowIssues(rows.map(row => row.values));
+  let readyCount = 0, invalidCount = 0;
+  rows.forEach((row, index) => {
+    if (!['draft', 'failed'].includes(row.status) || recruitDraftIsBlank(row.values)) return;
+    if (Object.keys(issues[index]).length) invalidCount++;
+    else readyCount++;
+  });
+  return { issues, readyCount, invalidCount, canSubmit: readyCount > 0 && invalidCount === 0 };
+}
