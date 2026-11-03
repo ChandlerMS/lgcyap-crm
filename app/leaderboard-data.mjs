@@ -10,7 +10,7 @@ const nonnegative = value => typeof value === 'number' && Number.isFinite(value)
 const signedNumber = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const metricNumber = (value, key) => ['annualPremium', 'premium', 'production', 'roas'].includes(key) ? signedNumber(value) : nonnegative(value);
 const descending = (first, second) => first === null || second === null ? first === null && second === null ? 0 : first === null ? 1 : -1 : second - first;
-const SP_CALL_LABELS = Object.freeze({ ringcx: 'Calls (answered, RingCX)', mixed: 'Calls (answered, RingCX and Agent Daily Calls reports)', spreadsheet: 'Calls (answered, Agent Daily Calls reports)' });
+const SP_CALL_LABELS = Object.freeze({ ringcx: 'Calls (RingCX report)', spreadsheet: 'Calls (answered, Agent Daily Calls reports)' });
 const CALLS_SYNC_MS = 300000, CALLS_REFRESH_LAG_MS = 60000;
 
 export function leaderboardSpCallLabel(basis) {

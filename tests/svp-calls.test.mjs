@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { applySvpCalls, importSvpCallsReports, parseSvpCallsReport, readSvpCalls, SvpCallsImportError } from '../lib/svp-calls.mjs';
 
-const schema = await readFile(new URL('../migrations/0007_svp_calls.sql', import.meta.url), 'utf8') + await readFile(new URL('../migrations/0008_svp_ringcx_calls.sql', import.meta.url), 'utf8');
+const schema = (await Promise.all(['0007_svp_calls.sql', '0008_svp_ringcx_calls.sql', '0009_svp_ringcx_report.sql'].map(name => readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8')))).join('\n');
 const SHA = 'a'.repeat(64);
 const file = month => `Agent_Daily_Calls_${month}_Synthetic_2026.xlsx`;
 const day = (date, rows, total = true) => ({ sheet: date, data: [[`Daily Connected Calls Report — ${date}`], ['Source: synthetic'], [], ['Date', 'Agent Full Name', 'Total Calls Connected'], ...rows.map(([name, calls]) => [date, name, calls]), ...(total ? [['Total', `${rows.length} Active Agents`, null]] : [])] });

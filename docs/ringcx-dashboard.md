@@ -49,4 +49,4 @@ User confirmed sale disposition: exact label Sold. Close rate = Sold / answered 
 
 ## Daily calls per agent
 
-The Standard vs. Preferred leaderboard's daily per-agent counts come from the reporting API, not these real-time counters. See `SVP-CALLS-IMPORT.md`, section RingCX sync. The `/ringcx` dashboard's Connected Today stays unavailable.
+The Standard vs. Preferred leaderboard's daily per-agent counts come from a saved RingCX Historical report, not these real-time counters. See `SVP-CALLS-IMPORT.md`, section RingCX sync. The `/ringcx` dashboard's Connected Today stays unavailable.

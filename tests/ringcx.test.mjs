@@ -65,24 +65,20 @@ test('upstream failures are sanitized and trigger cooldown', async () => {
  assert.equal(invalid.sessionCalls,null); assert.equal(invalid.stateSeconds,null);
  });
 
-test('agent queue report uses the RingCentral account id and stays within the group queues; failures explain themselves', async () => {
+test('analytics session uses the main account and the RingCX token; failures explain themselves without exposing the claims', async () => {
   const calls=[];
-  const bodies=[{access_token:'rc-secret'},{accessToken:'cx-secret'},[{gateId:7,gateGroupId:1973,connected:0,accepted:0},{gateId:8,gateGroupId:1803,connected:0,accepted:0}],{id:980634004,name:'private'},[{agentName:'Agent One',queue:7,answIxnCnt:1}],[]];
+  const bodies=[{access_token:'rc-secret'},{accessToken:'cx-secret'},{gdClientId:'client-1',gdPgpToken:'claims-secret',gdSsoProvider:'sso',gdDomainUrlBase:'https://analytics.ringcentral.com'}];
   const client=createRingCx({clientId:'c',clientSecret:'s',jwt:'j',fetch:async(url,init)=>{calls.push({url,init});return Response.json(bodies.shift());}});
-  const queues=await client.svpQueues();
-  assert.deepEqual([[...queues.ids],queues.answeredToday],[['7'],0]);
-  assert.deepEqual(await client.agentQueueReport({startDate:'2026-11-03 10:00:00',endDate:'2026-11-03 12:00:00'}),[{agentName:'Agent One',queue:7,answIxnCnt:1}]);
-  assert.equal(calls[3].url,'https://platform.ringcentral.com/restapi/v1.0/account/~'); assert.equal(calls[3].init.headers.Authorization,'Bearer rc-secret');
-  assert.equal(calls[4].url,'https://ringcx.ringcentral.com/voice/api/cx/integration/v1/accounts/980634004/sub-accounts/50560001/agg-agent-extended-stats');
-  assert.equal(calls[4].init.method,'POST'); assert.equal(calls[4].init.headers.Authorization,'Bearer cx-secret');
-  assert.deepEqual(JSON.parse(calls[4].init.body),{startDate:'2026-11-03 10:00:00',endDate:'2026-11-03 12:00:00',timeInterval:15,timeZone:'US/Eastern'});
-  await client.agentQueueReport({startDate:'a',endDate:'b'}); assert.equal(calls.length,6,'the account id is looked up once');
-  const reject=status=>createRingCx({clientId:'c',clientSecret:'s',jwt:'j',fetch:async url=>/oauth\/token/.test(url)?Response.json({access_token:'rc'}):/accesstoken/.test(url)?Response.json({accessToken:'cx'}):/account\/~/.test(url)?Response.json({id:1}):new Response('WEM Access required',{status})});
-  await assert.rejects(reject(403).agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_ACCESS_DENIED'&&error.detail==='HTTP 403 WEM Access required');
-  const limited=reject(429);
-  await assert.rejects(limited.agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_RATE_LIMITED');
-  await assert.rejects(limited.agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_RATE_LIMITED'&&error.detail==='','a cooldown makes no further request');
-  await assert.rejects(createRingCx().agentQueueReport({startDate:'a',endDate:'b'}),error=>error.code==='RINGCX_NOT_CONFIGURED');
+  assert.deepEqual(await client.analyticsSession(),{clientId:'client-1',claims:'claims-secret',provider:'sso',domain:'https://analytics.ringcentral.com'});
+  assert.equal(calls[2].url,'https://ringcx.ringcentral.com/platform/api/ev-report-catalog/v1/gd/session/account/50560000');
+  assert.equal(calls[2].init.method,'POST'); assert.equal(calls[2].init.headers.Authorization,'Bearer cx-secret');
+  const answer=respond=>createRingCx({clientId:'c',clientSecret:'s',jwt:'j',fetch:async url=>/oauth\/token/.test(url)?Response.json({access_token:'rc'}):/accesstoken/.test(url)?Response.json({accessToken:'cx'}):respond()});
+  await assert.rejects(answer(()=>new Response('Analytics role required',{status:403})).analyticsSession(),error=>error.code==='RINGCX_ACCESS_DENIED'&&error.detail==='HTTP 403 Analytics role required');
+  await assert.rejects(answer(()=>Response.json({gdPgpToken:'claims-secret',gdClientId:'x'})).analyticsSession(),error=>error.code==='INVALID_ANALYTICS_SESSION'&&error.detail==='missing gdSsoProvider, gdDomainUrlBase');
+  const limited=answer(()=>new Response('slow down',{status:429}));
+  await assert.rejects(limited.analyticsSession(),error=>error.code==='RINGCX_RATE_LIMITED');
+  await assert.rejects(limited.analyticsSession(),error=>error.code==='RINGCX_RATE_LIMITED'&&error.detail==='','a cooldown makes no further request');
+  await assert.rejects(createRingCx().analyticsSession(),error=>error.code==='RINGCX_NOT_CONFIGURED');
 });
 
 test('busy includes all non-available logged-in states without changing active call count', () => {
