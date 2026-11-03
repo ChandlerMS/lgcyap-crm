@@ -9,6 +9,11 @@ database fence. The public demo is unchanged. Do not deploy this branch through 
 
 ## Automatic deployments
 
+Legacy Bot is part of GitHub `main`. Production builds also check that the main
+page retains its chat embed for HubSpot portal `50894788`; removing it or changing
+the account stops deployment. Run `node --test tests/production-source.test.mjs`
+when editing the main page or the deployment guard.
+
 The private GitHub repository [ChandlerMS/lgcyap-crm](https://github.com/ChandlerMS/lgcyap-crm)
 is connected to the existing `legacy-recruiting-private` Vercel project in Main
 Team. Every push or merge to `main` creates a Production deployment and assigns

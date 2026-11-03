@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const REPOSITORY = 'https://github.com/ChandlerMS/lgcyap-crm.git';
@@ -14,7 +15,7 @@ function readGithubMain() {
 }
 
 /** Deployment guard, not an access-control boundary against Vercel administrators. */
-export function verifyProductionSource({ env = process.env, readMainSha = readGithubMain } = {}) {
+export function verifyProductionSource({ env = process.env, readMainSha = readGithubMain, readBotSource = () => readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8') } = {}) {
   if (env.VERCEL_ENV !== 'production' && env.VERCEL_TARGET_ENV !== 'production') return { production: false };
   const reject = reason => { throw new Error(`Production deployment blocked: ${reason} Push changes to ChandlerMS/lgcyap-crm main and let the GitHub integration deploy them.`); };
   if (env.VERCEL !== '1' || env.VERCEL_PROJECT_ID !== 'prj_tAhuHcbCr3HXxant1EGPbaFLjc6E') reject('the Vercel production project could not be verified.');
@@ -22,6 +23,10 @@ export function verifyProductionSource({ env = process.env, readMainSha = readGi
   if (env.VERCEL_GIT_COMMIT_REF !== 'main') reject('only the main branch can build for production.');
   const sha = env.VERCEL_GIT_COMMIT_SHA;
   if (!SHA.test(sha ?? '')) reject('the GitHub commit SHA is missing or invalid.');
+  let source;
+  try { source = readBotSource(); } catch { reject('the main-page Legacy Bot embed could not be checked.'); }
+  const chatScripts = source.match(/<Script\b[^>]*\/>/g) ?? [];
+  if (!chatScripts.some(script => /src="https:\/\/js\.usemessages\.com\/conversations-embed\.js"/.test(script) && /data-hsjs-portal="50894788"/.test(script))) reject('the main-page Legacy Bot embed is missing or uses the wrong HubSpot account.');
   let latest;
   try { latest = readMainSha(); } catch { reject('the latest GitHub main commit could not be checked.'); }
   if (!SHA.test(latest ?? '') || sha !== latest) reject('this commit is not the current GitHub main HEAD.');

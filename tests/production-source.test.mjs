@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { verifyProductionSource } from '../scripts/verify-production-source.mjs';
 
 const current = 'a'.repeat(40);
@@ -24,6 +25,16 @@ test('production requires the exact repository, main branch and current remote c
 
 test('production fails closed when main HEAD cannot be verified', () => {
   for (const readMainSha of [() => { throw new Error('Network error'); }, () => '', () => 'refs/heads/main']) assert.throws(() => verifyProductionSource({ env, readMainSha }), /Production deployment blocked/);
+});
+
+test('production cannot remove Legacy Bot or switch its HubSpot account', () => {
+  const source = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const withoutBot = source.replace(/<Script\b[\s\S]*?\/>/g, '');
+  const wrongAccount = source.replace('50894788', '123');
+  for (const altered of [withoutBot, wrongAccount]) {
+    assert.throws(() => verifyProductionSource({ env, readMainSha: () => current, readBotSource: () => altered }), /Legacy Bot embed is missing or uses the wrong HubSpot account/);
+  }
+  assert.throws(() => verifyProductionSource({ env, readMainSha: () => current, readBotSource: () => { throw new Error('Missing source'); } }), /Legacy Bot embed could not be checked/);
 });
 
 test('local and preview builds remain available; production target cannot masquerade as preview', () => {
