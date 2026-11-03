@@ -13,18 +13,21 @@ test('queue scope is exact and incomplete counters never silently become zero', 
   assert.throws(() => summarizeQueues([]));
   assert.throws(() => summarizeQueues([{gateId:1,gateGroupId:1973,connected:5}]));
 });
+test('live ENGAGED includes held calls but WORKING and disposition do not', () => {
+  assert.deepEqual(summarizeAgents([agent(1,'ENGAGED'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'AVAILABLE')]), {loggedIn:5,available:1,onCalls:2,other:2});
+});
 test('unauthenticated requests never invoke RingCX; private no-store headers', async () => {
   const result = await ringCxResponse({getUser:async()=>null,client:{snapshot:()=>{throw Error('must not call');}}});
   assert.equal(result.status,401); assert.match(result.headers.get('cache-control'),/no-store/);
 });
-test('token exchange, coalescing and redaction; unverified daily metrics stay null', async () => {
+test('daily answered and concurrent connected remain separate; credentials stay private', async () => {
   const calls=[];
   const bodies=[{access_token:'rc-secret'},{accessToken:'cx-secret'},[agent(1,'AVAILABLE')],[{gateId:1,gateGroupId:1973,connected:5,accepted:3}]];
   const client=createRingCx({clientId:'client',clientSecret:'secret',jwt:'jwt',fetch:async(url,init)=>{calls.push({url,init});return Response.json(bodies.shift());}});
   const [first,second]=await Promise.all([client.snapshot(),client.snapshot()]);
   assert.deepEqual(first,second); assert.equal(calls.length,4);
   assert.equal(calls[2].init.headers.Authorization,'Bearer cx-secret');
-  assert.equal(first.agents.available,1); assert.equal(first.calls.connected,null); assert.equal(first.calls.answered,null);
+  assert.equal(first.agents.available,1); assert.equal(first.calls.connected,null); assert.equal(first.calls.answered,3); assert.equal(first.calls.activeConnected,5);
   assert.doesNotMatch(JSON.stringify(first),/private|rc-secret|cx-secret|callAni|agentId/);
   await client.snapshot(); assert.equal(calls.length,4);
 });

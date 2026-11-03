@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './ringcx.module.css';
 
-type Snapshot = { observedAt: string; agents: { available: number; onCalls: number; loggedIn: number; other: number }; queues: number; calls: { connected: number | null; answered: number | null; status: string } };
+type Snapshot = { observedAt: string; agents: { available: number; onCalls: number; loggedIn: number; other: number }; queues: number; calls: { connected: number | null; answered: number | null; activeConnected: number; status: string } };
 export default function RingCxDashboard() {
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ export default function RingCxDashboard() {
       <article><h2>On calls</h2><p className={styles.onCalls}>{value(data?.agents.onCalls)}</p><span>Agents in an active call state</span></article>
       <aside><strong>{value(data?.agents.loggedIn)}</strong><span>Logged in</span><p>{value(data?.agents.other)} in other states</p></aside>
     </section>
-    <section className={styles.daily} aria-label="Today's inbound calls"><div className={styles.sectionHeading}><h2>Today’s inbound calls</h2><span>Eastern time</span></div><p className={styles.subtitle}>Standard vs Preferred queues only</p><div className={styles.totals}><article><h3>Connected</h3><strong>{value(data?.calls.connected)}</strong></article><article><h3>Answered</h3><strong>{value(data?.calls.answered)}</strong></article></div><p className={styles.note}>Daily totals are awaiting verification against RingCX Analytics. Unverified totals are not shown as zero.</p></section>
+    <section className={styles.daily} aria-label="Today's inbound calls"><div className={styles.sectionHeading}><h2>Today’s inbound calls</h2><span>Resets at midnight Eastern</span></div><p className={styles.subtitle}>Standard vs Preferred queues only</p><div className={styles.totals}><article><h3>Connected today</h3><strong>{value(data?.calls.connected)}</strong></article><article><h3>Answered today</h3><strong>{value(data?.calls.answered)}</strong></article></div><p className={styles.note}>Answered matches RingCX “Answered Inbound.” The daily connected total is awaiting historical-report verification.</p><p className={styles.note}>Connected right now: <strong>{value(data?.calls.activeConnected)}</strong> calls across these queues. This is a live count, not today’s total.</p></section>
     <footer><span>{data ? `${stale ? 'Last received' : 'Updated'} ${new Date(data.observedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York' })} Eastern` : 'Waiting for the first RingCX update'}</span><span>{data ? `${data.queues} queues · ` : ''}Refreshes every 15 seconds</span></footer>
   </main>;
 }

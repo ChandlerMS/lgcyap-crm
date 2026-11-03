@@ -24,3 +24,13 @@ Existing Vercel project `legacy-recruiting-private` (`lgcyap-crm.vercel.app`), p
 Observe AVAILABLE → ON_CALL → wrap → AVAILABLE using actual non-empty data, verify account timezone in RingCX Admin, reconcile non-zero `connected`/`accepted` queue counters with the requested historical metrics including transfers/callbacks, then implement verified daily aggregation. Do not remove pending-validation labels just because zero counters agree.
 
 Sources: https://developers.ringcentral.com/guide/authentication/jwt-flow ; https://developers.ringcentral.com/engage/voice/guide/authentication/auth-ringcentral ; https://developers.ringcentral.com/engage/voice/guide/analytics/reports/realtime-supervisor-view ; https://developers.ringcentral.com/engage/voice/guide/users/agents/agent-groups .
+
+## Nonzero validation — November 3, 2026, 10:51 Eastern
+
+- Account General settings explicitly show `(GMT-05:00) Eastern Time (America/New_York)`.
+- At 15:51:27 UTC, the API sum for all 53 queues in group 1973 was `accepted=23`, `presentedInbound=41`, `connected=6`, `answeredAll=23`, callback/manual-outbound answered both zero. Native Real-Time Inbound for **1973 - Standard vs Preferred** showed **Ans IB 23 / Pres IB 41 / Conn. 6**. This validates this nonzero snapshot against native realtime analytics, not historical equivalence for all call scenarios.
+- `connected` is the concurrent gauge: it was 5 then 6 while accepted was 23. It must never populate **Connected today**. Exposed separately as `calls.activeConnected`; `calls.answered` now uses accepted. `calls.connected` stays null, status `connected_pending_validation`.
+- Historical reports twice displayed **Historical Analytics is temporarily unavailable**. Daily connected cannot be reconciled with the historical metric until that service is available. No synthetic cumulative counter or hardcoded total is substituted.
+- Live API agents use ENGAGED/WORKING, not only ON_CALL. Six ENGAGED records had active call identifiers; two held calls were still ENGAGED and displayed Hold in native analytics. ENGAGED now counts as on calls, including hold. PENDING-DISP/WORKING remain other states. No caller records are returned or retained.
+
+This supersedes the earlier pending status for answered and timezone. Remaining: historical daily connected integration and reconciliation, including transfers/callbacks. Auth boundaries and secret handling are unchanged.
