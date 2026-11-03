@@ -24,7 +24,7 @@ class Ledger {
   async finish(value) { const row = this.rows.get(value.userId + ':' + value.requestId); if (!row || row.status !== 'pending' || row.hash !== value.hash) return false; row.status = value.status; return true; }
   status(requestId = uuid) { return this.rows.get(user.userId + ':' + requestId)?.status; }
 }
-const grantInfo = { hubId: 50894788, appId: 59264745, scopes: ['contacts', 'tickets', 'companies'].flatMap(kind => [`crm.objects.${kind}.read`, `crm.objects.${kind}.write`]) };
+const grantInfo = { hubId: 50894788, appId: 59264745, scopes: ['contacts', 'tickets', 'companies', 'custom'].flatMap(kind => [`crm.objects.${kind}.read`, `crm.objects.${kind}.write`]) };
 const options = (fetchImpl, ledger = new Ledger()) => ({ userId: user.userId, accessToken: token, hmacSecret: secret, ledger, fetchImpl: async (url, init) => url.endsWith('/access-token-info') ? json(grantInfo) : fetchImpl(url, init), now: () => Date.parse(afterTime) });
 
 test('wrong portal, app or per-tool grants fail before any record read, ledger claim or PATCH', async () => {
@@ -49,8 +49,8 @@ test('valid credential-scoped introspection cache is short-lived and optional re
   assert.equal(await checkToolWriteCapability('contacts', user, enabled), false);
 });
 
-test('only five tools and their approved editable properties are accepted; routing, creation and demo authority are rejected', () => {
-  for (const tool of ['contacts', 'tickets', 'tasks', 'customer-success', 'meetings']) assert.ok(editableFields(tool).length > 0);
+test('only approved tools and their approved editable properties are accepted; routing, creation and demo authority are rejected', () => {
+  for (const tool of ['contract-agents', 'contacts', 'tickets', 'tasks', 'customer-success', 'meetings']) assert.ok(editableFields(tool).length > 0);
   for (const tool of ['calendar', 'calls', 'inbox', 'constructor']) assert.throws(() => input(tool, { subject: 'No' }));
   for (const changes of [{ hs_pipeline_stage: '1473318770' }, { hs_pipeline: '0' }, { licensing_branch: 'licensed' }, { recruiting_path: 'genpop' }, { properties: 'bad' }]) assert.throws(() => input('tickets', changes));
   assert.throws(() => input('customer-success', { hs_next_renewal_date: '2026-11-01' }));
@@ -66,7 +66,7 @@ test('validation canonicalizes email/domain, keeps sparse expected values and re
 });
 
 test('each tool uses one sparse fixed PATCH and fresh confirmation, preserving other properties', async () => {
-  for (const [tool, changes] of [['contacts', { firstname: 'Revised' }], ['tickets', { hs_ticket_priority: 'HIGH' }], ['tasks', { hs_task_status: 'COMPLETED' }], ['customer-success', { hs_csm_sentiment: 'healthy' }], ['meetings', { hs_meeting_location: 'New office' }]]) {
+  for (const [tool, changes] of [['contract-agents', { full_name: 'Synthetic Agent', first_name: 'Synthetic', last_name: 'Agent', email: 'agent@example.invalid', phone: '5550100', npn: '0012345', agent_status: 'Active', hubspot_owner_id: '123' }], ['contacts', { firstname: 'Revised' }], ['tickets', { hs_ticket_priority: 'HIGH' }], ['tasks', { hs_task_status: 'COMPLETED' }], ['customer-success', { hs_csm_sentiment: 'healthy' }], ['meetings', { hs_meeting_location: 'New office' }]]) {
     const before = record(tool), after = record(tool, { ...changes, hs_lastmodifieddate: afterTime, lastmodifieddate: afterTime }); let calls = 0;
     const ledger = new Ledger(), result = await saveHubSpotToolRecord(input(tool, changes), options(async (url, init) => {
       calls++; const parsed = new URL(url); assert.equal(parsed.origin, 'https://api.hubapi.com'); assert.equal(parsed.pathname, `/crm/v3/objects/${HUBSPOT_TOOL_CONFIG[tool].object}/101`); assert.equal(init.redirect, 'manual'); assert.equal(init.headers.Authorization, `Bearer ${token}`);
@@ -172,4 +172,15 @@ test('write HTTP boundary denies anonymous, previews, forged origins, oversized 
   assert.equal((await handleHubSpotToolWriteRequest(make(JSON.stringify({ ...rawInput('contacts', { firstname: 'Revised' }), isDemo: true })), 'contacts', '101', enabled)).status, 400);
   assert.equal(calls, 0);
   const success = await handleHubSpotToolWriteRequest(make(), 'contacts', '101', enabled); assert.equal(success.status, 200); assert.equal(calls, 1); assert.match(success.headers.get('Cache-Control'), /private, no-store/);
+});
+
+
+test('Contract Agents require both custom scopes and reject unrelated properties or invalid status', async () => {
+  for (const scopes of [[], ['crm.objects.contacts.read', 'crm.objects.contacts.write'], ['crm.objects.custom.read'], ['crm.objects.custom.write']]) {
+    await assert.rejects(verifyToolWriteAccess('contract-agents', { accessToken: token, fetchImpl: async () => json({ ...grantInfo, scopes }) }), { code: 'HUBSPOT_WRITE_ACCESS_REQUIRED' });
+  }
+  assert.equal(await verifyToolWriteAccess('contract-agents', { accessToken: token, fetchImpl: async () => json({ ...grantInfo, scopes: ['crm.objects.custom.read', 'crm.objects.custom.write'] }) }), true);
+  for (const changes of [{ agent_status: 'active' }, { agent_status: 'Unknown' }, { hs_pipeline: '0' }, { agent_address: 'Not allowed' }, { firstname: 'Wrong object' }]) assert.throws(() => input('contract-agents', changes));
+  assert.equal(input('contract-agents', { npn: '0012345' }).changes.npn, '0012345');
+  assert.equal(input('contract-agents', { phone: '' }).changes.phone, '');
 });
