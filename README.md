@@ -106,8 +106,9 @@ with reserved fictional phones and example.invalid email addresses. Demo edits
 and stage moves live only in browser memory and reset on reload. They never write
 to HubSpot. Live tools and intake cannot mount beneath a demo label.
 
-Recruits keeps its overview link and has a keyboard-accessible disclosure arrow
-that collapses Add Recruits and the nested Pipeline folder together. The Pipeline
+The entire Recruits row toggles its keyboard-accessible disclosure, with Overview,
+Add Recruits and the nested Pipeline folder underneath. Recruits starts collapsed
+on app opening; nested destinations reveal their parent menus. The Pipeline
 folder and its branches start collapsed; following a stage link opens its parent
 menus automatically. The full sidebar also collapses.
 Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar and

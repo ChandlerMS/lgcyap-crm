@@ -262,6 +262,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   }, [route.view, route.id]);
   useEffect(() => {
     // Reveal nested destinations, but keep Recruits collapsed on its overview page.
+    if (route.view === "today") return;
     let parent = sidebarRef.current?.querySelector(".recruit-pages .nav-link[aria-current='page']")?.parentElement;
     while (parent && parent !== sidebarRef.current) {
       if (parent instanceof HTMLDetailsElement) parent.open = true;
@@ -276,7 +277,9 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       return;
     }
     const sidebar = sidebarRef.current;
-    sidebar?.querySelector<HTMLElement>(".nav-link[aria-current='page'],.nav-link")?.focus();
+    const activeLink = sidebar?.querySelector<HTMLElement>(".nav-link[aria-current='page']");
+    const focusTarget = activeLink?.getClientRects().length ? activeLink : sidebar?.querySelector<HTMLElement>(".nav-link");
+    focusTarget?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function keydown(event: KeyboardEvent) {
@@ -359,8 +362,9 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const navigation = <>
     {WORKSPACE_EXTRA_PAGES.map(navigationLink)}
     <details className="nav-recruits">
-      <summary>{navigationLink(NAV[0])}<span className="nav-branch-chevron" aria-hidden="true">⌄</span><span className="sr-only">Toggle recruit navigation</span></summary>
+      <summary><Icon name={NAV[0].icon} /><span>{NAV[0].label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
       <div className="recruit-pages">
+        {navigationLink({ ...NAV[0], label: "Overview" })}
         {navigationLink(NAV[1])}
         <details className="nav-pipeline">
           <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
