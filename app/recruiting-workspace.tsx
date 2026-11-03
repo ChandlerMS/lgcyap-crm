@@ -261,6 +261,14 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     mainRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
   }, [route.view, route.id]);
   useEffect(() => {
+    // Reveal the active destination when following a direct link or browser history.
+    let parent = sidebarRef.current?.querySelector(".nav-link[aria-current='page']")?.parentElement;
+    while (parent && parent !== sidebarRef.current) {
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+      parent = parent.parentElement;
+    }
+  }, [route.view, route.id]);
+  useEffect(() => {
     if (!menuOpen) {
       if (restoreMenuFocus.current) { menuRef.current?.focus(); restoreMenuFocus.current = false; }
       else if (focusPageAfterNav.current) mainRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
@@ -350,12 +358,16 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={activeView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
   const navigation = <>
     {WORKSPACE_EXTRA_PAGES.map(navigationLink)}
-    {navigationLink(NAV[0])}
-    {navigationLink(NAV[1])}
-    <details className="nav-pipeline">
-      <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
-      <div className="pipeline-pages">
-        {WORKSPACE_NAV_GROUPS.map(group => <Fragment key={group.id}>{group.branch ? <details className="nav-branch"><summary><Icon name={group.id === "licensed" ? "check" : group.id === "not-licensed" ? "file" : "people"} /><span>{group.label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary><div className="nav-branch-stages">{group.items.map(navigationLink)}</div></details> : <><p className="nav-flow-caption">{group.label}</p>{group.items.map(navigationLink)}</>}</Fragment>)}
+    <details className="nav-recruits">
+      <summary>{navigationLink(NAV[0])}<span className="nav-branch-chevron" aria-hidden="true">⌄</span><span className="sr-only">Toggle recruit navigation</span></summary>
+      <div className="recruit-pages">
+        {navigationLink(NAV[1])}
+        <details className="nav-pipeline">
+          <summary><Icon name="folder" /><span>Pipeline</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary>
+          <div className="pipeline-pages">
+            {WORKSPACE_NAV_GROUPS.map(group => <Fragment key={group.id}>{group.branch ? <details className="nav-branch"><summary><Icon name={group.id === "licensed" ? "check" : group.id === "not-licensed" ? "file" : "people"} /><span>{group.label}</span><span className="nav-branch-chevron" aria-hidden="true">⌄</span></summary><div className="nav-branch-stages">{group.items.map(navigationLink)}</div></details> : <><p className="nav-flow-caption">{group.label}</p>{group.items.map(navigationLink)}</>}</Fragment>)}
+          </div>
+        </details>
       </div>
     </details>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
