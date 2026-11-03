@@ -209,7 +209,11 @@ chip opens that task in HubSpot, and "+N more" opens HubSpot's task list. In
 Demo mode the box asks for live data instead. Follow up chips name the recruits
 waiting more than 15 days since their last contact (or creation, if never
 contacted), longest first, and count the rest as "+N more". Under the pipeline,
-Meetings and Calendar show live HubSpot records side by side. Search on Today
+two columns show Meetings | Calendar and, below them, Calls | Recruits. Meetings,
+Calendar and Calls are live HubSpot panels; Calls keeps its own sidebar page too.
+Recruits lists every loaded recruit by name with stage, last contact and contact
+tools, 20 at a time, ignoring the Today date selection and search; "Open full
+list" goes to the Recruits page for filters and the board. Search on Today
 covers the pipeline. There is no Tasks page or full Follow Up list; existing
 `#tasks` and `#follow-up` links open Recruits.
 

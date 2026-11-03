@@ -11,6 +11,7 @@ import RecruitStageControls from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
 import RecruitFollowUpChips from "./recruit-follow-up-chips";
 import RecruitTaskChips from "./recruit-task-chips";
+import RecruitsPanel from "./recruits-panel";
 import RecruitActivity from "./recruit-activity";
 import DemoRecruitEditor from "./demo-recruit-editor";
 import { createDemoRecruits, applyDemoStage } from "./recruit-demo.mjs";
@@ -473,6 +474,8 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <div className="today-overview">
         {recruitsPagePanel("meetings")}
         {recruitsPagePanel("calendar")}
+        {recruitsPagePanel("calls")}
+        <RecruitsPanel records={all} partial={data.partial} />
       </div>
     </>;
     return <>{heading(stagePage?.label ?? "Recruits", route.view === "recruits" ? "Recruiting records connected to your HubSpot recruiting pipeline." : `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;

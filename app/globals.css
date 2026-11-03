@@ -538,7 +538,7 @@ a.summary-chip:hover { border-color: var(--gold); }
 
 @media (max-width: 520px) { .source-bar { flex-wrap: wrap; } .source-summary { min-width: 0; max-width: 100%; overflow-wrap: anywhere; } }
 
-/* Under the pipeline: Meetings | Calendar, as two columns. */
+/* Under the pipeline: Meetings | Calendar, then Calls | Recruits, as two columns. */
 .today-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 56px 40px; margin-bottom: 40px; }
 .today-panel .helper { margin: 12px 0 18px; }
 .profile-activity { margin-top: 40px; padding-top: 24px; }
@@ -551,6 +551,9 @@ a.summary-chip:hover { border-color: var(--gold); }
 .activity-body { white-space: pre-wrap; line-height: 1.65; max-height: 480px; overflow: auto; }
 .activity-entry summary { cursor: pointer; color: var(--gold); padding: 8px 0; }
 .today-overview > section { min-width: 0; margin-bottom: 0; }
+.recruits-panel .table-wrap { max-height: 350px; overflow: auto; }
+/* Four columns fit a half-width panel; the full Recruits list keeps the wide table. */
+.recruits-panel .data-table { min-width: 0; }
 @media (max-width: 1200px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 44px; } }
 /* One persistent provider frame; minimizing never interrupts an active call. */
 .rc-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 55; box-shadow: 0 8px 30px #0008; }
