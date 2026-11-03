@@ -354,7 +354,8 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Vercel pool lifecycle](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#attachdatabasepool)
 - [Neon pooling](https://neon.com/docs/connect/connection-pooling)
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
-# Queue (PolicyTek live calls and availability)
+
+## Queue (PolicyTek live calls and availability)
 
 Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows only On Live Calls and Available, polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
 
@@ -370,4 +371,3 @@ For local development, add the two variables to the ignored `.env.local`. Keep t
 The default `availableRule` in `lib/phone-hud-rule.mjs` shows every explicitly available, non-busy sales agent. Heartbeat and idle cutoffs can be configured there. Names, source labels and times are projected from upstream responses; phone numbers, emails and credentials never reach the board. Cached boards and access tokens are shared only within each server instance, so multiple Vercel instances can independently read PolicyTek.
 
 Run `node --test tests/phone-hud.test.mjs` for Queue filtering, caching, token retry, safe failures and endpoint authorization tests. Fixtures are synthetic and make no live PolicyTek calls.
-

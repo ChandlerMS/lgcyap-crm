@@ -450,7 +450,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 @media (max-width: 520px) { .intake-pagination { align-items: flex-start; flex-direction: column; } .intake-submit-bar > .btn { flex: 1 1 100%; } .intake-submit-bar .intake-submit { order: -1; } }
 
 /* Queue (/queue): who is on a live call and who is available, live from PolicyTek, for a wall screen. */
-.queue-page { --gold-quiet: #6d633e; --gold-wash: #1a180f; --faint: #7d7a72; --ready: #5fd08a; --queue-gutter: clamp(16px, 2.4vw, 40px); display: grid; grid-template-rows: auto auto 1fr auto; gap: clamp(12px, 1.6vw, 24px); min-height: 100vh; padding: var(--queue-gutter); line-height: 1.4; }
+.queue-page { --gold-quiet: #6d633e; --gold-wash: #1a180f; --faint: #7d7a72; --ready: #5fd08a; --queue-gutter: clamp(16px, 2.4vw, 40px); display: flex; flex-direction: column; gap: clamp(12px, 1.6vw, 24px); min-height: 100vh; padding: var(--queue-gutter); line-height: 1.4; }
 .queue-top { display: flex; align-items: center; flex-wrap: wrap; gap: clamp(12px, 2vw, 28px); padding-bottom: clamp(12px, 1.6vw, 22px); border-bottom: 1px solid var(--line); }
 .queue-logo { display: block; width: auto; height: clamp(40px, 5.2vw, 72px); }
 .queue-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -466,7 +466,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .queue-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--muted); }
 .queue-icon-btn:hover { color: var(--gold); border-color: var(--gold-quiet); background: var(--gold-wash); }
 .queue-notice { margin: 0; padding: 10px 14px; border: 1px solid var(--gold-quiet); border-left: 3px solid var(--gold); border-radius: 6px; background: var(--gold-wash); font-size: 15px; }
-.queue-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: clamp(12px, 1.6vw, 24px); min-height: 0; }
+.queue-board { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: clamp(12px, 1.6vw, 24px); min-height: 0; }
 .queue-col { display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
 .queue-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: clamp(14px, 1.4vw, 22px) clamp(16px, 1.6vw, 26px); border-bottom: 1px solid var(--line); }
 .queue-col-head h2 { margin: 0; font-size: clamp(17px, 1.5vw, 26px); font-weight: 600; letter-spacing: -.015em; }
