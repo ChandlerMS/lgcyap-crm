@@ -129,11 +129,11 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
     { label: "Close", value: whatsappCalls?.closeRate != null ? PERCENT.format(whatsappCalls.closeRate) : "—" },
     { label: "Calls", value: number(whatsappCalls?.connected) },
   ] : board === "source" ? [
-    { label: "Leads", value: number(totals?.leads) }, { label: "Submitted", value: number(totals?.first) }, { label: "Submitted premium", value: number(totals?.second, true) }, { label: "Return on spend", value: totals?.roas == null ? "—" : `${totals.roas.toFixed(2)}x` },
+    { label: "Submitted premium", value: number(totals?.second, true) }, { label: "Submitted", value: number(totals?.first) }, { label: "Close rate", value: totals?.first != null && totals?.leads != null && totals.leads > 0 ? PERCENT.format(totals.first / totals.leads) : "—" }, { label: "Leads", value: number(totals?.leads) },
   ] : [
     { label: salesBoard ? (period === "custom" ? "Policies sold" : `Policies sold ${periodLabel.toLowerCase()}`) : "Submitted", value: number(totals?.first) },
     { label: salesBoard ? (period === "custom" ? "Annual premium" : `Annual premium ${periodLabel.toLowerCase()}`) : "Submitted premium", value: number(totals?.second, true) },
-    { label: salesBoard ? "Sold / inbound logs" : "Submitted / leads", value: board === "sp" && current?.calls?.soldPerInboundLog != null ? PERCENT.format(current.calls.soldPerInboundLog) : board === "shopper" && totals?.first != null && totals?.leads != null && totals.leads > 0 ? PERCENT.format(totals.first / totals.leads) : "—" }, { label: salesBoard ? "Inbound call logs" : "Leads", value: board === "sp" ? number(current?.calls?.total) : number(totals?.leads) },
+    { label: "Close rate", value: board === "sp" && current?.calls?.soldPerInboundLog != null ? PERCENT.format(current.calls.soldPerInboundLog) : board === "shopper" && totals?.first != null && totals?.leads != null && totals.leads > 0 ? PERCENT.format(totals.first / totals.leads) : "—" }, { label: "Calls", value: board === "sp" ? number(current?.calls?.total) : number(totals?.leads) },
   ];
   return <section className={styles.leaderboard} aria-labelledby="leaderboard-title" aria-busy={loading}>
     <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>Agent Leaderboard</h1><p>Sold policies by writing agent.</p></header>
