@@ -261,8 +261,8 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     mainRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
   }, [route.view, route.id]);
   useEffect(() => {
-    // Reveal the active destination when following a direct link or browser history.
-    let parent = sidebarRef.current?.querySelector(".nav-link[aria-current='page']")?.parentElement;
+    // Reveal nested destinations, but keep Recruits collapsed on its overview page.
+    let parent = sidebarRef.current?.querySelector(".recruit-pages .nav-link[aria-current='page']")?.parentElement;
     while (parent && parent !== sidebarRef.current) {
       if (parent instanceof HTMLDetailsElement) parent.open = true;
       parent = parent.parentElement;
