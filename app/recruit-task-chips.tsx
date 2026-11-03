@@ -6,7 +6,7 @@ import SummaryChips, { type SummaryChip } from "./summary-chips";
 type TasksResult = { status?: string; records?: { id: string; title: string; status?: string | null; scheduledAt?: string | null; hubspotUrl?: string }[]; partial?: boolean; hubspotUrl?: string; error?: { message?: string } };
 type State = { status: "loading" } | { status: "ready"; result: TasksResult } | { status: "failed"; message: string };
 const FAILED = "Tasks could not be loaded from HubSpot.";
-// Open HubSpot tasks beside Follow Up, soonest due first; a chip opens that task in HubSpot and "+N more" opens HubSpot's task list.
+// Open HubSpot tasks assigned to the signed-in user beside Follow Up, soonest due first; a chip opens that task in HubSpot and "+N more" opens HubSpot's task list.
 export default function RecruitTaskChips({ live, now, onUnauthorized }: { live: boolean; now: number; onUnauthorized: () => void }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -35,7 +35,7 @@ export default function RecruitTaskChips({ live, now, onUnauthorized }: { live: 
   const empty = !live ? "Switch to live data to see HubSpot tasks."
     : state.status === "loading" ? "Loading tasks from HubSpot…"
     : state.status === "failed" ? <>{state.message} <button className="text-link" onClick={() => { setState({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></>
-    : "No open tasks.";
-  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Open, soonest due" chips={chips}
+    : "No open tasks assigned to you.";
+  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
     empty={empty} more={{ href: hubspotHref(ready?.hubspotUrl), external: true, label: "open tasks in HubSpot" }} />;
 }
