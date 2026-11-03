@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { readRecruitActivity, normalizeActivity, handleRecruitActivity } from '../lib/recruit-activity.mjs';
 import { PIPELINE_ID } from '../lib/recruiting-config.mjs';
 
@@ -62,9 +63,8 @@ test('RingEX call metadata and HubSpot AI summary are shown without inventing a 
 
 test('reads associated native RingEX calls with media flags and verified summary fields', async () => {
   let requests = 0;
-  const result = await readRecruitActivity('11', { kind: 'calls', source: 'contact' }, { accessToken: 'test', viewerEmail: 'viewer@example.invalid', fetchImpl: async (url, options) => {
+  const result = await readRecruitActivity('11', { kind: 'calls', source: 'contact' }, { accessToken: 'test', fetchImpl: async (url, options) => {
     requests++;
-    if (url.includes('/crm/v3/owners/')) return response({ results: url.includes('archived=true') ? [] : [{ id: '777', email: 'viewer@example.invalid' }] });
     if (url.includes('/objects/tickets/11?')) return response({ id: '11', properties: { hs_pipeline: PIPELINE_ID } });
     if (url.endsWith('/tickets/contacts/batch/read')) return response({ status: 'COMPLETE', results: [{ from: { id: '11' }, to: [{ toObjectId: '22' }] }] });
     if (url.includes('/contacts/22/associations/calls?')) return response({ results: [{ toObjectId: '33' }] });
@@ -73,11 +73,11 @@ test('reads associated native RingEX calls with media flags and verified summary
       assert.deepEqual(body.inputs, [{ id: '33' }]);
       assert.ok(body.properties.includes('hs_ai_summary'));
       assert.ok(body.properties.includes('hs_object_source_detail_1'));
-      return response({ status: 'COMPLETE', results: [{ id: '33', properties: { hubspot_owner_id: '777', hs_call_recording_url: 'https://provider.invalid/private', hs_call_has_transcript: 'true', hs_ai_summary: 'Summary', hs_object_source_detail_1: 'RingEX by RingCentral' } }] });
+      return response({ status: 'COMPLETE', results: [{ id: '33', properties: { hs_call_recording_url: 'https://provider.invalid/private', hs_call_has_transcript: 'true', hs_ai_summary: 'Summary', hs_object_source_detail_1: 'RingEX by RingCentral' } }] });
     }
     throw Error('Unexpected API route');
   } });
-  assert.equal(requests, 6);
+  assert.equal(requests, 4);
   assert.equal(result.records[0].recordingAvailable, true);
   assert.equal(result.records[0].transcriptAvailable, true);
   assert.equal(result.records[0].summary, 'Summary');
@@ -89,7 +89,6 @@ function ownedActivity(kind) {
   const urls = [];
   return { urls, fetchImpl: async url => {
     urls.push(url);
-    if (url.includes('/crm/v3/owners/')) return response({ results: url.includes('archived=true') ? [] : [{ id: '777', email: 'viewer@example.invalid' }, { id: '888', email: 'someone-else@example.invalid' }] });
     if (url.includes('/objects/tickets/11?')) return response({ id: '11', properties: { hs_pipeline: PIPELINE_ID } });
     if (url.includes(`/tickets/11/associations/${kind}?`)) return response({ results: [{ toObjectId: '33' }, { toObjectId: '34' }, { toObjectId: '35' }], paging: { next: { after: '80' } } });
     if (url.endsWith(`/${kind}/batch/read`)) return response({ status: 'COMPLETE', results: [{ id: '33', properties: { hubspot_owner_id: '777' } }, { id: '34', properties: { hubspot_owner_id: '888' } }, { id: '35', properties: {} }] });
@@ -97,29 +96,17 @@ function ownedActivity(kind) {
   } };
 }
 
-test('a recruit\'s calls, tasks and meetings show only those assigned to the signed-in user and can still page on', async () => {
-  for (const kind of ['calls', 'tasks', 'meetings']) {
-    const result = await readRecruitActivity('11', { kind }, { accessToken: 'test', viewerEmail: 'VIEWER@example.invalid', ...ownedActivity(kind) });
-    assert.deepEqual(result.records.map(row => row.id), ['33']); assert.equal(result.next, '80');
-    assert.match(result.notice, /Showing only those assigned to you/);
-    assert.doesNotMatch(JSON.stringify(result), /example\.invalid/i);
-  }
-});
-
-test('a recruit\'s notes and emails keep everyone\'s history', async () => {
-  for (const kind of ['notes', 'emails']) {
+test('a recruit\'s profile shows everyone\'s activity of every kind and never reads owners', async () => {
+  for (const kind of ['calls', 'tasks', 'meetings', 'notes', 'emails']) {
     const mock = ownedActivity(kind);
-    const result = await readRecruitActivity('11', { kind }, { accessToken: 'test', viewerEmail: 'viewer@example.invalid', ...mock });
-    assert.deepEqual(result.records.map(row => row.id), ['33', '34', '35']); assert.doesNotMatch(result.notice, /assigned to you/);
+    const result = await readRecruitActivity('11', { kind }, { accessToken: 'test', ...mock });
+    assert.deepEqual(result.records.map(row => row.id), ['33', '34', '35']); assert.equal(result.next, '80');
+    assert.doesNotMatch(result.notice, /assigned to you/);
     assert.equal(mock.urls.some(url => url.includes('/crm/v3/owners/')), false);
   }
 });
 
-test('with no matching owner a recruit\'s calls, tasks and meetings say so and read nothing further', async () => {
-  for (const viewerEmail of ['nobody@example.invalid', undefined]) {
-    const mock = ownedActivity('calls');
-    const result = await readRecruitActivity('11', { kind: 'calls' }, { accessToken: 'test', viewerEmail, ...mock });
-    assert.deepEqual(result.records, []); assert.equal(result.next, null); assert.match(result.notice, /does not match a HubSpot owner/);
-    assert.equal(mock.urls.some(url => url.includes('/associations/')), false);
-  }
+test('the activity route and panel no longer scope a recruit\'s history to the signed-in user', () => {
+  assert.doesNotMatch(readFileSync('app/api/recruits/[id]/activity/route.ts', 'utf8'), /viewerEmail/);
+  assert.doesNotMatch(readFileSync('app/recruit-activity.tsx', 'utf8'), /assigned to you/);
 });
