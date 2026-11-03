@@ -1,19 +1,11 @@
 "use client";
-import { useLayoutEffect, useRef, useState, type MouseEvent } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { fitFollowUpChips, followUpRecruits } from "./recruit-follow-up.mjs";
 import type { PipelineRecruit } from "./recruit-pipeline";
 
 type Row = PipelineRecruit & { daysWaiting: number };
 const RENDERED = 24;
-// Same page as the full table, so jump to it without a hash change (hash changes route the workspace).
-function showFullList(event: MouseEvent<HTMLAnchorElement>) {
-  const title = document.getElementById("follow-up-title");
-  if (!title) return;
-  event.preventDefault();
-  title.focus({ preventScroll: true });
-  title.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-}
-// Header summary of Follow Up: longest-waiting names first, trimmed to the rows set by --chip-rows, ending in a link to the full list.
+// Follow Up on the Recruits page: longest-waiting names first, trimmed to the rows set by --chip-rows, ending in a count of the rest.
 export default function RecruitFollowUpChips({ records, now, partial }: { records: readonly PipelineRecruit[]; now: number; partial?: boolean }) {
   const rows = followUpRecruits(records, now) as Row[];
   const listRef = useRef<HTMLUListElement>(null);
@@ -47,7 +39,7 @@ export default function RecruitFollowUpChips({ records, now, partial }: { record
         const name = row.name || [row.firstName, row.lastName].filter(Boolean).join(" ") || "Unnamed recruit";
         return <li key={row.id} data-chip className={index < shown ? undefined : "is-overflow"}><a className="follow-up-chip" href={`#recruit/${encodeURIComponent(row.id)}`} title={`${name}, ${row.daysWaiting} days waiting`}><span className="follow-up-chip-name">{name}</span><span className="follow-up-chip-days" aria-hidden="true">{row.daysWaiting}d</span><span className="sr-only">, {row.daysWaiting} days waiting</span></a></li>;
       })}
-      <li data-more className={rest > 0 ? undefined : "is-overflow"}><a className="follow-up-chip follow-up-chip-more" href="#follow-up" onClick={showFullList}>+{rest} more<span className="sr-only"> in the full Follow Up list</span></a></li>
+      <li data-more className={rest > 0 ? undefined : "is-overflow"}><span className="follow-up-chip follow-up-chip-more">+{rest} more<span className="sr-only"> waiting</span></span></li>
     </ul>}
   </section>;
 }

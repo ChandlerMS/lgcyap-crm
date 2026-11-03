@@ -27,12 +27,14 @@ test('native HubSpot tools use the verified portal and exact requested order', (
   }
 });
 
-test('Tasks, Meetings and Calendar live on the Recruits page instead of the sidebar', () => {
-  assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Tasks', 'Meetings', 'Calendar']);
+test('Meetings and Calendar live on the Recruits page instead of the sidebar', () => {
+  assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Meetings', 'Calendar']);
   for (const tool of RECRUITS_PAGE_TOOLS) {
     assert.equal(HUBSPOT_TOOLS.some(item => item.id === tool.id), false);
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: 'today' });
   }
+  // Tasks and the full Follow Up list were removed; saved links still open Recruits.
+  for (const hash of ['#tasks', '#follow-up']) assert.deepEqual(resolveWorkspaceRoute(hash), { view: 'today' });
 });
 
 test('each stage page includes only its exact HubSpot stage ID', () => {
