@@ -1,5 +1,5 @@
 .pipeline { margin: 0 0 38px; padding: 0 0 20px; }
-.heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.heading { display: flex; align-items: center; justify-content: flex-end; gap: 24px; margin-bottom: 22px; }
 .heading h2 { margin: 0; color: var(--text, #f4f1e9); font-size: clamp(28px, 3vw, 34px); font-weight: 600; letter-spacing: -.025em; }
 .carouselControls { display: flex; gap: 8px; }
 .carouselControls button { display: grid; place-items: center; width: 40px; height: 36px; border: 0; border-radius: 5px; background: #17150f; color: #e1c66f; cursor: pointer; font-size: 20px; }

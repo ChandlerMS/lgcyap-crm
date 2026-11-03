@@ -3,6 +3,7 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import HubSpotRecordEditor, { type HubspotEditField } from "./hubspot-record-editor";
 import InboxWorkspace from "./inbox-workspace";
+import SupportTicketCreate from "./support-ticket-create";
 import { hubspotRecordSnapshotAvailable } from "./hubspot-record-edit.mjs";
 import { currentHubspotMonth, filterHubspotRows, hubspotDateKey, hubspotMonthDays, hubspotRetryDeadline, hubspotSearchResponseMatches, normalizeHubspotSearchQuery, safeHubspotViewLink, shiftHubspotMonth, sortHubspotRows } from "./hubspot-workspace-view.mjs";
 import styles from "./hubspot-workspace.module.css";
@@ -75,6 +76,7 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editorBusy, setEditorBusy] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const detailRequestRef = useRef<AbortController | null>(null);
@@ -94,7 +96,7 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   const unauthorizedRef = useRef(onUnauthorized);
   useEffect(() => { unauthorizedRef.current = onUnauthorized; }, [onUnauthorized]);
   useEffect(() => { (detailRecord ? detailHeadingRef : listHeadingRef).current?.focus(); }, [detailRecord]);
-  useEffect(() => { onDirtyChange?.(editorOpen); return () => onDirtyChange?.(false); }, [editorOpen, onDirtyChange]);
+  useEffect(() => { onDirtyChange?.(editorOpen || createOpen); return () => onDirtyChange?.(false); }, [editorOpen, createOpen, onDirtyChange]);
   const reportEditorBusy = useCallback((busy: boolean) => { setEditorBusy(busy); onBusyChange?.(busy); }, [onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
 
@@ -217,6 +219,8 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   const selected = current?.records.find(record => record.id === selectedThread);
   const available = current?.status === "available";
   const table = <div className={styles.tableWrap}><table className={styles.table}><thead><tr>{definition.columns.map(column => <th key={column.field} scope="col" aria-sort={sort?.field === column.field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className={styles.sortButton} type="button" onClick={() => { setSort(value => ({ field: column.field, direction: value?.field === column.field && value.direction === "asc" ? "desc" : "asc" })); setPage(1); }} aria-label={`Sort by ${column.label}`}><span>{column.label}</span><span aria-hidden="true">{sort?.field === column.field ? sort.direction === "asc" ? "↑" : "↓" : "↕"}</span></button></th>)}<th scope="col"><span className="sr-only">HubSpot record</span></th></tr></thead><tbody>{shown.map(record => <tr key={record.id}>{definition.columns.map(column => <td key={column.field}>{column.field === "title" ? <><button type="button" className={styles.recordName} onClick={() => openRecord(record)}>{record.title || `Untitled ${definition.singular}`}</button>{record.subtitle && <span className={styles.secondary}>{record.subtitle}</span>}</> : column.dateOnly ? calendarDateLabel(record[column.field]) : column.date ? dateLabel(record[column.field]) : <span className={column.field === "status" || column.field === "health" ? styles.status : undefined}>{textLabel(record[column.field])}</span>}</td>)}<td><NativeLink href={record.hubspotUrl} label="View" /></td></tr>)}</tbody></table></div>;
+  if (createOpen && tool === "help-desk") return <SupportTicketCreate onUnauthorized={onUnauthorized} onBusyChange={reportEditorBusy} onClose={() => { setCreateOpen(false); onDirtyChange?.(false); }} onCreated={replayed => { setCreateOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "This support ticket was already saved to HubSpot. Refresh the list to find it." : "Support ticket created and confirmed in HubSpot."); setQuery(""); setSearchDraft(""); void load(null); }} />;
+
   const detailed = detailRecord ? current?.records.find(record => record.id === detailRecord.id) ?? detailRecord : null;
   if (detailed && available) {
     const recordInfoFields: Column[] = [...definition.columns, ...(detailed.subtitle ? [{ field: "subtitle" as const, label: "Details" }] : []), ...(["createdAt", "updatedAt"] as const).filter(field => !definition.columns.some(column => column.field === field)).map(field => ({ field, label: field === "createdAt" ? "Created" : "Updated", date: true }))];
@@ -236,12 +240,13 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
     </section>;
   }
   return <section className={styles.workspace} aria-labelledby="hubspot-view-title" aria-busy={loading}>
-    <div className={styles.heading}><div><h1 id="hubspot-view-title" tabIndex={-1} ref={listHeadingRef}>{definition.label}</h1><p>{definition.description}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>Read-only</span><NativeLink href={current?.hubspotUrl} /><button className="btn btn-secondary" disabled={loading || Boolean(failure?.retryAt || retryAt)} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div></div>
+    <div className={styles.heading}><div><h1 id="hubspot-view-title" tabIndex={-1} ref={listHeadingRef}>{definition.label}</h1><p>{definition.description}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>Read-only</span>{tool === "help-desk" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>New Support Ticket</button>}<NativeLink href={current?.hubspotUrl} /><button className="btn btn-secondary" disabled={loading || Boolean(failure?.retryAt || retryAt)} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div></div>
     {tool !== "inbox" && <form className={styles.providerSearch} onSubmit={event => { event.preventDefault(); const normalized = normalizeHubspotSearchQuery(searchDraft); setSearchError(normalized.error); if (!normalized.error) { setQuery(""); void load(normalized.query); } }}>
       <label htmlFor="hubspot-global-search">{tool === "customer-success" ? "Search customer companies in HubSpot" : `Search ${definition.label.toLowerCase()} in HubSpot`}</label>
       <div><input id="hubspot-global-search" type="search" autoComplete="off" maxLength={200} value={searchDraft} placeholder="Enter a search phrase" aria-invalid={Boolean(searchError)} aria-describedby={searchError ? "hubspot-global-search-error" : "hubspot-global-search-hint"} onChange={event => { setSearchDraft(event.target.value); setSearchError(null); }} /><button className="btn btn-primary" type="submit" disabled={loading || Boolean(retryAt)}>Search HubSpot</button><button className="btn btn-secondary" type="button" disabled={loading || Boolean(retryAt)} onClick={() => { setSearchDraft(""); setSearchError(null); setQuery(""); void load(null); }}>Reset search</button></div>
       <p id="hubspot-global-search-hint">Search runs when you select Search HubSpot or press Enter. Reset returns to recent records.</p>{searchError && <p id="hubspot-global-search-error" className={styles.messageError} role="alert">{searchError}</p>}
     </form>}
+    {saveNotice && <p className={styles.searchSummary} role="status">{saveNotice}</p>}
     {failure && <div className={styles.alert} role="alert"><strong>{current?.status === "available" ? "Showing the last loaded records" : "View unavailable"}</strong><p>{failure.message}</p>{failure.retryAt && <p>Try again after {dateLabel(new Date(failure.retryAt).toISOString())}.</p>}</div>}
     {retryAt && <p className={styles.notice} role="status">HubSpot is limiting requests. Refresh and conversation reads are available after {dateLabel(new Date(retryAt).toISOString())}.</p>}
     {!current && loading && <div className={styles.loading} role="status">Loading {definition.label.toLowerCase()} from HubSpot…</div>}

@@ -10,3 +10,7 @@ The `#help-desk` workspace reads real support tickets through the existing authe
 - This page shows ticket records; email replies, channel routing, SLAs and HubSpot Help Desk automation remain in HubSpot.
 
 Verification: `node --test tests/recruiting-navigation.test.mjs tests/hubspot-tools.test.mjs tests/hubspot-record-edit.test.mjs`.
+
+## Creating support tickets
+
+Use **New Support Ticket** for a title, description and priority form. The server creates in Support Pipeline `0`, selects the first open stage, and confirms the saved fields. Ticket descriptions are also shown in record details. See [the creation contract](../SUPPORT-TICKETS-API.md) for authorization and duplicate-submission handling.

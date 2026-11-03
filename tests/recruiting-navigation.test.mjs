@@ -19,7 +19,7 @@ test('canonical stages are shared while each entry path has its own sidebar orde
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
-  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contacts', 'Tasks', 'Calendar', 'Meetings', 'Tickets', 'Help Desk']);
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contacts', 'Tasks', 'Calendar', 'Meetings', 'Help Desk', 'Tickets']);
   for (const tool of HUBSPOT_TOOLS) {
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
     assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');

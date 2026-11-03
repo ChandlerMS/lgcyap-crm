@@ -517,10 +517,11 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .activity-entry { padding: 24px 0; border-bottom: 1px solid #25231c; overflow-wrap: anywhere; }
 .activity-body { white-space: pre-wrap; line-height: 1.65; max-height: 480px; overflow: auto; }
 .activity-entry summary { cursor: pointer; color: var(--gold); padding: 8px 0; }
+.today-overview .follow-up-section { grid-column: 2; }
 .today-overview > section { min-width: 0; margin-bottom: 0; }
 .today-overview .follow-up-section .table-wrap { max-height: 350px; overflow: auto; }
 .today-overview .follow-up-section .data-table { min-width: 580px; }
-@media (max-width: 1100px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 30px; } }
+@media (max-width: 1100px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 30px; } .today-overview .follow-up-section { grid-column: 1; } }
 /* One persistent provider frame; minimizing never interrupts an active call. */
 .rc-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 55; box-shadow: 0 8px 30px #0008; }
 .rc-panel { position: fixed; right: 24px; bottom: 24px; z-index: 60; width: 380px; max-width: calc(100% - 32px); max-height: calc(100dvh - 32px); overflow: auto; border-radius: 16px; background: #141414; color: #f4f1e8; box-shadow: 0 12px 60px #000b; border: 1px solid #d4af3733; }

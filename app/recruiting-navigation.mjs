@@ -41,8 +41,8 @@ export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'tasks', label: 'Tasks', icon: 'check', path: '/contacts/50894788/objects/0-27' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar', path: '/calendar/50894788' },
   { id: 'meetings', label: 'Meetings', icon: 'calendar', path: '/contacts/50894788/objects/0-47' },
-  { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
   { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
+  { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' })]);
 
