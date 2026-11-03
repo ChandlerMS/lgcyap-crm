@@ -13,7 +13,7 @@ test('blank padding is ignored and a complete row with optional blank email is r
 });
 
 test('missing names, whitespace, malformed phones and optional malformed emails block the whole batch', () => {
-  for (const patch of [{ firstName: '' }, { lastName: '  ' }, { phone: 'invalid' }, { email: 'bad' }]) {
+  for (const patch of [{ firstName: '' }, { lastName: '  ' }, { phone: 'invalid' }, { email: 'bad' }, { recruitingPath: '' }, { recruitingPath: 'invalid' }]) {
     const state = recruitSubmissionState([entry({ ...valid, ...patch }), entry({ ...valid, phone: '4075550124' })]);
     assert.equal(state.readyCount, 1);
     assert.equal(state.invalidCount, 1);

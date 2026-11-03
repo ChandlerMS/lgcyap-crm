@@ -17,3 +17,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - The guard checks production project, GitHub repository metadata, `main`, and equality with the current remote `main` SHA. If GitHub cannot be checked, the build must fail closed; do not bypass it to make a deployment pass.
 - Keep the main-page Legacy Bot chat embed for HubSpot portal `50894788`. The production guard rejects its removal or a different portal. Run `node --test tests/production-source.test.mjs` when editing the main page or deployment checks.
 - Repository/build checks prevent accidental stale deployments; Vercel owners can override configuration, use prebuilt uploads, or move aliases. Do not claim these checks remove an owner's platform permissions.
+
+## Codex coordinator / Claude Code worker
+
+- Codex owns assignment, independent review, verification, Git integration, and deployment.
+- Claude Code works only in its assigned isolated worktree. Read `docs/collaboration/README.md` before using `scripts/Invoke-ClaudeWorker.ps1` for a bounded task.
+- Inspect the actual diff and run relevant checks after a worker returns. Never run concurrent writers in one checkout.
+- Keep credentials, environment files, and customer records out of task packets and logs.
+- Both checkouts target existing Vercel project `legacy-recruiting-private`, team `main-team8`. Never create a duplicate project or deploy merely to test collaboration.

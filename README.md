@@ -441,7 +441,7 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Vercel pool lifecycle](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#attachdatabasepool)
 - [Neon pooling](https://neon.com/docs/connect/connection-pooling)
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
-# Queue (PolicyTek live calls and availability)
+## Queue (PolicyTek live calls and availability)
 
 Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows only On Live Calls and Available, polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
 

@@ -548,7 +548,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 }
 
 /* Queue (/queue): who is on a live call and who is available, live from PolicyTek, for a wall screen. */
-.queue-page { --gold-quiet: #6d633e; --gold-wash: #1a180f; --faint: #7d7a72; --ready: #5fd08a; --queue-gutter: clamp(16px, 2.4vw, 40px); display: grid; grid-template-rows: auto auto 1fr auto; gap: clamp(12px, 1.6vw, 24px); min-height: 100vh; padding: var(--queue-gutter); line-height: 1.4; }
+.queue-page { --gold-quiet: #6d633e; --gold-wash: #1a180f; --faint: #7d7a72; --ready: #5fd08a; --queue-gutter: clamp(16px, 2.4vw, 40px); display: flex; flex-direction: column; gap: clamp(12px, 1.6vw, 24px); min-height: 100vh; padding: var(--queue-gutter); line-height: 1.4; }
 .queue-top { display: flex; align-items: center; flex-wrap: wrap; gap: clamp(12px, 2vw, 28px); padding-bottom: clamp(12px, 1.6vw, 22px); border-bottom: 1px solid var(--line); }
 .queue-logo { display: block; width: auto; height: clamp(40px, 5.2vw, 72px); }
 .queue-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -564,7 +564,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .queue-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--muted); }
 .queue-icon-btn:hover { color: var(--gold); border-color: var(--gold-quiet); background: var(--gold-wash); }
 .queue-notice { margin: 0; padding: 10px 14px; border: 1px solid var(--gold-quiet); border-left: 3px solid var(--gold); border-radius: 6px; background: var(--gold-wash); font-size: 15px; }
-.queue-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: clamp(12px, 1.6vw, 24px); min-height: 0; }
+.queue-board { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: clamp(12px, 1.6vw, 24px); min-height: 0; }
 .queue-col { display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
 .queue-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: clamp(14px, 1.4vw, 22px) clamp(16px, 1.6vw, 26px); border-bottom: 1px solid var(--line); }
 .queue-col-head h2 { margin: 0; font-size: clamp(17px, 1.5vw, 26px); font-weight: 600; letter-spacing: -.015em; }
@@ -597,3 +597,12 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 }
 
 .queue-workspace-frame { display: block; width: 100%; height: calc(100dvh - 140px); min-height: 600px; border: 0; background: var(--bg); }
+
+/* The CRM owns the launcher; HubSpot owns the conversation inside its iframe. */
+.legacy-bot-launcher { position: fixed; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 2147483646; display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 12px 18px; border: 2px solid var(--gold); border-radius: 999px; background: #090909; color: var(--gold); box-shadow: 0 4px 24px #0008; font-weight: 600; cursor: pointer; }
+.legacy-bot-launcher svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.legacy-bot-launcher:hover { background: #221d0d; }
+.legacy-bot-launcher:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.legacy-bot-launcher:disabled { opacity: .6; cursor: wait; }
+.legacy-bot-control[data-open="true"] .legacy-bot-launcher { visibility: hidden; }
+body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-messages-iframe-container { visibility: hidden; pointer-events: none; }
