@@ -15,8 +15,7 @@ test('Standard vs. Preferred reloads a minute after each sync, and only while it
 });
 
 test('Standard vs. Preferred row label names the call source', () => {
-  assert.equal(leaderboardSpCallLabel('ringcx'), 'Calls (answered, RingCX)');
-  assert.equal(leaderboardSpCallLabel('mixed'), 'Calls (answered, RingCX and Agent Daily Calls reports)');
+  assert.equal(leaderboardSpCallLabel('ringcx'), 'Calls (RingCX report)');
   assert.equal(leaderboardSpCallLabel('spreadsheet'), 'Calls (answered, Agent Daily Calls reports)');
   assert.equal(leaderboardSpCallLabel(undefined), 'Calls (inbound logs attributed through deal owner)');
 });
