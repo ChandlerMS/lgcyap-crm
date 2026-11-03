@@ -34,3 +34,7 @@ Sources: https://developers.ringcentral.com/guide/authentication/jwt-flow ; http
 - Live API agents use ENGAGED/WORKING, not only ON_CALL. Six ENGAGED records had active call identifiers; two held calls were still ENGAGED and displayed Hold in native analytics. ENGAGED now counts as on calls, including hold. PENDING-DISP/WORKING remain other states. No caller records are returned or retained.
 
 This supersedes the earlier pending status for answered and timezone. Remaining: historical daily connected integration and reconciliation, including transfers/callbacks. Auth boundaries and secret handling are unchanged.
+
+## Live roster contract
+
+Authenticated `GET /api/ringcx` also returns `onCallAgents: [{id, name, status}]`, alphabetically sorted and deduplicated by agent ID, restricted to group 2498 and ENGAGED/ON_CALL. Status is On call or On hold. The list and headline use the same snapshot and state rules. Only agent display names, IDs and status are exposed; upstream caller numbers, call identifiers, emails and credentials are excluded. Missing names fall back to Agent plus ID. No duration is inferred from state time. The UI matches the CRM queue page's black/gold tokens, logo and initial avatars; it labels stale rosters and clears names when authentication expires.

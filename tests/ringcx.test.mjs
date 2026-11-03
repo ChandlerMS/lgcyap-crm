@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeAgents, summarizeQueues, createRingCx, ringCxResponse } from '../lib/ringcx.mjs';
+import { summarizeAgents, summarizeQueues, onCallAgents, createRingCx, ringCxResponse } from '../lib/ringcx.mjs';
 const agent = (agentId, agentState, agentGroupId = 2498) => ({ agentId, agentState, agentGroupId, callAni: 'private' });
 test('unique target agents only; wrap and other states never count as available', () => {
   assert.deepEqual(summarizeAgents([agent(1,'AVAILABLE'),agent(1,'AVAILABLE'),agent(2,'ON_CALL'),agent(3,'WRAP_UP'),agent(4,'AVAILABLE',2044)]), {loggedIn:3,available:1,onCalls:1,other:1});
@@ -15,6 +15,16 @@ test('queue scope is exact and incomplete counters never silently become zero', 
 });
 test('live ENGAGED includes held calls but WORKING and disposition do not', () => {
   assert.deepEqual(summarizeAgents([agent(1,'ENGAGED'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'AVAILABLE')]), {loggedIn:5,available:1,onCalls:2,other:2});
+});
+test('on-call roster shares count scope, deduplicates and only exposes allowed fields', () => {
+  const held = {...agent(1,'ENGAGED'),firstName:' Alex ',lastName:'Example',onHoldDts:'2026-11-03T15:00:00Z',email:'private@example.com',callUii:'private-call'};
+  const rows=[held,held,agent(2,'ON_CALL'),agent(3,'AVAILABLE'),agent(4,'PENDING-DISP'),agent(5,'ENGAGED',2044)];
+  const roster=onCallAgents(rows);
+  assert.deepEqual(roster,[{id:'2',name:'Agent 2',status:'On call'},{id:'1',name:'Alex Example',status:'On hold'}]);
+  assert.equal(roster.length,summarizeAgents(rows).onCalls);
+  assert.doesNotMatch(JSON.stringify(roster),/private|email|callUii|callAni/);
+  assert.deepEqual(onCallAgents([]),[]);
+  assert.throws(()=>onCallAgents([held,agent(1,'AVAILABLE')]));
 });
 test('unauthenticated requests never invoke RingCX; private no-store headers', async () => {
   const result = await ringCxResponse({getUser:async()=>null,client:{snapshot:()=>{throw Error('must not call');}}});
