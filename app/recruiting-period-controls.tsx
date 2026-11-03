@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { RECRUITING_PERIODS, resolveRecruitingPeriod, recruitingPeriodStats } from "./recruiting-period.mjs";
 import styles from "./recruiting-period-controls.module.css";
 
@@ -14,9 +15,11 @@ type Props = {
   basis?: "createdAt" | "enteredStageAt";
   now?: Date | string;
   partial?: boolean;
+  // Shown beside the title and totals when there is room, within their height.
+  aside?: ReactNode;
 };
 
-export default function RecruitingPeriodControls({ records, stages, selection, onSelectionChange, basis = "createdAt", now, partial = false }: Props) {
+export default function RecruitingPeriodControls({ records, stages, selection, onSelectionChange, basis = "createdAt", now, partial = false, aside }: Props) {
   const period = resolveRecruitingPeriod(selection, now);
   const stats = recruitingPeriodStats(records, stages, period, basis);
   const usesCreated = basis === "createdAt";
@@ -33,6 +36,7 @@ export default function RecruitingPeriodControls({ records, stages, selection, o
         <div><dt>Recruits contacted</dt><dd>{stats.contactedCount}</dd></div>
         <div><dt>Percentage contacted</dt><dd>{stats.contactedPercentage}%</dd></div>
       </dl>
+      {aside && <div className={styles.aside}>{aside}</div>}
       {(selection.preset === "date" || selection.preset === "range") && <div className={styles.dates}>
         <label>{selection.preset === "date" ? "Date" : "Start date"}<input type="date" min="0001-01-01" max="9999-12-31" required value={selection.startDate ?? ""} onChange={event => onSelectionChange({ ...selection, startDate: event.target.value })} aria-invalid={!period.valid} /></label>
         {selection.preset === "range" && <label>End date<input type="date" min={selection.startDate || "0001-01-01"} max="9999-12-31" required value={selection.endDate ?? ""} onChange={event => onSelectionChange({ ...selection, endDate: event.target.value })} aria-invalid={!period.valid} /></label>}
