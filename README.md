@@ -354,3 +354,20 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Vercel pool lifecycle](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#attachdatabasepool)
 - [Neon pooling](https://neon.com/docs/connect/connection-pooling)
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
+# Queue (PolicyTek live calls and availability)
+
+Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows only On Live Calls and Available, polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
+
+Set these **server-only** environment variables in the Vercel project before deploying:
+
+- `POLICYTEK_REFRESH_TOKEN`: the dedicated HUD login's PolicyTek refresh token.
+- `POLICYTEK_WORKSPACE_ID`: that login's selected workspace ID.
+
+Enter values directly in Vercel's project environment settings; never put them in chat or commit them. Add them to each environment that needs live data, then redeploy. Cloudflare secrets do not transfer automatically. The existing Cloudflare board continues independently. `HUD_VIEW_KEY` is unnecessary here because employee sign-in protects both `/queue` and `POST /api/queue`.
+
+For local development, add the two variables to the ignored `.env.local`. Keep the app's existing authentication settings and `BETTER_AUTH_URL` configured for the actual origin. Missing PolicyTek settings show a connection notice without affecting recruiting. A TV must have an approved employee session; expired sessions redirect to sign-in and return to `/queue` afterward.
+
+The default `availableRule` in `lib/phone-hud-rule.mjs` shows every explicitly available, non-busy sales agent. Heartbeat and idle cutoffs can be configured there. Names, source labels and times are projected from upstream responses; phone numbers, emails and credentials never reach the board. Cached boards and access tokens are shared only within each server instance, so multiple Vercel instances can independently read PolicyTek.
+
+Run `node --test tests/phone-hud.test.mjs` for Queue filtering, caching, token retry, safe failures and endpoint authorization tests. Fixtures are synthetic and make no live PolicyTek calls.
+

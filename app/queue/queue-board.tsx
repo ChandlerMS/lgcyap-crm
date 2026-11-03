@@ -14,7 +14,7 @@ const STALE_MS = 20000; // older than this, the header says so
 const RELOAD_MS = 6 * 3600e3; // a wall screen reloads now and then to pick up a new deployment
 
 const NOTICES: Record<Problem, string> = {
-  not_configured: "PolicyTek isn’t connected yet: POLICYTEK_REFRESH_TOKEN and POLICYTEK_WORKSPACE_ID are not set on this deployment.",
+  not_configured: "Queue is waiting for its PolicyTek connection. Contact your app administrator.",
   policytek_sign_in: "PolicyTek turned down the queue’s sign-in. Its refresh token needs replacing.",
   policytek_down: "Can’t reach PolicyTek right now. Showing the last queue and retrying.",
   denied: "This account doesn’t have access to the queue.",
@@ -51,17 +51,21 @@ export default function QueueBoard() {
 
   useEffect(() => {
     let stopped = false;
+    let controller: AbortController | undefined;
     let next: ReturnType<typeof setTimeout> | undefined;
     async function poll() {
       try {
-        const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store" });
+        controller = new AbortController();
+        const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) });
         const body = await response.json().catch(() => ({}));
+        if (stopped) return;
         if (response.status === 401) { window.location.assign(typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
         if (typeof body.served === "number") setOffset(body.served - Date.now());
         if (response.status === 403) setProblem("denied");
         else if (body.ok === true) { setBoard(body); setProblem(null); }
         else setProblem(body.error in NOTICES ? body.error : "server");
       } catch {
+        if (stopped) return;
         setProblem("network");
       }
       setTick(Date.now());
@@ -70,17 +74,18 @@ export default function QueueBoard() {
     void poll();
     const clock = setInterval(() => setTick(Date.now()), 1000);
     const reload = setTimeout(() => window.location.reload(), RELOAD_MS);
-    return () => { stopped = true; clearTimeout(next); clearInterval(clock); clearTimeout(reload); };
+    return () => { stopped = true; controller?.abort(); clearTimeout(next); clearInterval(clock); clearTimeout(reload); };
   }, []);
 
   // Keep a wall screen from sleeping while the queue is showing.
   useEffect(() => {
     let wake: WakeLockSentinel | null = null;
-    const keepAwake = async () => { try { wake = await navigator.wakeLock.request("screen"); } catch { /* not allowed here; the screen may sleep */ } };
+    let stopped = false;
+    const keepAwake = async () => { try { const acquired = await navigator.wakeLock.request("screen"); if (stopped) await acquired.release(); else wake = acquired; } catch { /* not allowed here; the screen may sleep */ } };
     const onVisible = () => { if (document.visibilityState === "visible" && (!wake || wake.released)) void keepAwake(); };
     void keepAwake();
     document.addEventListener("visibilitychange", onVisible);
-    return () => { document.removeEventListener("visibilitychange", onVisible); void wake?.release().catch(() => {}); };
+    return () => { stopped = true; document.removeEventListener("visibilitychange", onVisible); void wake?.release().catch(() => {}); };
   }, []);
 
   const now = tick === null ? null : tick + offset;
