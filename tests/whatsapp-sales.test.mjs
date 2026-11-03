@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
-import { importWhatsappReports, parseWhatsappReport, readWhatsappLeaderboard, WhatsappImportError } from '../lib/whatsapp-sales.mjs';
+import { importWhatsappReports, parseWhatsappReport, readWhatsappLeaderboard, WhatsappImportError, WHATSAPP_MONTHLY_CALLS } from '../lib/whatsapp-sales.mjs';
 import { validateLeaderboardInput } from '../lib/leaderboard.mjs';
 import { leaderboardMetrics, leaderboardTotals, rankLeaderboardRows } from '../app/leaderboard-data.mjs';
 
@@ -67,12 +67,26 @@ test('ranges before dialer coverage, straddling it, missing months or past impor
   try {
     const before = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-06-01', to: '2026-06-16' }, { db, now: NOW });
     assert.equal(before.calls.status, 'not-covered'); assert.equal(before.rows[0].queueConnected, null); assert.match(before.notice, /not available for this range/);
-    const straddle = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-06-01', to: '2026-06-30' }, { db, now: NOW });
+    const straddle = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-06-10', to: '2026-06-20' }, { db, now: NOW });
     assert.equal(straddle.calls.status, 'partial'); assert.equal(straddle.partial, false);
     const missing = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-05-01', to: '2026-06-30' }, { db, now: NOW });
     assert.equal(missing.partial, true); assert.match(missing.notice, /One month in this range has not been imported/);
     const month = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'month' }, { db, now: NOW });
     assert.equal(month.partial, true); assert.match(month.notice, /runs through Jul 3, 2026/);
+  } finally { await db.close(); }
+});
+
+test('whole months with entered call totals use them for Calls and Close; other ranges keep dialer calls', async () => {
+  const db = await database([june, july]);
+  try {
+    const whole = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-06-01', to: '2026-06-30' }, { db, now: NOW });
+    assert.deepEqual([whole.calls.basis, whole.calls.status, whole.calls.connected, whole.calls.sold], ['monthly', 'available', WHATSAPP_MONTHLY_CALLS['2026-06'], 3]);
+    assert.equal(whole.calls.closeRate, 3 / 28978); assert.match(whole.notice, /monthly call totals/);
+    const part = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-06-10', to: '2026-06-30' }, { db, now: NOW });
+    assert.equal(part.calls.basis, undefined); assert.equal(part.calls.connected, 4); assert.match(part.notice, /appear when the range is whole months/);
+    const mixed = await readWhatsappLeaderboard({ board: 'whatsapp', period: 'custom', from: '2026-06-01', to: '2026-07-31' }, { db, now: NOW });
+    assert.equal(mixed.calls.basis, undefined);
+    assert.equal(Object.values(WHATSAPP_MONTHLY_CALLS).reduce((a, b) => a + b, 0), 246741);
   } finally { await db.close(); }
 });
 
