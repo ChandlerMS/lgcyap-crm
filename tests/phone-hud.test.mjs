@@ -17,7 +17,8 @@ function fixture({ fail = '', retry401 = false, dayCalls } = {}) {
     if (path.includes('get-access-token')) return Response.json({ data: { accessToken: 'test-only-access' } });
     if (path.endsWith('/calls') && retry401 && !denied) { denied = true; return new Response('', { status: 401 }); }
     if (day && fail === 'day') return new Response('', { status: 500 });
-    if (day && dayCalls) return Response.json({ items: dayCalls });
+    if (day && fail === 'narrow' && new URL(url).searchParams.has('createdAt_end')) return new Response('', { status: 500 });
+    if (day && dayCalls) return Response.json({ items: dayCalls(new URL(url).searchParams) });
     if (path.includes('get-by-keys')) return Response.json({ data: { sales_agents: ['a', 'b', 'c', 'd', 'e'] } });
     if (path.endsWith('/calls')) return Response.json(fail === 'shape' ? {} : { items: [
       { _id: 'c1', createdAt: iso(4), direction: 'inbound', agent: { _id: 'a', firstName: 'Avery' }, leadSource: { alias: 'Campaign' }, phone: 'private-phone' },
@@ -70,8 +71,35 @@ test('calls today counts calls of any status by sales agents since midnight East
   assert.equal(requests.filter(r => r.day).length, 1);
   advance(31000); await reader.board();
   assert.equal(requests.filter(r => r.day).length, 2);
-  const full = Array.from({ length: 999 }, (_, i) => ({ _id: `d${i}`, agent: { _id: i % 2 ? 'a' : 'excluded' } }));
-  assert.deepEqual((await fixture({ dayCalls: full }).reader.board()).callsToday, { count: 499, capped: true });
+});
+
+// A busy synthetic day: 2,400 calls every 15 seconds since midnight Eastern, every other one by a sales agent.
+const dayStart = Date.parse('2026-11-03T05:00:00Z');
+const busyDay = Array.from({ length: 2400 }, (_, i) => ({ _id: `d${i}`, createdAt: new Date(dayStart + i * 15000).toISOString(), agent: { _id: i % 2 ? 'a' : 'excluded' } }));
+// PolicyTek's newest-first page of up to 999 calls; ignoreEnd answers as if createdAt_end were not a filter.
+const policytekPage = ({ ignoreEnd = false } = {}) => query => {
+  const from = Date.parse(query.get('createdAt_start')), to = !ignoreEnd && query.has('createdAt_end') ? Date.parse(query.get('createdAt_end')) : Infinity;
+  return busyDay.filter(call => { const at = Date.parse(call.createdAt); return at >= from && at <= to; }).reverse().slice(0, 999);
+};
+
+test('a day past one page of calls is read in halves until every window fits, counting each call once', async () => {
+  const { reader, requests } = fixture({ dayCalls: policytekPage() });
+  assert.deepEqual((await reader.board()).callsToday, { count: 1200, capped: false });
+  const days = requests.filter(r => r.day);
+  assert.equal(days.length, 7); // the whole day, two halves, four quarters
+  assert.equal(days[0].query.has('createdAt_end'), false);
+  assert.ok(days.slice(1).every(r => r.query.has('createdAt_end')));
+});
+
+test('if PolicyTek ignores window ends or a narrower read fails, the count is a marked lower bound', async () => {
+  for (const options of [{ dayCalls: policytekPage({ ignoreEnd: true }) }, { dayCalls: policytekPage(), fail: 'narrow' }]) {
+    const { reader, requests } = fixture(options);
+    const board = await reader.board();
+    assert.equal(board.ok, true);
+    assert.equal(board.callsToday.capped, true);
+    assert.ok(board.callsToday.count >= 499 && board.callsToday.count < 1200);
+    assert.ok(requests.filter(r => r.day).length <= 15);
+  }
 });
 
 test('a failed day read leaves the live board working without a call count', async () => {
