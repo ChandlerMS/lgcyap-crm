@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { STAGE_PAGES, STAGES, TERMINAL_STAGE_IDS } from '../lib/recruiting-config.mjs';
 import {
-  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, RECRUITS_PAGE_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
+  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, RECRUITS_PAGE_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
   recordsForStagePage, unmappedStageRecords,
 } from '../app/recruiting-navigation.mjs';
 
@@ -27,13 +27,16 @@ test('native HubSpot tools use the verified portal and exact requested order', (
   }
 });
 
-test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls keeps a sidebar page', () => {
+test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls keeps a page of its own', () => {
   assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Meetings', 'Calendar', 'Calls']);
   for (const tool of RECRUITS_PAGE_TOOLS.filter(item => item.id !== 'calls')) {
     assert.equal(HUBSPOT_TOOLS.some(item => item.id === tool.id), false);
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: 'today' });
   }
   assert.deepEqual(resolveWorkspaceRoute('#calls'), { view: 'calls' });
+  // Calls and Recruits open from their panel titles; their pages stay but leave the sidebar.
+  assert.deepEqual(SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Contract Agents', 'Help Desk', 'Tickets']);
+  assert.deepEqual(resolveWorkspaceRoute('#recruits'), { view: 'recruits' });
   // Tasks and the full Follow Up list were removed; saved links still open Recruits.
   for (const hash of ['#tasks', '#follow-up']) assert.deepEqual(resolveWorkspaceRoute(hash), { view: 'today' });
 });

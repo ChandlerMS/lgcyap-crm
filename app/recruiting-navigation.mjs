@@ -42,7 +42,9 @@ export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
   { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
-// HubSpot views shown as panels on the Recruits page. Those without a sidebar page (Meetings, Calendar) send their old links to Recruits; Calls keeps its own page too.
+// Calls and Recruits keep their pages but open from their panel titles on the Recruits page, not the sidebar.
+export const SIDEBAR_HUBSPOT_TOOLS = Object.freeze(HUBSPOT_TOOLS.filter(tool => tool.id !== 'calls' && tool.id !== 'recruits'));
+// HubSpot views shown as panels on the Recruits page. Those without a page of their own (Meetings, Calendar) send their old links to Recruits.
 export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'meetings', label: 'Meetings' },
   { id: 'calendar', label: 'Calendar' },
