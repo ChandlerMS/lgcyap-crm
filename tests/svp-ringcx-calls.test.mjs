@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { RingCxError } from '../lib/ringcx.mjs';
@@ -256,6 +257,44 @@ const sheet = (date, rows) => ({ sheet: date, data: [[`Daily Connected Calls Rep
 const june = parseSvpCallsReport({ fileName: 'Agent_Daily_Calls_2026-06_June_2026.xlsx', sha256: SHA, sheets: [sheet('2026-06-20', [['Agent One', 7], ['Agent Two', 3]])] });
 const board = extra => ({ status: 'available', board: 'sp', salesComplete: true, source: 'HubSpot', rows: [{ name: 'Agent One', attributed: true, sales: 9 }, { name: 'Agent Four', attributed: true, sales: 1 }, { name: 'Writing agent not recorded', attributed: false, sales: 2 }], ...extra });
 const day = date => ({ startDate: date, endDate: date });
+
+test('outside 9 AM–9 PM Eastern the cron stops before RingCX or the database, and open pages stop reloading', () => {
+  const route = readFileSync('app/api/cron/svp-ringcx-calls/route.ts', 'utf8');
+  const auth = route.indexOf('cronAuthorized(request'), hours = route.indexOf('if (!policytekRefreshActive())'), reads = route.indexOf('await getSvpCallsDb()');
+  assert.ok(auth >= 0 && auth < hours && hours < reads);
+  assert.equal(readFileSync('app/leaderboard.tsx', 'utf8').match(/policytekRefreshActive\(\) && !document\.hidden/g)?.length, 2, 'the Standard vs. Preferred reload pauses like Shopper and Source');
+});
+
+test('the overnight pause is not called late, and today stays on the report until the 9 AM read', async () => {
+  const db = await database();
+  try {
+    await syncSvpRingcxCalls(db, async () => fakeReport(history), at('2026-11-04T01:55:00Z'));
+
+    const night = await readSvpCalls(db, day('2026-11-03'), at('2026-11-04T04:30:00Z'));
+    assert.deepEqual([night.total, night.report.stale], [21, false], '11:30 PM is a planned pause');
+    assert.doesNotMatch(applySvpCalls(board(), night).callNotice, /not been read/);
+
+    const eightAm = at('2026-11-04T13:00:00Z');
+    const early = await readSvpCalls(db, day('2026-11-04'), eightAm);
+    assert.deepEqual([early.status, early.partial, early.total, early.report.stale], ['available', false, 0, false]);
+    const shown = applySvpCalls(board(), early);
+    assert.deepEqual([shown.calls.basis, shown.calls.soldPerInboundLog, shown.rows[0].inboundCalls, shown.rows[0].soldPerInboundLog], ['ringcx', null, 0, null]);
+    assert.match(shown.callNotice, /checked every five minutes, 9 AM–9 PM Eastern\./);
+    assert.match(shown.callNotice, /last refreshed this data at 2026-11-03 5:59 PM Eastern\./);
+    const week = await readSvpCalls(db, { startDate: '2026-11-02', endDate: '2026-11-04' }, eightAm);
+    assert.deepEqual([week.partial, week.total], [false, 53]);
+
+    const range = { startDate: '2026-11-03', endDate: '2026-11-04' };
+    assert.equal((await readSvpCalls(db, range, at('2026-11-04T14:10:00Z'))).report.stale, false, 'a grace period after 9 AM');
+    assert.equal((await readSvpCalls(db, range, at('2026-11-04T14:20:00Z'))).report.stale, true, 'a morning with no reads is a real problem');
+
+    assert.equal((await readSvpCalls(db, day('2026-11-04'), at('2026-11-05T02:30:00Z'))).status, 'not-covered', 'a day whose reads all failed is not shown as zero calls');
+    assert.equal((await readSvpCalls(db, day('2026-11-05'), at('2026-11-05T13:00:00Z'))).status, 'not-covered', 'only the one overnight pause is bridged');
+
+    await syncSvpRingcxCalls(db, async () => fakeReport(history), at('2026-11-04T14:00:07Z'));
+    assert.equal((await readSvpRingcxStatus(db)).reportThrough, '2026-11-04');
+  } finally { await db.close(); }
+});
 
 test('the board takes Calls and Close Rate from the report, and the report wins over the workbook', async () => {
   const db = await database();

@@ -81,6 +81,22 @@ test('analytics session uses the main account and the RingCX token; failures exp
   await assert.rejects(createRingCx().analyticsSession(),error=>error.code==='RINGCX_NOT_CONFIGURED');
 });
 
+test('a job every five minutes never sends a token RingCX has just expired', async () => {
+  let now=0, logins=0;
+  // Tokens last exactly five minutes from when RingCX issues them, and the sign-in finishes after that.
+  const fetch=async(url,init)=>{
+    if(/oauth\/token/.test(url)) return Response.json({access_token:'rc'});
+    if(/accesstoken/.test(url)){ logins++; const issued=now; now+=400; return Response.json({accessToken:`cx-${issued}`}); }
+    if(now>=Number(init.headers.Authorization.split('-')[1])+300000) return new Response('JWT expired',{status:401});
+    return Response.json({gdClientId:'client',gdPgpToken:'claims',gdSsoProvider:'sso',gdDomainUrlBase:'https://analytics.ringcentral.com'});
+  };
+  const client=createRingCx({clientId:'c',clientSecret:'s',jwt:'j',clock:()=>now,fetch});
+  await client.analyticsSession();
+  for(const run of [1,2,3,4]){ now=run*300000+270; await client.analyticsSession(); }
+  assert.equal(logins,5);
+  now+=60000; await client.analyticsSession(); assert.equal(logins,5,'a token is still reused within its first minutes');
+});
+
 test('busy includes all non-available logged-in states without changing active call count', () => {
  const rows=[agent(1,'AVAILABLE'),agent(2,'ENGAGED'),agent(3,'WORKING'),agent(4,'PENDING-DISP'),agent(5,'BREAK'),agent(6,'LUNCH',2044)];
  assert.equal(busyAgents(rows).length,4); assert.equal(summarizeAgents(rows).onCalls,1);

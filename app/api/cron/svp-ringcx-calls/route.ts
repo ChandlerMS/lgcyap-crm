@@ -1,5 +1,6 @@
 import { getSvpCallsDb } from '@/db/svp-calls.mjs';
 import { cronAuthorized } from '@/lib/recruit-lifecycle-sync.mjs';
+import { policytekRefreshActive } from '@/lib/policytek-schedule.mjs';
 import { createRingCx } from '@/lib/ringcx.mjs';
 import { openSvpReport, syncSvpRingcxCalls } from '@/lib/svp-ringcx-calls.mjs';
 
@@ -11,6 +12,8 @@ const client = createRingCx({ clientId: process.env.RINGCX_CLIENT_ID, clientSecr
 export async function GET(request: Request) {
   const headers = { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' };
   if (!cronAuthorized(request, process.env.CRON_SECRET)) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
+  // Checked here because vercel.json's UTC schedule cannot follow daylight saving.
+  if (!policytekRefreshActive()) return Response.json({ status: 'skipped', reason: 'outside sync hours' }, { headers });
   try {
     const summary = await syncSvpRingcxCalls(await getSvpCallsDb(), () => openSvpReport(client));
     if (summary.status === 'failed') console.error(`RingCX call sync failed: ${summary.code}${summary.detail ? ` (${summary.detail})` : ''}`);
