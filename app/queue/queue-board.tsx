@@ -7,13 +7,14 @@ import { useEffect, useState, type ReactNode } from "react";
 type Call = { id: string; name: string; direction: "inbound" | "outbound" | null; source: string | null; since: number };
 type Agent = { id: string; name: string; since: number | null; idle: boolean; dim?: boolean };
 type Board = { ok: true; now: number; calls: Call[]; available: Agent[] };
-type Problem = "not_configured" | "policytek_sign_in" | "policytek_down" | "denied" | "server" | "network";
+type Problem = "sign_in" | "not_configured" | "policytek_sign_in" | "policytek_down" | "denied" | "server" | "network";
 
 const POLL_MS = 5000; // how often this screen asks for the queue
 const STALE_MS = 20000; // older than this, the header says so
 const RELOAD_MS = 6 * 3600e3; // a wall screen reloads now and then to pick up a new deployment
 
 const NOTICES: Record<Problem, string> = {
+  sign_in: "Your session expired. Sign in again to open the queue.",
   not_configured: "Queue is waiting for its PolicyTek connection. Contact your app administrator.",
   policytek_sign_in: "PolicyTek turned down the queue’s sign-in. Its refresh token needs replacing.",
   policytek_down: "Can’t reach PolicyTek right now. Showing the last queue and retrying.",
@@ -43,7 +44,7 @@ function Row({ kind, name, meta, timer, dim }: { kind: "call" | "ready"; name: s
   return <li className={`queue-row is-${kind}${dim ? " is-dim" : ""}`}><span className="queue-avatar" aria-hidden="true">{initials(name)}</span><span className="queue-who"><span className="queue-name">{name}</span><span className="queue-meta">{meta}</span></span><span className="queue-timer">{timer}</span></li>;
 }
 
-export default function QueueBoard() {
+export default function QueueBoard({ embedded = false }: { embedded?: boolean }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [tick, setTick] = useState<number | null>(null); // this screen's clock, once a second
@@ -59,7 +60,7 @@ export default function QueueBoard() {
         const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) });
         const body = await response.json().catch(() => ({}));
         if (stopped) return;
-        if (response.status === 401) { window.location.assign(typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
+        if (response.status === 401) { if (embedded) { setBoard(null); setProblem("sign_in"); return; } window.location.assign(typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
         if (typeof body.served === "number") setOffset(body.served - Date.now());
         if (response.status === 403) setProblem("denied");
         else if (body.ok === true) { setBoard(body); setProblem(null); }
@@ -75,7 +76,7 @@ export default function QueueBoard() {
     const clock = setInterval(() => setTick(Date.now()), 1000);
     const reload = setTimeout(() => window.location.reload(), RELOAD_MS);
     return () => { stopped = true; controller?.abort(); clearTimeout(next); clearInterval(clock); clearTimeout(reload); };
-  }, []);
+  }, [embedded]);
 
   // Keep a wall screen from sleeping while the queue is showing.
   useEffect(() => {
@@ -102,12 +103,12 @@ export default function QueueBoard() {
       <div className="queue-top-right">
         <span className="queue-state" data-state={state} role="status"><span className="queue-pulse" aria-hidden="true" />{stateText}</span>
         <time className="queue-clock">{tick === null ? "" : new Date(tick).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
-        <Link className="queue-icon-btn" href="/" aria-label="Back to the recruiting workspace" title="Recruiting workspace"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" /></svg></Link>
+        {!embedded && <Link className="queue-icon-btn" href="/" aria-label="Back to the recruiting workspace" title="Recruiting workspace"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" /></svg></Link>}
         <button className="queue-icon-btn" type="button" aria-label="Full screen" title="Full screen" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
       </div>
     </header>
 
-    {notice && <p className="queue-notice" role="alert">{notice}</p>}
+    {notice && <p className="queue-notice" role="alert">{notice}{problem === "sign_in" && <> <a href="/sign-in?return_to=%2F%23queue" target="_top">Sign in</a></>}</p>}
 
     <main className="queue-board">
       <Column kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>

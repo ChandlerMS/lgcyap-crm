@@ -48,6 +48,7 @@ export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderb
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
+  if (value === 'queue') return { view: 'queue' };
   if (value === 'follow-up') return { view: 'today' };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['recruits', 'orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
