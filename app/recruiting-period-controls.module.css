@@ -1,5 +1,5 @@
-.section { margin: 0 0 36px; }
-.heading { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 28px; }
+.section { width: 100%; min-width: 0; margin: 0 0 36px; }
+.heading { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .title { margin: 0; min-width: 0; }
 .title select { display: block; max-width: 100%; color: var(--text); background: transparent; border: 0; border-bottom: 1px solid #64532c; border-radius: 0; padding: 0 28px 4px 0; font-size: clamp(30px, 3vw, 40px); font-weight: 600; line-height: 1.25; letter-spacing: -.035em; }
 .title option { font-size: 16px; background: #141414; color: var(--text); }
@@ -9,7 +9,7 @@
 .dates input[aria-invalid="true"] { border-color: var(--error); }
 .description { margin: 12px 0 24px; color: var(--muted); font-size: 13px; }
 .context { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.stats { display: flex; flex-wrap: wrap; gap: 20px 46px; margin: 0 0 0 auto; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 20px 46px; margin: 0; }
 .stats div { display: flex; flex-direction: column-reverse; gap: 7px; min-width: 110px; }
 .stats dt { color: var(--muted); font-size: 12px; line-height: 1.4; }
 .stats dd { margin: 0; color: var(--text); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
