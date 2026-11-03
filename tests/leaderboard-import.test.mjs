@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { leaderboardCustomPeriod, leaderboardQuickRange } from '../lib/leaderboard-period.mjs';
+import { leaderboardCustomPeriod, leaderboardQuickRange, leaderboardMonthOptions, leaderboardMonthWeeks, leaderboardMonthRange } from '../lib/leaderboard-period.mjs';
 import { readLeaderboardCalls, attachLeaderboardCalls } from '../lib/leaderboard-calls.mjs';
 import { readLeaderboard, validateLeaderboardInput, handleLeaderboardRequest } from '../lib/leaderboard.mjs';
 
@@ -14,6 +14,25 @@ test('quick ranges use prior Eastern calendar periods across year boundaries', (
   assert.deepEqual(leaderboardQuickRange('yesterday', Date.parse('2027-01-01T02:00:00Z')), { from: '2026-12-30', to: '2026-12-30' });
   assert.deepEqual(leaderboardQuickRange('lastweek', Date.parse('2026-11-03T15:00:00Z')), { from: '2026-10-26', to: '2026-11-01' });
   assert.deepEqual(leaderboardQuickRange('lastmonth', Date.parse('2027-01-03T15:00:00Z')), { from: '2026-12-01', to: '2026-12-31' });
+});
+test('month picker offers the last 12 Eastern months, oldest first, across the year boundary', () => {
+  const months = leaderboardMonthOptions(Date.parse('2027-01-01T03:00:00Z'));
+  assert.equal(months.length, 12);
+  assert.deepEqual([months[0], months.at(-1)], [{ key: '2026-01', label: 'January 2026' }, { key: '2026-12', label: 'December 2026' }]);
+  assert.equal(leaderboardMonthOptions(Date.parse('2027-03-15T15:00:00Z')).at(-1).key, '2027-03');
+});
+test('month weeks are Monday–Sunday, clipped to the month and to today', () => {
+  const past = leaderboardMonthWeeks('2027-02', Date.parse('2027-06-01T15:00:00Z'));
+  assert.deepEqual(past.map(({ from, to }) => [from, to]), [['2027-02-01', '2027-02-07'], ['2027-02-08', '2027-02-14'], ['2027-02-15', '2027-02-21'], ['2027-02-22', '2027-02-28']]);
+  const current = leaderboardMonthWeeks('2026-11', Date.parse('2026-11-03T15:00:00Z'));
+  assert.deepEqual(current.map(({ week, from, to, available, label }) => [week, from, to, available, label]), [
+    [1, '2026-11-01', '2026-11-01', true, 'Nov 1'], [2, '2026-11-02', '2026-11-03', true, 'Nov 2 – Nov 8'], [3, '2026-11-09', '2026-11-15', false, 'Nov 9 – Nov 15'],
+    [4, '2026-11-16', '2026-11-22', false, 'Nov 16 – Nov 22'], [5, '2026-11-23', '2026-11-29', false, 'Nov 23 – Nov 29'], [6, '2026-11-30', '2026-11-30', false, 'Nov 30'],
+  ]);
+  assert.deepEqual(leaderboardMonthRange('2026-11', Date.parse('2026-11-03T15:00:00Z')), { from: '2026-11-01', to: '2026-11-03' });
+  assert.deepEqual(leaderboardMonthRange('2026-10', Date.parse('2026-11-03T15:00:00Z')), { from: '2026-10-01', to: '2026-10-31' });
+  assert.equal(leaderboardMonthRange('2026-12', Date.parse('2026-11-03T15:00:00Z')), null);
+  for (const invalid of ['2026-13', '2026-1', '', null]) assert.throws(() => leaderboardMonthWeeks(invalid));
 });
 test('custom API contract rejects missing or extra dates and preserves validated range', () => {
   const input = { board: 'sp', period: 'custom', from: '2026-10-01', to: '2026-10-31' };

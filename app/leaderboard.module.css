@@ -54,6 +54,24 @@
 .range label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .range input { min-height: 42px; max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #141414; color: var(--text); color-scheme: dark; font: inherit; }
 .range p { width: 100%; margin: 0; text-align: center; font-size: 12px; color: var(--muted); }
+.dateFields { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px; }
+.monthPicker { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px 22px; padding: 14px 0; border-block: 1px solid var(--line); }
+.monthPicker > h3 { width: 100%; margin: 0; text-align: center; font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.wheel { position: relative; width: 210px; height: 200px; perspective: 520px; border: 1px solid var(--line); border-radius: 10px; background: radial-gradient(ellipse at center, #1d1a12, #0f0f0f 72%); }
+.wheel::before { content: ""; position: absolute; inset: 80px 10px auto; height: 40px; border-block: 1px solid #b8862f; border-radius: 6px; background: #d4af3714; pointer-events: none; }
+.wheelList { height: 100%; overflow-y: auto; padding-block: 80px; box-sizing: border-box; scroll-snap-type: y mandatory; scrollbar-width: none; transform-style: preserve-3d; mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); border-radius: 10px; }
+.wheelList::-webkit-scrollbar { display: none; }
+.wheelOption { height: 40px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 15px; color: var(--muted); cursor: pointer; user-select: none; backface-visibility: hidden; }
+.wheelOption[aria-selected="true"] { color: #e9cf7a; font-weight: 600; }
+.wheelList:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.weeks { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; width: min(100%, 420px); border: 1px solid var(--line); border-radius: 8px; padding: 4px; background: #141414; }
+.weeks button { display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; font-size: 14px; font-weight: 500; border: 0; background: transparent; color: var(--muted); padding: 8px 10px; border-radius: 5px; cursor: pointer; }
+.weeks button small { font-size: 11px; font-weight: 400; opacity: .8; }
+.weeks button:hover:not(:disabled) { color: var(--text); }
+.weeks button:disabled { opacity: .35; cursor: not-allowed; }
+.weeks [aria-pressed="true"] { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); color: #0a0905; font-weight: 600; }
+.weeks button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (forced-colors: active) { .wheelOption[aria-selected="true"] { color: Highlight; } .wheel::before { border-color: Highlight; } }
 .callMetrics { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 11px; line-height: 1.6; color: var(--muted); margin-top: 3px; white-space: normal; }
 .chart li { min-height: 48px; }
 .chart li:focus-visible, .range input:focus-visible, .boardTabs button:focus-visible, .segment button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }

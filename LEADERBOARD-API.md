@@ -6,7 +6,7 @@
 {"board":"sp","period":"day"}
 ```
 
-Boards are `sp`, `shopper`, or `source`; periods are `day`, `week`, or `month`.
+Boards are `sp`, `shopper`, `source`, or `whatsapp`; periods are `day`, `week`, or `month`.
 The JSON body is limited to 512 bytes. Access requires a verified app session,
 an approved email, and the app's exact origin. Responses are private/no-store.
 GET returns 405; anonymous or forged identity returns 401.
@@ -41,6 +41,15 @@ Reads deduplicate deal IDs, reject repeated/invalid cursors, and stop at 10,000
 deals or the read budget. Incomplete pagination, changing result counts, and
 missing attribution/premium are marked partial with a notice. Rankings from
 partial data are not complete account totals. HubSpot search indexing can lag.
+
+WhatsApp reads daily rows imported from the LAP Daily Agent Report workbooks (see `WHATSAPP-IMPORT.md`).
+Rows contain `name`, `attributed`, `sales`, `production` (the reports' Total Production, not annual premium),
+`queueConnected`, `queueSold`, and `closeRate` (queue sold ÷ connected inbound queue calls). The response adds
+`calls` (`status` `available`/`partial`/`not-covered`, `coverageStart`, `connected`, `sold`, `closeRate`,
+`unmappedConnected`, `unmappedSold`) and `dataThrough`. Calls exist from 2026-06-17; per-agent call fields are null
+before that. Unmapped dialer seats count only in `calls` totals. `partial` is true when a requested month is not
+imported or the range runs past the latest imported activity. Before any import the board returns `unavailable`
+with error `WHATSAPP_NOT_IMPORTED`.
 
 Shopper and Source read stored PolicyTek browser captures. See `POLICYTEK-SYNC.md` for the five-minute local bridge, publisher contract, date semantics and freshness limits. Report totals and incomplete named rankings remain distinct. Missing date ranges are queued; no financial values are fabricated.
 
