@@ -1,6 +1,8 @@
-.frame { display: block; width: 100%; height: calc(100dvh - 56px); border: 0; background: #0b0b0a; }
-.host { position: relative; }
-.mount { min-height: calc(100dvh - 56px); }
+/* Keep scrolling inside the workspace, with the frame pinned below the version bar. */
+:global(html):has(.host) { min-width: 0; overflow: hidden; }
+.host { position: fixed; inset: 56px 0 0; min-width: 0; min-height: 0; overflow: hidden; }
+.mount { width: 100%; height: 100%; min-width: 0; min-height: 0; }
+.frame { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; border: 0; background: #0b0b0a; }
 .status { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: #0b0b0a; color: #e3bf5e; font: 14px system-ui, sans-serif; }
 .status p { margin: 0; }
 .status button { padding: 8px 16px; border: 1px solid #e3bf5e; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
