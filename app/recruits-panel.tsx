@@ -15,7 +15,7 @@ export default function RecruitsPanel({ records, partial }: { records: readonly 
   const rows = sortRecruitRows(records, sort) as PipelineRecruit[];
   const pages = Math.max(1, Math.ceil(rows.length / PAGE)), current = Math.min(page, pages);
   return <section className="today-panel recruits-panel" aria-labelledby="today-recruits-title">
-    <div className="follow-up-heading"><h2 id="today-recruits-title">Recruits <span>{rows.length}{partial ? "+" : ""}</span></h2><a className="text-link" href="#recruits">Open full list</a></div>
+    <div className="follow-up-heading"><h2 id="today-recruits-title"><a className="panel-title-link" href="#recruits">Recruits</a> <span>{rows.length}{partial ? "+" : ""}</span></h2></div>
     <p className="helper">All loaded recruits, regardless of the Today date selection or pipeline search.</p>
     {!rows.length ? <p className="helper">No recruits are loaded.</p> : <>
       <div className="table-wrap"><table className="data-table"><thead><tr>{COLUMNS.map(([field, label]) => <th key={field} aria-sort={sort.field === field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="column-sort" onClick={() => { setSort({ field, direction: sort.field === field && sort.direction === "asc" ? "desc" : "asc" }); setPage(1); }}>{label}{sort.field === field ? sort.direction === "asc" ? " ↑" : " ↓" : ""}</button></th>)}<th><span className="sr-only">Contact tools</span></th></tr></thead>

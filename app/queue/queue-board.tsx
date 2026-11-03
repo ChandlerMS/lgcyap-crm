@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 type Call = { id: string; name: string; direction: "inbound" | "outbound" | null; source: string | null; since: number };
 type Agent = { id: string; name: string; since: number | null; idle: boolean; dim?: boolean };
-type Board = { ok: true; now: number; calls: Call[]; available: Agent[] };
+type Board = { ok: true; now: number; calls: Call[]; available: Agent[]; callsToday?: { count: number; capped: boolean } | null };
 type Problem = "sign_in" | "not_configured" | "policytek_sign_in" | "policytek_down" | "denied" | "server" | "network";
 
 const POLL_MS = 5000; // how often this screen asks for the queue
@@ -95,6 +95,10 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
   const stateText = state === "live" ? "Live" : state === "stale" ? `Last update ${age < 60000 ? `${Math.floor(age / 1000)}s` : waited(age)} ago` : "Connecting…";
   const notice = problem && !(problem === "policytek_down" && !board) ? NOTICES[problem] : null;
   const empty = (rows: unknown[] | undefined, none: string) => board ? (rows?.length ? null : none) : problem === "policytek_down" ? NOTICES.policytek_down : "Connecting to PolicyTek…";
+  const callsToday = board?.callsToday ? `${board.callsToday.count.toLocaleString("en-US")}${board.callsToday.capped ? "+" : ""}` : "–";
+  // The average of the waits shown in Available.
+  const waits = board && now !== null ? board.available.filter(agent => agent.since !== null).map(agent => now - (agent.since as number)) : [];
+  const averageWait = waits.length ? waits.reduce((sum, wait) => sum + wait, 0) / waits.length : null;
 
   return <div className="queue-page">
     <header className="queue-top">
@@ -110,19 +114,24 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
 
     {notice && <p className="queue-notice" role="alert">{notice}{problem === "sign_in" && <> <a href="/sign-in?return_to=%2F%23queue" target="_top">Sign in</a></>}</p>}
 
+    <section className="queue-stats" aria-label="Today">
+      <div className="queue-stat"><h2>Total Calls Today</h2><span className="queue-count">{callsToday}</span></div>
+      <div className="queue-stat"><h2>Average Wait Time</h2><span className="queue-count">{averageWait === null ? "–" : averageWait < 60000 ? "<1m" : waited(averageWait)}</span></div>
+    </section>
+
     <main className="queue-board">
-      <Column kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>
-        {board?.calls.map(call => <Row key={call.id} kind="call" name={call.name}
-          meta={[call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "Call", call.source].filter(Boolean).join(" · ")}
-          timer={now === null ? "" : stopwatch(now - call.since)} />)}
-      </Column>
       <Column kind="available" title="Available" count={board ? board.available.length : null} empty={empty(board?.available, "No one is available.")}>
         {board?.available.map(agent => <Row key={agent.id} kind="ready" name={agent.name} dim={agent.dim}
           meta={agent.idle ? "Available · idle" : "Available"}
           timer={now === null || agent.since === null ? "" : waited(now - agent.since)} />)}
       </Column>
+      <Column kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>
+        {board?.calls.map(call => <Row key={call.id} kind="call" name={call.name}
+          meta={[call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "Call", call.source].filter(Boolean).join(" · ")}
+          timer={now === null ? "" : stopwatch(now - call.since)} />)}
+      </Column>
     </main>
 
-    <p className="queue-foot">Live from PolicyTek, updated every 5 seconds. Longest call and longest wait first. On DND and Offline are not shown.</p>
+    <p className="queue-foot">Live from PolicyTek, updated every 5 seconds. Longest wait and longest call first. Total calls today counts sales agents’ calls since midnight Eastern and updates every minute; average wait is across the agents in Available. On DND and Offline are not shown.</p>
   </div>;
 }

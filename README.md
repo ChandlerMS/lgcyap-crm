@@ -209,11 +209,12 @@ chip opens that task in HubSpot, and "+N more" opens HubSpot's task list. In
 Demo mode the box asks for live data instead. Follow up chips name the recruits
 waiting more than 15 days since their last contact (or creation, if never
 contacted), longest first, and count the rest as "+N more". Under the pipeline,
-two columns show Meetings | Calendar and, below them, Calls | Recruits. Meetings,
-Calendar and Calls are live HubSpot panels; Calls keeps its own sidebar page too.
-Recruits lists every loaded recruit by name with stage, last contact and contact
-tools, 20 at a time, ignoring the Today date selection and search; "Open full
-list" goes to the Recruits page for filters and the board. Search on Today
+two columns show Meetings | Calendar and, below them, Recruits | Calls. Meetings,
+Calendar and Calls are live HubSpot panels. Recruits lists every loaded recruit
+by name with stage, last contact and contact tools, 20 at a time, ignoring the
+Today date selection and search. The Recruits and Calls titles open their full
+pages (filters and the board on Recruits), which are not in the sidebar and link
+back to the Recruiting Dashboard. Search on Today
 covers the pipeline. There is no Tasks page or full Follow Up list; existing
 `#tasks` and `#follow-up` links open Recruits.
 
@@ -450,7 +451,7 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
 ## Queue (PolicyTek live calls and availability)
 
-Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows only On Live Calls and Available, polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
+Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows Available and On Live Calls under two totals, Total Calls Today (sales agents' PolicyTek calls since midnight Eastern, read once a minute) and Average Wait Time (the average wait of the agents in Available), polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
 
 Set these **server-only** environment variables in the Vercel project before deploying:
 

@@ -24,8 +24,8 @@ type ToolResult = {
   selectedRecordId?: string; fields?: HubspotEditField[]; capabilities?: { canEdit: boolean };
 };
 type ReadFailure = { message: string; retryAt?: number };
-// compact renders a half-width panel on the Recruits page instead of a full page.
-type Props = { tool: string; label?: string; description?: string; compact?: boolean; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
+// compact renders a half-width panel on the Recruits page instead of a full page; pageHref links its title to the full page.
+type Props = { tool: string; label?: string; description?: string; compact?: boolean; pageHref?: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
 type Column = { field: keyof ToolRecord; label: string; date?: boolean; dateOnly?: boolean; fullPageOnly?: boolean };
 type Definition = { label: string; description: string; singular: string; columns: Column[] };
 const DEFINITIONS: Record<string, Definition> = {
@@ -62,7 +62,7 @@ export default function HubSpotWorkspace(props: Props) {
   return props.tool === "inbox" ? <InboxWorkspace onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
 }
 
-function CrmWorkspace({ tool, label, description, compact = false, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
+function CrmWorkspace({ tool, label, description, compact = false, pageHref, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
   const definition = { ...DEFINITIONS[tool === "help-desk" ? "tickets" : tool], ...(label ? { label } : {}), ...(description ? { description } : {}) };
   const [data, setData] = useState<ToolResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -260,7 +260,7 @@ function CrmWorkspace({ tool, label, description, compact = false, onUnauthorize
   }
   const headingCount = compact && available && tool !== "calendar" ? `${(current.total ?? current.loadedCount).toLocaleString("en-US")}${current.total == null && current.partial ? "+" : ""}` : null;
   return <section className={sectionClass} aria-labelledby={titleId} aria-busy={loading}>
-    <div className={styles.heading}><div><Heading id={titleId} tabIndex={-1} ref={listHeadingRef}>{definition.label}{headingCount && <span className={styles.headingCount}>{headingCount}</span>}</Heading>{!compact && <p>{definition.description}</p>}</div><div className={styles.headingActions}>{!compact && tool !== "contract-agents" && <span className={styles.readOnly}>Read-only</span>}{tool === "contract-agents" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>Add Contract Agent</button>}{tool === "help-desk" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>New Support Ticket</button>}<NativeLink href={current?.hubspotUrl} /><button className="btn btn-secondary" disabled={loading || Boolean(failure?.retryAt || retryAt)} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div></div>
+    <div className={styles.heading}><div><Heading id={titleId} tabIndex={-1} ref={listHeadingRef}>{pageHref ? <a className="panel-title-link" href={pageHref}>{definition.label}</a> : definition.label}{headingCount && <span className={styles.headingCount}>{headingCount}</span>}</Heading>{!compact && <p>{definition.description}</p>}</div><div className={styles.headingActions}>{!compact && tool !== "contract-agents" && <span className={styles.readOnly}>Read-only</span>}{tool === "contract-agents" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>Add Contract Agent</button>}{tool === "help-desk" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>New Support Ticket</button>}<NativeLink href={current?.hubspotUrl} /><button className="btn btn-secondary" disabled={loading || Boolean(failure?.retryAt || retryAt)} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div></div>
     {tool !== "inbox" && showTable && <form className={styles.providerSearch} onSubmit={event => { event.preventDefault(); const normalized = normalizeHubspotSearchQuery(searchDraft); setSearchError(normalized.error); if (!normalized.error) { setQuery(""); void load(normalized.query); } }}>
       <label htmlFor={searchId} className={compact ? "sr-only" : undefined}>{tool === "customer-success" ? "Search customer companies in HubSpot" : `Search ${definition.label.toLowerCase()} in HubSpot`}</label>
       <div><input id={searchId} type="search" autoComplete="off" maxLength={200} value={searchDraft} placeholder={compact ? `Search ${definition.label.toLowerCase()} in HubSpot` : "Enter a search phrase"} aria-invalid={Boolean(searchError)} aria-describedby={searchError ? `${searchId}-error` : `${searchId}-hint`} onChange={event => { setSearchDraft(event.target.value); setSearchError(null); }} /><button className="btn btn-primary" type="submit" disabled={loading || Boolean(retryAt)}>Search HubSpot</button>{(!compact || activeSearch) && <button className="btn btn-secondary" type="button" disabled={loading || Boolean(retryAt)} onClick={() => { setSearchDraft(""); setSearchError(null); setQuery(""); void load(null); }}>Reset search</button>}</div>
