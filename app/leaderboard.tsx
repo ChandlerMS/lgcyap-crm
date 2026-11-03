@@ -41,7 +41,7 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
     if (value === "custom" && !range.from) { const today = leaderboardPeriod("day", instant).startDate; const initial = { from: today, to: today }; setRange(initial); setDraftRange(initial); }
     setRangeError(null); setPeriod(value);
   };
-  const applyRange = (value = draftRange) => {
+  const applyRange = (value: { from: string; to: string }) => {
     const selected = { from: value.from, to: value.to || value.from };
     try { leaderboardCustomPeriod(selected.from, selected.to); } catch { setRangeError("Choose valid dates in order, up to 366 days."); return; }
     setRange(selected); setDraftRange(selected); setRangeError(null); setPeriod("custom");
@@ -115,7 +115,25 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
     <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>Agent Leaderboard</h1><p>Sold policies by writing agent.</p></header>
     <div className={styles.boardTabs} role="group" aria-label="Leaderboard">{LEADERBOARD_BOARDS.map(value => <button key={value.id} type="button" aria-pressed={board === value.id} onClick={() => setBoard(value.id as Board)}>{value.label}</button>)}</div>
     <div className={styles.controls}>{<div className={styles.segment} role="group" aria-label="Leaderboard period">{LEADERBOARD_PERIODS.map(value => <button key={value.id} type="button" aria-pressed={period === value.id} onClick={() => selectPeriod(value.id as Period, Date.now())}>{value.label}</button>)}</div>}<div className={styles.segment} role="group" aria-label="Rank by"><button type="button" aria-pressed={metric === "sales"} onClick={() => setMetric("sales")}>{keys.firstLabel}</button><button type="button" aria-pressed={metric === "ap"} onClick={() => setMetric("ap")}>{keys.secondLabel}</button></div><button className="btn btn-secondary" type="button" disabled={loading || (board !== "whatsapp" && Boolean(retryAt))} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
-    {period === "custom" && <form className={styles.range} onSubmit={event => { event.preventDefault(); applyRange(); }}><div className={styles.segment} role="group" aria-label="Quick range">{[{ id: "yesterday", label: "Yesterday" }, { id: "lastweek", label: "Last week" }, { id: "lastmonth", label: "Last month" }].map(value => <button key={value.id} type="button" onClick={() => applyRange(leaderboardQuickRange(value.id))}>{value.label}</button>)}</div><label>From<input type="date" min="2000-01-01" max="2099-12-31" aria-label="From date" required value={draftRange.from} onChange={event => setDraftRange(value => ({ ...value, from: event.target.value }))} /></label><label>To<input type="date" min="2000-01-01" max="2099-12-31" aria-label="To date" value={draftRange.to} onChange={event => setDraftRange(value => ({ ...value, to: event.target.value }))} /></label><button type="submit" className="btn btn-primary">Apply dates</button><p>One day or a date range, up to 366 days · Eastern time</p>{rangeError && <p role="alert">{rangeError}</p>}</form>}
+    {period === "custom" && <form className={styles.range} onSubmit={event => {
+      event.preventDefault();
+      // Submit the visible fields, including edits not yet reflected in React state.
+      const fields = new FormData(event.currentTarget);
+      applyRange({ from: String(fields.get("from") ?? ""), to: String(fields.get("to") ?? "") });
+    }}>
+      <div className={styles.segment} role="group" aria-label="Quick range">{[{ id: "yesterday", label: "Yesterday" }, { id: "lastweek", label: "Last week" }, { id: "lastmonth", label: "Last month" }].map(value => <button key={value.id} type="button" onClick={() => applyRange(leaderboardQuickRange(value.id))}>{value.label}</button>)}</div>
+      <label>From<input type="date" name="from" min="2000-01-01" max="2099-12-31" aria-label="From date" aria-describedby="leaderboard-range-help" required value={draftRange.from} onInput={event => {
+        const from = event.currentTarget.value;
+        setDraftRange(value => ({ ...value, from }));
+      }} /></label>
+      <label>To<input type="date" name="to" min="2000-01-01" max="2099-12-31" aria-label="To date" aria-describedby="leaderboard-range-help" value={draftRange.to} onInput={event => {
+        const to = event.currentTarget.value;
+        setDraftRange(value => ({ ...value, to }));
+      }} /></label>
+      <button type="submit" className="btn btn-primary">Apply dates</button>
+      <p id="leaderboard-range-help">One day or a date range, up to 366 days · Eastern time. Leave To blank for one day.</p>
+      {rangeError && <p role="alert">{rangeError}</p>}
+    </form>}
     <div className={styles.source}><span>{current?.source ?? (board === "sp" ? "HubSpot" : board === "whatsapp" ? "WhatsApp Sales" : "PolicyTek")}</span>{current?.fetchedAt && <span>Updated {updated(current.fetchedAt)}</span>}{current?.startDate && <span>{current.startDate}{current.endDate && current.endDate !== current.startDate ? ` – ${current.endDate}` : ""} · Eastern time</span>}</div>
     {error && <div className={styles.alert} role="alert"><strong>{available ? "Showing the last loaded leaderboard" : "Leaderboard unavailable"}</strong><p>{error}</p></div>}
     {board !== "whatsapp" && retryAt && <p className={styles.notice} role="status">Refresh is available after {updated(new Date(retryAt).toISOString())}.</p>}
