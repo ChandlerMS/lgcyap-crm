@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { STAGE_PAGES, STAGES, TERMINAL_STAGE_IDS } from '../lib/recruiting-config.mjs';
 import {
-  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
+  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, RECRUITS_PAGE_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
   recordsForStagePage, unmappedStageRecords,
 } from '../app/recruiting-navigation.mjs';
 
@@ -19,11 +19,19 @@ test('canonical stages are shared while each entry path has its own sidebar orde
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
-  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contacts', 'Tasks', 'Calendar', 'Meetings', 'Help Desk', 'Tickets']);
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Contacts', 'Help Desk', 'Tickets']);
   for (const tool of HUBSPOT_TOOLS) {
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
     assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');
     assert.match(new URL(tool.href).pathname, /(?:^|\/)50894788(?:\/|$)/);
+  }
+});
+
+test('Tasks, Meetings and Calendar live on the Recruits page instead of the sidebar', () => {
+  assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Tasks', 'Meetings', 'Calendar']);
+  for (const tool of RECRUITS_PAGE_TOOLS) {
+    assert.equal(HUBSPOT_TOOLS.some(item => item.id === tool.id), false);
+    assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: 'today' });
   }
 });
 

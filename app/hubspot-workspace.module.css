@@ -89,3 +89,24 @@
 @media (max-width: 950px) { .inbox { grid-template-columns: minmax(210px, 38%) minmax(0, 1fr); } .messages { padding: 22px 18px; } }
 @media (max-width: 620px) { .heading { gap: 18px; margin-bottom: 27px; } .headingActions { width: 100%; } .toolbar { align-items: flex-start; } .toolbar p { text-align: left; } .inbox { grid-template-columns: 1fr; } .threadList { max-height: 320px; border-right: 0; border-bottom: 1px solid #51472d; } .thread { padding: 18px 12px; } .messages { padding: 25px 10px; } .monthHeading h2 { font-size: 20px; } }
 @media (max-width: 950px) { .detailGrid { grid-template-columns: 1fr; } }
+/* Recruits-page panels keep the full view's data and actions, sized for a half-width column. */
+.compact .heading { align-items: baseline; gap: 12px 16px; margin-bottom: 18px; }
+.compact .heading h2 { margin: 0; font-size: clamp(28px, 3vw, 34px); font-weight: 600; line-height: 1.2; letter-spacing: -.025em; }
+.compact .heading .detailTitle { font-size: 22px; overflow-wrap: anywhere; }
+.headingCount { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.compact .headingActions { padding-top: 0; gap: 12px; }
+.compact .providerSearch { padding: 0; margin: 0 0 14px; border-bottom: 0; }
+.compact .providerSearch input { min-height: 40px; }
+.compact .toolbar { margin-bottom: 12px; }
+.compact .toolbar p { text-align: left; }
+.compact .tableWrap { max-height: 350px; overflow: auto; }
+.compact .table { min-width: 520px; }
+.compact .table th { padding-top: 12px; padding-bottom: 12px; }
+.compact .table td { padding-top: 14px; padding-bottom: 14px; }
+.compact .table td:last-child { white-space: nowrap; }
+.compact .empty, .compact .loading { padding: 32px 16px; }
+.compact .detailGrid { grid-template-columns: 1fr; }
+.compact .monthHeading h3 { margin: 0; font-size: 19px; font-weight: 500; letter-spacing: -.02em; }
+.compact .calendar { margin-bottom: 0; }
+.compact .weekdays, .compact .days { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 476px; }
+.compact .day, .compact .paddingDay { min-height: 84px; padding: 8px 6px; }
