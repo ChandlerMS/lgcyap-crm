@@ -15,8 +15,21 @@ Team. Every push or merge to `main` creates a Production deployment and assigns
 [lgcyap-crm.vercel.app](https://lgcyap-crm.vercel.app) after a successful build.
 
 Vercel builds from the repository root with Node.js 24, `npm ci`, and
-`npm run build`. Production credentials stay in Vercel environment settings;
+`node scripts/verify-production-source.mjs && npm run build && node scripts/verify-production-source.mjs`. Production credentials stay in Vercel environment settings;
 ordinary Git builds do not apply database migrations.
+
+Production is published by pushing or merging to GitHub `main`. The Vercel project
+and `vercel.json` both check the GitHub repository, branch, project and latest
+remote `main` commit before and after the build. Missing metadata, another branch,
+a stale commit, or a failed remote check stops the build. Older checkouts missing
+the guard script also fail under the project Build Command. Local and preview
+builds remain available. Do not publish this project with local `vercel --prod`,
+prebuilt production uploads, or promotion of a different branch.
+
+These are build safeguards against accidental stale releases, not a restriction
+on Vercel owners: administrators can still change settings, upload prebuilt
+artifacts, or move production aliases. Production incidents require verifying
+the live deployment's Git commit against `origin/main`, not just its Ready status.
 
 The black-and-gold recruiting interface, logo, read filters, fourteen editable
 properties, and explicit Edit → Review → Save flow are retained. Hosting changes:
