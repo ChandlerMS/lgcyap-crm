@@ -13,6 +13,12 @@
 
 The original public application is available at `/v2/apply`; original `/apply/*` links redirect there. The source's optional Google callback is routed to V2. V2 integration values must be supplied explicitly as `ONBOARD_GOOGLE_*`, `ONBOARD_MAIL_*`, `ONBOARD_TEAM_CALENDARS`, `ONBOARD_INDEED_INBOX`, etc. V1's Google login/email credentials are never inherited. Optional email, Google Calendar and Indeed integrations remain unconfigured unless those values are set. No new cron is enabled.
 
+## First-load recovery
+
+The host mounts the iframe after client hydration and shows a loading message until the original app has rendered its signed-in workspace. A failed or stalled startup recreates only the embedded frame (at most three attempts, 15 seconds per attempt). Recovery stops permanently once the app is ready, so it never reloads over subsequent edits. Leaving Version 2 cancels pending startup work. Persistent failures show a retry button instead of a blank page. All of this lives outside the uploaded document; its HTML, styles, scripts and layout are unchanged.
+
+Regression checks cover failed initial documents, asynchronous sign-in, bounded timeouts, cleanup, and no reload after readiness. An isolated browser fixture also exercises an initial HTTP 503, a delayed document/data response, and one failed initial state request with the original uploaded app and synthetic data.
+
 ## Validation
 
 - All 45 vendor files compared against the ZIP with SHA-256: no differences.

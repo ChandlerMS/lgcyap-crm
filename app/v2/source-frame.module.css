@@ -1,1 +1,6 @@
 .frame { display: block; width: 100%; height: calc(100dvh - 56px); border: 0; background: #0b0b0a; }
+.host { position: relative; }
+.mount { min-height: calc(100dvh - 56px); }
+.status { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: #0b0b0a; color: #e3bf5e; font: 14px system-ui, sans-serif; }
+.status p { margin: 0; }
+.status button { padding: 8px 16px; border: 1px solid #e3bf5e; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
