@@ -10,6 +10,8 @@ const nonnegative = value => typeof value === 'number' && Number.isFinite(value)
 const signedNumber = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const metricNumber = (value, key) => ['annualPremium', 'premium', 'production', 'roas'].includes(key) ? signedNumber(value) : nonnegative(value);
 const descending = (first, second) => first === null || second === null ? first === null && second === null ? 0 : first === null ? 1 : -1 : second - first;
+/** Standard vs. Preferred's columns after Close rate, from the RingCX report. */
+export const LEADERBOARD_SP_CALL_TOTALS = Object.freeze([{ field: 'connected', label: 'Total Calls Connected' }, { field: 'abandoned', label: 'Total Calls Abandoned' }]);
 const SP_CALL_LABELS = Object.freeze({ ringcx: 'Calls (RingCX report)', spreadsheet: 'Calls (answered, Agent Daily Calls reports)' });
 const CALLS_SYNC_MS = 300000, CALLS_REFRESH_LAG_MS = 60000;
 
@@ -79,14 +81,14 @@ export function sourceLeaderboardValue(row, field) {
 /** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
 export function leaderboardSortFields(board) {
   const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : 'Calls';
-  return [{ field: 'production', label: keys.secondLabel }, { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, { field: 'name', label: 'Alphabetical' }];
+  return [{ field: 'production', label: keys.secondLabel }, { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
 }
 
 /** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
 export function leaderboardSortValue(row, board, field) {
   if (field === 'name') return typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null;
   if (field === 'production') return signedNumber(row[leaderboardMetrics(board).second]);
-  if (board === 'sp') return nonnegative(field === 'calls' ? row.inboundCalls : field === 'closeRate' ? row.soldPerInboundLog : null);
+  if (board === 'sp') return nonnegative({ calls: row.inboundCalls, closeRate: row.soldPerInboundLog, connected: row.connectedCalls, abandoned: row.abandonedCalls }[field]);
   if (board === 'whatsapp') return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
   return field === 'calls' ? nonnegative(row.leads) : field === 'closeRate' ? sourceLeaderboardValue(row, 'closeRate') : null;
 }
@@ -97,7 +99,7 @@ export function leaderboardSortValue(row, board, field) {
  */
 export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', direction: 'desc' }) {
   const rows = rankedRows.map((row, index) => ({ ...row, rank: index + 1 }));
-  if (!['name', 'calls', 'closeRate', 'production'].includes(sort.field)) return rows;
+  if (!['name', 'calls', 'closeRate', 'connected', 'abandoned', 'production'].includes(sort.field)) return rows;
   const direction = sort.direction === 'asc' ? 1 : -1;
   return rows.sort((a, b) => {
     const unattributed = Number(a.attributed === false) - Number(b.attributed === false);
@@ -114,19 +116,20 @@ export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', d
  * missing values are blank, never zero. Names that start like a formula are prefixed with ' so they open as text.
  */
 export function leaderboardCsv(rows, board) {
-  const keys = leaderboardMetrics(board), source = board === 'source';
+  const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
   const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
   const cell = value => {
     const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
-  const header = ['Rank', source ? 'Source' : 'Agent', source ? 'Leads' : 'Calls', 'Close rate', keys.firstLabel, keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
+  const header = ['Rank', source ? 'Source' : 'Agent', source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), keys.firstLabel, keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
   const lines = rows.map(row => [
     row.attributed === false ? '' : row.rank ?? '',
     typeof row.name === 'string' ? row.name : '',
     fixed(leaderboardSortValue(row, board, 'calls'), 0),
     percent(leaderboardSortValue(row, board, 'closeRate')),
+    ...callTotals.map(column => fixed(leaderboardSortValue(row, board, column.field), 0)),
     fixed(nonnegative(row[keys.first]), 0),
     fixed(signedNumber(row[keys.second]), 2),
     ...(source ? [fixed(nonnegative(row.spend), 2), fixed(sourceLeaderboardValue(row, 'roas'), 2)] : []),

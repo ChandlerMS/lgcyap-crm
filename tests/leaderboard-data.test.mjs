@@ -101,9 +101,9 @@ test('unattributed policies count in totals without inventing an agent or awardi
 import { filterLeaderboardRows, leaderboardSortFields, sortLeaderboardRows } from '../app/leaderboard-data.mjs';
 test('ranked rows re-sort by name, calls, close rate and production per board, keeping ranks and unattributed rows last', () => {
   const ranked = [
-    { name: 'Bravo Agent', sales: 9, annualPremium: 900, inboundCalls: 30, soldPerInboundLog: .3 },
+    { name: 'Bravo Agent', sales: 9, annualPremium: 900, inboundCalls: 30, soldPerInboundLog: .3, connectedCalls: 31, abandonedCalls: 1 },
     { name: 'alpha agent', sales: 5, annualPremium: 1200, inboundCalls: null, soldPerInboundLog: null },
-    { name: 'Charlie Agent', sales: 2, annualPremium: 100, inboundCalls: 4, soldPerInboundLog: .5 },
+    { name: 'Charlie Agent', sales: 2, annualPremium: 100, inboundCalls: 4, soldPerInboundLog: .5, connectedCalls: 9, abandonedCalls: 5 },
     { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 50, inboundCalls: null, soldPerInboundLog: null },
   ];
   const order = (field, direction) => sortLeaderboardRows(ranked, 'sp', { field, direction }).map(row => `${row.rank}:${row.name.split(' ')[0]}`);
@@ -113,11 +113,13 @@ test('ranked rows re-sort by name, calls, close rate and production per board, k
   assert.deepEqual(order('calls', 'asc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
   assert.deepEqual(order('closeRate', 'desc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
   assert.deepEqual(order('production', 'desc'), ['2:alpha', '1:Bravo', '3:Charlie', '4:Writing']);
+  assert.deepEqual(order('connected', 'desc'), ['1:Bravo', '3:Charlie', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('abandoned', 'desc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
   const whatsapp = sortLeaderboardRows([{ name: 'A', production: 5, queueConnected: 1, closeRate: .1 }, { name: 'B', production: 9, queueConnected: 7, closeRate: 0 }], 'whatsapp', { field: 'calls', direction: 'desc' });
   assert.deepEqual(whatsapp.map(row => row.name), ['B', 'A']);
   const shopper = sortLeaderboardRows([{ name: 'A', submitted: 1, premium: 10, leads: 10 }, { name: 'B', submitted: 3, premium: 5, leads: 6 }], 'shopper', { field: 'closeRate', direction: 'desc' });
   assert.deepEqual(shopper.map(row => row.name), ['B', 'A']);
-  assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Calls', 'Close rate', 'Alphabetical']);
+  assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Calls', 'Close rate', 'Total Calls Connected', 'Total Calls Abandoned', 'Alphabetical']);
   assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Submitted premium', 'Leads', 'Close rate', 'Alphabetical']);
   assert.deepEqual(leaderboardSortFields('whatsapp').map(option => option.field), ['production', 'calls', 'closeRate', 'name']);
   assert.equal(leaderboardSortFields('whatsapp')[0].label, 'Total production');
@@ -129,15 +131,15 @@ test('Standard vs. Preferred sits right of Shopper in the board tabs', () => {
 });
 test('the export is the rows as shown, with raw numbers, blanks for missing values and safe text', () => {
   const rows = sortLeaderboardRows([
-    { name: 'Bravo, Jr. "BJ"', sales: 3, annualPremium: 1234.567, inboundCalls: 12, soldPerInboundLog: .25 },
+    { name: 'Bravo, Jr. "BJ"', sales: 3, annualPremium: 1234.567, inboundCalls: 12, soldPerInboundLog: .25, connectedCalls: 15, abandonedCalls: 3 },
     { name: '=HYPERLINK("x")', sales: 1, annualPremium: 50, inboundCalls: null, soldPerInboundLog: null },
     { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 10 },
   ], 'sp', { field: 'production', direction: 'desc' });
   assert.equal(leaderboardCsv(rows, 'sp'), [
-    'Rank,Agent,Calls,Close rate,Policies sold,Annual premium',
-    '1,"Bravo, Jr. ""BJ""",12,25%,3,1234.57',
-    `2,"'=HYPERLINK(""x"")",,,1,50`,
-    ',Writing agent not recorded,,,1,10',
+    'Rank,Agent,Calls,Close rate,Total Calls Connected,Total Calls Abandoned,Policies sold,Annual premium',
+    '1,"Bravo, Jr. ""BJ""",12,25%,15,3,3,1234.57',
+    `2,"'=HYPERLINK(""x"")",,,,,1,50`,
+    ',Writing agent not recorded,,,,,1,10',
   ].join('\r\n') + '\r\n');
   const source = leaderboardCsv([{ name: 'Web', rank: 1, leads: 8, submitted: 2, premium: 900, spend: 300 }], 'source').split('\r\n');
   assert.equal(source[0], 'Rank,Source,Leads,Close rate,Submitted,Submitted premium,Spend,ROAS');
