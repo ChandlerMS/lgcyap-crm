@@ -4,6 +4,7 @@ let initialized;
 
 async function applyMigrations(pool) {
   await pool.query(await readFile(new URL('../migrations/0011_lead_data.sql', import.meta.url), 'utf8'));
+  await pool.query(await readFile(new URL('../migrations/0012_lead_data_workbooks.sql', import.meta.url), 'utf8'));
 }
 
 /** Reversible additive tables only, initialized after request authorization. */
