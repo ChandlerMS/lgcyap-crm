@@ -32,9 +32,9 @@ const saved = ({ state = true, relative = true, extra = [] } = {}) => ({
 
 function database() {
   const client = new PGlite();
-  const sql = readFileSync('migrations/0011_lead_data.sql', 'utf8');
+  const sql = readFileSync('migrations/0011_lead_data.sql', 'utf8'), workbooks = readFileSync('migrations/0012_lead_data_workbooks.sql', 'utf8');
   return (async () => {
-    await client.exec(sql); await client.exec(sql);
+    await client.exec(sql); await client.exec(sql); await client.exec(workbooks);
     return client;
   })();
 }

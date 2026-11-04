@@ -19,6 +19,22 @@ The Lead Data page (`/#lead-data`, directly under Leaderboard) shows Instant Dis
 - The very first load runs when someone opens the page, at any hour, so the page isn't blank until the next 9 AM run. The cron never reads outside its hours.
 - Agent names use the same matching as Standard vs. Preferred. Training and second logins stay separate from agents. Calls with no agent (`N/A`) count toward the totals and the No agent tile, and are not ranked.
 
+## Workbooks
+
+The "Instant Hangups - Daily Totals" and "Short Duration Calls - Daily Totals" workbooks are kept in the database too, in `lead_data_workbook_daily`:
+
+```bash
+npm run lead-data:import -- "<Instant Hangups workbook>" "<Short Duration Calls workbook>" --apply
+```
+
+Without `--apply` it only validates the files and prints a summary. With it, the command asks for the database connection string.
+
+- The workbooks were exported from the same two reports, so they hold the same calls. A workbook date counts only when the reports have nothing for that date; adding them on top would double every number.
+- They protect the history. Saving a report rebuilds `lead_data_ringcx_daily` and removes days the report no longer returns. The workbook rows stay, and the page shows them for those dates and says so.
+- Only Date, Agent and Interaction Seconds are read from Call Data, and only counts per agent per day are stored. The 2-second rule and agent name matching are the same as the sync's.
+- The import stops if Call Data disagrees with the workbook's own month sheets. Importing again replaces the dates it covers and leaves earlier dates alone.
+- The workbooks saved 2026-11-03 cover 2026-05-19 through 2026-11-03. Before import, they matched the page for every agent except one Short Duration call: on 8/12/2026 Gabriela Santiago has 3 calls by call ID, while the export merges two identical rows into one. The page keeps the reports' count.
+
 ## PolicyTek
 
 Not connected. The reports this app reads from PolicyTek (Agent Report and Source Performance) hold leads, quoted, submitted, premium and spend, with no call disconnects, so the tab says it isn't connected rather than showing zeros. Connecting it needs the PolicyTek report that holds these numbers.
