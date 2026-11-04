@@ -85,10 +85,15 @@ test('reads associated native RingEX calls with media flags and verified summary
   assert.ok(!JSON.stringify(result).includes('provider.invalid'));
 });
 
-function ownedActivity(kind) {
+function ownedActivity(kind, { ownersFail = false } = {}) {
   const urls = [];
   return { urls, fetchImpl: async url => {
     urls.push(url);
+    if (url.includes('/crm/v3/owners/')) {
+      if (ownersFail) return new Response('{}', { status: 500 });
+      // HubSpot leaves first and last name blank on deactivated owners.
+      return response({ results: url.includes('archived=true') ? [{ id: '888', email: 'former@example.invalid' }] : [{ id: '777', firstName: 'Sam', lastName: 'Owner', email: 'sam@example.invalid' }] });
+    }
     if (url.includes('/objects/tickets/11?')) return response({ id: '11', properties: { hs_pipeline: PIPELINE_ID } });
     if (url.includes(`/tickets/11/associations/${kind}?`)) return response({ results: [{ toObjectId: '33' }, { toObjectId: '34' }, { toObjectId: '35' }], paging: { next: { after: '80' } } });
     if (url.endsWith(`/${kind}/batch/read`)) return response({ status: 'COMPLETE', results: [{ id: '33', properties: { hubspot_owner_id: '777' } }, { id: '34', properties: { hubspot_owner_id: '888' } }, { id: '35', properties: {} }] });
@@ -96,17 +101,25 @@ function ownedActivity(kind) {
   } };
 }
 
-test('a recruit\'s profile shows everyone\'s activity of every kind and never reads owners', async () => {
+test('a recruit\'s profile shows everyone\'s activity of every kind and names each owner without exposing emails', async () => {
   for (const kind of ['calls', 'tasks', 'meetings', 'notes', 'emails']) {
-    const mock = ownedActivity(kind);
-    const result = await readRecruitActivity('11', { kind }, { accessToken: 'test', ...mock });
-    assert.deepEqual(result.records.map(row => row.id), ['33', '34', '35']); assert.equal(result.next, '80');
+    const result = await readRecruitActivity('11', { kind }, { accessToken: 'test', ...ownedActivity(kind) });
+    assert.deepEqual(result.records.map(row => [row.id, row.owner]), [['33', 'Sam Owner'], ['34', 'Name unavailable'], ['35', 'None']]);
+    assert.equal(result.next, '80');
     assert.doesNotMatch(result.notice, /assigned to you/);
-    assert.equal(mock.urls.some(url => url.includes('/crm/v3/owners/')), false);
+    assert.doesNotMatch(JSON.stringify(result), /example\.invalid/i);
   }
 });
 
-test('the activity route and panel no longer scope a recruit\'s history to the signed-in user', () => {
+test('a failed owner lookup keeps every history entry and does not claim an owned entry has no owner', async () => {
+  const result = await readRecruitActivity('11', { kind: 'calls' }, { accessToken: 'test', ...ownedActivity('calls', { ownersFail: true }) });
+  assert.deepEqual(result.records.map(row => [row.id, row.owner]), [['33', 'Name unavailable'], ['34', 'Name unavailable'], ['35', 'None']]);
+  assert.equal(result.next, '80');
+});
+
+test('the activity route and panel no longer scope a recruit\'s history to the signed-in user, and the panel shows the owner', () => {
   assert.doesNotMatch(readFileSync('app/api/recruits/[id]/activity/route.ts', 'utf8'), /viewerEmail/);
-  assert.doesNotMatch(readFileSync('app/recruit-activity.tsx', 'utf8'), /assigned to you/);
+  const panel = readFileSync('app/recruit-activity.tsx', 'utf8');
+  assert.doesNotMatch(panel, /assigned to you/);
+  assert.match(panel, /Owner: \$\{row\.owner\}/);
 });
