@@ -111,18 +111,20 @@ export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', d
   });
 }
 
+/** A CSV cell. Names that start like a formula are prefixed with ' so they open as text. */
+export function leaderboardCsvCell(value) {
+  const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
 /**
  * The rows as shown (sorted and searched) as CSV. Numbers stay unformatted so spreadsheets can total them;
- * missing values are blank, never zero. Names that start like a formula are prefixed with ' so they open as text.
+ * missing values are blank, never zero.
  */
 export function leaderboardCsv(rows, board) {
   const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
   const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
-  const cell = value => {
-    const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
-    return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-  };
   const header = ['Rank', source ? 'Source' : 'Agent', source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), keys.firstLabel, keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
   const lines = rows.map(row => [
     row.attributed === false ? '' : row.rank ?? '',
@@ -134,7 +136,7 @@ export function leaderboardCsv(rows, board) {
     fixed(signedNumber(row[keys.second]), 2),
     ...(source ? [fixed(nonnegative(row.spend), 2), fixed(sourceLeaderboardValue(row, 'roas'), 2)] : []),
   ]);
-  return [header, ...lines].map(line => line.map(cell).join(',')).join('\r\n') + '\r\n';
+  return [header, ...lines].map(line => line.map(leaderboardCsvCell).join(',')).join('\r\n') + '\r\n';
 }
 
 /** e.g. leaderboard-standard-vs-preferred-2026-11-01-to-2026-11-03.csv */

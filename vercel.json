@@ -5,6 +5,7 @@
   "installCommand": "npm ci",
   "crons": [
     { "path": "/api/cron/recruit-lifecycle", "schedule": "* * * * *" },
-    { "path": "/api/cron/svp-ringcx-calls", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/svp-ringcx-calls", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/lead-data", "schedule": "*/5 * * * *" }
   ]
 }

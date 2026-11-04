@@ -53,7 +53,7 @@ export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'calendar', label: 'Calendar' },
   { id: 'calls', label: 'Calls' },
 ].map(tool => Object.freeze(tool)));
-export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' })]);
+export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'lead-data', label: 'Lead Data', icon: 'chart' })]);
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');

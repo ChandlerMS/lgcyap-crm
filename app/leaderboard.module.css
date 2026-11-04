@@ -96,3 +96,13 @@
 .search input { font: inherit; font-size: 14px; color: var(--text); background: #141414; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
 .search input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 @media (max-width: 640px) { .search { max-width: none; } .rowTools .segment { width: 100%; } }
+/* Lead Data: rank, name, bar, count, with no calls or close columns. Compare stacks its two cards on narrow screens. */
+.chart.leadRows li, .chartHead.leadRows { grid-template-columns: 27px minmax(140px, 28%) minmax(30px, 1fr) minmax(48px, auto); }
+.compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.compareTiles { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 0; }
+.compare .tableWrap { margin-top: 18px; }
+.compareTable { min-width: 0; }
+.compareTable tfoot th, .compareTable tfoot td { color: var(--muted); }
+.compareTable tfoot tr:last-child th, .compareTable tfoot tr:last-child td { color: var(--text); font-weight: 600; border-bottom: 0; }
+@media (max-width: 1100px) { .compare { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .chart.leadRows li, .chartHead.leadRows { grid-template-columns: 23px minmax(70px, 38%) minmax(25px, 1fr) auto; gap: 8px; } }
