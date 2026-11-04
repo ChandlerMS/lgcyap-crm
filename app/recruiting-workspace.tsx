@@ -17,6 +17,7 @@ import DemoRecruitEditor from "./demo-recruit-editor";
 import { createDemoRecruits, applyDemoStage } from "./recruit-demo.mjs";
 import HubSpotWorkspace from "./hubspot-workspace";
 import Leaderboard from "./leaderboard";
+import LeadData from "./lead-data";
 import RecruitingPeriodControls from "./recruiting-period-controls";
 import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting-period.mjs";
 import { saveRecruitStageWithRefresh, StageSaveError } from "./recruit-stage-save.mjs";
@@ -341,6 +342,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const selectedPage = selected ? stagePageForRecord(selected) : undefined;
   const activeView = selectedPage?.id ?? route.view;
   const leaderboardView = route.view === "leaderboard";
+  const leadDataView = route.view === "lead-data";
   const queueView = route.view === "queue";
   const ringcxView = route.view === "ringcx";
   const embeddedView = queueView || ringcxView;
@@ -445,6 +447,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (queueView) return <iframe className="queue-workspace-frame" src="/queue?embedded=1" title="Shopper live call queue" allow="fullscreen; screen-wake-lock" />;
     if (demoMode && hubspotTool) return <>{dashboardLink}{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;
     if (leaderboardView) return <Leaderboard onUnauthorized={expiredSignIn} />;
+    if (leadDataView) return <LeadData onUnauthorized={expiredSignIn} />;
     if (hubspotTool && !route.id) return <>{dashboardLink}<HubSpotWorkspace key={hubspotTool.id} tool={hubspotTool.id} label={hubspotTool.label} description={hubspotTool.id === "help-desk" ? "Live support tickets from HubSpot’s Support Pipeline." : undefined} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (route.view === "add-recruits" && demoMode) return <>{heading("Add Recruits", "Switch to live data to add real recruits to HubSpot.", null)}<p className="helper">Demo records are separate from HubSpot.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, "add-recruits")}>Use live data</button></>;
     if (route.view === "add-recruits") return <AddRecruits canCreate={data?.capabilities?.canCreateRecruit === true && !error}

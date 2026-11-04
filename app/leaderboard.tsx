@@ -2,19 +2,16 @@
 
 import Image from "next/image";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
-import { LEADERBOARD_BOARDS, LEADERBOARD_PERIODS, LEADERBOARD_SP_CALL_TOTALS, leaderboardBarWidth, leaderboardCallsRefreshActive, leaderboardCallsRefreshDelay, leaderboardCsv, leaderboardCsvFilename, filterLeaderboardRows, leaderboardMetrics, leaderboardSortFields, leaderboardSortValue, leaderboardSpCallLabel, leaderboardTotals, rankLeaderboardRows, sortLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from "./leaderboard-data.mjs";
+import { LEADERBOARD_BOARDS, LEADERBOARD_SP_CALL_TOTALS, leaderboardBarWidth, leaderboardCallsRefreshActive, leaderboardCallsRefreshDelay, leaderboardCsv, leaderboardCsvFilename, filterLeaderboardRows, leaderboardMetrics, leaderboardSortFields, leaderboardSortValue, leaderboardSpCallLabel, leaderboardTotals, rankLeaderboardRows, sortLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from "./leaderboard-data.mjs";
 import { hubspotRetryDeadline } from "./hubspot-workspace-view.mjs";
-import { leaderboardPeriod, leaderboardCustomPeriod, leaderboardQuickRange, leaderboardMonthOptions, leaderboardMonthWeeks, leaderboardMonthRange } from "../lib/leaderboard-period.mjs";
-import MonthWheel from "./leaderboard-month-wheel";
+import { leaderboardPeriod } from "../lib/leaderboard-period.mjs";
+import { LeaderboardPeriodTabs, LeaderboardRangeForm, useLeaderboardDates, type LeaderboardPeriodId as Period } from "./leaderboard-date-range";
 import { policytekRefreshActive, policytekNextRefreshDelay } from "../lib/policytek-schedule.mjs";
 import styles from "./leaderboard.module.css";
 
 type Board = "sp" | "shopper" | "source" | "whatsapp";
-type Period = "day" | "week" | "month" | "custom";
 type Metric = "sales" | "ap";
 type RowSort = { field: string; direction: "asc" | "desc" };
-type CustomView = "yesterday" | "lastweek" | "lastmonth" | "choose" | "range";
-const CUSTOM_VIEWS: { id: CustomView; label: string }[] = [{ id: "yesterday", label: "Yesterday" }, { id: "lastweek", label: "Last week" }, { id: "lastmonth", label: "Last month" }, { id: "choose", label: "Choose" }, { id: "range", label: "Range" }];
 type Row = { name: string; attributed?: boolean; sales?: number | null; annualPremium?: number | null; submitted?: number | null; premium?: number | null; leads?: number | null; spend?: number | null; closeRate?: number | null; roas?: number | null; production?: number | null; queueConnected?: number | null; queueSold?: number | null; [key: string]: unknown };
 type Result = { stale?: boolean; reportTotals?: { leads: number; submitted: number; premium: number; spend: number }; calls?: { status: string; basis?: string; total?: number | null; partial?: boolean; soldPerInboundLog?: number | null; connected?: number | null; abandoned?: number | null; sold?: number | null; closeRate?: number | null; coverageStart?: string; unmappedConnected?: number | null }; dataThrough?: string | null; callNotice?: string; board: Board; period: Period; status: "available" | "connection-required" | "unavailable"; rows: Row[]; partial: boolean; source: string; notice?: string; fetchedAt?: string; startDate?: string; endDate?: string; error?: { code?: string; message?: string }; retryAfterSeconds?: number };
 const NUMBER = new Intl.NumberFormat("en-US");
@@ -29,14 +26,9 @@ function updated(value: string | undefined) { const stamp = value ? Date.parse(v
 
 export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => void }) {
   const [board, setBoard] = useState<Board>("sp");
-  const [period, setPeriod] = useState<Period>("day");
+  const dates = useLeaderboardDates();
+  const { period, range, periodLabel } = dates;
   const [metric, setMetric] = useState<Metric>("ap");
-  const [range, setRange] = useState({ from: "", to: "" });
-  const [draftRange, setDraftRange] = useState({ from: "", to: "" });
-  const [rangeError, setRangeError] = useState<string | null>(null);
-  const [pickerNow, setPickerNow] = useState(0);
-  const [monthKey, setMonthKey] = useState("");
-  const [customView, setCustomView] = useState<CustomView>("range");
   const [sourceSort, setSourceSort] = useState({ field: "premium", direction: "desc" });
   const [rowSort, setRowSort] = useState<RowSort>(PREMIUM_SORT);
   const [query, setQuery] = useState("");
@@ -49,31 +41,6 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
   const retryRef = useRef(0);
   const unauthorizedRef = useRef(onUnauthorized);
   const actualPeriod = period;
-  const selectPeriod = (value: Period, instant: number) => {
-    if (value === "custom") { setPickerNow(instant); if (!monthKey) setMonthKey(leaderboardPeriod("day", instant).startDate.slice(0, 7)); }
-    if (value === "custom" && !range.from) { const today = leaderboardPeriod("day", instant).startDate; const initial = { from: today, to: today }; setRange(initial); setDraftRange(initial); }
-    setRangeError(null); setPeriod(value);
-  };
-  const applyRange = (value: { from: string; to: string }) => {
-    const selected = { from: value.from, to: value.to || value.from };
-    try { leaderboardCustomPeriod(selected.from, selected.to); } catch { setRangeError("Choose valid dates in order, up to 366 days."); return; }
-    setRange(selected); setDraftRange(selected); setRangeError(null); setPeriod("custom");
-    // Keep the month wheel on the month being shown when a range sits inside one offered month.
-    const month = selected.from.slice(0, 7);
-    if (month === selected.to.slice(0, 7) && leaderboardMonthOptions(pickerNow).some(option => option.key === month)) setMonthKey(month);
-  };
-  const months = pickerNow ? leaderboardMonthOptions(pickerNow) : [];
-  const weeks = pickerNow && monthKey ? leaderboardMonthWeeks(monthKey, pickerNow) : [];
-  const wholeMonth = pickerNow && monthKey ? leaderboardMonthRange(monthKey, pickerNow) : null;
-  // Quick ranges load at once; Choose and Range only reveal their controls.
-  const selectCustomView = (value: CustomView) => {
-    setCustomView(value); setRangeError(null);
-    if (value !== "choose" && value !== "range") applyRange(leaderboardQuickRange(value));
-  };
-  const selectMonth = (key: string) => {
-    const whole = leaderboardMonthRange(key, pickerNow);
-    if (whole && (whole.from !== range.from || whole.to !== range.to)) applyRange(whole);
-  };
   useEffect(() => { unauthorizedRef.current = onUnauthorized; }, [onUnauthorized]);
   const load = useCallback(async () => {
     if (retryRef.current > Date.now()) { setLoading(false); return; }
@@ -141,7 +108,6 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
   const max = Math.max(0, ...ranked.map(row => typeof row[selectedField] === "number" ? row[selectedField] as number : 0));
   const missingMetrics = available ? current.rows.filter(row => typeof row[selectedField] !== "number" || !Number.isFinite(row[selectedField])).length : 0;
   const sourceTableRows = available && board === "source" ? filterLeaderboardRows(sourceLeaderboardTableRows(current.rows, sourceSort), query) as Row[] : [];
-  const periodLabel = actualPeriod === "day" ? "Today" : actualPeriod === "week" ? "This week" : actualPeriod === "month" ? "This month" : `${range.from} – ${range.to}`;
   const boardLabel = LEADERBOARD_BOARDS.find(value => value.id === board)?.label ?? "Leaderboard";
   const callsLabel = sortFields.find(option => option.field === "calls")?.label ?? "Calls";
   const callTotals = board === "sp" ? LEADERBOARD_SP_CALL_TOTALS : [];
@@ -172,36 +138,8 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
   return <section className={styles.leaderboard} aria-labelledby="leaderboard-title" aria-busy={loading}>
     <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>Agent Leaderboard</h1><p>Sold policies by writing agent.</p></header>
     <div className={styles.boardTabs} role="group" aria-label="Leaderboard">{LEADERBOARD_BOARDS.map(value => <button key={value.id} type="button" aria-pressed={board === value.id} onClick={() => setBoard(value.id as Board)}>{value.label}</button>)}</div>
-    <div className={styles.controls}>{<div className={styles.segment} role="group" aria-label="Leaderboard period">{LEADERBOARD_PERIODS.map(value => <button key={value.id} type="button" aria-pressed={period === value.id} onClick={() => selectPeriod(value.id as Period, Date.now())}>{value.label}</button>)}</div>}<div className={styles.segment} role="group" aria-label="Rank by"><button type="button" aria-pressed={metric === "sales"} onClick={() => rankBy("sales")}>{keys.firstLabel}</button><button type="button" aria-pressed={metric === "ap"} onClick={() => rankBy("ap")}>{keys.secondLabel}</button></div><button className="btn btn-secondary" type="button" disabled={loading || (board !== "whatsapp" && Boolean(retryAt))} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
-    {period === "custom" && <form className={styles.range} onSubmit={event => {
-      event.preventDefault();
-      // Submit the visible fields, including edits not yet reflected in React state.
-      const fields = new FormData(event.currentTarget);
-      applyRange({ from: String(fields.get("from") ?? ""), to: String(fields.get("to") ?? "") });
-    }}>
-      <div className={styles.segment} role="group" aria-label="Custom range">{CUSTOM_VIEWS.map(value => <button key={value.id} type="button" aria-pressed={customView === value.id} aria-controls={value.id === "choose" ? "leaderboard-month-picker" : value.id === "range" ? "leaderboard-date-range" : undefined} onClick={() => selectCustomView(value.id)}>{value.label}</button>)}</div>
-      {customView === "choose" && months.length > 0 && <div id="leaderboard-month-picker" className={styles.monthPicker}>
-        <h3 id="leaderboard-month-label">Month &amp; week</h3>
-        <MonthWheel months={months} value={monthKey} onChange={selectMonth} labelledBy="leaderboard-month-label" />
-        <div className={styles.weeks} role="group" aria-label={`Weeks of ${months.find(month => month.key === monthKey)?.label ?? "the month"}`}>
-          <button type="button" aria-pressed={Boolean(wholeMonth) && range.from === wholeMonth?.from && range.to === wholeMonth?.to} disabled={!wholeMonth} onClick={() => wholeMonth && applyRange(wholeMonth)}>Full month<small>All weeks</small></button>
-          {weeks.map(week => <button key={week.week} type="button" aria-pressed={range.from === week.from && range.to === week.to} disabled={!week.available} title={week.available ? undefined : "This week has not started yet"} onClick={() => applyRange({ from: week.from, to: week.to })}>Week {week.week}<small>{week.label}</small></button>)}
-        </div>
-      </div>}
-      {customView === "range" && <div id="leaderboard-date-range" className={styles.dateFields}>
-      <label>From<input type="date" name="from" min="2000-01-01" max="2099-12-31" aria-label="From date" aria-describedby="leaderboard-range-help" required value={draftRange.from} onInput={event => {
-        const from = event.currentTarget.value;
-        setDraftRange(value => ({ ...value, from }));
-      }} /></label>
-      <label>To<input type="date" name="to" min="2000-01-01" max="2099-12-31" aria-label="To date" aria-describedby="leaderboard-range-help" value={draftRange.to} onInput={event => {
-        const to = event.currentTarget.value;
-        setDraftRange(value => ({ ...value, to }));
-      }} /></label>
-      <button type="submit" className="btn btn-primary">Apply dates</button>
-      <p id="leaderboard-range-help">One day or a date range, up to 366 days · Eastern time. Leave To blank for one day.</p>
-      </div>}
-      {rangeError && <p role="alert">{rangeError}</p>}
-    </form>}
+    <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Leaderboard period" /><div className={styles.segment} role="group" aria-label="Rank by"><button type="button" aria-pressed={metric === "sales"} onClick={() => rankBy("sales")}>{keys.firstLabel}</button><button type="button" aria-pressed={metric === "ap"} onClick={() => rankBy("ap")}>{keys.secondLabel}</button></div><button className="btn btn-secondary" type="button" disabled={loading || (board !== "whatsapp" && Boolean(retryAt))} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
+    <LeaderboardRangeForm dates={dates} />
     <div className={styles.source}><span>{current?.source ?? (board === "sp" ? "HubSpot" : board === "whatsapp" ? "WhatsApp Sales" : "PolicyTek")}</span>{current?.fetchedAt && <span>Updated {updated(current.fetchedAt)}</span>}{current?.startDate && <span>{current.startDate}{current.endDate && current.endDate !== current.startDate ? ` – ${current.endDate}` : ""} · Eastern time</span>}</div>
     {error && <div className={styles.alert} role="alert"><strong>{available ? "Showing the last loaded leaderboard" : "Leaderboard unavailable"}</strong><p>{error}</p></div>}
     {board !== "whatsapp" && retryAt && <p className={styles.notice} role="status">Refresh is available after {updated(new Date(retryAt).toISOString())}.</p>}
