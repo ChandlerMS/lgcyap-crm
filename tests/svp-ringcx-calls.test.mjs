@@ -7,7 +7,7 @@ import { RingCxError } from '../lib/ringcx.mjs';
 import { applySvpCalls, importSvpCallsReports, parseSvpCallsReport, readSvpCalls } from '../lib/svp-calls.mjs';
 import { openSvpReport, readSvpRingcxStatus, SVP_REPORT_FIRST_DATE, svpReportDays, svpReportExecution, svpReportLoadedAt, svpReportRows, syncSvpRingcxCalls } from '../lib/svp-ringcx-calls.mjs';
 
-const schemas = await Promise.all(['0007_svp_calls.sql', '0008_svp_ringcx_calls.sql', '0009_svp_ringcx_report.sql'].map(file => readFile(new URL(`../migrations/${file}`, import.meta.url), 'utf8')));
+const schemas = await Promise.all(['0007_svp_calls.sql', '0008_svp_ringcx_calls.sql', '0009_svp_ringcx_report.sql', '0010_svp_report_connected.sql'].map(file => readFile(new URL(`../migrations/${file}`, import.meta.url), 'utf8')));
 const at = value => Date.parse(value);
 const FIVE_MINUTES = 300000, NOW = at('2026-11-03T22:00:00Z');
 const database = async () => { const db = new PGlite(); for (const schema of schemas) { await db.exec(schema); await db.exec(schema); } return db; };
@@ -17,10 +17,10 @@ const element = (number, id) => `${obj(number)}/elements?id=${id}`;
 // The report's saved definition as RingCX returned it on 2026-11-03.
 const SAVED = {
   filters: [
-    { relativeDateFilter: { from: 0, granularity: 'GDC.time.date', dataSet: { uri: obj(2044) }, to: 0 } },
+    { relativeDateFilter: { granularity: 'GDC.time.year', dataSet: { uri: obj(2044) } } },
     { positiveAttributeFilter: { displayForm: { uri: obj(7090) }, in: [element(7089, 332)] } },
     { negativeAttributeFilter: { displayForm: { uri: obj(7110) }, notIn: [] } },
-    { positiveAttributeFilter: { in: [element(7020, 1001932)], displayForm: { uri: obj(7021) } } },
+    { negativeAttributeFilter: { displayForm: { uri: obj(7021) }, notIn: [element(7020, 1001915), element(7020, 519760), element(7020, 1001916)] } },
     { positiveAttributeFilter: { in: [element(7095, 207)], displayForm: { uri: obj(7096) } } },
     { negativeAttributeFilter: { displayForm: { uri: obj(7074) }, notIn: [] } },
     { negativeAttributeFilter: { displayForm: { uri: obj(7185) }, notIn: [element(7184, 73), element(7184, 120119), element(7184, 1)] } },
@@ -29,19 +29,23 @@ const SAVED = {
   buckets: [
     { localIdentifier: 'measures', items: [
       { measure: { definition: { measureDefinition: { filters: [{ positiveAttributeFilter: { in: [element(7073, 118255)], displayForm: { uri: obj(7074) } } }], item: { uri: obj(7639) } } }, localIdentifier: 'sold-id', title: 'Interactions (Agent Disposition: Sold)', alias: 'Sold' } },
-      { measure: { localIdentifier: 'calls-id', title: 'Interactions', alias: 'Calls', definition: { measureDefinition: { item: { uri: obj(7639) } } } } },
+      { measure: { localIdentifier: 'calls-id', title: 'Interactions Handled', alias: 'Calls', definition: { measureDefinition: { item: { uri: obj(8349) } } } } },
       { measure: { format: '#,##0.00%', localIdentifier: 'rate-id', alias: 'Close Rate', definition: { arithmeticMeasure: { measureIdentifiers: ['sold-id', 'calls-id'], operator: 'ratio' } } } },
+      { measure: { localIdentifier: 'connected-id', title: 'Interactions', alias: 'Connected', definition: { measureDefinition: { item: { uri: obj(7639) } } } } },
+      { measure: { format: '#,##0', localIdentifier: 'abandoned-id', alias: 'Abandoned', definition: { arithmeticMeasure: { measureIdentifiers: ['connected-id', 'calls-id'], operator: 'difference' } } } },
     ] },
-    { localIdentifier: 'attribute', items: [{ visualizationAttribute: { displayForm: { uri: obj(4455) }, localIdentifier: 'agent-id' } }] },
+    { localIdentifier: 'attribute', items: [{ visualizationAttribute: { displayForm: { uri: obj(4455) }, localIdentifier: 'agent-id' } }, { visualizationAttribute: { displayForm: { uri: obj(2036) }, localIdentifier: 'shown-date-id' } }] },
   ],
 };
-const RESOLVED = { dateSet: obj(2044), dateLabel: obj(2035) };
+const RESOLVED = { dateSet: obj(2044), dateLabel: obj(2035), shownDateLabel: obj(2036) };
 
 test('the execution keeps the saved filters and measures, replaces only the date, and groups by day and agent', () => {
   const { execution: { afm, resultSpec } } = svpReportExecution(SAVED, RESOLVED, '2026-10-27', '2026-11-03');
   assert.deepEqual(afm.measures, [
     { localIdentifier: 'sold-id', alias: 'Sold', definition: { measure: { filters: [{ positiveAttributeFilter: { in: [element(7073, 118255)], displayForm: { uri: obj(7074) } } }], item: { uri: obj(7639) } } } },
-    { localIdentifier: 'calls-id', alias: 'Calls', definition: { measure: { item: { uri: obj(7639) } } } },
+    { localIdentifier: 'calls-id', alias: 'Calls', definition: { measure: { item: { uri: obj(8349) } } } },
+    { localIdentifier: 'connected-id', alias: 'Connected', definition: { measure: { item: { uri: obj(7639) } } } },
+    { localIdentifier: 'abandoned-id', alias: 'Abandoned', definition: { arithmeticMeasure: { measureIdentifiers: ['connected-id', 'calls-id'], operator: 'difference' } } },
   ]);
   assert.deepEqual(afm.attributes, [{ displayForm: { uri: obj(2035) }, localIdentifier: 'date' }, { displayForm: { uri: obj(4455) }, localIdentifier: 'agent' }]);
   assert.deepEqual(afm.filters[0], { absoluteDateFilter: { dataSet: { uri: obj(2044) }, from: '2026-10-27', to: '2026-11-03' } });
@@ -50,46 +54,62 @@ test('the execution keeps the saved filters and measures, replaces only the date
 
   const edited = change => { const copy = structuredClone(SAVED); change(copy); return () => svpReportExecution(copy, RESOLVED, 'a', 'b'); };
   assert.throws(edited(copy => { copy.buckets[0].items[1].measure.alias = 'Answered'; }), error => error.code === 'REPORT_CHANGED' && /"Calls"/.test(error.detail));
+  assert.throws(edited(copy => { copy.buckets[0].items[3].measure.alias = 'Answered'; }), error => error.code === 'REPORT_CHANGED' && /"Connected"/.test(error.detail));
+  assert.throws(edited(copy => { copy.buckets[0].items.pop(); }), error => error.code === 'REPORT_CHANGED' && /"Abandoned"/.test(error.detail));
   assert.throws(edited(copy => { copy.buckets[1].items.push(copy.buckets[1].items[0]); }), error => error.code === 'REPORT_CHANGED' && /found 2/.test(error.detail));
+  assert.doesNotThrow(edited(copy => { copy.buckets[1].items.pop(); }), 'a report that lists agents without dates is still one agent per row');
   assert.throws(edited(copy => { copy.filters.shift(); }), error => error.code === 'REPORT_CHANGED');
   assert.throws(edited(copy => { copy.filters[0].relativeDateFilter.dataSet.uri = obj(1); }), error => error.code === 'REPORT_CHANGED');
 });
 
 const resultPage = (rows, { offset = 0, total = rows.length } = {}) => ({
-  headerItems: [[rows.map(row => ({ attributeHeaderItem: { name: row[0], uri: 'd' } })), rows.map(row => ({ attributeHeaderItem: { name: row[1], uri: 'a' } }))], [[{ measureHeaderItem: { name: 'Sold', order: 0 } }, { measureHeaderItem: { name: 'Calls', order: 1 } }]]],
-  data: rows.map(row => [row[3] ?? null, row[2] ?? null]),
+  headerItems: [[rows.map(row => ({ attributeHeaderItem: { name: row[0], uri: 'd' } })), rows.map(row => ({ attributeHeaderItem: { name: row[1], uri: 'a' } }))], [['Sold', 'Calls', 'Connected', 'Abandoned'].map((name, order) => ({ measureHeaderItem: { name, order } }))]],
+  data: rows.map(row => [row[3] ?? null, row[2] ?? null, row[4] ?? null, row[5] ?? null]),
   paging: { count: [rows.length, 2], offset: [offset, 0], total: [total, 2] },
 });
 
 test('result rows read measures by name, count a blank as none, and reject anything unexpected', () => {
-  assert.deepEqual(svpReportRows(resultPage([['2026-11-02', 'Agent One', '12', 3], ['2026-11-02', 'Agent Two', 4, null]])), [{ date: '2026-11-02', name: 'Agent One', calls: 12, sold: 3 }, { date: '2026-11-02', name: 'Agent Two', calls: 4, sold: 0 }]);
+  assert.deepEqual(svpReportRows(resultPage([['2026-11-02', 'Agent One', '12', 3, '15', '3'], ['2026-11-02', 'Agent Two', 4, null, 4, null], ['2026-11-02', 'N/A', null, null, 7, 7]])), [
+    { date: '2026-11-02', name: 'Agent One', calls: 12, sold: 3, connected: 15, abandoned: 3 },
+    { date: '2026-11-02', name: 'Agent Two', calls: 4, sold: 0, connected: 4, abandoned: 0 },
+    { date: '2026-11-02', name: 'N/A', calls: 0, sold: 0, connected: 7, abandoned: 7 },
+  ]);
   assert.deepEqual(svpReportRows(resultPage([])), []);
   const bad = page => assert.throws(() => svpReportRows(page), error => error.code === 'INVALID_REPORT_RESPONSE' && !/Private/.test(error.detail));
   bad({});
   bad(resultPage([['11/02/2026', 'Private Person', 1, 0]]));
   bad(resultPage([['2026-11-02', 'Private Person', 1.5, 0]]));
   bad(resultPage([['2026-11-02', 'Private Person', -1, 0]]));
+  bad(resultPage([['2026-11-02', 'Private Person', 1, 0, 1, -1]]));
   bad({ ...resultPage([]), headerItems: [[[], []], [[{ measureHeaderItem: { name: 'Calls' } }]]] });
+  bad({ ...resultPage([]), headerItems: [[[], []], [['Sold', 'Calls', 'Connected'].map(name => ({ measureHeaderItem: { name } }))]] });
 });
 
-test('rows fold into one per agent per day under HubSpot spelling; empty names and empty rows are skipped', () => {
+test('rows fold into one per agent per day under HubSpot spelling; empty names and empty rows are skipped, but N/A stays for its abandoned calls', () => {
   assert.deepEqual(svpReportDays([
-    { date: '2026-11-02', name: 'Agent One', calls: 2, sold: 1 },
-    { date: '2026-11-02', name: ' agent  one ', calls: 3, sold: 0 },
-    { date: '2026-11-03', name: 'Agent One', calls: 1, sold: 0 },
-    { date: '2026-11-02', name: 'Julian Parker Gillion', calls: 4, sold: 0 },
-    { date: '2026-11-02', name: 'Jose Luis Garcia', calls: 5, sold: 0 },
-    { date: '2026-11-02', name: 'Walter (Noah) Korfant', calls: 6, sold: 1 },
-    { date: '2026-11-02', name: 'Idle Agent', calls: 0, sold: 0 },
-    { date: '2026-11-02', name: '  ', calls: 9, sold: 0 },
-    { date: '2026-11-02', name: 'x'.repeat(201), calls: 9, sold: 0 },
+    { date: '2026-11-02', name: 'Agent One', calls: 2, sold: 1, connected: 3, abandoned: 1 },
+    { date: '2026-11-02', name: ' agent  one ', calls: 3, sold: 0, connected: 4, abandoned: 1 },
+    { date: '2026-11-03', name: 'Agent One', calls: 1, sold: 0, connected: 1, abandoned: 0 },
+    { date: '2026-11-02', name: 'Julian Parker Gillion', calls: 4, sold: 0, connected: 4, abandoned: 0 },
+    { date: '2026-11-02', name: 'Jose Luis Garcia', calls: 5, sold: 0, connected: 5, abandoned: 0 },
+    { date: '2026-11-02', name: 'Walter (Noah) Korfant', calls: 6, sold: 1, connected: 6, abandoned: 0 },
+    { date: '2026-11-02', name: 'N/A', calls: 0, sold: 0, connected: 9, abandoned: 9 },
+    { date: '2026-11-02', name: 'Idle Agent', calls: 0, sold: 0, connected: 0, abandoned: 0 },
+    { date: '2026-11-02', name: '  ', calls: 9, sold: 0, connected: 9, abandoned: 0 },
+    { date: '2026-11-02', name: 'x'.repeat(201), calls: 9, sold: 0, connected: 9, abandoned: 0 },
   ]), [
-    { date: '2026-11-02', key: 'agent one', name: 'Agent One', calls: 5, sold: 1 },
-    { date: '2026-11-03', key: 'agent one', name: 'Agent One', calls: 1, sold: 0 },
-    { date: '2026-11-02', key: 'julian gillion', name: 'Julian Parker Gillion', calls: 4, sold: 0 },
-    { date: '2026-11-02', key: 'luis garcia', name: 'Jose Luis Garcia', calls: 5, sold: 0 },
-    { date: '2026-11-02', key: 'walter noah korfant', name: 'Walter (Noah) Korfant', calls: 6, sold: 1 },
+    { date: '2026-11-02', key: 'agent one', name: 'Agent One', calls: 5, sold: 1, connected: 7, abandoned: 2 },
+    { date: '2026-11-03', key: 'agent one', name: 'Agent One', calls: 1, sold: 0, connected: 1, abandoned: 0 },
+    { date: '2026-11-02', key: 'julian gillion', name: 'Julian Parker Gillion', calls: 4, sold: 0, connected: 4, abandoned: 0 },
+    { date: '2026-11-02', key: 'luis garcia', name: 'Jose Luis Garcia', calls: 5, sold: 0, connected: 5, abandoned: 0 },
+    { date: '2026-11-02', key: 'walter noah korfant', name: 'Walter (Noah) Korfant', calls: 6, sold: 1, connected: 6, abandoned: 0 },
+    { date: '2026-11-02', key: 'n/a', name: 'N/A', calls: 0, sold: 0, connected: 9, abandoned: 9 },
   ]);
+});
+
+test('RingCX spellings that differ from HubSpot count under the HubSpot name', () => {
+  const names = ['Rebekah (Becky) Saintil', 'Ashton Gray Platero', 'Stu Burdette', 'Josh Ziegler', 'Matt Smith', 'Ezra (Alex) Gonzales', 'Chandler Smith (Agent)'];
+  assert.deepEqual(svpReportDays(names.map(name => row('2026-11-02', name, 1))).map(day => day.key), ['rebekah saintil', 'ashton platero gray', 'stuart burdette', 'joshua ziegler', 'matthew smith', 'ezra gonzales', 'chandler smith']);
 });
 
 test('last load time reads RingCX format, with or without the leading zero', () => {
@@ -108,8 +128,8 @@ const fakeAnalytics = ({ pages = [resultPage([['2026-11-03', 'Agent One', 4, 1]]
   const defaults = {
     '/gdc/account/customerlogin': () => new Response('{}', { headers: cookie('GDCAuthSST', 'long') }),
     '/gdc/account/token': () => new Response('{}', { headers: cookie('GDCAuthTT', 'short') }),
-    [`/gdc/md/${PID}/identifiers`]: () => Response.json({ identifiers: [['aaB7aXOESEiB', obj(1997754)], ['callstartdate.dataset.dt', obj(2044)], ['callstartdate.date.day.yyyy_mm_dd', obj(2035)], ['aaD16BZbLrKz', obj(7638)]].map(([identifier, uri]) => ({ identifier, uri })) }),
-    [obj(1997754)]: () => Response.json({ visualizationObject: { meta: { updated }, content: saved } }),
+    [`/gdc/md/${PID}/identifiers`]: () => Response.json({ identifiers: [['aaB7smARXvDN', obj(1998709)], ['callstartdate.dataset.dt', obj(2044)], ['callstartdate.date.day.yyyy_mm_dd', obj(2035)], ['callstartdate.date.day.us.mm_dd_yyyy', obj(2036)], ['aaD16BZbLrKz', obj(7638)]].map(([identifier, uri]) => ({ identifier, uri })) }),
+    [obj(1998709)]: () => Response.json({ visualizationObject: { meta: { updated }, content: saved } }),
     [`/gdc/app/projects/${PID}/executeAfm`]: init => Response.json({ executionResponse: { links: { executionResult: `/gdc/app/projects/${PID}/executionResults/${JSON.parse(init.body).execution.afm.attributes ? 'rows' : 'loaded'}?c=abc&q=x%2By&offset=0,0&limit=2,1000&dimensions=2&totals=0,0` } } }, { status: 201 }),
     [`/gdc/app/projects/${PID}/executionResults/loaded`]: () => Response.json({ executionResult: { data: ['11032026175927'], headerItems: [], paging: { count: [1], offset: [0], total: [1] } } }),
     [`/gdc/app/projects/${PID}/executionResults/rows`]: () => { const next = queue.shift(); return next instanceof Response ? next : Response.json({ executionResult: next }); },
@@ -124,11 +144,14 @@ const fakeAnalytics = ({ pages = [resultPage([['2026-11-03', 'Agent One', 4, 1]]
 };
 
 test('the report opens with the login cookies and reads every page by replacing the offset', async () => {
-  const pages = [resultPage([['2026-11-02', 'Agent One', 1, 0], ['2026-11-02', 'Agent Two', 2, 0]], { total: 3 }), new Response(null, { status: 202 }), resultPage([['2026-11-03', 'Agent One', 3, 1]], { offset: 2, total: 3 })];
+  const pages = [resultPage([['2026-11-02', 'Agent One', 1, 0, 2, 1], ['2026-11-02', 'Agent Two', 2, 0, 2, 0]], { total: 3 }), new Response(null, { status: 202 }), resultPage([['2026-11-03', 'Agent One', 3, 1, 3, 0]], { offset: 2, total: 3 })];
   const { fetch, requests, client } = fakeAnalytics({ pages });
   const report = await openSvpReport(client, { fetch, pollMs: 1 });
   assert.equal(report.version, '2026-11-03 23:51:48');
-  assert.deepEqual(await report.read('2026-11-02', '2026-11-03'), [{ date: '2026-11-02', name: 'Agent One', calls: 1, sold: 0 }, { date: '2026-11-02', name: 'Agent Two', calls: 2, sold: 0 }, { date: '2026-11-03', name: 'Agent One', calls: 3, sold: 1 }]);
+  assert.deepEqual(await report.read('2026-11-02', '2026-11-03'), [{ date: '2026-11-02', name: 'Agent One', calls: 1, sold: 0, connected: 2, abandoned: 1 }, { date: '2026-11-02', name: 'Agent Two', calls: 2, sold: 0, connected: 2, abandoned: 0 }, { date: '2026-11-03', name: 'Agent One', calls: 3, sold: 1, connected: 3, abandoned: 0 }]);
+  const executed = JSON.parse(requests.find(({ url }) => url.pathname.endsWith('/executeAfm')).init.body).execution.afm;
+  assert.deepEqual(executed.attributes, [{ displayForm: { uri: obj(2035) }, localIdentifier: 'date' }, { displayForm: { uri: obj(4455) }, localIdentifier: 'agent' }], "the report's own mm/dd/yyyy date is replaced by the sync's");
+  assert.deepEqual(executed.measures.map(measure => measure.alias), ['Sold', 'Calls', 'Connected', 'Abandoned']);
   assert.equal(await report.dataLoadedAt(), '2026-11-03 17:59:27');
 
   const login = requests.find(({ url }) => url.pathname.endsWith('/customerlogin'));
@@ -162,7 +185,7 @@ test('login failures name the step and never repeat the claims; the claims only 
   await assert.rejects(open({ '/gdc/account/token': () => new Response('{}') }), failed('REPORT_LOGIN_FAILED', /set no token/));
   await assert.rejects(open({ '/gdc/account/token': () => new Response('', { status: 429 }) }), failed('RINGCX_RATE_LIMITED', /^token: HTTP 429$/));
   await assert.rejects(open({ [`/gdc/md/${PID}/identifiers`]: () => Response.json({ identifiers: [] }) }), failed('REPORT_CHANGED', /not found/));
-  await assert.rejects(open({ [obj(1997754)]: () => new Response('', { status: 500 }) }), failed('REPORT_UNAVAILABLE', /^report: HTTP 500$/));
+  await assert.rejects(open({ [obj(1998709)]: () => new Response('', { status: 500 }) }), failed('REPORT_UNAVAILABLE', /^report: HTTP 500$/));
   await assert.rejects(open({ '/gdc/account/customerlogin': () => { throw new TypeError(`connect failed ${CLAIMS}`); } }), failed('REPORT_UNAVAILABLE', /^login: TypeError$/));
 
   const redirected = fakeAnalytics({ routes: { '/gdc/account/customerlogin': () => new Response(null, { status: 302, headers: cookie('GDCAuthSST', 'long') }) } });
@@ -185,7 +208,7 @@ const fakeReport = (rows, { version = 'v1', loadedAt = '2026-11-03 17:59:27' } =
   const report = { version, ranges: [], read: async (from, to) => { report.ranges.push([from, to]); return rows.filter(row => row.date >= from && row.date <= to); }, dataLoadedAt: async () => loadedAt };
   return report;
 };
-const row = (date, name, calls, sold = 0) => ({ date, name, calls, sold });
+const row = (date, name, calls, sold = 0, connected = calls, abandoned = 0) => ({ date, name, calls, sold, connected, abandoned });
 const history = [row('2026-06-25', 'Agent One', 10, 1), row('2026-11-02', 'Agent One', 24, 6), row('2026-11-02', 'Agent Two', 8, 2), row('2026-11-03', 'Agent One', 16, 2), row('2026-11-03', 'Agent Three', 5, 1)];
 const saved = async db => (await db.query("SELECT to_char(call_date, 'YYYY-MM-DD') AS date, agent_key, calls, sold FROM svp_ringcx_report_daily ORDER BY call_date, agent_key")).rows.map(item => [item.date, item.agent_key, item.calls, item.sold]);
 
@@ -194,7 +217,7 @@ test('the first run reads all history, later runs re-read the last week, and van
   try {
     const first = fakeReport(history);
     const result = await syncSvpRingcxCalls(db, async () => first, NOW);
-    assert.deepEqual(result, { status: 'ok', from: SVP_REPORT_FIRST_DATE, to: '2026-11-03', rebuild: true, rows: 5, calls: 63, sold: 12 });
+    assert.deepEqual(result, { status: 'ok', from: SVP_REPORT_FIRST_DATE, to: '2026-11-03', rebuild: true, rows: 5, calls: 63, sold: 12, connected: 63, abandoned: 0 });
     assert.deepEqual(first.ranges, [[SVP_REPORT_FIRST_DATE, '2026-11-03']]);
     assert.equal((await saved(db)).length, 5);
 
@@ -210,7 +233,7 @@ test('the first run reads all history, later runs re-read the last week, and van
 
     const status = await readSvpRingcxStatus(db);
     assert.deepEqual([status.reportFrom, status.reportThrough, status.dataLoadedAt, status.errorCode, status.lastRun.calls], ['2026-06-25', '2026-11-03', '2026-11-03 17:59:27', null, 47]);
-    assert.deepEqual(status.days[0], { date: '2026-11-03', agents: 2, calls: 23, sold: 4, workbook_calls: null });
+    assert.deepEqual(status.days[0], { date: '2026-11-03', agents: 2, calls: 23, sold: 4, connected: 23, abandoned: 0, workbook_calls: null });
   } finally { await db.close(); }
 });
 
@@ -296,6 +319,27 @@ test('the overnight pause is not called late, and today stays on the report unti
   } finally { await db.close(); }
 });
 
+test('Total Calls Connected and Abandoned come from the report; calls with no agent count in the totals only', async () => {
+  const db = await database();
+  try {
+    await syncSvpRingcxCalls(db, async () => fakeReport([row('2026-11-03', 'Agent One', 16, 2, 18, 2), row('2026-11-03', 'Agent Three', 5, 1, 6, 1), row('2026-11-03', 'N/A', 0, 0, 151, 151)]), NOW);
+    const calls = await readSvpCalls(db, day('2026-11-03'), NOW);
+    const shown = applySvpCalls(board(), calls);
+    assert.deepEqual(shown.rows.map(item => [item.inboundCalls, item.connectedCalls, item.abandonedCalls]), [[16, 18, 2], [0, 0, 0], [null, null, null]]);
+    assert.deepEqual(shown.calls, { status: 'available', basis: 'ringcx', total: 21, partial: false, soldPerInboundLog: 3 / 21, connected: 175, abandoned: 154 }, 'N/A adds to Connected and Abandoned but never to Calls or Close Rate');
+    assert.match(shown.callNotice, /151 abandoned calls with no agent \("N\/A" in the report\) count in the totals only\./);
+    assert.match(shown.callNotice, /One agent with calls but no HubSpot sales/, 'N/A is not an agent with calls');
+    const status = await readSvpRingcxStatus(db);
+    assert.deepEqual(status.days[0], { date: '2026-11-03', agents: 2, calls: 21, sold: 3, connected: 175, abandoned: 154, workbook_calls: null });
+    assert.deepEqual([status.lastRun.connected, status.lastRun.abandoned], [175, 154]);
+
+    await importSvpCallsReports(db, [june], NOW);
+    const before = applySvpCalls(board(), await readSvpCalls(db, day('2026-06-20'), NOW));
+    assert.equal(before.calls.basis, 'spreadsheet');
+    assert.deepEqual([before.rows[0].connectedCalls, before.calls.connected], [undefined, undefined], 'the workbooks have no such columns, so the board shows a dash, never zero');
+  } finally { await db.close(); }
+});
+
 test('the board takes Calls and Close Rate from the report, and the report wins over the workbook', async () => {
   const db = await database();
   try {
@@ -306,9 +350,9 @@ test('the board takes Calls and Close Rate from the report, and the report wins 
     const today = await readSvpCalls(db, day('2026-11-03'), NOW);
     const shown = applySvpCalls(board(), today);
     assert.deepEqual(shown.rows.map(item => [item.inboundCalls, item.soldPerInboundLog]), [[16, 2 / 16], [0, null], [null, null]], 'Close Rate is RingCX Sold ÷ Calls, not the 9 HubSpot sales');
-    assert.deepEqual(shown.calls, { status: 'available', basis: 'ringcx', total: 21, partial: false, soldPerInboundLog: 3 / 21 });
+    assert.deepEqual(shown.calls, { status: 'available', basis: 'ringcx', total: 21, partial: false, soldPerInboundLog: 3 / 21, connected: 21, abandoned: 0 });
     assert.equal(shown.source, 'HubSpot · RingCX');
-    assert.match(shown.callNotice, /RingCX report "Agent Close Rate - Standard vs Preferred SYNC", checked every five minutes/);
+    assert.match(shown.callNotice, /Total Calls Abandoned come from the RingCX report "Agent Close Rate - Standard vs Preferred ALL TIME", checked every five minutes/);
     assert.match(shown.callNotice, /RingCX last refreshed this data at 5:59 PM Eastern\./);
     assert.match(shown.callNotice, /One agent with calls but no HubSpot sales in this range counts in the totals only\./);
     assert.equal(applySvpCalls(board({ salesComplete: false }), today).calls.soldPerInboundLog, 3 / 21, "the report's Close Rate does not depend on HubSpot returning every deal");
