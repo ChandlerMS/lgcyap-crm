@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { onboardFrameState, startOnboardFrame } from '../lib/onboard-frame.mjs';
+import { ONBOARD_NO_ACCESS_ID, onboardFrameState, startOnboardFrame } from '../lib/onboard-frame.mjs';
 
 function document(state) {
   return {
     URL: state === 'blank' ? 'about:blank' : 'https://crm.example.invalid/v2/app',
     readyState: 'complete',
     getElementById(id) {
+      if (state === 'no-access') return id === ONBOARD_NO_ACCESS_ID ? {} : null;
       if (state === 'error' || state === 'blank') return null;
       if (id === 'main') return { childElementCount: state === 'pending' ? 0 : 1 };
       if (id === 'me') return {};
@@ -76,6 +77,28 @@ test('a hung startup has bounded recovery and exposes a retry instead of staying
   assert.deepEqual(f.states, ['loading', 'failed']);
   t.mock.timers.tick(60000);
   assert.equal(f.navigations.length, 3);
+});
+
+test('repeated startup failures reach the retry message without waiting for the timeout', t => {
+  const f = fixture(t);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    f.commit('error');
+    t.mock.timers.tick(500);
+  }
+  assert.equal(f.navigations.length, 3);
+  assert.deepEqual(f.states, ['loading', 'failed']);
+  t.mock.timers.tick(60000);
+  assert.equal(f.navigations.length, 3);
+});
+
+test('a no-access page is final: it is shown and never retried', t => {
+  const f = fixture(t);
+  f.frame.inert = true;
+  f.commit('no-access');
+  assert.equal(f.frame.inert, false);
+  assert.deepEqual(f.states, ['loading', 'ready']);
+  t.mock.timers.tick(60000);
+  assert.equal(f.navigations.length, 1);
 });
 
 test('once ready, subsequent failures never reload an app that may contain edits', t => {

@@ -13,16 +13,20 @@
 
 The original public application is available at `/v2/apply`; original `/apply/*` links redirect there. The source's optional Google callback is routed to V2. V2 integration values must be supplied explicitly as `ONBOARD_GOOGLE_*`, `ONBOARD_MAIL_*`, `ONBOARD_TEAM_CALENDARS`, `ONBOARD_INDEED_INBOX`, etc. V1's Google login/email credentials are never inherited. Optional email, Google Calendar and Indeed integrations remain unconfigured unless those values are set. No new cron is enabled.
 
+Failures the host catches are written to the server log as one JSON line, `onboard_host_failed`, with the method, the path with any application token removed, the error name, and either the error code or a plain error's message. Query strings, headers, identity and record data are left out. Errors the source handles itself still go through its own logging, unchanged.
+
 ## First-load recovery
 
 The host mounts the iframe after client hydration and shows a loading message until the original app has rendered its signed-in workspace. A failed or stalled startup recreates only the embedded frame (at most three attempts, 15 seconds per attempt). Recovery stops permanently once the app is ready, so it never reloads over subsequent edits. Leaving Version 2 cancels pending startup work. Persistent failures show a retry button instead of a blank page. All of this lives outside the uploaded document; its HTML, styles, scripts and layout are unchanged.
+
+The source treats any unanswered sign-in check as signed out, so the hosting layer rewrites that one check when it serves the page; the vendor files stay byte-for-byte. Only a real signed-out answer from `/api/v2/me` goes to the shared sign-in page. A server error, network failure or unreadable response replaces the page and goes through the recovery above, so an outage never looks like being signed out. A member marked inactive gets a final "access is turned off" page, which is not retried.
 
 Regression checks cover failed initial documents, asynchronous sign-in, bounded timeouts, cleanup, and no reload after readiness. An isolated browser fixture also exercises an initial HTTP 503, a delayed document/data response, and one failed initial state request with the original uploaded app and synthetic data.
 
 ## Validation
 
 - All 45 vendor files compared against the ZIP with SHA-256: no differences.
-- Source HTML and every style block remain unchanged apart from hosting URL/sign-out changes outside the styles.
+- Source HTML and every style block remain unchanged apart from hosting URL, sign-out and sign-in check changes outside the styles.
 - PGlite integration tests exercise original schema creation, source membership, independent state persistence, optimistic concurrency conflicts, anonymous/origin rejection, and internal-session cleanup.
 - Production HTTP smoke checks include both version pages and V2 APIs, with anonymous/forged credentials and no real provider credentials.
 - Final full suite: 326 tests passed; lint, type checking, production build, and HTTP smoke passed. Desktop (1440px) and mobile (390px) source UI checks passed; a synthetic candidate was saved/reloaded against browser-mocked V2 endpoints. No live recruiting records were used or changed in QA.
