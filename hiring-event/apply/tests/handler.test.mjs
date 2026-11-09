@@ -80,11 +80,15 @@ test('health reports mode and HubSpot access without secrets', async () => {
   const fallback = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ tokenInfoStatus: 404 }).fetchImpl })).json();
   assert.deepEqual(fallback, { ok: true, mode: 'live', hubspot: 'ok', via: 'recruiting_pipeline' });
   const rejected = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ tokenInfoStatus: 400, pipelineStatus: 401 }).fetchImpl })).json();
-  assert.deepEqual(rejected, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access_pipeline', status: 401, tokenInfoStatus: 400 });
+  assert.deepEqual(rejected, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access_pipeline', status: 401, tokenInfoStatus: 400, savedValue: 'not_a_hubspot_key' });
+  const shaped = { ...LIVE, HUBSPOT_ACCESS_TOKEN: `  pat-na1-${'a1b2c3d4-'.repeat(4)}e5f6\n` };
+  const keyLike = await (await handleHealth({ env: shaped, fetchImpl: fakeHubSpot({ tokenInfoStatus: 400, pipelineStatus: 401 }).fetchImpl })).json();
+  assert.equal(keyLike.savedValue, 'hubspot_key', 'surrounding spaces and line breaks are ignored');
+  assert.ok(!JSON.stringify(keyLike).includes('a1b2c3d4'), 'the value itself is never returned');
   const bad = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ hubId: 1 }).fetchImpl })).json();
-  assert.deepEqual(bad, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access', status: null });
+  assert.deepEqual(bad, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access', status: null, savedValue: 'not_a_hubspot_key' });
   const denied = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ tokenInfoStatus: 401 }).fetchImpl })).json();
-  assert.deepEqual(denied, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access', status: 401 });
+  assert.deepEqual(denied, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access', status: 401, savedValue: 'not_a_hubspot_key' });
   const off = await (await handleHealth({ env: {} })).json();
   assert.deepEqual(off, { ok: false, mode: 'not-configured', hubspot: 'not_checked' });
 });

@@ -41,7 +41,8 @@ async function staticFile(pathname) {
 
 createServer(async (req, res) => {
   for (const { key, value } of headerRules) res.setHeader(key, value);
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  let url;
+  try { url = new URL(req.url, `http://${req.headers.host}`); } catch { res.writeHead(400).end('Bad request'); return; }
   try {
     const api = /^\/api\/([a-z0-9-]+)$/.exec(url.pathname);
     if (api) {
@@ -67,4 +68,5 @@ createServer(async (req, res) => {
     if (!res.headersSent) res.writeHead(500);
     res.end('Server error');
   }
-}).listen(port, () => console.log(`Serving ${appDir} at http://localhost:${port}`));
+// Only this computer by default. Set HOST=0.0.0.0 to try the form from a phone on the same network.
+}).listen(port, process.env.HOST || '127.0.0.1', () => console.log(`Serving ${appDir} at http://localhost:${port}`));

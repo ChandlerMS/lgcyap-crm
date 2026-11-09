@@ -14,13 +14,26 @@ function log(event, fields) {
   console.log(JSON.stringify({ event, ...fields }));
 }
 
+/** The HubSpot key from the environment, without accidental surrounding spaces or line breaks. */
+export function hubspotToken(env = process.env) {
+  return typeof env.HUBSPOT_ACCESS_TOKEN === 'string' ? env.HUBSPOT_ACCESS_TOKEN.trim() : '';
+}
+
+/**
+ * Whether the saved value has the shape of a HubSpot key ("pat-<region>-..."), for setup checks.
+ * Reports only that shape, never the value.
+ */
+export function tokenShape(env = process.env) {
+  return /^pat-[a-z0-9]+-[A-Za-z0-9-]{20,}$/.test(hubspotToken(env)) ? 'hubspot_key' : 'not_a_hubspot_key';
+}
+
 /**
  * How this deployment handles a valid application:
  * dry-run (local or Preview testing only), not-configured, closed (kill switch off) or live.
  */
 export function applyMode(env = process.env) {
   if (env.APPLY_DRY_RUN === '1' && env.VERCEL_ENV !== 'production') return 'dry-run';
-  if (!env.HUBSPOT_ACCESS_TOKEN) return 'not-configured';
+  if (!hubspotToken(env)) return 'not-configured';
   if (env.APPLY_WRITES_ENABLED !== 'true') return 'closed';
   return 'live';
 }
@@ -65,7 +78,7 @@ export async function handleSubmit(request, { env = process.env, fetchImpl = fet
   if (mode === 'closed') return reply(503, { ok: false, code: 'CLOSED' });
 
   try {
-    const client = createHubSpotClient({ accessToken: env.HUBSPOT_ACCESS_TOKEN, fetchImpl, now });
+    const client = createHubSpotClient({ accessToken: hubspotToken(env), fetchImpl, now });
     const result = await recordApplication(client, checked, evaluation, { now });
     log('apply_recorded', { ...result, pass: evaluation.pass, ms: now() - started });
     return reply(200, outcomeBody(evaluation));
@@ -86,7 +99,7 @@ export async function handleHealth({ env = process.env, fetchImpl = fetch, now =
   const detail = {};
   if (mode === 'live' || mode === 'closed') {
     try {
-      detail.via = await verifyAccess(createHubSpotClient({ accessToken: env.HUBSPOT_ACCESS_TOKEN, fetchImpl, now, budgetMs: 8000 }), { now, cache: false });
+      detail.via = await verifyAccess(createHubSpotClient({ accessToken: hubspotToken(env), fetchImpl, now, budgetMs: 8000 }), { now, cache: false });
       hubspot = 'ok';
     } catch (error) {
       hubspot = error instanceof ApplyError && error.code === 'HUBSPOT_ACCESS' ? 'access_problem' : 'unreachable';
@@ -95,6 +108,7 @@ export async function handleHealth({ env = process.env, fetchImpl = fetch, now =
         Object.assign(detail, { step: error.phase, status: error.upstreamStatus ?? null });
         if (error.tokenInfoStatus) detail.tokenInfoStatus = error.tokenInfoStatus;
       }
+      detail.savedValue = tokenShape(env);
     }
   }
   return reply(200, { ok: mode === 'live' && hubspot === 'ok', mode, hubspot, ...detail });
