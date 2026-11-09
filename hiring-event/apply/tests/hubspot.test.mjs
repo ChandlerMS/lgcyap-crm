@@ -145,15 +145,17 @@ test('a service key with files.write is accepted', async () => {
   assert.equal(hub.state.files.length, 1);
 });
 
-test('when token info is unavailable, the portal is confirmed through account details', async () => {
+test('when token info is unavailable, the portal is confirmed by reading the Recruiting pipeline', async () => {
   const hub = fakeHubSpot({ tokenInfoStatus: 404 });
   const result = await run(hub);
   assert.equal(result.action, 'created');
-  assert.ok(hub.state.calls.some(c => c.pathname === '/account-info/v3/details'));
+  assert.ok(hub.state.calls.some(c => c.pathname === '/crm/v3/pipelines/tickets/924992938'));
 
-  const other = fakeHubSpot({ tokenInfoStatus: 404, accountPortalId: 999 });
-  await assert.rejects(run(other), error => error.code === 'HUBSPOT_ACCESS' && error.phase === 'access_account');
-  assert.equal(other.state.calls.length, 2, 'nothing written for another portal');
+  for (const pipelineStatus of [401, 403, 404]) {
+    const other = fakeHubSpot({ tokenInfoStatus: 400, pipelineStatus });
+    await assert.rejects(run(other), error => error.code === 'HUBSPOT_ACCESS' && error.phase === 'access_pipeline' && error.upstreamStatus === pipelineStatus && error.tokenInfoStatus === 400);
+    assert.equal(other.state.calls.length, 2, 'nothing written without a confirmed portal');
+  }
 
   const denied = fakeHubSpot({ tokenInfoStatus: 401 });
   await assert.rejects(run(denied), error => error.code === 'HUBSPOT_ACCESS');

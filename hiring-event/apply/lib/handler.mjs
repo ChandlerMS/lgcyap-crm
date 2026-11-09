@@ -91,7 +91,10 @@ export async function handleHealth({ env = process.env, fetchImpl = fetch, now =
     } catch (error) {
       hubspot = error instanceof ApplyError && error.code === 'HUBSPOT_ACCESS' ? 'access_problem' : 'unreachable';
       // Which check failed and HubSpot's status code, to help setup. No token or account data.
-      if (error instanceof ApplyError) Object.assign(detail, { step: error.phase, status: error.upstreamStatus ?? null });
+      if (error instanceof ApplyError) {
+        Object.assign(detail, { step: error.phase, status: error.upstreamStatus ?? null });
+        if (error.tokenInfoStatus) detail.tokenInfoStatus = error.tokenInfoStatus;
+      }
     }
   }
   return reply(200, { ok: mode === 'live' && hubspot === 'ok', mode, hubspot, ...detail });

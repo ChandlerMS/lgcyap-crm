@@ -78,7 +78,9 @@ test('health reports mode and HubSpot access without secrets', async () => {
   const ok = await (await handleHealth({ env: LIVE, fetchImpl: hub.fetchImpl })).json();
   assert.deepEqual(ok, { ok: true, mode: 'live', hubspot: 'ok', via: 'token_info' });
   const fallback = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ tokenInfoStatus: 404 }).fetchImpl })).json();
-  assert.deepEqual(fallback, { ok: true, mode: 'live', hubspot: 'ok', via: 'account_info' });
+  assert.deepEqual(fallback, { ok: true, mode: 'live', hubspot: 'ok', via: 'recruiting_pipeline' });
+  const rejected = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ tokenInfoStatus: 400, pipelineStatus: 401 }).fetchImpl })).json();
+  assert.deepEqual(rejected, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access_pipeline', status: 401, tokenInfoStatus: 400 });
   const bad = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ hubId: 1 }).fetchImpl })).json();
   assert.deepEqual(bad, { ok: false, mode: 'live', hubspot: 'access_problem', step: 'access', status: null });
   const denied = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ tokenInfoStatus: 401 }).fetchImpl })).json();

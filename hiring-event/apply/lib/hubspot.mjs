@@ -8,12 +8,13 @@ import { formatPhone, splitName } from './validate.mjs';
 const API = 'https://api.hubapi.com';
 
 export class ApplyError extends Error {
-  constructor(code, status, { phase, upstreamStatus } = {}) {
+  constructor(code, status, { phase, upstreamStatus, tokenInfoStatus } = {}) {
     super(code);
     this.code = code;
     this.status = status;
     this.phase = phase;
     this.upstreamStatus = upstreamStatus;
+    this.tokenInfoStatus = tokenInfoStatus;
   }
 }
 
@@ -81,10 +82,11 @@ export function hasScopes(scopes) {
 /**
  * Confirms the token belongs to the Legacy portal before anything is written.
  * 1. HubSpot's token-info lookup gives the portal and scopes for private-app tokens; both must match.
- * 2. HubSpot does not document that lookup for service keys. If it answers 400 or 404, the portal is
- *    confirmed through account details instead. Scopes cannot be listed that way, so a missing scope
- *    shows up as a 403 on the HubSpot call that needs it, and that application reports a failure.
- * Returns how access was confirmed: 'token_info' or 'account_info'.
+ * 2. HubSpot does not document that lookup for service keys. If it answers 400 or 404, the token must
+ *    read the Recruiting ticket pipeline (its ID exists only in this portal) with its Application
+ *    stage. That uses only the ticket read scope. Other scopes cannot be listed this way, so a missing
+ *    one shows up as a 403 on the call that needs it, and that application reports a failure.
+ * Returns how access was confirmed: 'token_info' or 'recruiting_pipeline'.
  */
 export async function verifyAccess(client, { now = Date.now, cache = true } = {}) {
   if (cache && verifiedToken === client.accessToken && now() < verifiedUntil) return verifiedVia;
@@ -95,9 +97,19 @@ export async function verifyAccess(client, { now = Date.now, cache = true } = {}
     if (String(info.body?.hubId) !== PORTAL_ID || !hasScopes(scopes)) throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access' });
     via = 'token_info';
   } else if (info.status === 400 || info.status === 404) {
-    const account = client.ok(await client.call('access_account', 'GET', '/account-info/v3/details'), 'access_account');
-    if (String(account?.portalId) !== PORTAL_ID) throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access_account' });
-    via = 'account_info';
+    const tokenInfoStatus = info.status;
+    const result = await client.call('access_pipeline', 'GET', `/crm/v3/pipelines/tickets/${RECRUITING_PIPELINE_ID}`);
+    if (result.failed) {
+      const status = result.status;
+      // 401: HubSpot did not accept the token. 403: no ticket read scope. 404: not this portal.
+      if ([401, 403, 404].includes(status)) throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access_pipeline', upstreamStatus: status, tokenInfoStatus });
+      try { client.ok(result, 'access_pipeline'); } catch (error) { error.tokenInfoStatus = tokenInfoStatus; throw error; }
+    }
+    const stages = Array.isArray(result.body?.stages) ? result.body.stages.map(stage => String(stage?.id)) : [];
+    if (String(result.body?.id) !== RECRUITING_PIPELINE_ID || !stages.includes(STAGE.application)) {
+      throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access_pipeline', tokenInfoStatus });
+    }
+    via = 'recruiting_pipeline';
   } else {
     client.ok(info, 'access');
   }
