@@ -23,8 +23,10 @@ export const REQUIRED_SCOPES = Object.freeze([
   'crm.objects.contacts.write',
   'crm.objects.tickets.read',
   'crm.objects.tickets.write',
-  'files',
 ]);
+// Uploading license photos needs one of these. Legacy private apps have `files`;
+// HubSpot service keys only offer the granular `files.write`.
+export const FILE_SCOPES = Object.freeze(['files', 'files.write']);
 
 // Private File Manager folder for license photos. PRIVATE files open only for signed-in
 // HubSpot users through short-lived links.

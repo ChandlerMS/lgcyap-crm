@@ -1,6 +1,6 @@
 import {
   ASSOCIATION, CONTRACTED_BEFORE, HEARD_ABOUT, HIRING_EVENT_STAGE_ID, LICENSE_FOLDER, OFFICES,
-  PORTAL_ID, RECRUITING_PATH, RECRUITING_PIPELINE_ID, REQUIRED_SCOPES, SIGN_IN_SOURCES, TERMINAL_STAGE_IDS,
+  FILE_SCOPES, PORTAL_ID, RECRUITING_PATH, RECRUITING_PIPELINE_ID, REQUIRED_SCOPES, SIGN_IN_SOURCES, TERMINAL_STAGE_IDS,
 } from './config.mjs';
 import { formatPhone } from './validate.mjs';
 
@@ -73,20 +73,43 @@ export function createHubSpotClient({ accessToken, fetchImpl = fetch, baseUrl = 
 let verifiedUntil = 0;
 let verifiedToken = '';
 
-/** Confirms the token belongs to the Legacy portal and has every scope sign-in needs. */
+let verifiedVia = null;
+
+/**
+ * Confirms the token belongs to the Legacy portal before anything is written, and
+ * returns how it was confirmed:
+ * - 'token_info': HubSpot's token lookup answered, so the portal and every scope
+ *   sign-in needs are checked.
+ * - 'account_info': the lookup does not recognize this kind of token (400 or 404,
+ *   possible for service keys), so only the portal is confirmed. HubSpot still
+ *   refuses any call the token lacks a scope for.
+ * A 401 or 403 from either check fails closed with no fallback.
+ */
 export async function verifyAccess(client, { now = Date.now, cache = true } = {}) {
-  if (cache && verifiedToken === client.accessToken && now() < verifiedUntil) return true;
-  const info = client.ok(await client.call('access', 'POST', '/oauth/v2/private-apps/get/access-token-info', { json: { tokenKey: client.accessToken }, retryable: true }), 'access');
-  const scopes = Array.isArray(info?.scopes) ? info.scopes : [];
-  if (String(info?.hubId) !== PORTAL_ID || !REQUIRED_SCOPES.every(scope => scopes.includes(scope))) {
-    throw new SignInError('HUBSPOT_ACCESS', 503, { phase: 'access' });
+  if (cache && verifiedToken === client.accessToken && now() < verifiedUntil) return verifiedVia;
+  const lookup = await client.call('access', 'POST', '/oauth/v2/private-apps/get/access-token-info', { json: { tokenKey: client.accessToken }, retryable: true });
+  let via;
+  if (!lookup.failed) {
+    const info = lookup.body;
+    const scopes = Array.isArray(info?.scopes) ? info.scopes : [];
+    if (String(info?.hubId) !== PORTAL_ID || !REQUIRED_SCOPES.every(scope => scopes.includes(scope)) || !FILE_SCOPES.some(scope => scopes.includes(scope))) {
+      throw new SignInError('HUBSPOT_ACCESS', 503, { phase: 'access' });
+    }
+    via = 'token_info';
+  } else if (lookup.status === 400 || lookup.status === 404) {
+    const details = client.ok(await client.call('access', 'GET', '/account-info/v3/details'), 'access');
+    if (String(details?.portalId) !== PORTAL_ID) throw new SignInError('HUBSPOT_ACCESS', 503, { phase: 'access' });
+    via = 'account_info';
+  } else {
+    client.ok(lookup, 'access'); // 401/403 -> HUBSPOT_ACCESS, 429 -> HUBSPOT_BUSY, others -> HUBSPOT_REJECTED
   }
   verifiedToken = client.accessToken;
   verifiedUntil = now() + 10 * 60 * 1000;
-  return true;
+  verifiedVia = via;
+  return via;
 }
 
-export function resetAccessCache() { verifiedUntil = 0; verifiedToken = ''; }
+export function resetAccessCache() { verifiedUntil = 0; verifiedToken = ''; verifiedVia = null; }
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);

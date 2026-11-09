@@ -153,6 +153,52 @@ test('the token must belong to the Legacy portal and carry every scope', async (
   }
 });
 
+const CRM_SCOPES = ['crm.objects.contacts.read', 'crm.objects.contacts.write', 'crm.objects.tickets.read', 'crm.objects.tickets.write'];
+
+test('a service key with the granular files.write scope is accepted', async () => {
+  const hub = fakeHubSpot({ 'POST /oauth/v2/private-apps/get/access-token-info': () => [200, { hubId: 50894788, scopes: [...CRM_SCOPES, 'files.write'] }] });
+  const result = await recordSignIn(client(hub), await input(), { now });
+  assert.equal(result.ticketCreated, true);
+  assert.equal(hub.find('GET /account-info/v3/details').length, 0);
+});
+
+test('when the token lookup does not recognize the token, the portal is confirmed instead', async () => {
+  for (const status of [400, 404]) {
+    resetAccessCache();
+    const hub = fakeHubSpot({
+      'POST /oauth/v2/private-apps/get/access-token-info': () => [status, { message: 'not a private app token' }],
+      'GET /account-info/v3/details': () => [200, { portalId: 50894788, timeZone: 'US/Eastern' }],
+    });
+    const result = await recordSignIn(client(hub), await input(), { now });
+    assert.equal(result.ticketCreated, true, `status ${status}`);
+    assert.equal(hub.find('GET /account-info/v3/details').length, 1);
+  }
+});
+
+test('the portal fallback refuses another portal and writes nothing', async () => {
+  const hub = fakeHubSpot({
+    'POST /oauth/v2/private-apps/get/access-token-info': () => [404, {}],
+    'GET /account-info/v3/details': () => [200, { portalId: 1234 }],
+  });
+  await assert.rejects(recordSignIn(client(hub), await input(), { now }), error => error.code === 'HUBSPOT_ACCESS');
+  assert.deepEqual(hub.calls.map(c => c.key), ['POST /oauth/v2/private-apps/get/access-token-info', 'GET /account-info/v3/details']);
+});
+
+test('a rejected token fails closed without the portal fallback', async () => {
+  for (const status of [401, 403]) {
+    resetAccessCache();
+    const hub = fakeHubSpot({ 'POST /oauth/v2/private-apps/get/access-token-info': () => [status, {}] });
+    await assert.rejects(recordSignIn(client(hub), await input(), { now }), error => error.code === 'HUBSPOT_ACCESS' && error.status === 503);
+    assert.equal(hub.calls.length, 1, `status ${status}`);
+  }
+});
+
+test('a token with no file scope at all is refused', async () => {
+  const hub = fakeHubSpot({ 'POST /oauth/v2/private-apps/get/access-token-info': () => [200, { hubId: 50894788, scopes: [...CRM_SCOPES, 'files.read'] }] });
+  await assert.rejects(recordSignIn(client(hub), await input(), { now }), error => error.code === 'HUBSPOT_ACCESS');
+  assert.equal(hub.calls.length, 1);
+});
+
 test('a 429 is retried once; a failed ticket create is not retried', async () => {
   let searches = 0;
   const hub = fakeHubSpot({

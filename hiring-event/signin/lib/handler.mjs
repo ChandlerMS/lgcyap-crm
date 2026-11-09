@@ -79,16 +79,19 @@ export async function handleSubmit(request, { env = process.env, fetchImpl = fet
 export async function handleHealth({ env = process.env, fetchImpl = fetch, now = Date.now } = {}) {
   const mode = signInMode(env);
   let hubspot = 'unchecked';
+  let via;
   if (env.HUBSPOT_ACCESS_TOKEN && mode !== 'dry-run') {
     try {
       const client = createHubSpotClient({ accessToken: env.HUBSPOT_ACCESS_TOKEN, fetchImpl, now, budgetMs: 8000 });
-      await verifyAccess(client, { now });
+      via = await verifyAccess(client, { now });
       hubspot = 'verified';
     } catch (error) {
       hubspot = error instanceof SignInError && error.code === 'HUBSPOT_ACCESS' ? 'access-needed' : 'unreachable';
     }
   }
-  return reply(200, { ok: mode === 'live' && hubspot === 'verified', mode, hubspot });
+  // `via` says how the token was confirmed: 'token_info' (portal and scopes) or
+  // 'account_info' (portal only, for tokens the scope lookup does not recognize).
+  return reply(200, { ok: mode === 'live' && hubspot === 'verified', mode, hubspot, ...(via ? { via } : {}) });
 }
 
 export function methodNotAllowed(allow) {

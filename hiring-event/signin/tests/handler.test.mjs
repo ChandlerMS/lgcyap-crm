@@ -99,11 +99,18 @@ test('an invalid property name for "how heard" is ignored', async () => {
 test('health reports mode and token check without secrets', async () => {
   const hub = fakeHubSpot();
   let response = await handleHealth({ env: LIVE, fetchImpl: hub.fetchImpl });
-  assert.deepEqual(await response.json(), { ok: true, mode: 'live', hubspot: 'verified' });
+  assert.deepEqual(await response.json(), { ok: true, mode: 'live', hubspot: 'verified', via: 'token_info' });
   resetAccessCache();
   const denied = fakeHubSpot({ 'POST /oauth/v2/private-apps/get/access-token-info': () => [401, { message: 'expired' }] });
   response = await handleHealth({ env: LIVE, fetchImpl: denied.fetchImpl });
   assert.deepEqual(await response.json(), { ok: false, mode: 'live', hubspot: 'access-needed' });
+  resetAccessCache();
+  const serviceKey = fakeHubSpot({
+    'POST /oauth/v2/private-apps/get/access-token-info': () => [404, {}],
+    'GET /account-info/v3/details': () => [200, { portalId: 50894788 }],
+  });
+  response = await handleHealth({ env: LIVE, fetchImpl: serviceKey.fetchImpl });
+  assert.deepEqual(await response.json(), { ok: true, mode: 'live', hubspot: 'verified', via: 'account_info' });
   response = await handleHealth({ env: { SIGNIN_DRY_RUN: '1' } });
   assert.deepEqual(await response.json(), { ok: false, mode: 'dry-run', hubspot: 'unchecked' });
 });

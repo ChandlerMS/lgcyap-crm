@@ -37,15 +37,17 @@ Ticket fields set on a new ticket:
 
 ## One-time setup
 
-### 1. HubSpot private app (owner)
+### 1. HubSpot service key (owner)
 
-In HubSpot, go to Settings, then Integrations, then Private Apps, and create an app named something like "Legacy Hiring Event Sign-In". Give it only these scopes:
+HubSpot no longer lets you create private apps, so the sign-in site and the application site share one **service key**, "Legacy Hiring Event Forms (sign-in and apply)", under Development, then Keys, then Service Keys. It has only these scopes:
 
 - `crm.objects.contacts.read`, `crm.objects.contacts.write`
 - `crm.objects.tickets.read`, `crm.objects.tickets.write`
-- `files`
+- `files.write`. A legacy private-app token with `files` also works.
 
-Copy its access token straight into Vercel in step 3. Do not paste it into chat, code or docs. Before writing, the site checks that the token belongs to portal `50894788` and has all five scopes, and refuses to write otherwise. Each server instance repeats the check every 10 minutes.
+Copy the key straight into Vercel in step 3. Do not paste it into chat, code or docs.
+
+Before writing, the site confirms the token belongs to portal `50894788`, and refuses to write otherwise. Each server instance repeats the check every 10 minutes. HubSpot's token lookup also lists the token's scopes, and when it does, every scope above is required. HubSpot does not document that lookup for service keys. If it answers 400 or 404, the site confirms the portal through the account details endpoint instead. HubSpot still refuses any call the key has no scope for. `/api/health` reports which check ran as `via`: `token_info` or `account_info`.
 
 ### 2. Optional: a "How did you hear about us?" ticket property
 
@@ -68,7 +70,7 @@ Environment variables, on `lgcyap-signin` only:
 
 | Variable | Production | Preview |
 | --- | --- | --- |
-| `HUBSPOT_ACCESS_TOKEN` | The private app token. Mark it Sensitive. | Leave unset |
+| `HUBSPOT_ACCESS_TOKEN` | The service key from step 1. Mark it Sensitive. | Leave unset |
 | `SIGNIN_WRITES_ENABLED` | `true` to accept sign-ins, `false` to close them | Leave unset |
 | `SIGNIN_DRY_RUN` | Leave unset. Production ignores it. | `1`: validates everything and writes nothing |
 | `HUBSPOT_HEARD_ABOUT_PROPERTY` | Optional, from step 2 | Leave unset |
@@ -81,7 +83,7 @@ Merge the branch into `main`. All three Vercel projects deploy from `main`, so t
 
 ## Before each event
 
-1. Open `https://lgcyap-signin.vercel.app/api/health`. It should return `{"ok":true,"mode":"live","hubspot":"verified"}`.
+1. Open `https://lgcyap-signin.vercel.app/api/health`. It should return `"ok":true`, `"mode":"live"` and `"hubspot":"verified"`, plus `via`.
    - `"mode":"closed"`: set `SIGNIN_WRITES_ENABLED=true` and redeploy.
    - `"hubspot":"access-needed"`: the token is wrong, expired or missing a scope.
 2. Scan the TV code and the printed code with a phone. Both should open the sign-in page.
