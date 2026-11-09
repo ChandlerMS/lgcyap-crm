@@ -14,7 +14,7 @@ The QR codes add where the person scanned: `?s=room` on the TV and `?s=lobby` on
 
 Portal `50894788`. Each sign-in:
 
-1. **Contact.** Finds the contact by email. If one exists, it only fills a blank first name, last name or phone and never overwrites anything. Otherwise it creates one with first name, last name, email and phone. It never touches `lifecyclestage`.
+1. **Contact.** Finds the contact by email. If one exists, it is used as-is and never edited: the form is public, and nobody proves they own the email they type. What the person entered goes on the ticket and the note, which says the email matched an existing contact so staff can confirm the details before changing it. Otherwise it creates a contact with first name, last name, email and phone. It never touches `lifecyclestage`.
 2. **Ticket.** If the contact already has an open ticket in the Recruiting pipeline (not Completed or Withdrawn), it reuses that ticket. Otherwise it creates one in the Recruiting pipeline (`924992938`) at **Hiring Event** (`1473318768`) with `recruiting_path = genpop`. That matches the CRM's own Add Recruits, and the CRM only moves Hiring Event tickets forward when they have a path.
 3. **License photos.** Uploads the front photo, and the back if given, to File Manager folder `/Hiring Event Sign-Ins/Driver Licenses` as **private** files. File names hold the contact ID and a timestamp, never the person's name.
 4. **Note.** Adds a note with every answer and the photos attached, on both the ticket and the contact.

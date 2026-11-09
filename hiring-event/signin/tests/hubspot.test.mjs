@@ -77,19 +77,28 @@ test('unlicensed sign-ins record the unlicensed intake status without NPN fields
   assert.equal(hub.find('POST /crm/v3/objects/notes')[0].body.properties.hs_attachment_ids, '7001');
 });
 
-test('an existing contact keeps its data; only blanks are filled', async () => {
+test('an existing contact is never modified; the answers go on the ticket and note for staff', async () => {
   const hub = fakeHubSpot({
-    'POST /crm/v3/objects/contacts/search': () => [200, { total: 1, results: [{ id: '777', properties: { firstname: 'Staff', lastname: 'Entered', phone: '' } }] }],
-    'PATCH /crm/v3/objects/contacts/777': () => [200, { id: '777' }],
+    'POST /crm/v3/objects/contacts/search': () => [200, { total: 1, results: [{ id: '777', properties: { email: 'testy.sample@example.invalid' } }] }],
     'GET /crm/v4/objects/contacts/777/associations/tickets': () => [200, { results: [] }],
   });
   const result = await recordSignIn(client(hub), await input(), { now });
   assert.equal(result.contactCreated, false);
-  assert.equal(hub.find('POST /crm/v3/objects/contacts').length, 0);
-  const patch = hub.find('PATCH /crm/v3/objects/contacts/777');
-  assert.equal(patch.length, 1);
-  assert.deepEqual(patch[0].body, { properties: { phone: '+14075550142' } });
   assert.equal(result.ticketCreated, true);
+  assert.equal(hub.find('POST /crm/v3/objects/contacts').length, 0);
+  assert.equal(hub.calls.filter(c => c.init.method === 'PATCH' || c.init.method === 'PUT' || c.init.method === 'DELETE').length, 0, 'no contact or other record is edited');
+  assert.deepEqual(hub.find('POST /crm/v3/objects/contacts/search')[0].body.properties, ['email']);
+  const ticket = hub.find('POST /crm/v3/objects/tickets')[0].body;
+  assert.equal(ticket.properties.recruit_phone_number, '+14075550142');
+  assert.equal(ticket.associations[0].to.id, '777');
+  const note = hub.find('POST /crm/v3/objects/notes')[0].body.properties.hs_note_body;
+  assert.match(note, /matched an existing contact, which was not changed/);
+});
+
+test('a new contact is labeled as created from the sign-in', async () => {
+  const hub = fakeHubSpot();
+  await recordSignIn(client(hub), await input(), { now });
+  assert.match(hub.find('POST /crm/v3/objects/tickets')[0].body.properties.content, /Contact record: Created from this sign-in/);
 });
 
 test('a person with an open recruiting ticket gets a note on it instead of a second ticket', async () => {

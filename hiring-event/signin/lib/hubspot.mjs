@@ -145,25 +145,18 @@ function ticketProperties(input, { description, heardAboutProperty }) {
 async function findContact(client, email) {
   const body = client.ok(await client.call('contact_search', 'POST', '/crm/v3/objects/contacts/search', {
     retryable: true,
-    json: { filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }], properties: ['firstname', 'lastname', 'phone', 'email'], limit: 2 },
+    json: { filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }], properties: ['email'], limit: 2 },
   }), 'contact_search');
   const match = Array.isArray(body?.results) ? body.results[0] : null;
-  return match && /^\d+$/.test(String(match.id)) ? { id: String(match.id), properties: match.properties ?? {} } : null;
+  return match && /^\d+$/.test(String(match.id)) ? String(match.id) : null;
 }
 
+// The form is public and nobody proves they own the email they type, so an existing
+// contact is never edited. What the person entered stays on the ticket and the note,
+// where staff can check it before changing the contact themselves.
 async function ensureContact(client, input) {
-  const existing = await findContact(client, input.email);
-  if (existing) {
-    // Fill only blanks on an existing contact; never overwrite what staff already have.
-    const fill = {};
-    if (!existing.properties.firstname) fill.firstname = input.firstName;
-    if (!existing.properties.lastname) fill.lastname = input.lastName;
-    if (!existing.properties.phone) fill.phone = input.phone;
-    if (Object.keys(fill).length) {
-      client.ok(await client.call('contact_fill', 'PATCH', `/crm/v3/objects/contacts/${existing.id}`, { json: { properties: fill } }), 'contact_fill');
-    }
-    return { id: existing.id, created: false };
-  }
+  const existingId = await findContact(client, input.email);
+  if (existingId) return { id: existingId, created: false };
   const result = await client.call('contact_create', 'POST', '/crm/v3/objects/contacts', {
     json: { properties: { firstname: input.firstName, lastname: input.lastName, email: input.email, phone: input.phone } },
   });
@@ -224,7 +217,7 @@ async function createNote(client, { contactId, ticketId, html, attachmentIds, ti
 
 /**
  * Records one validated sign-in:
- * 1. reuse the Contact with this email (filling blanks) or create it;
+ * 1. reuse the Contact with this email without changing it, or create it;
  * 2. reuse its open Recruiting ticket, or create one at Hiring Event;
  * 3. upload the license photos as PRIVATE files;
  * 4. add a note with every answer and the photos to the ticket and contact.
@@ -237,6 +230,9 @@ export async function recordSignIn(client, input, { now = Date.now, heardAboutPr
   const existingTicketId = await openRecruitingTicket(client, contact.id);
   const licenseFiles = input.licenseBack ? 'Front and back attached to the sign-in note' : 'Front attached to the sign-in note';
   const lines = summaryLines(input, { signedInAt, licenseFiles });
+  lines.push(['Contact record', contact.created
+    ? 'Created from this sign-in'
+    : 'The email matched an existing contact, which was not changed. Confirm these details with the person before updating it.']);
   const description = ['Hiring event sign-in', ...lines.map(([k, v]) => `${k}: ${v}`)].join('\n');
 
   const ticketId = existingTicketId ?? await createTicket(client, contact.id, ticketProperties(input, { description, heardAboutProperty }));
