@@ -47,6 +47,7 @@ test('a new applicant gets a contact, a ticket at Application, a private file an
   assert.match(note.properties.hs_note_body, /Meets all five/);
   assert.match(note.properties.hs_note_body, /Why does this role interest you\?/);
   assert.match(note.properties.hs_note_body, /Customer service\.<br>Looking to grow\./);
+  assert.match(note.properties.hs_note_body, /this opens Part 2 below\)<\/strong><br>No<\/li>/, 'an unticked box reads No');
   assert.ok(hub.state.calls.every(c => c.auth === 'Bearer test-token'));
 });
 

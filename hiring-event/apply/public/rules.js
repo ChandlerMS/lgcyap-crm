@@ -42,9 +42,10 @@ export function evaluateApplication(answers) {
 
 /** Display text for a stored answer. */
 export function answerText(item, value) {
+  // A checkbox is always answered: unticked means No.
+  if (item.type === 'check') return value === 'yes' ? 'Yes' : 'No';
   if (value === undefined || value === null || value === '') return '';
   if (item.type === 'yesno') return value === 'yes' ? 'Yes' : value === 'no' ? 'No' : '';
-  if (item.type === 'check') return value === 'yes' ? 'Yes' : '';
   if (item.type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [y, m, d] = value.split('-');
     return `${m}/${d}/${y}`;
