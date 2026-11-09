@@ -1,0 +1,84 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { applyMode, handleHealth, handleSubmit } from '../lib/handler.mjs';
+import { resetAccessCache } from '../lib/hubspot.mjs';
+import { applicationForm, baseAnswers } from './fixtures.mjs';
+import { fakeHubSpot } from './fake-hubspot.mjs';
+
+const LIVE = { HUBSPOT_ACCESS_TOKEN: 'test-token', APPLY_WRITES_ENABLED: 'true', VERCEL_ENV: 'production' };
+
+function request(form, { origin = 'https://lgcyap-apply.vercel.app', host = 'lgcyap-apply.vercel.app' } = {}) {
+  const headers = { host };
+  if (origin) headers.origin = origin;
+  return new Request('https://lgcyap-apply.vercel.app/api/submit', { method: 'POST', body: form, headers });
+}
+
+test('mode: dry run only outside Production, and writes need the switch', () => {
+  assert.equal(applyMode({ APPLY_DRY_RUN: '1' }), 'dry-run');
+  assert.equal(applyMode({ APPLY_DRY_RUN: '1', VERCEL_ENV: 'production' }), 'not-configured');
+  assert.equal(applyMode({ HUBSPOT_ACCESS_TOKEN: 'x' }), 'closed');
+  assert.equal(applyMode(LIVE), 'live');
+});
+
+test('cross-site posts are refused', async () => {
+  const res = await handleSubmit(request(applicationForm(), { origin: 'https://evil.example' }), { env: LIVE });
+  assert.equal(res.status, 403);
+  const none = await handleSubmit(request(applicationForm(), { origin: null }), { env: LIVE });
+  assert.equal(none.status, 403);
+});
+
+test('invalid answers return 422 with question IDs and no echoed values', async () => {
+  const res = await handleSubmit(request(applicationForm({ answers: baseAnswers({ email: 'nope' }) })), { env: LIVE });
+  assert.equal(res.status, 422);
+  const body = await res.json();
+  assert.deepEqual(body, { ok: false, code: 'INVALID', fields: { email: 'invalid' } });
+});
+
+test('bot submissions look accepted but write nothing', async () => {
+  const hub = fakeHubSpot();
+  const res = await handleSubmit(request(applicationForm({ website: 'x' })), { env: LIVE, fetchImpl: hub.fetchImpl });
+  assert.equal(res.status, 200);
+  assert.equal(hub.state.calls.length, 0);
+});
+
+test('dry run evaluates without HubSpot', async () => {
+  const res = await handleSubmit(request(applicationForm({ answers: baseAnswers({ english: 'no' }) })), { env: { APPLY_DRY_RUN: '1' } });
+  const body = await res.json();
+  assert.equal(body.dryRun, true);
+  assert.equal(body.pass, false);
+  assert.deepEqual(body.failed, ['fluency in English, since every call is in English']);
+});
+
+test('not configured or switched off returns 503 and writes nothing', async () => {
+  assert.equal((await handleSubmit(request(applicationForm()), { env: {} })).status, 503);
+  const hub = fakeHubSpot();
+  const res = await handleSubmit(request(applicationForm()), { env: { HUBSPOT_ACCESS_TOKEN: 'x' }, fetchImpl: hub.fetchImpl });
+  assert.equal((await res.json()).code, 'CLOSED');
+  assert.equal(hub.state.calls.length, 0);
+});
+
+test('live: records the application and reports pass', async () => {
+  resetAccessCache();
+  const hub = fakeHubSpot();
+  const logs = [];
+  const original = console.log;
+  console.log = line => logs.push(line);
+  try {
+    const res = await handleSubmit(request(applicationForm()), { env: LIVE, fetchImpl: hub.fetchImpl });
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true, pass: true, failed: [] });
+  } finally { console.log = original; }
+  assert.equal(hub.state.tickets.length, 1);
+  assert.ok(logs.every(line => !/Testy|example\.com|4075550142/i.test(line)), 'logs hold no applicant details');
+});
+
+test('health reports mode and HubSpot access without secrets', async () => {
+  resetAccessCache();
+  const hub = fakeHubSpot();
+  const ok = await (await handleHealth({ env: LIVE, fetchImpl: hub.fetchImpl })).json();
+  assert.deepEqual(ok, { ok: true, mode: 'live', hubspot: 'ok' });
+  const bad = await (await handleHealth({ env: LIVE, fetchImpl: fakeHubSpot({ hubId: 1 }).fetchImpl })).json();
+  assert.deepEqual(bad, { ok: false, mode: 'live', hubspot: 'access_problem' });
+  const off = await (await handleHealth({ env: {} })).json();
+  assert.deepEqual(off, { ok: false, mode: 'not-configured', hubspot: 'not_checked' });
+});
