@@ -116,7 +116,7 @@ npm run dev:signin
 npm run dev:qr
 ```
 
-`npm test` runs the sign-in unit tests against a fake HubSpot. `dev:signin` serves the form at http://localhost:3010 in dry-run mode, so nothing is written. `dev:qr` serves the TV page at http://localhost:3011.
+`npm test` runs the sign-in unit tests against a fake HubSpot. `dev:signin` serves the form at http://localhost:3010 in dry-run mode, so nothing is written. `dev:qr` serves the TV page at http://localhost:3011. The preview server only accepts connections from this computer. To try the form on a phone over Wi-Fi, run `node scripts/dev-server.mjs signin 3010 --dry-run --lan`.
 
 ## Privacy
 

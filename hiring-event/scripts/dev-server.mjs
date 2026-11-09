@@ -4,6 +4,8 @@
 //
 //   node hiring-event/scripts/dev-server.mjs hiring-event/signin 3010 --dry-run
 // --dry-run sets SIGNIN_DRY_RUN=1: the sign-in validates everything and writes nothing.
+// --lan also listens on the local network (for testing on a phone); by default only
+// this computer can connect.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
@@ -14,6 +16,7 @@ const [dirArg, portArg] = process.argv.slice(2).filter(arg => !arg.startsWith('-
 if (process.argv.includes('--dry-run')) process.env.SIGNIN_DRY_RUN = '1';
 const appDir = resolve(dirArg ?? '.');
 const port = Number(portArg ?? 3010);
+const hostname = process.argv.includes('--lan') ? '0.0.0.0' : '127.0.0.1';
 const publicDir = join(appDir, 'public');
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -43,7 +46,17 @@ async function staticFile(pathname) {
 
 createServer(async (req, res) => {
   for (const { key, value } of headerRules) res.setHeader(key, value);
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  // Everything, URL parsing included, stays inside the try: a malformed request gets a
+  // 400 instead of crashing the preview. The path comes from req.url only; the Host
+  // header is never parsed (the sign-in handler reads it as a plain string).
+  let url;
+  try {
+    url = new URL(req.url ?? '/', `http://localhost:${port}`);
+    decodeURIComponent(url.pathname);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain' }).end('Bad request');
+    return;
+  }
   try {
     const api = /^\/api\/([a-z0-9-]+)$/.exec(url.pathname);
     if (api) {
@@ -69,4 +82,4 @@ createServer(async (req, res) => {
     if (!res.headersSent) res.writeHead(500);
     res.end('Server error');
   }
-}).listen(port, () => console.log(`Serving ${appDir} at http://localhost:${port}`));
+}).listen(port, hostname, () => console.log(`Serving ${appDir} at http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}${hostname === '0.0.0.0' ? ' (also on the local network)' : ''}`));
