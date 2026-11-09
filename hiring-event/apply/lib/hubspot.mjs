@@ -98,26 +98,24 @@ function easternTime(ms) {
 
 const id = value => /^\d+$/.test(String(value ?? '')) ? String(value) : null;
 
-async function findContact(client, email) {
+async function findContactId(client, email) {
+  // Only the ID is needed: an existing contact is linked, never read into or changed.
   const body = client.ok(await client.call('contact_search', 'POST', '/crm/v3/objects/contacts/search', {
     retryable: true,
-    json: { filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }], properties: ['firstname', 'lastname', 'phone', 'city', 'state', 'zip'], limit: 2 },
+    json: { filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }], properties: ['email'], limit: 2 },
   }), 'contact_search');
   const match = Array.isArray(body?.results) ? body.results[0] : null;
-  return match && id(match.id) ? { id: id(match.id), properties: match.properties ?? {} } : null;
+  return match ? id(match.id) : null;
 }
 
-/** Reuses the contact with this email, filling only blank fields, or creates it. */
+/**
+ * The form is public and the email is not verified, so a contact that already has this email is
+ * only linked to. Its fields are never changed; staff confirm details with the person first.
+ * A new contact is created with the applicant's details.
+ */
 async function ensureContact(client, properties) {
-  const existing = await findContact(client, properties.email);
-  if (existing) {
-    const fill = {};
-    for (const [key, value] of Object.entries(properties)) {
-      if (key !== 'email' && value && !existing.properties[key]) fill[key] = value;
-    }
-    if (Object.keys(fill).length) client.ok(await client.call('contact_fill', 'PATCH', `/crm/v3/objects/contacts/${existing.id}`, { json: { properties: fill } }), 'contact_fill');
-    return { id: existing.id, created: false };
-  }
+  const existingId = await findContactId(client, properties.email);
+  if (existingId) return { id: existingId, created: false };
   const result = await client.call('contact_create', 'POST', '/crm/v3/objects/contacts', { json: { properties } });
   if (result.status === 409) {
     // Created moments ago (search indexing lags) or by a double tap: use the existing ID.
@@ -129,16 +127,14 @@ async function ensureContact(client, properties) {
   return { id: id(body.id), created: true };
 }
 
-const TICKET_FILL = ['recruit_email', 'recruit_phone_number', 'orientation_office', 'intake_license_status', 'npn_number', 'invited_by_name'];
-
-/** The newest open Recruiting ticket on this contact, or null. */
+/** The newest open Recruiting ticket on this contact, or null. Read only, never changed. */
 async function openRecruitingTicket(client, contactId) {
   const assoc = client.ok(await client.call('ticket_lookup', 'GET', `/crm/v4/objects/contacts/${contactId}/associations/tickets?limit=100`), 'ticket_lookup');
   const ids = (Array.isArray(assoc?.results) ? assoc.results : []).map(item => id(item?.toObjectId)).filter(Boolean);
   if (!ids.length) return null;
   const tickets = client.ok(await client.call('ticket_lookup', 'POST', '/crm/v3/objects/tickets/batch/read', {
     retryable: true,
-    json: { inputs: ids.slice(0, 100).map(ticketId => ({ id: ticketId })), properties: ['hs_pipeline', 'hs_pipeline_stage', 'recruiting_path', ...TICKET_FILL] },
+    json: { inputs: ids.slice(0, 100).map(ticketId => ({ id: ticketId })), properties: ['hs_pipeline', 'hs_pipeline_stage'] },
   }), 'ticket_lookup');
   const open = (Array.isArray(tickets?.results) ? tickets.results : [])
     .filter(t => id(t?.id) && t.properties?.hs_pipeline === RECRUITING_PIPELINE_ID && !TERMINAL_STAGE_IDS.includes(t.properties.hs_pipeline_stage))
@@ -182,12 +178,15 @@ export function applicationSections(answers) {
   }));
 }
 
-function noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense }) {
+export const EXISTING_CONTACT_NOTE = 'The email matched an existing contact, which was not changed. Confirm these details with the person before updating it.';
+
+function noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense, existingContact }) {
   const p = (label, value) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
   let html = `<p><strong>Agent application (v3.1) submitted online, ${escapeHtml(easternTime(submittedAt))}</strong></p>`;
   html += p('Required items', evaluation.pass ? 'Meets all five' : `Did not meet: ${evaluation.failed.join('; ')}`);
   html += p('Needs a private conversation', evaluation.review.length ? evaluation.review.join(' | ') : 'Nothing flagged');
   html += p('In HubSpot', outcome);
+  if (existingContact) html += p('Contact', EXISTING_CONTACT_NOTE);
   html += p("Driver's license", hasLicense ? 'Attached to this note (private file)' : 'Not attached');
   for (const section of applicationSections(answers)) {
     html += `<p><strong>${escapeHtml(section.title.toUpperCase())}</strong></p><ul>`;
@@ -208,14 +207,13 @@ function ticketDescription({ submittedAt, evaluation, answers }) {
 }
 
 /**
- * Records one validated application:
- * 1. reuse the contact with this email (filling blanks) or create it;
- * 2. find the contact's open Recruiting ticket:
- *    - at Hiring Event on the Referrals path (or no path): move it to Application,
- *    - anywhere else: leave its stage alone;
- *    and fill that ticket's blank fields from the application;
- * 3. with no open ticket, create one at Application, unless a required item failed
- *    (that applicant was told the role is not a fit, so only the contact and note are kept);
+ * Records one validated application. The form is public and the email is unverified, so existing
+ * records are only linked and noted, never changed:
+ * 1. link the contact that has this email, or create a new one;
+ * 2. if that contact has an open Recruiting ticket, add the application to it as a note, leaving
+ *    its stage and fields alone (staff confirm the person, then move it in the CRM);
+ * 3. otherwise create a ticket at Application, unless a required item failed (that applicant was
+ *    told the role is not a fit, so only the contact and note are kept);
  * 4. upload the license as a PRIVATE file and add a note with every answer.
  */
 export async function recordApplication(client, { answers, license }, evaluation, { now = Date.now } = {}) {
@@ -234,19 +232,10 @@ export async function recordApplication(client, { answers, license }, evaluation
   let outcome;
   if (open) {
     ticketId = open.id;
-    const patch = {};
-    for (const key of TICKET_FILL) if (fields[key] && !open.properties[key]) patch[key] = fields[key];
-    const atHiringEvent = open.properties.hs_pipeline_stage === STAGE.hiringEvent;
-    const referralPath = !open.properties.recruiting_path || open.properties.recruiting_path === 'genpop';
-    if (evaluation.pass && atHiringEvent && referralPath) {
-      patch.hs_pipeline_stage = STAGE.application;
-      action = 'moved';
-      outcome = 'Moved this ticket from Hiring Event to Application';
-    } else {
-      action = 'noted';
-      outcome = 'Added to the open recruiting ticket; its stage was not changed';
-    }
-    if (Object.keys(patch).length) client.ok(await client.call('ticket_update', 'PATCH', `/crm/v3/objects/tickets/${ticketId}`, { json: { properties: patch } }), 'ticket_update');
+    action = 'noted';
+    outcome = open.properties.hs_pipeline_stage === STAGE.hiringEvent
+      ? 'Added to this open recruiting ticket, which is at Hiring Event. Its stage and fields were not changed: confirm this is the same person, then move it to Application in the CRM.'
+      : 'Added to this open recruiting ticket. Its stage and fields were not changed.';
   } else if (evaluation.pass) {
     const body = client.ok(await client.call('ticket_create', 'POST', '/crm/v3/objects/tickets', {
       json: {
@@ -277,7 +266,7 @@ export async function recordApplication(client, { answers, license }, evaluation
   if (ticketId) associations.unshift({ to: { id: ticketId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: ASSOCIATION.noteToTicket }] });
   client.ok(await client.call('note_create', 'POST', '/crm/v3/objects/notes', {
     json: {
-      properties: { hs_timestamp: new Date(submittedAt).toISOString(), hs_note_body: noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense: true }), hs_attachment_ids: fileId },
+      properties: { hs_timestamp: new Date(submittedAt).toISOString(), hs_note_body: noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense: true, existingContact: !contact.created }), hs_attachment_ids: fileId },
       associations,
     },
   }), 'note_create');

@@ -8,11 +8,13 @@ and gold look as the hiring-event sign-in, and writes each application to HubSpo
 
 Portal `50894788`, Recruiting ticket pipeline `924992938`, the same records the CRM reads.
 
+The form is public and the email is not verified, so records found by email are only linked and
+noted. The site never changes an existing contact or ticket.
+
 | Situation | Result |
 | --- | --- |
-| New applicant who meets the five required items | Contact (created, or reused by email) and a ticket at **Application** |
-| Already has an open recruiting ticket at **Hiring Event** (Referrals path or no path) | That ticket moves to **Application**. No second ticket. |
-| Already has an open recruiting ticket at any other stage, or on the Recruiters path | Stage unchanged. The application is added as a note. |
+| New applicant who meets the five required items | A new contact (or a link to the existing contact with that email) and a new ticket at **Application** |
+| The contact already has an open recruiting ticket | The application is added to that ticket as a note. Its stage and fields are not changed. If it is at **Hiring Event**, the note asks staff to confirm the person and move it to Application in the CRM. |
 | Fails a required item (18+, work authorization, English, SSN, office hours) | Contact and note only, no ticket. The applicant sees the same "not able to move forward" message as Onboard. |
 
 Every application also gets:
@@ -24,9 +26,13 @@ Every application also gets:
 
 Ticket fields set on a new ticket: `subject` (`Recruiting: Full Name`), `recruit_name`, `recruit_email`,
 `recruit_phone_number`, `orientation_office`, `intake_license_status`, `already_licensed`, `npn_number`,
-`invited_by_name`, `source_type` = Form, and `content`. On an existing ticket only blank fields are
-filled. Existing contact values are never overwritten. Contact `lifecyclestage` is never touched.
-`recruiting_path` is left for staff (the CRM allows the Application to Phone Interview move without one).
+`invited_by_name`, `source_type` = Form, and `content`. When the email matches an existing contact,
+the note says so and that the contact was not changed, so staff confirm details with the person
+before updating it. Contact `lifecyclestage` is never touched. `recruiting_path` is left for staff
+(the CRM allows the Application to Phone Interview move without one).
+
+Because the email is not verified, anyone who knows a person's email can add an application note to
+that person's contact or open ticket. They cannot change the person's data.
 
 ## Setup
 

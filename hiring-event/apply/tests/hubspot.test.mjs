@@ -50,43 +50,38 @@ test('a new applicant gets a contact, a ticket at Application, a private file an
   assert.ok(hub.state.calls.every(c => c.auth === 'Bearer test-token'));
 });
 
-test('an existing contact is reused and only blank fields are filled', async () => {
-  const hub = fakeHubSpot({ contacts: [{ id: '501', properties: { email: 'testy.applicant@example.com', firstname: 'Tess', lastname: '', phone: '+13215550100' } }] });
+// The form is public and emails are not verified: nothing found by email may be changed.
+const noChanges = hub => assert.deepEqual(hub.state.calls.filter(c => c.method === 'PATCH' || c.method === 'PUT' || c.method === 'DELETE'), []);
+
+test('an existing contact is linked but never changed', async () => {
+  const before = { email: 'testy.applicant@example.com', firstname: 'Tess', lastname: '', phone: '+13215550100' };
+  const hub = fakeHubSpot({ contacts: [{ id: '501', properties: { ...before } }] });
   const result = await run(hub);
   assert.equal(result.contactCreated, false);
-  const contact = hub.state.contacts[0].properties;
-  assert.equal(contact.firstname, 'Tess', 'existing first name kept');
-  assert.equal(contact.phone, '+13215550100', 'existing phone kept');
-  assert.equal(contact.lastname, 'Q Applicant', 'blank last name filled');
-  assert.equal(contact.city, 'Orlando');
+  assert.equal(result.contactId, '501');
+  assert.deepEqual(hub.state.contacts[0].properties, before, 'blank fields stay blank, values stay as they were');
+  noChanges(hub);
+  const search = hub.state.calls.find(c => c.pathname === '/crm/v3/objects/contacts/search');
+  assert.deepEqual(search.body.properties, ['email'], 'reads nothing but the match');
+  assert.equal(hub.state.tickets[0].associations[0].to.id, '501', 'the new ticket is linked to the contact');
+  assert.match(hub.state.notes[0].properties.hs_note_body, /matched an existing contact, which was not changed/);
 });
 
-test('a hiring-event sign-in ticket moves to Application and keeps its own values', async () => {
-  const hub = fakeHubSpot({
-    contacts: [{ id: '501', properties: { email: 'testy.applicant@example.com' } }],
-    tickets: [{ id: '7001', contactId: '501', properties: { hs_pipeline: '924992938', hs_pipeline_stage: '1473318768', recruiting_path: 'genpop', orientation_office: 'miami', recruit_email: '' } }],
-  });
-  const result = await run(hub);
-  assert.equal(result.action, 'moved');
-  assert.equal(result.ticketId, '7001');
-  assert.equal(hub.state.tickets.length, 1, 'no second ticket');
-  const t = hub.state.tickets[0].properties;
-  assert.equal(t.hs_pipeline_stage, '1473318769');
-  assert.equal(t.orientation_office, 'miami', 'staff value kept');
-  assert.equal(t.recruit_email, 'testy.applicant@example.com', 'blank value filled');
-  assert.match(hub.state.notes[0].properties.hs_note_body, /Moved this ticket from Hiring Event to Application/);
-});
-
-test('an open ticket past Hiring Event, or on the Recruiters path, keeps its stage', async () => {
+test('an open ticket gets the note but keeps its stage and fields', async () => {
   for (const properties of [
+    { hs_pipeline: '924992938', hs_pipeline_stage: '1473318768', recruiting_path: 'genpop', orientation_office: 'miami', recruit_email: '' },
     { hs_pipeline: '924992938', hs_pipeline_stage: '1473225368', recruiting_path: 'genpop' },
     { hs_pipeline: '924992938', hs_pipeline_stage: '1473318768', recruiting_path: 'mass_recruiting' },
   ]) {
     const hub = fakeHubSpot({ contacts: [{ id: '501', properties: { email: 'testy.applicant@example.com' } }], tickets: [{ id: '7002', contactId: '501', properties }] });
     const result = await run(hub);
     assert.equal(result.action, 'noted');
-    assert.equal(hub.state.tickets[0].properties.hs_pipeline_stage, properties.hs_pipeline_stage);
+    assert.equal(result.ticketId, '7002');
+    assert.equal(hub.state.tickets.length, 1, 'no second ticket');
+    assert.deepEqual(hub.state.tickets[0].properties, properties, 'stage and fields unchanged');
+    noChanges(hub);
     assert.equal(hub.state.notes[0].associations[0].to.id, '7002');
+    if (properties.hs_pipeline_stage === '1473318768') assert.match(hub.state.notes[0].properties.hs_note_body, /confirm this is the same person, then move it to Application in the CRM/);
   }
 });
 
