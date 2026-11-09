@@ -83,13 +83,16 @@ export async function handleSubmit(request, { env = process.env, fetchImpl = fet
 export async function handleHealth({ env = process.env, fetchImpl = fetch, now = Date.now } = {}) {
   const mode = applyMode(env);
   let hubspot = 'not_checked';
+  const detail = {};
   if (mode === 'live' || mode === 'closed') {
     try {
-      await verifyAccess(createHubSpotClient({ accessToken: env.HUBSPOT_ACCESS_TOKEN, fetchImpl, now, budgetMs: 8000 }), { now, cache: false });
+      detail.via = await verifyAccess(createHubSpotClient({ accessToken: env.HUBSPOT_ACCESS_TOKEN, fetchImpl, now, budgetMs: 8000 }), { now, cache: false });
       hubspot = 'ok';
     } catch (error) {
       hubspot = error instanceof ApplyError && error.code === 'HUBSPOT_ACCESS' ? 'access_problem' : 'unreachable';
+      // Which check failed and HubSpot's status code, to help setup. No token or account data.
+      if (error instanceof ApplyError) Object.assign(detail, { step: error.phase, status: error.upstreamStatus ?? null });
     }
   }
-  return reply(200, { ok: mode === 'live' && hubspot === 'ok', mode, hubspot });
+  return reply(200, { ok: mode === 'live' && hubspot === 'ok', mode, hubspot, ...detail });
 }

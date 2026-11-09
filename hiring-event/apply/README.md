@@ -36,10 +36,12 @@ that person's contact or open ticket. They cannot change the person's data.
 
 ## Setup
 
-1. **HubSpot private app.** In HubSpot, Settings, Integrations, Private Apps. The sign-in site's app
-   works here too if it has these scopes: `crm.objects.contacts.read`, `crm.objects.contacts.write`,
-   `crm.objects.tickets.read`, `crm.objects.tickets.write`, `files`. The server checks the portal and
-   scopes and refuses to write otherwise.
+1. **HubSpot service key.** HubSpot no longer creates private apps; service keys replace them
+   (Development, Keys, Service Keys). The key "Legacy Hiring Event Forms (sign-in and apply)" serves
+   both hiring-event sites with `crm.objects.contacts.read`, `crm.objects.contacts.write`,
+   `crm.objects.tickets.read`, `crm.objects.tickets.write` and `files.write`. An older private-app
+   token works too if it has the four CRM scopes and `files`. Before writing, the server confirms the
+   token is for portal `50894788` (and its scopes, when HubSpot reports them) and refuses otherwise.
 2. **Vercel project** `lgcyap-apply` in team `main-team8`: import the GitHub repository, set
    **Root Directory** to `hiring-event/apply`, Framework Preset **Other**, no build command.
 3. **Environment variables** (Production):
@@ -48,8 +50,10 @@ that person's contact or open ticket. They cannot change the person's data.
      again later and nothing is written.
    - Preview deployments: leave the token out. `APPLY_DRY_RUN` = `1` there checks answers without
      writing (it is ignored in Production).
-4. **Check it.** Open `/api/health`. Ready looks like `{"ok":true,"mode":"live","hubspot":"ok"}`.
-   `access_problem` means the token is for another portal or is missing a scope.
+4. **Check it.** Open `/api/health`. Ready looks like `{"ok":true,"mode":"live","hubspot":"ok",...}`.
+   `access_problem` means the token is for another portal, is missing a scope, or was rejected; the
+   `step` and `status` fields say which HubSpot check failed. Environment variable changes apply only
+   after a redeploy.
 5. Recommended: a Vercel Firewall rate limit on `/api/submit` (for example 10 requests per minute per IP).
 
 ## Limits and privacy

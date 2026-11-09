@@ -1,6 +1,6 @@
 // An in-memory stand-in for the HubSpot endpoints the application uses. It records every call
 // so tests can check exactly what would be written. No network access.
-export function fakeHubSpot({ scopes, hubId = 50894788, contacts = [], tickets = [], failOn = null } = {}) {
+export function fakeHubSpot({ scopes, hubId = 50894788, tokenInfoStatus = 200, accountPortalId = 50894788, contacts = [], tickets = [], failOn = null } = {}) {
   const state = {
     calls: [],
     contacts: contacts.map(c => ({ ...c, properties: { ...c.properties } })),
@@ -26,7 +26,10 @@ export function fakeHubSpot({ scopes, hubId = 50894788, contacts = [], tickets =
     state.calls.push({ method, pathname, body, auth: init.headers?.Authorization });
     if (failOn && failOn.method === method && pathname.startsWith(failOn.path)) return json(failOn.status ?? 500, { message: 'fail' });
 
-    if (pathname === '/oauth/v2/private-apps/get/access-token-info') return json(200, { hubId, appId: 1, scopes: allScopes });
+    if (pathname === '/oauth/v2/private-apps/get/access-token-info') {
+      return tokenInfoStatus === 200 ? json(200, { hubId, appId: 1, scopes: allScopes }) : json(tokenInfoStatus, { message: 'not found' });
+    }
+    if (pathname === '/account-info/v3/details' && method === 'GET') return json(200, { portalId: accountPortalId, accountType: 'STANDARD' });
     if (pathname === '/crm/v3/objects/contacts/search') {
       const email = body.filterGroups[0].filters[0].value;
       return json(200, { results: state.contacts.filter(c => c.properties.email === email).map(c => ({ id: c.id, properties: c.properties })) });

@@ -128,12 +128,36 @@ test('answers are HTML-escaped in the note', async () => {
   assert.match(body, /&lt;script&gt;alert\(1\)&lt;\/script&gt; &amp; more/);
 });
 
+const CRM_SCOPES = ['crm.objects.contacts.read', 'crm.objects.contacts.write', 'crm.objects.tickets.read', 'crm.objects.tickets.write'];
+
 test('a token for another portal or missing scopes writes nothing', async () => {
-  for (const options of [{ hubId: 123 }, { scopes: ['crm.objects.contacts.read'] }]) {
+  for (const options of [{ hubId: 123 }, { scopes: ['crm.objects.contacts.read'] }, { scopes: CRM_SCOPES }, { scopes: [...CRM_SCOPES, 'files.read'] }]) {
     const hub = fakeHubSpot(options);
     await assert.rejects(run(hub), error => error.code === 'HUBSPOT_ACCESS');
     assert.equal(hub.state.calls.length, 1);
   }
+});
+
+test('a service key with files.write is accepted', async () => {
+  const hub = fakeHubSpot({ scopes: [...CRM_SCOPES, 'files.write'] });
+  const result = await run(hub);
+  assert.equal(result.action, 'created');
+  assert.equal(hub.state.files.length, 1);
+});
+
+test('when token info is unavailable, the portal is confirmed through account details', async () => {
+  const hub = fakeHubSpot({ tokenInfoStatus: 404 });
+  const result = await run(hub);
+  assert.equal(result.action, 'created');
+  assert.ok(hub.state.calls.some(c => c.pathname === '/account-info/v3/details'));
+
+  const other = fakeHubSpot({ tokenInfoStatus: 404, accountPortalId: 999 });
+  await assert.rejects(run(other), error => error.code === 'HUBSPOT_ACCESS' && error.phase === 'access_account');
+  assert.equal(other.state.calls.length, 2, 'nothing written for another portal');
+
+  const denied = fakeHubSpot({ tokenInfoStatus: 401 });
+  await assert.rejects(run(denied), error => error.code === 'HUBSPOT_ACCESS');
+  assert.equal(denied.state.calls.length, 1, 'a rejected token does not fall back');
 });
 
 test('a HubSpot failure surfaces a safe code', async () => {

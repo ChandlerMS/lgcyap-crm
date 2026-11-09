@@ -1,6 +1,6 @@
 import { visibleSections, isShown, answerText } from '../public/rules.js';
 import {
-  ALREADY_LICENSED, ASSOCIATION, INTAKE_LICENSE_STATUS, LICENSE_FOLDER, OFFICE_VALUES, PORTAL_ID,
+  ALREADY_LICENSED, ASSOCIATION, FILE_SCOPES, INTAKE_LICENSE_STATUS, LICENSE_FOLDER, OFFICE_VALUES, PORTAL_ID,
   RECRUITING_PIPELINE_ID, REQUIRED_SCOPES, STAGE, TERMINAL_STAGE_IDS,
 } from './config.mjs';
 import { formatPhone, splitName } from './validate.mjs';
@@ -72,21 +72,42 @@ export function createHubSpotClient({ accessToken, fetchImpl = fetch, baseUrl = 
 
 let verifiedUntil = 0;
 let verifiedToken = '';
+let verifiedVia = '';
 
-/** Confirms the token belongs to the Legacy portal and has every scope the application needs. */
-export async function verifyAccess(client, { now = Date.now, cache = true } = {}) {
-  if (cache && verifiedToken === client.accessToken && now() < verifiedUntil) return true;
-  const info = client.ok(await client.call('access', 'POST', '/oauth/v2/private-apps/get/access-token-info', { json: { tokenKey: client.accessToken }, retryable: true }), 'access');
-  const scopes = Array.isArray(info?.scopes) ? info.scopes : [];
-  if (String(info?.hubId) !== PORTAL_ID || !REQUIRED_SCOPES.every(scope => scopes.includes(scope))) {
-    throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access' });
-  }
-  verifiedToken = client.accessToken;
-  verifiedUntil = now() + 10 * 60 * 1000;
-  return true;
+export function hasScopes(scopes) {
+  return REQUIRED_SCOPES.every(scope => scopes.includes(scope)) && FILE_SCOPES.some(scope => scopes.includes(scope));
 }
 
-export function resetAccessCache() { verifiedUntil = 0; verifiedToken = ''; }
+/**
+ * Confirms the token belongs to the Legacy portal before anything is written.
+ * 1. HubSpot's token-info lookup gives the portal and scopes for private-app tokens; both must match.
+ * 2. HubSpot does not document that lookup for service keys. If it answers 400 or 404, the portal is
+ *    confirmed through account details instead. Scopes cannot be listed that way, so a missing scope
+ *    shows up as a 403 on the HubSpot call that needs it, and that application reports a failure.
+ * Returns how access was confirmed: 'token_info' or 'account_info'.
+ */
+export async function verifyAccess(client, { now = Date.now, cache = true } = {}) {
+  if (cache && verifiedToken === client.accessToken && now() < verifiedUntil) return verifiedVia;
+  let via;
+  const info = await client.call('access', 'POST', '/oauth/v2/private-apps/get/access-token-info', { json: { tokenKey: client.accessToken }, retryable: true });
+  if (!info.failed) {
+    const scopes = Array.isArray(info.body?.scopes) ? info.body.scopes : [];
+    if (String(info.body?.hubId) !== PORTAL_ID || !hasScopes(scopes)) throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access' });
+    via = 'token_info';
+  } else if (info.status === 400 || info.status === 404) {
+    const account = client.ok(await client.call('access_account', 'GET', '/account-info/v3/details'), 'access_account');
+    if (String(account?.portalId) !== PORTAL_ID) throw new ApplyError('HUBSPOT_ACCESS', 503, { phase: 'access_account' });
+    via = 'account_info';
+  } else {
+    client.ok(info, 'access');
+  }
+  verifiedToken = client.accessToken;
+  verifiedVia = via;
+  verifiedUntil = now() + 10 * 60 * 1000;
+  return via;
+}
+
+export function resetAccessCache() { verifiedUntil = 0; verifiedToken = ''; verifiedVia = ''; }
 
 export function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
