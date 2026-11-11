@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 317 200" role="img" aria-label="Photo added">
+  <rect width="317" height="200" fill="#121114"/>
+  <rect x="1" y="1" width="315" height="198" fill="none" stroke="#A9842A" stroke-width="2"/>
+  <path d="M137 98l14 14 30-30" fill="none" stroke="#D4AF37" stroke-width="7" stroke-linecap="square"/>
+  <text x="158.5" y="150" text-anchor="middle" fill="#EDEAE2" font-family="Inter, system-ui, sans-serif" font-size="17" font-weight="600">Photo added</text>
+</svg>
