@@ -1,0 +1,14 @@
+{
+  "name": "lgcyap-signin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hiring-event sign-in for Legacy Agency Partners. Writes each sign-in to HubSpot.",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "node ../scripts/dev-server.mjs . 3010",
+    "test": "node --test \"tests/*.test.mjs\""
+  }
+}
