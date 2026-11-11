@@ -36,14 +36,14 @@ export const OFFICE_VALUES = Object.freeze({ Orlando: 'orlando', Miami: 'miami',
 // Ticket `intake_license_status` from "Which best describes you today?". Licensed in another
 // state is left blank: that person still needs a Florida license, so staff decide.
 export const INTAKE_LICENSE_STATUS = Object.freeze({
-  'Not licensed yet': 'unlicensed',
-  'Studying for my license exam': 'in_progress',
-  'Currently licensed in Florida': 'already_licensed',
+  'Not licensed': 'unlicensed',
+  'Florida 2-14': 'already_licensed',
+  'Florida 2-15': 'already_licensed',
 });
 export const ALREADY_LICENSED = Object.freeze({
-  'Not licensed yet': 'false',
-  'Studying for my license exam': 'false',
-  'Currently licensed in Florida': 'true',
+  'Not licensed': 'false',
+  'Florida 2-14': 'true',
+  'Florida 2-15': 'true',
 });
 
 export const LIMITS = Object.freeze({

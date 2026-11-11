@@ -68,7 +68,8 @@ function normalize(item, raw) {
     case 'long': return paragraph(raw, LIMITS.long);
     case 'yesno': return raw === '' || raw === 'yes' || raw === 'no' ? { value: raw } : { error: 'invalid' };
     case 'check': return raw === '' || raw === 'yes' ? { value: raw } : { error: 'invalid' };
-    case 'choice': return raw === '' || item.options.includes(raw) ? { value: raw } : { error: 'invalid' };
+    case 'choice':
+    case 'select': return raw === '' || item.options.includes(raw) ? { value: raw } : { error: 'invalid' };
     case 'date': {
       const v = raw.trim();
       return v === '' || validDate(v) ? { value: v } : { error: 'invalid' };
@@ -93,10 +94,12 @@ function normalize(item, raw) {
   }
 }
 
+// The form no longer asks for a license photo (Sarah's notes, 2026-11-10). A file sent anyway is
+// still checked, and then attached privately.
 async function readUpload(entry) {
-  if (entry === null || entry === undefined || entry === '') return { error: 'required' };
+  if (entry === null || entry === undefined || entry === '') return { value: null };
   if (typeof entry === 'string' || typeof entry.arrayBuffer !== 'function') return { error: 'invalid' };
-  if (entry.size === 0) return { error: 'required' };
+  if (entry.size === 0) return { value: null };
   if (entry.size > LIMITS.maxFileBytes) return { error: 'too_large' };
   if (entry.size < LIMITS.minFileBytes) return { error: 'invalid' };
   const bytes = new Uint8Array(await entry.arrayBuffer());
@@ -130,8 +133,6 @@ export async function validateApplication(form) {
     const result = normalize(item, raw[id]);
     if (result.error) errors[id] = result.error; else if (result.value !== '') clean[id] = result.value;
   }
-  // Onboard ticks "I hold, or have held, a license" when a licensed status is picked.
-  if (/^(currently licensed|licensed in)/i.test(clean.licenseStatus || '')) clean.everLicensed = 'yes';
 
   const answers = {};
   for (const item of visibleItems(clean)) {

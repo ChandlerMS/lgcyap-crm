@@ -216,11 +216,11 @@ export const EXISTING_CONTACT_NOTE = 'The email matched an existing contact, whi
 function noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense, existingContact }) {
   const p = (label, value) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
   let html = `<p><strong>Agent application (v3.1) submitted online, ${escapeHtml(easternTime(submittedAt))}</strong></p>`;
-  html += p('Required items', evaluation.pass ? 'Meets all five' : `Did not meet: ${evaluation.failed.join('; ')}`);
+  html += p('Required items', evaluation.pass ? 'Meets all required items' : `Did not meet: ${evaluation.failed.join('; ')}`);
   html += p('Needs a private conversation', evaluation.review.length ? evaluation.review.join(' | ') : 'Nothing flagged');
   html += p('In HubSpot', outcome);
   if (existingContact) html += p('Contact', EXISTING_CONTACT_NOTE);
-  html += p("Driver's license", hasLicense ? 'Attached to this note (private file)' : 'Not attached');
+  if (hasLicense) html += p('Photo ID', 'Attached to this note (private file)');
   for (const section of applicationSections(answers)) {
     html += `<p><strong>${escapeHtml(section.title.toUpperCase())}</strong></p><ul>`;
     html += section.rows.map(([label, value]) => `<li><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value).replace(/\n/g, '<br>')}</li>`).join('');
@@ -233,9 +233,9 @@ function ticketDescription({ submittedAt, evaluation, answers }) {
   return [
     `Agent application submitted online ${easternTime(submittedAt)}.`,
     `Office: ${answers.office}. License: ${answers.licenseStatus}.`,
-    evaluation.pass ? 'Meets all five required items.' : `Did not meet: ${evaluation.failed.join('; ')}.`,
+    evaluation.pass ? 'Meets all required items.' : `Did not meet: ${evaluation.failed.join('; ')}.`,
     evaluation.review.length ? `${evaluation.review.length} answer(s) need a private conversation.` : 'No answers flagged for review.',
-    'Every answer and the license photo are in the application note.',
+    'Every answer is in the application note.',
   ].join('\n');
 }
 
@@ -293,13 +293,15 @@ export async function recordApplication(client, { answers, license }, evaluation
   }
 
   const stamp = new Date(submittedAt).toISOString().slice(0, 10);
-  const fileId = await uploadLicense(client, license, `application-license-${contact.id}-${stamp}-${submittedAt}.${license.ext}`);
+  const fileId = license ? await uploadLicense(client, license, `application-id-${contact.id}-${stamp}-${submittedAt}.${license.ext}`) : null;
 
   const associations = [{ to: { id: contact.id }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: ASSOCIATION.noteToContact }] }];
   if (ticketId) associations.unshift({ to: { id: ticketId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: ASSOCIATION.noteToTicket }] });
+  const noteProperties = { hs_timestamp: new Date(submittedAt).toISOString(), hs_note_body: noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense: Boolean(fileId), existingContact: !contact.created }) };
+  if (fileId) noteProperties.hs_attachment_ids = fileId;
   client.ok(await client.call('note_create', 'POST', '/crm/v3/objects/notes', {
     json: {
-      properties: { hs_timestamp: new Date(submittedAt).toISOString(), hs_note_body: noteHtml({ submittedAt, evaluation, outcome, answers, hasLicense: true, existingContact: !contact.created }), hs_attachment_ids: fileId },
+      properties: noteProperties,
       associations,
     },
   }), 'note_create');

@@ -226,6 +226,13 @@ input[type=date], textarea {
   transition: border-color .14s, box-shadow .14s; caret-color: var(--gold);
 }
 input[type=date] { color-scheme: dark; appearance: none; }
+select {
+  width: 100%; min-height: 48px; padding: 12px 40px 12px 14px; border-radius: var(--r); border: 1px solid var(--line-2);
+  background: var(--field) url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23D4AF37' stroke-width='1.7' fill='none'/%3E%3C/svg%3E") no-repeat right 14px center;
+  color: var(--txt); font: 400 16px/1.3 Inter, system-ui, sans-serif; appearance: none; color-scheme: dark; cursor: pointer;
+}
+select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, .18); }
+.field.invalid select { border-color: var(--err); }
 textarea { min-height: 116px; resize: vertical; }
 input[type=date]:focus, textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, .18); }
 .field.invalid input[type=date], .field.invalid textarea { border-color: var(--err); }

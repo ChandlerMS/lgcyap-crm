@@ -2,9 +2,9 @@
 // which questions are shown, when Part 2 opens, and how answers are evaluated.
 import { APP_FORM } from './form.js';
 
-export const LICENSED_STATUS = /^(currently licensed|licensed in)/i;
+export const LICENSED_STATUS = /^(florida 2-1[45]|licensed in)/i;
 
-/** Part 2 opens for anyone who holds or held a license. */
+/** Part 2 opens for anyone who holds a license (Florida 2-14, 2-15, or another state). */
 export function isLicensed(answers) {
   return answers.everLicensed === 'yes' || LICENSED_STATUS.test(answers.licenseStatus || '');
 }

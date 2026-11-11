@@ -14,31 +14,27 @@ export function pdfBytes(size = 4000) {
 export function baseAnswers(overrides = {}) {
   return {
     legalName: 'Testy Q Applicant',
-    preferred: 'Testy',
     email: 'Testy.Applicant@Example.com',
     phone: '(407) 555-0142',
     city: 'Orlando',
-    state: 'FL',
+    state: 'Florida',
     zip: '32801',
     office: 'Orlando',
-    licenseStatus: 'Not licensed yet',
-    age18: 'yes', workAuth: 'yes', english: 'yes', ssn: 'yes', hours: 'yes',
+    licenseStatus: 'Not licensed',
+    age18: 'yes', workAuth: 'yes', ssn: 'yes', hours: 'yes',
     transport: 'yes',
-    commuteMin: '25',
+    startDate: 'Immediately',
     nameMatch: 'yes', felony: 'no', pending: 'no', licDenied: 'no', firedFraud: 'no', bankruptcy: 'no',
     emp1: 'Example Retail', title1: 'Associate', dates1: '01/2022 to 10/2026', why1: 'Customer service.\nLooking to grow.',
-    salesYears: '2', phoneYears: '1',
-    whyRole: 'I like helping families plan.',
-    hardGoal: 'I set a goal to hit 120% of quota and did.',
-    source: 'Indeed',
-    referredBy: '',
+    jobsHistory: 'Example Diner, server, 2021 to 2022',
     certify: 'yes',
     signature: 'Testy Q Applicant',
     ...overrides,
   };
 }
 
-export function applicationForm({ answers = baseAnswers(), file = jpegBytes(), fileType = 'image/jpeg', elapsedMs = 120000, website = '' } = {}) {
+// The form no longer asks for a photo; tests that need one pass `file`.
+export function applicationForm({ answers = baseAnswers(), file = null, fileType = 'image/jpeg', elapsedMs = 120000, website = '' } = {}) {
   const form = new FormData();
   form.append('answers', typeof answers === 'string' ? answers : JSON.stringify(answers));
   if (file) form.append('dlPhoto', new Blob([file], { type: fileType }), 'license.jpg');

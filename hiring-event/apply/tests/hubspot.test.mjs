@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { evaluateApplication } from '../public/rules.js';
 import { createHubSpotClient, recordApplication, resetAccessCache } from '../lib/hubspot.mjs';
 import { validateApplication } from '../lib/validate.mjs';
-import { applicationForm, baseAnswers } from './fixtures.mjs';
+import { applicationForm, baseAnswers, jpegBytes } from './fixtures.mjs';
 import { fakeHubSpot } from './fake-hubspot.mjs';
 
 const NOW = Date.UTC(2026, 10, 9, 22, 0, 0);
 
-async function run(hub, answers = baseAnswers()) {
+async function run(hub, answers = baseAnswers(), file = jpegBytes()) {
   resetAccessCache();
-  const checked = await validateApplication(applicationForm({ answers }));
+  const checked = await validateApplication(applicationForm({ answers, file }));
   assert.equal(checked.ok, true, JSON.stringify(checked.errors));
   const client = createHubSpotClient({ accessToken: 'test-token', fetchImpl: hub.fetchImpl, now: () => NOW, sleep: async () => {} });
   return recordApplication(client, checked, evaluateApplication(checked.answers), { now: () => NOW });
@@ -23,7 +23,7 @@ test('a new applicant gets a contact, a ticket at Application, a private file an
   assert.equal(result.contactCreated, true);
 
   const contact = hub.state.contacts[0];
-  assert.deepEqual(contact.properties, { firstname: 'Testy', lastname: 'Q Applicant', email: 'testy.applicant@example.com', phone: '+14075550142', city: 'Orlando', state: 'FL', zip: '32801' });
+  assert.deepEqual(contact.properties, { firstname: 'Testy', lastname: 'Q Applicant', email: 'testy.applicant@example.com', phone: '+14075550142', city: 'Orlando', state: 'Florida', zip: '32801' });
   assert.ok(!('lifecyclestage' in contact.properties), 'never touches the sales lifecycle');
 
   const ticket = hub.state.tickets[0];
@@ -44,11 +44,19 @@ test('a new applicant gets a contact, a ticket at Application, a private file an
   const note = hub.state.notes[0];
   assert.equal(note.properties.hs_attachment_ids, hub.state.files[0].id);
   assert.deepEqual(note.associations.map(a => a.types[0].associationTypeId), [228, 202]);
-  assert.match(note.properties.hs_note_body, /Meets all five/);
-  assert.match(note.properties.hs_note_body, /Why does this role interest you\?/);
+  assert.match(note.properties.hs_note_body, /Meets all required items/);
+  assert.match(note.properties.hs_note_body, /Earliest start date<\/strong><br>Immediately/);
   assert.match(note.properties.hs_note_body, /Customer service\.<br>Looking to grow\./);
-  assert.match(note.properties.hs_note_body, /this opens Part 2 below\)<\/strong><br>No<\/li>/, 'an unticked box reads No');
   assert.ok(hub.state.calls.every(c => c.auth === 'Bearer test-token'));
+});
+
+test('an application without a photo uploads nothing and the note has no attachment', async () => {
+  const hub = fakeHubSpot();
+  const result = await run(hub, baseAnswers(), null);
+  assert.equal(result.action, 'created');
+  assert.equal(hub.state.files.length, 0);
+  assert.ok(!('hs_attachment_ids' in hub.state.notes[0].properties));
+  assert.ok(!/Photo ID/.test(hub.state.notes[0].properties.hs_note_body));
 });
 
 // The form is public and emails are not verified: nothing found by email may be changed.
@@ -111,19 +119,18 @@ test('an applicant who fails a required item gets a contact and note but no tick
 
 test('a licensed applicant maps license fields and referral', async () => {
   const hub = fakeHubSpot();
-  await run(hub, baseAnswers({ licenseStatus: 'Currently licensed in Florida', npn: '12345678', referredBy: 'Jordan Example', felony: 'yes', eligExplain: 'Explained privately.' }));
+  await run(hub, baseAnswers({ licenseStatus: 'Florida 2-14', npn: '12345678', felony: 'yes' }));
   const t = hub.state.tickets[0].properties;
   assert.equal(t.intake_license_status, 'already_licensed');
   assert.equal(t.already_licensed, 'true');
   assert.equal(t.npn_number, '12345678');
-  assert.equal(t.invited_by_name, 'Jordan Example');
   assert.match(hub.state.notes[0].properties.hs_note_body, /PART 2/);
   assert.match(hub.state.notes[0].properties.hs_note_body, /Needs a private conversation:<\/strong> Have you ever been convicted/);
 });
 
 test('answers are HTML-escaped in the note', async () => {
   const hub = fakeHubSpot();
-  await run(hub, baseAnswers({ whyRole: '<script>alert(1)</script> & more' }));
+  await run(hub, baseAnswers({ why1: '<script>alert(1)</script> & more' }));
   const body = hub.state.notes[0].properties.hs_note_body;
   assert.ok(!body.includes('<script>'));
   assert.match(body, /&lt;script&gt;alert\(1\)&lt;\/script&gt; &amp; more/);

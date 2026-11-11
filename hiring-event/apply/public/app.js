@@ -97,6 +97,11 @@ function fieldHtml(item) {
       </label>
       <button type="button" class="remove" data-remove="${item.id}"${license ? '' : ' hidden'}>Remove and choose another</button>${err}</div>`;
   }
+  if (item.type === 'select') {
+    const ac = AUTOCOMPLETE[item.id] ? ` autocomplete="${AUTOCOMPLETE[item.id]}"` : '';
+    const opts = item.options.map(o => `<option value="${esc(o)}"${v === o ? ' selected' : ''}>${esc(o)}</option>`).join('');
+    return `${open}${label(item, `f-${item.id}`)}${hint(item)}<select id="f-${item.id}" name="${item.id}"${ac} ${described(item)}${req}><option value=""${v ? '' : ' selected'}>Choose…</option>${opts}</select>${err}</div>`;
+  }
   if (item.type === 'long') {
     return `${open}${label(item, `f-${item.id}`)}${hint(item)}<textarea id="f-${item.id}" name="${item.id}" rows="4" maxlength="3000" ${described(item)}${req}>${esc(v)}</textarea>${err}</div>`;
   }
@@ -224,7 +229,7 @@ function focusField(id) {
   const field = document.querySelector(`[data-field="${id}"]`);
   if (!field) return;
   field.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  const control = field.querySelector('input:not([type=hidden]), textarea');
+  const control = field.querySelector('input:not([type=hidden]), select, textarea');
   if (control) setTimeout(() => control.focus({ preventScroll: true }), 250);
 }
 
@@ -261,7 +266,6 @@ form.addEventListener('change', async event => {
   else if (t.type === 'checkbox') A[t.name] = t.checked ? 'yes' : '';
   else return;
   // Onboard opens Part 2 automatically for a licensed answer.
-  if (t.name === 'licenseStatus' && /^(currently licensed|licensed in)/i.test(t.value)) A.everLicensed = 'yes';
   if (CONTROLS.has(t.name)) {
     const selector = t.type === 'radio' ? `input[name="${t.name}"][value="${CSS.escape(t.value)}"]` : `input[name="${t.name}"]`;
     render({ keep: selector });
@@ -383,7 +387,7 @@ async function submit() {
   }
   const data = new FormData();
   data.append('answers', JSON.stringify(answers));
-  data.append('dlPhoto', license.blob, license.name);
+  if (license) data.append('dlPhoto', license.blob, license.name);
   data.append('website', form.elements.website.value);
   data.append('elapsedMs', String(Date.now() - startedAt));
 

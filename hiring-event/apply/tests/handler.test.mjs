@@ -42,11 +42,11 @@ test('bot submissions look accepted but write nothing', async () => {
 });
 
 test('dry run evaluates without HubSpot', async () => {
-  const res = await handleSubmit(request(applicationForm({ answers: baseAnswers({ english: 'no' }) })), { env: { APPLY_DRY_RUN: '1' } });
+  const res = await handleSubmit(request(applicationForm({ answers: baseAnswers({ workAuth: 'no' }) })), { env: { APPLY_DRY_RUN: '1' } });
   const body = await res.json();
   assert.equal(body.dryRun, true);
   assert.equal(body.pass, false);
-  assert.deepEqual(body.failed, ['fluency in English, since every call is in English']);
+  assert.deepEqual(body.failed, ['authorization to work in the United States']);
 });
 
 test('not configured or switched off returns 503 and writes nothing', async () => {
