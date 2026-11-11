@@ -50,7 +50,7 @@ export async function handleSubmit(request, { env = process.env, fetchImpl = fet
 
   const mode = signInMode(env);
   if (mode === 'dry-run') {
-    log('signin_dry_run', { files: checked.value.licenseBack ? 2 : 1, ms: now() - started });
+    log('signin_dry_run', { files: 1, ms: now() - started });
     return reply(200, { ok: true, dryRun: true });
   }
   if (mode === 'not-configured') return reply(503, { ok: false, code: 'NOT_CONFIGURED' });

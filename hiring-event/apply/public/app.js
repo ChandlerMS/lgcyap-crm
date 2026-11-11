@@ -35,6 +35,27 @@ let submitting = false;
 let saveTimer = null;
 let finished = false; // once sent, nothing is kept on the device (shared hiring-event tablets)
 
+// Details carried over from the sign-in page ("Start your application"). They travel in the
+// link's #fragment, which browsers never send to a server, and are removed from the address bar
+// at once. Only empty answers are filled, and the applicant can change any of them.
+let prefilled = false;
+(function readPrefill() {
+  const match = /^#prefill=([A-Za-z0-9_-]{1,4000})$/.exec(location.hash);
+  if (!match) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), c => c.charCodeAt(0));
+    const data = JSON.parse(new TextDecoder().decode(bytes));
+    for (const key of ['legalName', 'email', 'phone', 'office', 'npn']) {
+      const v = data?.[key];
+      if (typeof v === 'string' && v.trim() && v.length <= 200 && !A[key]) { A[key] = v.trim(); prefilled = true; }
+    }
+    const office = APP_FORM.flatMap(s => s.items).find(i => i.id === 'office');
+    if (A.office && !office.options.includes(A.office)) delete A.office;
+  } catch { /* a damaged link just means nothing is filled in */ }
+})();
+
 function persist(now = false) {
   clearTimeout(saveTimer);
   if (finished) return;
@@ -439,4 +460,8 @@ function showDone(result) {
   $('#again').addEventListener('click', () => { clearLicense(); window.location.reload(); });
 }
 
+if (prefilled) {
+  const note = $('.saved-note');
+  if (note) note.textContent = 'We filled in your name, email, phone and office from your sign-in. Check them, then continue.';
+}
 render({ focus: false });

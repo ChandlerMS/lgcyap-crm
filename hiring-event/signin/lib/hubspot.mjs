@@ -1,5 +1,5 @@
 import {
-  ASSOCIATION, CONTRACTED_BEFORE, HEARD_ABOUT, HIRING_EVENT_STAGE_ID, LICENSE_FOLDER, OFFICES,
+  ASSOCIATION, CONTRACTED_BEFORE, HEARD_ABOUT, HEARD_ABOUT_DETAIL, HIRING_EVENT_STAGE_ID, PHOTO_ID_FOLDER, OFFICES,
   FILE_SCOPES, PORTAL_ID, RECRUITING_PATH, RECRUITING_PIPELINE_ID, REQUIRED_SCOPES, SIGN_IN_SOURCES, TERMINAL_STAGE_IDS,
 } from './config.mjs';
 import { formatPhone } from './validate.mjs';
@@ -120,12 +120,18 @@ function easternTime(ms) {
 }
 
 /** Human-readable lines shared by the ticket description and the note. */
+export function heardAboutText(input) {
+  if (input.heardAbout === 'referral') return `${HEARD_ABOUT.referral}: ${input.referredBy}`;
+  if (input.heardAbout === 'other') return `Other: ${input.heardAboutOther}`;
+  const detail = HEARD_ABOUT_DETAIL[input.heardAbout]?.[input.heardAboutDetail];
+  return detail ? `${HEARD_ABOUT[input.heardAbout]}: ${detail}` : HEARD_ABOUT[input.heardAbout];
+}
+
 export function summaryLines(input, { signedInAt, licenseFiles }) {
-  const heard = input.heardAbout === 'referral' ? `${HEARD_ABOUT.referral} (${input.referredBy})`
-    : input.heardAbout === 'other' ? `Other: ${input.heardAboutOther}`
-      : HEARD_ABOUT[input.heardAbout];
+  const heard = heardAboutText(input);
+  const contracted = input.contractedBefore === 'yes' && input.contractedWith ? `Yes, with ${input.contractedWith}` : CONTRACTED_BEFORE[input.contractedBefore];
   const license = input.licenseStatus === 'licensed'
-    ? `Licensed. NPN: ${input.npn ?? 'not given'}. Contracted with an agency before: ${CONTRACTED_BEFORE[input.contractedBefore]}`
+    ? `Licensed. NPN: ${input.npn ?? 'not given'}. Contracted with an agency before: ${contracted}`
     : 'Unlicensed';
   return [
     ['Signed in', easternTime(signedInAt)],
@@ -136,7 +142,7 @@ export function summaryLines(input, { signedInAt, licenseFiles }) {
     ['Office', OFFICES[input.office]],
     ['How they heard about us', heard],
     ['License', license],
-    ["Driver's license", licenseFiles],
+    ['Photo ID (building security)', licenseFiles],
   ];
 }
 
@@ -161,7 +167,8 @@ function ticketProperties(input, { description, heardAboutProperty }) {
     if (input.npn) properties.npn_number = input.npn;
   }
   if (input.heardAbout === 'referral' && input.referredBy) properties.invited_by_name = input.referredBy;
-  if (heardAboutProperty) properties[heardAboutProperty] = input.heardAbout;
+  // The detail (facebook, indeed, ...) keeps the earlier option codes for this optional property.
+  if (heardAboutProperty) properties[heardAboutProperty] = input.heardAboutDetail ?? input.heardAbout;
   return properties;
 }
 
@@ -219,7 +226,7 @@ async function uploadLicense(client, file, fileName) {
   const form = new FormData();
   form.append('file', new Blob([file.bytes], { type: file.type }), fileName);
   form.append('fileName', fileName);
-  form.append('folderPath', LICENSE_FOLDER);
+  form.append('folderPath', PHOTO_ID_FOLDER);
   form.append('options', JSON.stringify({ access: 'PRIVATE', overwrite: false, duplicateValidationStrategy: 'NONE', duplicateValidationScope: 'EXACT_FOLDER' }));
   const body = client.ok(await client.call('license_upload', 'POST', '/files/v3/files', { form, retryable: true }), 'license_upload');
   if (!/^\d+$/.test(String(body?.id))) throw new SignInError('HUBSPOT_REJECTED', 502, { phase: 'license_upload' });
@@ -251,7 +258,7 @@ export async function recordSignIn(client, input, { now = Date.now, heardAboutPr
   await verifyAccess(client, { now });
   const contact = await ensureContact(client, input);
   const existingTicketId = await openRecruitingTicket(client, contact.id);
-  const licenseFiles = input.licenseBack ? 'Front and back attached to the sign-in note' : 'Front attached to the sign-in note';
+  const licenseFiles = 'Attached to the sign-in note (private file)';
   const lines = summaryLines(input, { signedInAt, licenseFiles });
   lines.push(['Contact record', contact.created
     ? 'Created from this sign-in'
@@ -261,8 +268,7 @@ export async function recordSignIn(client, input, { now = Date.now, heardAboutPr
   const ticketId = existingTicketId ?? await createTicket(client, contact.id, ticketProperties(input, { description, heardAboutProperty }));
 
   const stamp = new Date(signedInAt).toISOString().slice(0, 10);
-  const attachmentIds = [await uploadLicense(client, input.licenseFront, `license-front-${contact.id}-${stamp}-${signedInAt}.${input.licenseFront.ext}`)];
-  if (input.licenseBack) attachmentIds.push(await uploadLicense(client, input.licenseBack, `license-back-${contact.id}-${stamp}-${signedInAt}.${input.licenseBack.ext}`));
+  const attachmentIds = [await uploadLicense(client, input.photoId, `photo-id-${contact.id}-${stamp}-${signedInAt}.${input.photoId.ext}`)];
 
   const heading = existingTicketId
     ? 'Hiring event sign-in (this person already had an open recruiting ticket, so no new ticket was created)'

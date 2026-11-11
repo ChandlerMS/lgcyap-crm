@@ -28,26 +28,25 @@ export const REQUIRED_SCOPES = Object.freeze([
 // HubSpot service keys only offer the granular `files.write`.
 export const FILE_SCOPES = Object.freeze(['files', 'files.write']);
 
-// Private File Manager folder for license photos. PRIVATE files open only for signed-in
-// HubSpot users through short-lived links.
-export const LICENSE_FOLDER = '/Hiring Event Sign-Ins/Driver Licenses';
+// Private File Manager folder for photo IDs (building security). PRIVATE files open only for
+// signed-in HubSpot users through short-lived links.
+export const PHOTO_ID_FOLDER = '/Hiring Event Sign-Ins/Photo IDs';
 
-// Values are the ticket property `orientation_office` options.
-export const OFFICES = Object.freeze({ orlando: 'Orlando', miami: 'Miami', tampa: 'Tampa' });
+// Values are the ticket property `orientation_office` options. Tampa dropped (Sarah, 2026-11-10).
+export const OFFICES = Object.freeze({ orlando: 'Orlando', miami: 'Miami' });
 
-// "How did you hear about us?" The value is stored in the ticket description and note,
-// and also in the optional ticket property named by HUBSPOT_HEARD_ABOUT_PROPERTY.
+// "How did you hear about us?" grouped per Sarah's notes (2026-11-10). The answer is stored in
+// the ticket description and note. The optional ticket property named by
+// HUBSPOT_HEARD_ABOUT_PROPERTY gets the detail value, which uses the earlier codes.
 export const HEARD_ABOUT = Object.freeze({
-  referral: 'Referred by someone I know',
-  indeed: 'Indeed',
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  tiktok: 'TikTok',
-  google: 'Google search',
-  ziprecruiter: 'ZipRecruiter',
-  job_fair: 'Job fair or event',
+  referral: 'In-house referral',
+  social: 'Social media',
+  job_posting: 'Job posting',
   other: 'Other',
+});
+export const HEARD_ABOUT_DETAIL = Object.freeze({
+  social: Object.freeze({ facebook: 'Facebook', instagram: 'Instagram', linkedin: 'LinkedIn' }),
+  job_posting: Object.freeze({ indeed: 'Indeed', ziprecruiter: 'ZipRecruiter' }),
 });
 
 export const LICENSE_STATUS = Object.freeze({ licensed: 'Licensed', unlicensed: 'Unlicensed' });

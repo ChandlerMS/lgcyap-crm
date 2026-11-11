@@ -6,7 +6,7 @@ export function jpegBlob(size = 4000) {
 }
 
 export function validForm(overrides = {}) {
-  const { licenseFront: _front, licenseBack: _back, ...rest } = overrides;
+  const { photoId: _photo, ...rest } = overrides;
   const fields = {
     firstName: 'Testy', lastName: 'McSample', email: 'Testy.Sample@Example.invalid', phone: '(407) 555-0142',
     office: 'orlando', heardAbout: 'referral', referredBy: 'Pat Example', licenseStatus: 'licensed',
@@ -15,8 +15,8 @@ export function validForm(overrides = {}) {
   };
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) if (value !== undefined) form.append(key, value);
-  if (!('licenseFront' in overrides)) form.append('licenseFront', jpegBlob(), 'license-front.jpg');
-  if (overrides.licenseBack === undefined) form.append('licenseBack', jpegBlob(5000), 'license-back.jpg');
+  if (!('photoId' in overrides)) form.append('photoId', jpegBlob(), 'photo-id.jpg');
+  else if (overrides.photoId) form.append('photoId', overrides.photoId, 'photo-id.jpg');
   return form;
 }
 

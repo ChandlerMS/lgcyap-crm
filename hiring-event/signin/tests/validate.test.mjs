@@ -14,24 +14,27 @@ test('a complete licensed sign-in is accepted and normalized', async () => {
   assert.equal(v.npn, '12345678');
   assert.equal(v.contractedBefore, 'no');
   assert.equal(v.source, 'lobby');
-  assert.equal(v.licenseFront.type, 'image/jpeg');
-  assert.equal(v.licenseBack.ext, 'jpg');
+  assert.equal(v.photoId.type, 'image/jpeg');
+});
+
+test('Tampa is no longer an office', async () => {
+  const result = await validateSignIn(validForm({ office: 'tampa' }));
+  assert.deepEqual(result.errors, { office: 'required' });
 });
 
 test('unlicensed sign-ins ignore NPN and contracted-before answers', async () => {
-  const result = await validateSignIn(validForm({ licenseStatus: 'unlicensed', npn: 'not a number', contractedBefore: undefined, licenseBack: null }));
+  const result = await validateSignIn(validForm({ licenseStatus: 'unlicensed', npn: 'not a number', contractedBefore: undefined }));
   assert.equal(result.ok, true);
   assert.equal(result.value.npn, undefined);
   assert.equal(result.value.contractedBefore, undefined);
-  assert.equal(result.value.licenseBack, null);
 });
 
 test('missing required answers are reported per field', async () => {
-  const form = validForm({ firstName: '', email: 'not-an-email', phone: '123', office: 'denver', heardAbout: 'referral', referredBy: '', consent: undefined, licenseFront: null });
+  const form = validForm({ firstName: '', email: 'not-an-email', phone: '123', office: 'denver', heardAbout: 'referral', referredBy: '', consent: undefined, photoId: null });
   const result = await validateSignIn(form);
   assert.equal(result.ok, false);
   assert.deepEqual(result.errors, {
-    firstName: 'required', email: 'invalid', phone: 'invalid', office: 'required', referredBy: 'required', consent: 'required', licenseFront: 'required',
+    firstName: 'required', email: 'invalid', phone: 'invalid', office: 'required', referredBy: 'required', consent: 'required', photoId: 'required',
   });
 });
 
@@ -42,6 +45,24 @@ test('licensed sign-ins need the contracted-before answer; NPN is optional but n
   assert.deepEqual(result.errors, { npn: 'invalid' });
   result = await validateSignIn(validForm({ npn: '123-456' }));
   assert.equal(result.value.npn, '123456');
+});
+
+test('contracted before = Yes needs who they are contracted with', async () => {
+  let result = await validateSignIn(validForm({ contractedBefore: 'yes' }));
+  assert.deepEqual(result.errors, { contractedWith: 'required' });
+  result = await validateSignIn(validForm({ contractedBefore: 'yes', contractedWith: 'Example Agency' }));
+  assert.equal(result.value.contractedWith, 'Example Agency');
+});
+
+test('social media and job posting need the specific site', async () => {
+  let result = await validateSignIn(validForm({ heardAbout: 'social', referredBy: undefined }));
+  assert.deepEqual(result.errors, { heardAboutDetail: 'required' });
+  result = await validateSignIn(validForm({ heardAbout: 'social', heardAboutDetail: 'indeed', referredBy: undefined }));
+  assert.deepEqual(result.errors, { heardAboutDetail: 'required' });
+  result = await validateSignIn(validForm({ heardAbout: 'job_posting', heardAboutDetail: 'ziprecruiter', referredBy: undefined }));
+  assert.equal(result.value.heardAboutDetail, 'ziprecruiter');
+  result = await validateSignIn(validForm({ heardAbout: 'tiktok', referredBy: undefined }));
+  assert.deepEqual(result.errors, { heardAbout: 'required' });
 });
 
 test('"Other" needs a description', async () => {
@@ -62,15 +83,10 @@ test('names reject markup and control characters', async () => {
   assert.equal(result.ok, true);
 });
 
-test('license files must be real images within the size limit', async () => {
-  const pdf = new Blob([new Uint8Array(5000).fill(0x25)], { type: 'image/jpeg' });
-  let form = validForm({ licenseFront: null });
-  form.append('licenseFront', pdf, 'x.jpg');
-  assert.equal((await validateSignIn(form)).errors.licenseFront, 'not_image');
-
-  form = validForm({ licenseFront: null });
-  form.append('licenseFront', jpegBlob(2_600_000), 'big.jpg');
-  assert.equal((await validateSignIn(form)).errors.licenseFront, 'too_large');
+test('the photo ID must be a real image within the size limit', async () => {
+  const notImage = new Blob([new Uint8Array(5000).fill(0x25)], { type: 'image/jpeg' });
+  assert.equal((await validateSignIn(validForm({ photoId: notImage }))).errors.photoId, 'not_image');
+  assert.equal((await validateSignIn(validForm({ photoId: jpegBlob(2_600_000) }))).errors.photoId, 'too_large');
 });
 
 test('phone numbers are US-only and canonical', () => {

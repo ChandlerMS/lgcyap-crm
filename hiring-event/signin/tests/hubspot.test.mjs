@@ -23,7 +23,7 @@ beforeEach(() => resetAccessCache());
 test('a new person gets a Contact, a Hiring Event ticket, private license files and a note', async () => {
   const hub = fakeHubSpot();
   const result = await recordSignIn(client(hub), await input(), { now });
-  assert.deepEqual(result, { contactId: '501', ticketId: '901', contactCreated: true, ticketCreated: true, attachments: 2 });
+  assert.deepEqual(result, { contactId: '501', ticketId: '901', contactCreated: true, ticketCreated: true, attachments: 1 });
 
   const contact = hub.find('POST /crm/v3/objects/contacts')[0].body;
   assert.deepEqual(contact.properties, { firstname: 'Testy', lastname: 'McSample', email: 'testy.sample@example.invalid', phone: '+14075550142' });
@@ -42,22 +42,22 @@ test('a new person gets a Contact, a Hiring Event ticket, private license files 
   assert.equal(ticket.properties.invited_by_name, 'Pat Example');
   assert.equal(ticket.properties.source_type, 'FORM');
   assert.match(ticket.properties.content, /Signed in from: Lobby security desk \(QR\)/);
-  assert.match(ticket.properties.content, /How they heard about us: Referred by someone I know \(Pat Example\)/);
+  assert.match(ticket.properties.content, /How they heard about us: In-house referral: Pat Example/);
   assert.equal('licensing_branch' in ticket.properties, false);
   assert.deepEqual(ticket.associations, [{ to: { id: '501' }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 16 }] }]);
 
   const uploads = hub.find('POST /files/v3/files');
-  assert.equal(uploads.length, 2);
+  assert.equal(uploads.length, 1);
   for (const upload of uploads) {
     const options = JSON.parse(upload.body.get('options'));
     assert.equal(options.access, 'PRIVATE');
-    assert.equal(upload.body.get('folderPath'), '/Hiring Event Sign-Ins/Driver Licenses');
+    assert.equal(upload.body.get('folderPath'), '/Hiring Event Sign-Ins/Photo IDs');
     assert.doesNotMatch(upload.body.get('fileName'), /Testy|McSample|example/i);
     assert.equal(upload.body.get('file').type, 'image/jpeg');
   }
 
   const note = hub.find('POST /crm/v3/objects/notes')[0].body;
-  assert.equal(note.properties.hs_attachment_ids, '7001;7002');
+  assert.equal(note.properties.hs_attachment_ids, '7001');
   assert.equal(note.properties.hs_timestamp, new Date(NOW).toISOString());
   assert.match(note.properties.hs_note_body, /Hiring event sign-in/);
   assert.match(note.properties.hs_note_body, /\(407\) 555-0142/);
@@ -66,7 +66,7 @@ test('a new person gets a Contact, a Hiring Event ticket, private license files 
 
 test('unlicensed sign-ins record the unlicensed intake status without NPN fields', async () => {
   const hub = fakeHubSpot();
-  await recordSignIn(client(hub), await input({ licenseStatus: 'unlicensed', heardAbout: 'indeed', referredBy: undefined, licenseBack: null }), { now });
+  await recordSignIn(client(hub), await input({ licenseStatus: 'unlicensed', heardAbout: 'job_posting', heardAboutDetail: 'indeed', referredBy: undefined }), { now });
   const ticket = hub.find('POST /crm/v3/objects/tickets')[0].body.properties;
   assert.equal(ticket.intake_license_status, 'unlicensed');
   assert.equal(ticket.already_licensed, 'false');
@@ -221,7 +221,7 @@ test('typed answers are escaped in the note HTML', async () => {
 
 test('the optional "how heard" property is written only when configured', async () => {
   const hub = fakeHubSpot();
-  await recordSignIn(client(hub), await input({ heardAbout: 'facebook', referredBy: undefined }), { now, heardAboutProperty: 'how_did_you_hear_about_us' });
+  await recordSignIn(client(hub), await input({ heardAbout: 'social', heardAboutDetail: 'facebook', referredBy: undefined }), { now, heardAboutProperty: 'how_did_you_hear_about_us' });
   assert.equal(hub.find('POST /crm/v3/objects/tickets')[0].body.properties.how_did_you_hear_about_us, 'facebook');
 });
 

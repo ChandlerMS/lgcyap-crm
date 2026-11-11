@@ -1,19 +1,11 @@
 (() => {
   'use strict';
 
-  const STEP_TITLES = ['Your Information', 'About You', "Driver's License", 'Review & Submit'];
-  const OFFICES = { orlando: 'Orlando', miami: 'Miami', tampa: 'Tampa' };
-  const HEARD = {
-    referral: 'Referred by someone I know', indeed: 'Indeed', facebook: 'Facebook', instagram: 'Instagram',
-    linkedin: 'LinkedIn', tiktok: 'TikTok', google: 'Google search', ziprecruiter: 'ZipRecruiter',
-    job_fair: 'Job fair or event', other: 'Other',
-  };
-  const STEP_FIELDS = [
-    ['firstName', 'lastName', 'email', 'phone', 'office'],
-    ['heardAbout', 'referredBy', 'heardAboutOther', 'licenseStatus', 'contractedBefore', 'npn'],
-    ['licenseFront', 'licenseBack', 'consent'],
-    [],
-  ];
+  const APPLY_URL = 'https://lgcyap-apply.vercel.app/';
+  const OFFICES = { orlando: 'Orlando', miami: 'Miami' };
+  // Every question, in page order. Hidden ones are skipped when checking.
+  const FIELDS = ['firstName', 'lastName', 'email', 'phone', 'office', 'heardAbout', 'referredBy', 'heardAboutDetail', 'jobDetail',
+    'heardAboutOther', 'licenseStatus', 'contractedBefore', 'contractedWith', 'npn', 'photoId', 'consent'];
   const MESSAGES = {
     firstName: { required: 'Enter your first name.', invalid: 'Use letters only.' },
     lastName: { required: 'Enter your last name.', invalid: 'Use letters only.' },
@@ -21,13 +13,16 @@
     phone: { required: 'Enter your mobile number.', invalid: 'Enter a 10-digit US phone number.' },
     office: { required: 'Choose an office.' },
     heardAbout: { required: 'Choose one.' },
-    referredBy: { required: 'Enter the name of the person who referred you.', invalid: 'Keep it under 120 characters.' },
+    referredBy: { required: 'Choose who referred you, or pick Other and type their name.', invalid: 'Keep it under 120 characters.' },
+    heardAboutDetail: { required: 'Choose one.' },
+    jobDetail: { required: 'Choose one.' },
     heardAboutOther: { required: 'Tell us where you heard about us.', invalid: 'Keep it under 120 characters.' },
     licenseStatus: { required: 'Choose Licensed or Unlicensed.' },
     contractedBefore: { required: 'Choose Yes or No.' },
+    contractedWith: { required: 'Tell us who you are contracted with.', invalid: 'Keep it under 120 characters.' },
     npn: { invalid: 'Your NPN is numbers only, up to 10 digits.' },
-    licenseFront: { required: 'Add a photo of the front of your license.' },
-    consent: { required: 'Check this box so we can keep your license on file.' },
+    photoId: { required: 'Add a photo of your ID.' },
+    consent: { required: 'Check this box so we can keep your ID on file for building security.' },
   };
   const FILE_MESSAGES = {
     too_large: 'That photo is too large. Try taking a new one.',
@@ -37,12 +32,10 @@
   };
 
   const form = document.getElementById('form');
-  const steps = [...form.querySelectorAll('.step')];
   const params = new URLSearchParams(location.search);
   const source = ['room', 'lobby'].includes(params.get('s')) ? params.get('s') : 'direct';
-  const files = { licenseFront: null, licenseBack: null };
+  let photo = null;
   let started = performance.now();
-  let current = 0;
   let submitting = false;
 
   const $ = id => document.getElementById(id);
@@ -53,22 +46,43 @@
     if (el.type === 'checkbox') return el.checked ? el.value : '';
     return el.value.trim().replace(/\s+/g, ' ');
   };
+  const referredBy = () => (value('referredAgent') === '__other' ? value('referredByOther') : value('referredAgent'));
+  const heardDetail = () => (value('heardAbout') === 'social' ? value('socialDetail') : value('heardAbout') === 'job_posting' ? value('jobDetail') : '');
 
-  // ---------- conditional fields ----------
+  // ---------- agent roster for in-house referrals ----------
+  fetch('/roster.json', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(data => {
+      const names = Array.isArray(data?.agents) ? data.agents.filter(n => typeof n === 'string') : [];
+      const select = $('referredAgent');
+      const other = select.querySelector('option[value="__other"]');
+      for (const name of names) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.insertBefore(option, other);
+      }
+    })
+    .catch(() => { /* "Other (type a name)" still works */ });
+
+  // ---------- conditional questions ----------
+  // A question shows when its trigger has the expected answer and the trigger itself is showing.
   function applyConditions() {
     form.querySelectorAll('[data-show-if]').forEach(el => {
       const [name, expected] = el.dataset.showIf.split('=');
-      const show = value(name) === expected;
+      const trigger = form.querySelector(`[data-field="${name}"]`);
+      const show = value(name) === expected && !(trigger && trigger.hidden);
       el.hidden = !show;
       if (!show) el.classList.remove('invalid');
     });
+    $('referredByOther').hidden = value('referredAgent') !== '__other';
   }
   form.addEventListener('change', event => {
-    if (event.target.name) {
-      applyConditions();
-      const field = event.target.closest('.field');
-      if (field?.classList.contains('invalid')) validateField(field.dataset.field);
-    }
+    if (!event.target.name) return;
+    applyConditions();
+    const field = event.target.closest('.field');
+    if (field?.classList.contains('invalid')) validateField(field.dataset.field);
+    if (event.target.id === 'referredAgent' && value('referredAgent') === '__other') $('referredByOther').focus();
   });
 
   // ---------- phone formatting ----------
@@ -89,56 +103,59 @@
     if (d.length === 11 && d.startsWith('1')) d = d.slice(1);
     return d.length === 10 && !/^[01]/.test(d) && !/^\d{3}[01]/.test(d);
   }
+  const textCheck = v => (!v ? 'required' : v.length > 120 ? 'invalid' : null);
 
   function check(name) {
-    const v = value(name);
     switch (name) {
-      case 'firstName': case 'lastName': return !v ? 'required' : !NAME.test(v) ? 'invalid' : null;
-      case 'email': return !v ? 'required' : !EMAIL.test(v.toLowerCase()) ? 'invalid' : null;
-      case 'phone': return !v ? 'required' : !phoneOk(v) ? 'invalid' : null;
-      case 'office': case 'heardAbout': case 'licenseStatus': case 'contractedBefore': return v ? null : 'required';
-      case 'referredBy': case 'heardAboutOther': return !v ? 'required' : v.length > 120 ? 'invalid' : null;
-      case 'npn': return v && !/^\d{1,10}$/.test(v.replace(/[\s-]/g, '')) ? 'invalid' : null;
-      case 'licenseFront': return files.licenseFront ? null : 'required';
-      case 'consent': return v ? null : 'required';
+      case 'firstName': case 'lastName': { const v = value(name); return !v ? 'required' : !NAME.test(v) ? 'invalid' : null; }
+      case 'email': { const v = value(name); return !v ? 'required' : !EMAIL.test(v.toLowerCase()) ? 'invalid' : null; }
+      case 'phone': { const v = value(name); return !v ? 'required' : !phoneOk(v) ? 'invalid' : null; }
+      case 'office': case 'heardAbout': case 'licenseStatus': case 'contractedBefore': return value(name) ? null : 'required';
+      case 'heardAboutDetail': return value('socialDetail') ? null : 'required';
+      case 'jobDetail': return value('jobDetail') ? null : 'required';
+      case 'referredBy': return textCheck(referredBy());
+      case 'heardAboutOther': case 'contractedWith': return textCheck(value(name));
+      case 'npn': { const v = value(name); return v && !/^\d{1,10}$/.test(v.replace(/[\s-]/g, '')) ? 'invalid' : null; }
+      case 'photoId': return photo ? null : 'required';
+      case 'consent': return value(name) ? null : 'required';
       default: return null;
     }
   }
 
-  function fieldEl(name) { return form.querySelector(`.field[data-field="${name}"]`); }
+  const fieldEl = name => form.querySelector(`.field[data-field="${name}"]`);
 
   function showError(name, code) {
+    // The server reports social and job-posting choices as one field.
+    if (name === 'heardAboutDetail' && value('heardAbout') === 'job_posting') name = 'jobDetail';
     const field = fieldEl(name);
     if (!field) return;
     const message = code ? (MESSAGES[name]?.[code] ?? FILE_MESSAGES[code] ?? 'Check this answer.') : '';
     field.classList.toggle('invalid', Boolean(code));
     const err = $(`err-${name}`);
     if (err) err.textContent = message;
-    field.querySelectorAll('input').forEach(input => {
+    field.querySelectorAll('input, select').forEach(input => {
       if (input.type !== 'radio' || input === field.querySelector('input')) input.setAttribute('aria-invalid', code ? 'true' : 'false');
     });
   }
 
   function validateField(name) {
     const field = fieldEl(name);
-    if (!field || field.hidden || field.closest('[hidden]:not(.step)')) { showError(name, null); return true; }
+    if (!field || field.hidden) { showError(name, null); return true; }
     const code = check(name);
     showError(name, code);
     return !code;
   }
 
-  function validateStep(index) {
+  function validateAll() {
     let first = null;
-    for (const name of STEP_FIELDS[index]) {
-      if (!validateField(name) && !first) first = name;
-    }
+    for (const name of FIELDS) if (!validateField(name) && !first) first = name;
     if (first) focusField(first);
     return !first;
   }
 
   function focusField(name) {
     const field = fieldEl(name);
-    const input = field?.querySelector('input:not([type=hidden])');
+    const input = field?.querySelector('input:not([type=hidden]):not([hidden]), select');
     field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (input) setTimeout(() => input.focus({ preventScroll: true }), 250);
   }
@@ -148,44 +165,11 @@
     if (field && ['text', 'email', 'tel'].includes(event.target.type) && event.target.value) validateField(field.dataset.field);
   });
 
-  // ---------- steps ----------
-  function showStep(index, { focus = true } = {}) {
-    current = index;
-    steps.forEach((step, i) => { step.hidden = i !== index; });
-    $('intro').hidden = index !== 0;
-    $('stepName').textContent = STEP_TITLES[index];
-    $('stepCount').textContent = `Step ${index + 1} of ${steps.length}`;
-    $('bar').setAttribute('aria-valuenow', String(index + 1));
-    $('bar').firstElementChild.style.width = `${((index + 1) / steps.length) * 100}%`;
-    if (index === 3) buildReview();
-    if (focus) {
-      $('card').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setTimeout(() => $(`h-step${index}`).focus({ preventScroll: true }), 50);
-    }
-  }
-
   form.addEventListener('click', event => {
-    const nav = event.target.closest('[data-nav]');
-    if (nav) {
-      if (nav.dataset.nav === 'next' && validateStep(current)) showStep(current + 1);
-      if (nav.dataset.nav === 'back') showStep(Math.max(0, current - 1));
-      return;
-    }
-    const edit = event.target.closest('[data-edit]');
-    if (edit) showStep(Number(edit.dataset.edit));
-    const remove = event.target.closest('[data-remove]');
-    if (remove) clearFile(remove.dataset.remove);
+    if (event.target.closest('[data-remove]')) clearPhoto();
   });
 
-  // Enter in a text box moves forward instead of submitting early.
-  form.addEventListener('keydown', event => {
-    if (event.key === 'Enter' && event.target.matches('input[type=text], input[type=email], input[type=tel]')) {
-      event.preventDefault();
-      if (current < 3 && validateStep(current)) showStep(current + 1);
-    }
-  });
-
-  // ---------- license photos ----------
+  // ---------- photo ID ----------
   // Decoding and encoding can stall while the page is hidden (for example while the
   // phone's camera is open), so every step gives up after 10 seconds.
   function withTimeout(promise, ms = 10000) {
@@ -227,80 +211,49 @@
     }
   }
 
-  function setDropState(name, state) {
-    const drop = form.querySelector(`[data-drop="${name}"]`);
+  function setDropState(state) {
+    const drop = form.querySelector('[data-drop="photoId"]');
     drop.querySelector('.drop-empty').hidden = state !== 'empty';
     drop.querySelector('.drop-full').hidden = state !== 'full';
     drop.querySelector('.drop-busy').hidden = state !== 'busy';
     drop.classList.toggle('filled', state === 'full');
-    form.querySelector(`[data-remove="${name}"]`).hidden = state !== 'full';
+    form.querySelector('[data-remove="photoId"]').hidden = state !== 'full';
   }
 
-  function clearFile(name) {
-    if (files[name]?.url) URL.revokeObjectURL(files[name].url);
-    files[name] = null;
-    $(name).value = '';
-    const img = form.querySelector(`[data-drop="${name}"] .drop-full img`);
-    img.removeAttribute('src');
-    setDropState(name, 'empty');
+  function clearPhoto() {
+    if (photo?.url) URL.revokeObjectURL(photo.url);
+    photo = null;
+    $('photoId').value = '';
+    form.querySelector('[data-drop="photoId"] .drop-full img').removeAttribute('src');
+    setDropState('empty');
   }
 
-  ['licenseFront', 'licenseBack'].forEach(name => {
-    const input = $(name);
-    input.addEventListener('change', async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      setDropState(name, 'busy');
-      showError(name, null);
-      try {
-        const { blob, preview } = await prepareImage(file);
-        if (files[name]?.url) URL.revokeObjectURL(files[name].url);
-        const url = URL.createObjectURL(blob);
-        files[name] = { blob, url, preview };
-        const img = form.querySelector(`[data-drop="${name}"] .drop-full img`);
-        img.src = preview ? url : '/photo-added.svg';
-        setDropState(name, 'full');
-      } catch (error) {
-        clearFile(name);
-        showError(name, error.message in FILE_MESSAGES ? error.message : 'unreadable');
-      }
-    });
+  $('photoId').addEventListener('change', async () => {
+    const file = $('photoId').files?.[0];
+    if (!file) return;
+    setDropState('busy');
+    showError('photoId', null);
+    try {
+      const prepared = await prepareImage(file);
+      if (photo?.url) URL.revokeObjectURL(photo.url);
+      photo = { ...prepared, url: URL.createObjectURL(prepared.blob) };
+      form.querySelector('[data-drop="photoId"] .drop-full img').src = photo.preview ? photo.url : '/photo-added.svg';
+      setDropState('full');
+    } catch (error) {
+      clearPhoto();
+      showError('photoId', error.message in FILE_MESSAGES ? error.message : 'unreadable');
+    }
   });
-
-  // ---------- review ----------
-  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
-
-  function buildReview() {
-    const licensed = value('licenseStatus') === 'licensed';
-    const heard = value('heardAbout') === 'referral' ? `${HEARD.referral} — ${value('referredBy')}`
-      : value('heardAbout') === 'other' ? `Other — ${value('heardAboutOther')}` : HEARD[value('heardAbout')];
-    const groups = [
-      { step: 0, title: 'Your Information', rows: [
-        ['Name', `${value('firstName')} ${value('lastName')}`], ['Email', value('email').toLowerCase()],
-        ['Mobile phone', value('phone')], ['Office', OFFICES[value('office')]],
-      ] },
-      { step: 1, title: 'About You', rows: [
-        ['How you heard about us', heard],
-        ['Florida life license', licensed ? 'Licensed' : 'Unlicensed'],
-        ...(licensed ? [['Contracted with an agency before', value('contractedBefore') === 'yes' ? 'Yes' : 'No'], ['NPN', value('npn') || 'Not given']] : []),
-      ] },
-    ];
-    let html = groups.map(g => `<div class="review"><div class="review-head"><h3>${esc(g.title)}</h3><button type="button" class="edit" data-edit="${g.step}">Edit<span class="sr"> ${esc(g.title)}</span></button></div><dl>${
-      g.rows.map(([k, v]) => `<div class="row"><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>`).join('');
-    const thumbs = ['licenseFront', 'licenseBack'].filter(n => files[n]).map(n => `<img src="${files[n].preview ? files[n].url : '/photo-added.svg'}" alt="${n === 'licenseFront' ? 'Front' : 'Back'} of license">`).join('');
-    html += `<div class="review"><div class="review-head"><h3>Driver's License</h3><button type="button" class="edit" data-edit="2">Edit<span class="sr"> driver's license</span></button></div><div class="thumbs">${thumbs}</div></div>`;
-    $('review').innerHTML = html;
-  }
 
   // ---------- submit ----------
   const SUBMIT_MESSAGES = {
     CLOSED: '<b>Sign-in is closed right now.</b> Please let a team member know you are here.',
     NOT_CONFIGURED: '<b>Sign-in is not connected yet.</b> Please let a team member know you are here.',
     HUBSPOT_ACCESS: '<b>Sign-in is not connected yet.</b> Please let a team member know you are here.',
-    TOO_LARGE: '<b>Your photos are too large to send.</b> Go back and take new photos of your license.',
+    TOO_LARGE: '<b>Your photo is too large to send.</b> Take a new photo of your ID.',
     FORBIDDEN: '<b>This page needs a refresh.</b> Reload the page and try again.',
   };
-  const RETRY_MESSAGE = '<b>We could not save your sign-in.</b> Check your connection and tap Submit again. If it keeps failing, let a team member know you are here.';
+  const RETRY_MESSAGE = '<b>We could not save your sign-in.</b> Check your connection and tap Sign In again. If it keeps failing, let a team member know you are here.';
 
   function showSubmitError(html) {
     const box = $('submitError');
@@ -311,25 +264,28 @@
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
-    if (submitting || current !== 3) return;
-    for (let i = 0; i < 3; i += 1) {
-      if (!validateStep(i)) { showStep(i); validateStep(i); return; }
-    }
+    if (submitting) return;
+    applyConditions();
+    if (!validateAll()) return;
     submitting = true;
     const button = $('submitBtn');
     button.disabled = true;
-    button.textContent = 'Submitting…';
+    button.textContent = 'Signing in…';
     $('submitError').hidden = true;
 
     const data = new FormData();
     ['firstName', 'lastName', 'email', 'phone', 'office', 'heardAbout', 'licenseStatus', 'consent', 'website'].forEach(n => data.append(n, value(n)));
-    if (value('heardAbout') === 'referral') data.append('referredBy', value('referredBy'));
+    if (value('heardAbout') === 'referral') data.append('referredBy', referredBy());
+    if (heardDetail()) data.append('heardAboutDetail', heardDetail());
     if (value('heardAbout') === 'other') data.append('heardAboutOther', value('heardAboutOther'));
-    if (value('licenseStatus') === 'licensed') { data.append('contractedBefore', value('contractedBefore')); data.append('npn', value('npn')); }
+    if (value('licenseStatus') === 'licensed') {
+      data.append('contractedBefore', value('contractedBefore'));
+      if (value('contractedBefore') === 'yes') data.append('contractedWith', value('contractedWith'));
+      data.append('npn', value('npn'));
+    }
     data.append('source', source);
     data.append('elapsedMs', String(Math.round(performance.now() - started)));
-    data.append('licenseFront', files.licenseFront.blob, 'license-front.jpg');
-    if (files.licenseBack) data.append('licenseBack', files.licenseBack.blob, 'license-back.jpg');
+    data.append('photoId', photo.blob, 'photo-id.jpg');
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 70000);
@@ -338,13 +294,10 @@
       const body = await response.json().catch(() => ({}));
       if (response.ok && body.ok) { showDone(); return; }
       if (response.status === 422 && body.fields) {
-        let firstStep = null;
-        for (const [name, code] of Object.entries(body.fields)) {
-          showError(name, code);
-          const step = STEP_FIELDS.findIndex(list => list.includes(name));
-          if (step >= 0 && (firstStep === null || step < firstStep)) firstStep = step;
-        }
-        if (firstStep !== null) { showStep(firstStep); setTimeout(() => focusField(Object.keys(body.fields).find(n => STEP_FIELDS[firstStep].includes(n))), 300); }
+        const names = Object.keys(body.fields);
+        for (const name of names) showError(name, body.fields[name]);
+        const first = FIELDS.find(n => names.includes(n)) ?? names[0];
+        if (first) focusField(first);
         return;
       }
       if (response.status === 413) { showSubmitError(SUBMIT_MESSAGES.TOO_LARGE); return; }
@@ -355,21 +308,35 @@
       clearTimeout(timer);
       submitting = false;
       button.disabled = false;
-      button.textContent = 'Submit Sign In';
+      button.textContent = 'Sign In';
     }
   });
 
+  // The application opens with what was entered here. The details travel in the link's #fragment,
+  // which browsers never send to a server, and the application removes it from the address bar.
+  function applicationLink() {
+    const prefill = {
+      legalName: `${value('firstName')} ${value('lastName')}`,
+      email: value('email').toLowerCase(),
+      phone: value('phone'),
+      office: OFFICES[value('office')] ?? '',
+    };
+    if (value('licenseStatus') === 'licensed' && value('npn')) prefill.npn = value('npn').replace(/[\s-]/g, '');
+    const json = JSON.stringify(prefill);
+    const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `${APPLY_URL}#prefill=${b64}`;
+  }
+
   function showDone() {
+    $('applyLink').href = applicationLink();
     form.hidden = true;
-    $('progress').hidden = true;
     $('intro').hidden = true;
     const first = value('firstName');
-    $('doneTitle').innerHTML = `You Are <span class="gold">Checked In</span>`;
+    $('doneTitle').innerHTML = 'You Are <span class="gold">Checked In</span>';
     $('doneLine1').textContent = source === 'lobby'
       ? `Thanks${first ? `, ${first}` : ''} — your sign-in is in. Head up to the 4th floor and our team will meet you there.`
-      : `Thanks${first ? `, ${first}` : ''} — your sign-in is in. A member of the Legacy team will be with you shortly.`;
-    // Drop the license photos from memory now that they are sent.
-    ['licenseFront', 'licenseBack'].forEach(clearFile);
+      : `Thanks${first ? `, ${first}` : ''} — your sign-in is in. A member of the LGCY team will be with you shortly.`;
+    clearPhoto();
     $('done').hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => $('doneTitle').focus({ preventScroll: true }), 50);
@@ -377,20 +344,18 @@
 
   $('again').addEventListener('click', () => {
     form.reset();
-    ['licenseFront', 'licenseBack'].forEach(clearFile);
+    clearPhoto();
     form.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
-    $('review').innerHTML = '';
     $('submitError').hidden = true;
     $('done').hidden = true;
+    $('applyLink').href = APPLY_URL;
     form.hidden = false;
-    $('progress').hidden = false;
+    $('intro').hidden = false;
     started = performance.now();
     applyConditions();
-    showStep(0, { focus: false });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     $('firstName').focus({ preventScroll: true });
   });
 
   applyConditions();
-  showStep(0, { focus: false });
 })();

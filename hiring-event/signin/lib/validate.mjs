@@ -1,4 +1,4 @@
-import { CONTRACTED_BEFORE, HEARD_ABOUT, LICENSE_STATUS, LIMITS, OFFICES, SIGN_IN_SOURCES } from './config.mjs';
+import { CONTRACTED_BEFORE, HEARD_ABOUT, HEARD_ABOUT_DETAIL, LICENSE_STATUS, LIMITS, OFFICES, SIGN_IN_SOURCES } from './config.mjs';
 
 const CONTROL = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 const NAME = /^[\p{L}\p{M}][\p{L}\p{M}' .,-]*$/u;
@@ -94,8 +94,13 @@ export async function validateSignIn(form) {
   value.heardAbout = choice(get('heardAbout'), HEARD_ABOUT);
   if (!value.heardAbout) errors.heardAbout = 'required';
   if (value.heardAbout === 'referral') {
+    // An agent picked from the roster, or a name typed under "Other".
     const v = text(get('referredBy'), 120);
     if (!v) errors.referredBy = v === null ? 'invalid' : 'required'; else value.referredBy = v;
+  }
+  if (HEARD_ABOUT_DETAIL[value.heardAbout]) {
+    value.heardAboutDetail = choice(get('heardAboutDetail'), HEARD_ABOUT_DETAIL[value.heardAbout]);
+    if (!value.heardAboutDetail) errors.heardAboutDetail = 'required';
   }
   if (value.heardAbout === 'other') {
     const v = text(get('heardAboutOther'), 120);
@@ -107,6 +112,10 @@ export async function validateSignIn(form) {
   if (value.licenseStatus === 'licensed') {
     value.contractedBefore = choice(get('contractedBefore'), CONTRACTED_BEFORE);
     if (!value.contractedBefore) errors.contractedBefore = 'required';
+    if (value.contractedBefore === 'yes') {
+      const v = text(get('contractedWith'), 120);
+      if (!v) errors.contractedWith = v === null ? 'invalid' : 'required'; else value.contractedWith = v;
+    }
     const npn = text(get('npn') ?? '', 20);
     if (npn === null) errors.npn = 'invalid';
     else if (npn) {
@@ -119,10 +128,9 @@ export async function validateSignIn(form) {
 
   value.source = choice(get('source'), SIGN_IN_SOURCES) ?? 'direct';
 
-  const front = await readFile(get('licenseFront'), true);
-  if (front.error) errors.licenseFront = front.error; else value.licenseFront = front.value;
-  const back = await readFile(get('licenseBack'), false);
-  if (back.error) errors.licenseBack = back.error; else value.licenseBack = back.value;
+  // One photo ID for building security (any ID, not only a driver's license).
+  const photo = await readFile(get('photoId'), true);
+  if (photo.error) errors.photoId = photo.error; else value.photoId = photo.value;
 
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value };
