@@ -6,6 +6,7 @@ import { resolveWorkspaceRoute } from '../app/recruiting-navigation.mjs';
 test('Queue stays addressable inside workspace navigation', () => {
   assert.deepEqual(resolveWorkspaceRoute('#queue'), { view: 'queue' });
   assert.deepEqual(resolveWorkspaceRoute('#ringcx'), { view: 'ringcx' });
+  assert.deepEqual(resolveWorkspaceRoute('#event-attendance'), { view: 'event-attendance' });
   assert.deepEqual(resolveWorkspaceRoute('#today'), { view: 'today' });
 });
 
@@ -24,6 +25,9 @@ test('Queue permits same-origin framing while private pages retain their embeddi
   assert.equal(effective('/ringcx').get('x-frame-options'), 'SAMEORIGIN');
   assert.match(effective('/ringcx').get('content-security-policy'), /frame-ancestors 'self';/);
   assert.match(effective('/ringcx').get('cache-control'), /private, no-store/);
+  assert.equal(effective('/event-attendance').get('x-frame-options'), 'SAMEORIGIN');
+  assert.match(effective('/event-attendance').get('content-security-policy'), /frame-ancestors 'self';/);
+  assert.match(effective('/event-attendance').get('cache-control'), /private, no-store/);
   for (const path of ['/', '/sign-in', '/sign-out', '/other']) {
     assert.equal(effective(path).get('x-frame-options'), 'DENY');
     assert.match(effective(path).get('content-security-policy'), /frame-ancestors 'none';/);

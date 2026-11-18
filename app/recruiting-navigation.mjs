@@ -57,7 +57,7 @@ export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderb
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
-  if (value === 'queue' || value === 'ringcx') return { view: value };
+  if (value === 'queue' || value === 'ringcx' || value === 'event-attendance') return { view: value };
   if (value === 'contacts') return { view: 'contract-agents' };
   // Tasks and the full Follow Up list left the Recruits page; saved links still open it.
   if (value === 'follow-up' || value === 'tasks') return { view: 'today' };
