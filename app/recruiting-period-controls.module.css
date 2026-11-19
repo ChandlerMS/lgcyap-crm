@@ -37,3 +37,23 @@
 }
 .stats div { min-width: 0; }
 .title select { width: auto; min-width: min(180px, 100%); field-sizing: content; }
+
+/* Slim header: the period with its dates and an info mark, the totals on one line, then the actions. */
+.section { margin-bottom: 18px; }
+.heading { row-gap: 12px; }
+.titleRow { flex-wrap: nowrap; align-items: baseline; gap: 6px 12px; }
+.title select { padding: 0 24px 2px 0; font-size: clamp(24px, 2vw, 28px); line-height: 1.2; min-width: 0; }
+.description { margin: 0; white-space: nowrap; color: var(--muted); font-size: 13px; }
+.stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 26px; }
+.stats div { flex-direction: row-reverse; justify-content: flex-end; align-items: baseline; gap: 7px; }
+.stats dd { font-size: clamp(22px, 1.8vw, 26px); line-height: 1.1; }
+.stats dt { font-size: 13px; white-space: nowrap; }
+.info { position: relative; align-self: center; }
+.infoButton { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1px solid #5a4d28; border-radius: 50%; background: transparent; color: #d7bd73; font: italic 600 12px/1 Georgia, serif; cursor: help; }
+.infoButton:hover { border-color: var(--gold); color: var(--gold); }
+.infoButton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.tip { position: absolute; top: calc(100% + 8px); left: -8px; z-index: 40; width: 300px; max-width: 80vw; padding: 10px 12px; border: 1px solid #685a34; border-radius: 8px; background: #19170f; color: #e8e2d3; font-size: 12px; line-height: 1.5; white-space: normal; box-shadow: 0 12px 28px #000a; visibility: hidden; opacity: 0; transition: opacity .12s, visibility 0s linear .12s; }
+.info:hover .tip, .info:focus-within .tip { visibility: visible; opacity: 1; transition-delay: 0s; }
+@container (min-width: 900px) { .heading { grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 28px; } }
+@media (max-width: 620px) { .titleRow { flex-wrap: wrap; } .stats dd { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }

@@ -1,49 +1,25 @@
 "use client";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import SummaryPreview from "./summary-preview";
-import { fitFollowUpChips } from "./recruit-follow-up.mjs";
 
-// badge is the short gold value on the chip; detail is its spoken and hover form; previewDetail is a fuller line for
+// badge is the short gold value on a row; detail is its spoken and hover form; previewDetail is a fuller line for
 // the title's hover preview. external links open in a new tab.
 export type SummaryChip = { id: string; href?: string; external?: boolean; name: string; badge?: string; detail: string; previewDetail?: string };
 type More = { href?: string; external?: boolean; label: string };
 // href makes the title open its own page; hovering or focusing the title then previews the first few items.
-// lead sits to the left of the title, e.g. the gold plus that adds a task or follow-up. previewActions are buttons
-// inside the hover preview, e.g. Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar.
+// lead is the card's gold plus that adds a task, follow-up or meeting. previewActions are buttons inside the hover
+// preview, e.g. Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar.
 type Props = { id: string; title: string; count?: string; note: string; chips: readonly SummaryChip[]; empty: ReactNode; more: More; className?: string; href?: string; lead?: ReactNode; previewActions?: ReactNode };
-const RENDERED = 24;
+const ROWS = 3;
 const PREVIEW = 6;
 const newTab = (external?: boolean) => external ? { target: "_blank", rel: "noopener noreferrer" } : {};
-// Chips beside the Today totals, trimmed to the rows set by --chip-rows and ending in a "+N more" count.
+// A compact dashboard card: title and count with its plus, a one-line note, the next few items, then "+N more".
 export default function SummaryChips({ id, title, count, note, chips, empty, more, className, href, lead, previewActions }: Props) {
-  const listRef = useRef<HTMLUListElement>(null);
-  const [fit, setFit] = useState(RENDERED);
-  const rowKey = chips.slice(0, RENDERED).map(chip => `${chip.id}:${chip.badge ?? ""}`).join(",") + `/${chips.length}`;
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    let measuredWidth = -1;
-    const measure = () => {
-      if (list.clientWidth === measuredWidth) return;
-      measuredWidth = list.clientWidth;
-      const style = getComputedStyle(list);
-      const widths = Array.from(list.querySelectorAll<HTMLElement>("[data-chip]"), chip => chip.offsetWidth);
-      // Leave a digit of slack: the more chip's count changes after this measurement.
-      const moreWidth = (list.querySelector<HTMLElement>("[data-more]")?.offsetWidth ?? 0) + 12;
-      setFit(fitFollowUpChips(widths, moreWidth, measuredWidth, parseFloat(style.columnGap) || 0, Number(style.getPropertyValue("--chip-rows")) || 2, chips.length));
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(list);
-    return () => observer.disconnect();
-    // rowKey captures every input to the measurement.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rowKey]);
-  const shown = Math.min(fit, chips.length), rest = chips.length - shown;
+  const rest = Math.max(0, chips.length - ROWS);
+  const moreHref = more.href ?? href;
   const moreText = <>+{rest} more<span className="sr-only"> {more.label}</span></>;
-  // The lead stays outside the heading, so its dialog never holds the hover preview open.
-  const heading = <SummaryPreview id={`${id}-preview`} enabled={Boolean(href)} heading={<>
-      <h2 id={id}>{href ? <a className="summary-chips-link" href={href}>{title}<span className="sr-only"> page</span></a> : title}{count && <span>{count}</span>}</h2><span className="muted">{note}</span></>}>
+  const heading = <SummaryPreview id={`${id}-preview`} enabled={Boolean(href)} heading={
+      <h2 id={id}>{href ? <a className="summary-chips-link" href={href}>{title}<span className="sr-only"> page</span></a> : title}{count && <span className="summary-card-count">{count}</span>}</h2>}>
       {href && <>
         <p className="summary-preview-title">{title}{count ? ` · ${count}` : ""}</p>
         {chips.length ? <ul>{chips.slice(0, PREVIEW).map(chip => <li key={chip.id}>{chip.href ? <a href={chip.href} {...newTab(chip.external)}>{chip.name}</a> : <span>{chip.name}</span>}<span className="muted">{chip.previewDetail ?? chip.detail}</span></li>)}</ul> : <p className="muted">{empty}</p>}
@@ -52,14 +28,15 @@ export default function SummaryChips({ id, title, count, note, chips, empty, mor
         <a className="text-link summary-preview-open" href={href}>Open {title}</a>
       </>}
     </SummaryPreview>;
-  return <section className={`summary-chips${className ? ` ${className}` : ""}`} aria-labelledby={id}>
-    {lead ? <div className="summary-chips-top">{lead}{heading}</div> : heading}
-    {!chips.length ? <p className="summary-chips-empty muted">{empty}</p> : <ul className="summary-chip-list" ref={listRef}>
-      {chips.slice(0, RENDERED).map((chip, index) => {
-        const label = <><span className="summary-chip-name">{chip.name}</span>{chip.badge && <span className="summary-chip-badge" aria-hidden="true">{chip.badge}</span>}<span className="sr-only">, {chip.detail}</span></>;
-        return <li key={chip.id} data-chip className={index < shown ? undefined : "is-overflow"}>{chip.href ? <a className="summary-chip" href={chip.href} title={`${chip.name}, ${chip.detail}`} {...newTab(chip.external)}>{label}</a> : <span className="summary-chip" title={`${chip.name}, ${chip.detail}`}>{label}</span>}</li>;
+  return <section className={`summary-chips summary-card${className ? ` ${className}` : ""}`} aria-labelledby={id}>
+    <div className="summary-card-head">{heading}{lead && <div className="summary-card-add">{lead}</div>}</div>
+    <p className="summary-card-note">{note}</p>
+    {!chips.length ? <p className="summary-card-empty">{empty}</p> : <ul className="summary-card-list">
+      {chips.slice(0, ROWS).map(chip => {
+        const label = <><span className="summary-card-name">{chip.name}</span>{chip.badge && <span className="summary-card-badge" aria-hidden="true">{chip.badge}</span>}<span className="sr-only">, {chip.detail}</span></>;
+        return <li key={chip.id}>{chip.href ? <a href={chip.href} title={`${chip.name}, ${chip.detail}`} {...newTab(chip.external)}>{label}</a> : <span title={`${chip.name}, ${chip.detail}`}>{label}</span>}</li>;
       })}
-      <li data-more className={rest > 0 ? undefined : "is-overflow"}>{more.href ? <a className="summary-chip summary-chip-more" href={more.href} {...newTab(more.external)}>{moreText}</a> : <span className="summary-chip summary-chip-more">{moreText}</span>}</li>
     </ul>}
+    {rest > 0 && (moreHref ? <a className="summary-card-more" href={moreHref} {...newTab(more.href ? more.external : false)}>{moreText}</a> : <span className="summary-card-more">{moreText}</span>)}
   </section>;
 }
