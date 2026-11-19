@@ -1178,3 +1178,11 @@ main.content.sales-calls-content { padding-top: 16px; }
 button.gold-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;color:var(--gold,#e3bf3b);font-size:24px;line-height:1;cursor:pointer}
 button.gold-close:hover{background:rgba(227,191,59,.1)}
 button.gold-close:focus-visible{outline:2px solid var(--gold,#e3bf3b);outline-offset:2px}
+
+/* Inline workspace status shares the dashboard disclosure controls without a tab bar. */
+.source-bar { border: 0; background: transparent; }
+.dashboard-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-bottom: 18px; }
+.dashboard-toolbar .source-bar { flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-start; padding: 0; gap: 8px 16px; }
+.dashboard-toolbar .source-summary { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.dashboard-toolbar .updated-at { flex-basis: auto; }
+.dashboard-toolbar .expand-collapse-controls { flex-shrink: 0; margin: 0 0 0 auto; }
