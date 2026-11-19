@@ -31,13 +31,16 @@ async function readStandardPreferred(input: Parameters<typeof readLeaderboard>[0
   try { return applySvpCalls(result, await readSvpCalls(await getSvpCallsDb(), result, now)); } catch { return result; }
 }
 
-/** Shopper uses the imported Calls and Applications reports where they cover every day of the range, otherwise the PolicyTek browser sync. */
-async function readShopper(input: Parameters<typeof readLeaderboard>[0]) {
+/**
+ * Shopper (on its own board and inside All) uses the imported Calls and Applications reports where they cover every day
+ * of the range, otherwise the PolicyTek browser sync. All passes its captured clock so both sources read the same range.
+ */
+async function readShopper(input: Parameters<typeof readLeaderboard>[0], options: { now?: number } = {}) {
   try {
-    const imported = await readShopperReportsLeaderboard(input, { db: await getShopperReportsDb() });
+    const imported = await readShopperReportsLeaderboard(input, { db: await getShopperReportsDb(), ...options });
     if (imported) return imported;
   } catch { /* An unreadable import never hides the browser-sync snapshot. */ }
-  return readPolicytekLeaderboard(input, { db: await getPolicytekDb() });
+  return readPolicytekLeaderboard(input, { db: await getPolicytekDb(), ...options });
 }
 
 async function handle(request: Request) {
@@ -46,10 +49,7 @@ async function handle(request: Request) {
     authorizeUser: user => editorAllowed(user, process.env.RECRUITING_EDITOR_EMAILS),
     // The TV page at leaderboard.lgcyap.com reads the same data from its own exact origin.
     allowedOrigin: leaderboardReadOrigin(request, process.env.BETTER_AUTH_URL),
-    readData: async input => input.board === 'all' ? readAllLeaderboard(input, {
-      readShopper: async (selected, options) => readPolicytekLeaderboard(selected, { db: await getPolicytekDb(), ...options }),
-      readStandardPreferred,
-    })
+    readData: async input => input.board === 'all' ? readAllLeaderboard(input, { readShopper, readStandardPreferred })
       : input.board === 'whatsapp-sp' ? readPendingWhatsappStandardPreferred(input)
       : input.board === 'sp' ? readStandardPreferred(input)
       : input.board === 'whatsapp' ? readWhatsappLeaderboard(input, { db: await getWhatsappDb() })

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { combineShopperReports, importShopperReports, parseShopperReport, readShopperReportsLeaderboard, shopperAgentKey, shopperReportFile, ShopperImportError } from '../lib/shopper-reports.mjs';
 import { leaderboardTotals, rankLeaderboardRows } from '../app/leaderboard-data.mjs';
+import { readAllLeaderboard } from '../lib/leaderboard-all.mjs';
 
 const schema = await readFile(new URL('../migrations/0017_shopper_reports.sql', import.meta.url), 'utf8');
 const sha = character => character.repeat(64);
@@ -102,6 +103,13 @@ test('imported days serve the Shopper board only when both reports cover the who
     // Ranked rows keep only agents with applications, as the Shopper board always has.
     assert.deepEqual(rankLeaderboardRows(result.rows, 'shopper', 'ap').map(row => row.name), ['Synthetic Alpha', 'Synthetic Delta']);
     assert.equal(leaderboardTotals(result.rows, 'shopper').leads, 5);
+    // The All board takes this imported result as its Shopper half.
+    const all = await readAllLeaderboard({ board: 'all', period: 'custom', from: '2026-11-02', to: '2026-11-06' }, { now,
+      readShopper: (selected, options) => readShopperReportsLeaderboard(selected, { db, ...options }),
+      readStandardPreferred: async selected => ({ ...selected, status: 'available', source: 'Synthetic', startDate: '2026-11-02', endDate: '2026-11-06', rows: [], calls: { status: 'available', total: 0, partial: false }, partial: false, stale: false, fetchedAt: new Date(now).toISOString() }) });
+    assert.equal(all.status, 'available');
+    assert.deepEqual(all.combinedTotals, { sales: 2, annualPremium: 90, calls: 5, closeRate: 2 / 5 });
+    assert.match(all.notice, /inbound calls from the imported PolicyTek Calls report/);
     // Days before a report's first imported row are unknown, so those ranges keep the browser sync rather than understate it.
     assert.equal(await read('2026-11-01', '2026-11-06'), null, 'calls start Nov 2');
     assert.equal(await read('2026-10-25', '2026-11-03'), null, 'both reports start after Oct 25');

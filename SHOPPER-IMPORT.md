@@ -5,7 +5,7 @@ The Shopper leaderboard's **Calls**, **Close rate**, **Submitted** and **Submitt
 - **Calls report** (`calls-report_MM-DD-YYYY_HHMM.xlsx`): every inbound call row counts as one call for its agent, on the call's date.
 - **Applications report** (`applications-report_MM-DD-YYYY_HHMM.xlsx`): every row counts as one submitted application for its agent on its Policy: Application Submit Date, and its Policy: Premium adds to Submitted premium.
 
-Close rate is submitted ÷ calls. Ranges that run past the last imported day (today, this week, this month) or start before either report's first imported day keep the PolicyTek browser sync described in `POLICYTEK-SYNC.md`, so the board stays live while past months and weeks use the reports. Days before a report's first row are treated as unknown, not empty.
+Close rate is submitted ÷ calls. Ranges that run past the last imported day (today, this week, this month) or start before either report's first imported day keep the PolicyTek browser sync described in `POLICYTEK-SYNC.md`, so the board stays live while past months and weeks use the reports. Days before a report's first row are treated as unknown, not empty. The All leaderboard reads its Shopper half the same way, so on imported ranges its Calls / leads adds Calls report calls rather than PolicyTek leads.
 
 ## Run
 
