@@ -8,7 +8,7 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { queryDispositions, validateDispositionQuery } from '../lib/svp-dispositions.mjs';
 const require = createRequire(import.meta.url);
-test('Calls toggles preserve order and sizing; the dispositions view applies filters and renders safe call links', async () => {
+test('Calls and Dispositions modes filter source buttons and preserve source selection; the dispositions view applies filters and renders safe call links', async () => {
   await mkdir('work', { recursive: true });
   const dir = await mkdtemp('work/dispositions-ui-');
   const dom = new JSDOM('<div id="app"></div>', { url: 'https://crm.test' });
@@ -26,13 +26,27 @@ test('Calls toggles preserve order and sizing; the dispositions view applies fil
     root = createRoot(document.getElementById('app'));
     const render = () => root.render(createElement(CallsPage, { view: current, onSourceChange: value => { current = value; render(); }, onUnauthorized: () => assert.fail('unexpected sign-out'), onBusyChange() {}, onDirtyChange() {} }));
     await act(async () => render());
-    const buttons = () => [...document.querySelector('[aria-label="Calls view"]').querySelectorAll('button')];
-    assert.deepEqual(buttons().map(button => button.textContent), ['Shopper', 'Shopper Dispositions', 'Standard vs Preferred', 'Standard vs Preferred Dispositions']);
+    const modes = () => [...document.querySelector('[aria-label="Calls view"]').querySelectorAll('button')];
+    const sources = () => [...document.querySelector(`[aria-label="${current.endsWith('-dispositions') ? 'Dispositions' : 'Calls'} source"]`).querySelectorAll('button')];
+    assert.deepEqual(modes().map(button => button.textContent), ['Calls', 'Dispositions']);
+    assert.equal(modes()[0].getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(sources().map(button => button.textContent), ['Shopper', 'Standard vs Preferred']);
     const originalClass = document.querySelector('iframe').className;
-    await act(async () => buttons()[1].click());
+    await act(async () => modes()[1].click());
+    assert.equal(current, 'shopper-dispositions');
+    assert.deepEqual(sources().map(button => button.textContent), ['Shopper Dispositions', 'Standard vs Preferred Dispositions']);
     assert.equal(document.querySelector('iframe').src, 'https://app.policytek.com/leads');
     assert.equal(document.querySelector('iframe').className, originalClass);
-    await act(async () => { buttons()[3].click(); await new Promise(resolve => setTimeout(resolve, 30)); });
+    await act(async () => modes()[0].click());
+    assert.equal(current, 'shopper');
+    assert.equal(document.querySelector('iframe').src, 'https://app.policytek.com/calls');
+    await act(async () => sources()[1].click());
+    assert.equal(current, 'standard');
+    await act(async () => { modes()[1].click(); await new Promise(resolve => setTimeout(resolve, 30)); });
+    assert.equal(current, 'standard-dispositions');
+    assert.equal(modes()[1].getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(sources().map(button => button.textContent), ['Shopper Dispositions', 'Standard vs Preferred Dispositions']);
+    assert.equal(sources()[1].getAttribute('aria-pressed'), 'true');
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     assert.equal(document.querySelectorAll('tbody tr').length, 2);
     assert.match(document.body.textContent, /does not update automatically/);
@@ -48,6 +62,13 @@ test('Calls toggles preserve order and sizing; the dispositions view applies fil
     await act(async () => [...document.querySelectorAll('button')].find(button => button.textContent === 'Reset').click());
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     assert.equal(document.querySelectorAll('tbody tr').length, 2);
+    await act(async () => modes()[0].click());
+    assert.equal(current, 'standard');
+    assert.deepEqual(sources().map(button => button.textContent), ['Shopper', 'Standard vs Preferred']);
+    assert.equal(sources()[1].getAttribute('aria-pressed'), 'true');
+    await act(async () => { current = 'shopper-dispositions'; render(); });
+    assert.equal(modes()[1].getAttribute('aria-pressed'), 'true', 'saved disposition routes select the matching mode');
+    assert.equal(sources()[0].getAttribute('aria-pressed'), 'true');
   } finally {
     if (root) await act(async () => root.unmount());
     globalThis.window = before.window; globalThis.document = before.document; globalThis.fetch = before.fetch; globalThis.IS_REACT_ACT_ENVIRONMENT = before.flag;

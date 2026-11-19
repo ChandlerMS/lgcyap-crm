@@ -1107,6 +1107,7 @@ main.content:has(.shopper-embed) { max-width: none; padding-inline: 16px; }
 @media (max-width: 600px) { .shopper-embed { min-height: 700px; } }
 
 /* Keep sales and calls close to their navigation and view tabs. */
+.calls-view-controls { display: grid; gap: 8px; margin-bottom: 12px; }
 main.content.sales-calls-content { padding-top: 16px; }
 .sales-calls-content .dashboard-back-row { margin-bottom: 12px; }
 .sales-calls-content .sales-heading { margin-top: 12px; }
