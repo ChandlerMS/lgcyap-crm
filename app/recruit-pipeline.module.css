@@ -277,3 +277,25 @@
 .dragging .stage .stageContent { visibility: hidden; opacity: 0; transition: none; }
 .face .stage .stageContent { background: #17150f; }
 @media (prefers-reduced-motion: reduce) { .stage .stageContent { transform: none; transition: none; } }
+
+/* The 3D view takes the same space as All stages: the same overall height, with type and cards sized like the board's,
+   so switching views keeps the dashboard still. */
+.turnHint { margin: -8px 0 8px; font-size: 12px; }
+.face { padding: 12px 16px 14px; }
+.face .faceHeading { margin: 0 0 10px; }
+.face .faceHeading span { font-size: 11px; }
+.face .faceHeading h3 { font-size: 17px; }
+.face .entryPaths, .face .licensePaths, .face .outcomes { gap: 32px; }
+.face .entryPath h3, .face .licensingRoute h3 { margin-bottom: 6px; font-size: 13px; line-height: 1.4; }
+.face .stage { min-height: 90px; }
+.face .stage .stageHeading { padding: 8px 8px 8px 14px; border-radius: 9px; }
+.face .stageToggle { grid-template-columns: minmax(0, 1fr) 28px; gap: 4px; min-height: 74px; font-size: 14px; }
+.face .stageToggle small { margin-top: 2px; font-size: 12px; }
+.face .count { font-size: 20px; }
+.face .expandButton { width: 28px; height: 30px; font-size: 18px; }
+.face .stage .recruitSummary > a { font-size: 14px; }
+.face .stage .recruit:has(.grip) { padding-top: 30px; }
+.face .stage .grip { width: 26px; height: 26px; font-size: 18px; }
+.face .dropHint { font-size: 13px; }
+.faceFlow { gap: 20px; }
+

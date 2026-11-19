@@ -125,11 +125,14 @@ test('Event Attendance emails open New Email with the templates, names take a ho
     assert.match(hovered, /<h3>Everyone who signed in <span>2<\/span><\/h3><div id="date-filter"><\/div>/);
     assert.match(hovered, /<th scope="row"><span class="[^"]*" data-hover="Pat Example QA"><a href="\/#recruit\/101" target="_top"/);
 
-    // On the dashboard, Applications loads but shows only its title until opened.
+    // On the dashboard, Applications loads but keeps its list collapsed under the counts until one is selected.
     const Board = (await load(directory, './app/event-attendance/event-attendance-board.tsx', 'board')).default;
     const section = renderToStaticMarkup(createElement(Board, { section: true }));
-    assert.match(section, /<button type="button" class="[^"]*" aria-expanded="false" aria-controls="applications-list">Show applications<span aria-hidden="true"> ▼<\/span><\/button>/);
     assert.doesNotMatch(section, /id="applications-list"/);
     assert.match(section, /Loading applications from HubSpot/);
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync('app/applications-page.tsx', 'utf8');
+    assert.match(source, /if \(tileOpen\(key\)\) \{ setListOpen\(false\); return; \}/, 'selecting the open count collapses the list');
+    assert.match(source, /"aria-expanded": tileOpen\(tile\.key\), "aria-controls": "applications-list"/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

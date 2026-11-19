@@ -19,10 +19,12 @@ export function openTaskChips(records, now) {
   return records.filter(record => record?.id && record.status !== 'Completed').map(record => {
     const id = String(record.id), due = Date.parse(record.scheduledAt ?? '');
     const chip = { id, href: hubspotHref(record.hubspotUrl), external: true, name: record.title || 'Untitled task', due: Number.isFinite(due) ? due : null };
-    if (chip.due === null) return { ...chip, detail: 'no due date' };
+    // The hover list shows each task's due date, status, priority and type, owner and notes.
+    const facts = (dueText) => [['Due', dueText], ['Status', record.status || 'Not recorded'], ...(record.subtitle ? [['Priority · type', record.subtitle]] : []), ...(record.owner ? [['Owner', record.owner]] : []), ...(record.preview ? [['Notes', record.preview]] : [])];
+    if (chip.due === null) return { ...chip, detail: 'no due date', facts: facts('No due date') };
     const late = today - easternDay(due);
-    if (late > 0) return { ...chip, badge: `${late}d late`, detail: `${late} day${late === 1 ? '' : 's'} overdue, due ${LONG_DATE.format(due)}` };
-    if (late === 0) return { ...chip, badge: 'Today', detail: 'due today' };
-    return { ...chip, badge: SHORT_DATE.format(due), detail: `due ${LONG_DATE.format(due)}` };
+    if (late > 0) return { ...chip, badge: `${late}d late`, detail: `${late} day${late === 1 ? '' : 's'} overdue, due ${LONG_DATE.format(due)}`, facts: facts(`${LONG_DATE.format(due)} · ${late} day${late === 1 ? '' : 's'} overdue`) };
+    if (late === 0) return { ...chip, badge: 'Today', detail: 'due today', facts: facts(`Today, ${LONG_DATE.format(due)}`) };
+    return { ...chip, badge: SHORT_DATE.format(due), detail: `due ${LONG_DATE.format(due)}`, facts: facts(LONG_DATE.format(due)) };
   }).sort((a, b) => (a.due ?? Infinity) - (b.due ?? Infinity) || a.id.localeCompare(b.id));
 }

@@ -8,13 +8,22 @@ export default function SummaryPreview({ id, heading, children, enabled }: { id:
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 12, top: 12, width: 360 });
   const show = () => { if (timer.current) clearTimeout(timer.current); if (enabled) setOpen(true); };
-  const hide = () => { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => { if (!panel.current?.contains(document.activeElement) && !anchor.current?.contains(document.activeElement)) setOpen(false); }, 200); };
+  // Leaving the title and the pop-up closes it after a short pause (time to move from one to the other). A pop-up
+  // opened from inside, such as Add Task, keeps it until that closes.
+  const hide = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(function check() {
+      if (panel.current?.querySelector("dialog[open]")) { timer.current = setTimeout(check, 300); return; }
+      if (panel.current?.matches(":hover") || anchor.current?.matches(":hover")) return;
+      setOpen(false);
+    }, 200);
+  };
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   useLayoutEffect(() => {
     if (!open) return;
     const measure = () => {
       const rect = anchor.current?.getBoundingClientRect(); if (!rect) return;
-      const width = Math.min(360, innerWidth - 24), height = panel.current?.offsetHeight ?? 250;
+      const width = Math.min(460, innerWidth - 24), height = panel.current?.offsetHeight ?? 250;
       const below = rect.bottom + 4;
       setPosition({ width, left: Math.max(12, Math.min(rect.left, innerWidth - width - 12)), top: Math.max(12, below + height <= innerHeight - 12 ? below : rect.top - height - 4) });
     };
@@ -27,6 +36,6 @@ export default function SummaryPreview({ id, heading, children, enabled }: { id:
     if (event.key === "ArrowDown" && enabled) { event.preventDefault(); show(); requestAnimationFrame(() => panel.current?.querySelector<HTMLAnchorElement>("a")?.focus()); }
   }}>
     {heading}
-    {open && createPortal(<div id={id} ref={panel} className="summary-preview" style={{ display: "block", position: "fixed", ...position, left: `max(12px, min(${position.left}px, calc(100vw - 372px)))`, maxWidth: "calc(100vw - 24px)", maxHeight: "calc(100dvh - 24px)", overflowY: "auto", zIndex: 95 }} onMouseEnter={show} onMouseLeave={hide} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(false); anchor.current?.querySelector<HTMLAnchorElement>("a")?.focus(); } }}>{children}</div>, document.body)}
+    {open && createPortal(<div id={id} ref={panel} className="summary-preview" style={{ display: "block", position: "fixed", ...position, left: `max(12px, min(${position.left}px, calc(100vw - 472px)))`, maxWidth: "calc(100vw - 24px)", maxHeight: "min(72dvh, 680px)", overflowY: "auto", overscrollBehavior: "contain", zIndex: 95 }} onMouseEnter={show} onMouseLeave={hide} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(false); anchor.current?.querySelector<HTMLAnchorElement>("a")?.focus(); } }}>{children}</div>, document.body)}
   </div>;
 }

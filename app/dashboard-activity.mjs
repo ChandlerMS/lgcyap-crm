@@ -6,6 +6,7 @@ const DAY_KEY = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeri
 const SHORT_DAY = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, month: 'short', day: 'numeric' });
 const WEEKDAY_TIME = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, weekday: 'short', hour: 'numeric', minute: '2-digit' });
 const FULL = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const TIME = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hour: 'numeric', minute: '2-digit' });
 
 const nameOf = record => record.name || [record.firstName, record.lastName].filter(Boolean).join(' ') || 'Unnamed recruit';
 const byName = (a, b) => a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' }) || a.id.localeCompare(b.id);
@@ -30,10 +31,15 @@ function scheduled(records) {
     return record?.id && Number.isFinite(at) ? [{ record, at, day: DAY_KEY.format(at) }] : [];
   }).sort((a, b) => a.at - b.at || String(a.record.id).localeCompare(String(b.record.id)));
 }
-const chip = ({ record, at }, badge) => ({
-  id: String(record.id), href: hubspotHref(record.hubspotUrl), external: true, name: record.title || 'Meeting', badge,
-  detail: FULL.format(at), previewDetail: `${FULL.format(at)}${record.status ? ` · ${record.status}` : ''}`,
-});
+const chip = ({ record, at }, badge) => {
+  const ends = Date.parse(record.endedAt ?? '');
+  return {
+    id: String(record.id), href: hubspotHref(record.hubspotUrl), external: true, name: record.title || 'Meeting', badge,
+    detail: FULL.format(at), previewDetail: `${FULL.format(at)}${record.status ? ` · ${record.status}` : ''}`,
+    // The hover list shows when it runs, its outcome, where, and whose it is.
+    facts: [['When', `${FULL.format(at)}${Number.isFinite(ends) && ends > at ? ` – ${TIME.format(ends)}` : ''}`], ['Outcome', record.status || 'Not recorded'], ...(record.subtitle ? [['Location', record.subtitle]] : []), ...(record.owner ? [['Owner', record.owner]] : [])],
+  };
+};
 
 /** Meetings summary: meetings from today on (Eastern calendar day), soonest first. */
 export function upcomingMeetingChips(records, now) {

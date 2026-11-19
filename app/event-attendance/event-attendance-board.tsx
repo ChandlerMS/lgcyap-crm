@@ -3,6 +3,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import Image from 'next/image';
 import { useEventReviews, type Review } from '../event-review';
 import ApplicationsPage, { type Application } from '../applications-page';
+import PanelPager from '../panel-pager';
+import { pageWindow } from '../panel-pager.mjs';
 import { SectionToggle } from '../dashboard-section';
 import { useRecruitHoverCard } from '../recruit-hover';
 import type { PipelineRecruit } from '../recruit-pipeline';
@@ -42,6 +44,7 @@ const SINCE_LABEL = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: '
 const UPDATED = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
 const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
 const REFRESH_MS = 60000;
+const DAYS_PER_PAGE = 5;
 
 const count = (value: number | null | undefined) => typeof value === 'number' && Number.isFinite(value) ? NUMBER.format(value) : '—';
 const share = (part: number | undefined, whole: number | undefined) => typeof part === 'number' && typeof whole === 'number' && whole > 0 ? `${Math.round(part / whole * 100)}%` : '—';
@@ -79,6 +82,9 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   const [boardReads, setBoardReads] = useState(0);
   const appsAfterRead = useRef(false);
   const appsTotal = useRef<number | null>(null);
+  // The day-by-day table can fold away under its title, and shows five event days a page, newest first.
+  const [daysOpen, setDaysOpen] = useState(true);
+  const [dayPage, setDayPage] = useState(1);
   // The Applications list's applications once loaded, for the answers in each applicant's hover card.
   const [applications, setApplications] = useState<Application[] | undefined>(undefined);
   // The attendee lists' sign-in date filter: '' for any date, an event day, or 'range' between from and to.
@@ -187,6 +193,9 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     </>}
     {dateActive && <button type="button" className={styles.linkButton} onClick={clearDate}>Clear date</button>}
   </div>;
+  const dayRows = pageWindow(data?.days.length ?? 0, dayPage, DAYS_PER_PAGE);
+  const statusText = error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading';
+  const hint = <>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</>;
   const tiles: { key: Tile; label: string; value: string; note: string }[] = [
     { key: 'signedIn', label: 'Signed in', value: count(people?.signedIn), note: `People · ${count(data?.signIns)} sign-ins in all` },
     { key: 'applied', label: 'Applied', value: count(people?.applied), note: `${share(people?.applied, people?.signedIn)} of people who signed in` },
@@ -206,9 +215,9 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications this day." /></>;
 
   return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
-    <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span></div>
+    {!section && <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
     <header className={styles.header}>
-      <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<Title id="event-attendance-title">{section ? <a className="panel-title-link" href="#event-attendance">Event Attendance</a> : "Event Attendance"}</Title><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists</p></div></div>
+      <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<Title id="event-attendance-title">{section ? <a className="panel-title-link" href="#event-attendance">Event Attendance</a> : "Event Attendance"}</Title><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists{section && <> · <span role="status" className={error ? styles.updatedWarning : styles.updated}>{statusText}</span></>}</p></div></div>
       <div className={styles.controls}>
         <a className={styles.action} href={HUBSPOT_SOURCE_URL} target="_blank" rel="noopener noreferrer" title="Opens the Recruiting tickets from the sign-in page, the application page and imported lists. If HubSpot shows another pipeline, choose Recruiting.">Open in HubSpot <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>
         <button type="button" disabled={!data} onClick={() => data && download(attendanceCsvFilename(data.fetchedAt), attendanceCsv(data))}>Export CSV</button>
@@ -217,7 +226,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
         <SectionToggle />
       </div>
     </header>
-    <p className={styles.hint}>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</p>
+    {!section && <p className={styles.hint}>{hint}</p>}
 
     {importError && <p role="alert" className={styles.alert}>{importError}</p>}
     {importFile && <AttendeeImport key={importFile.id} fileName={importFile.name} attendees={importFile.attendees} onClose={() => setImportFile(null)} onImported={() => void refresh()} />}
@@ -227,7 +236,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     {error &&<div role="alert" className={styles.alert}><p>{error}{data ? ' The last numbers received are shown below.' : ''}</p>{signInNeeded && <a href="/sign-in?return_to=%2F%23event-attendance" target="_top">Sign in</a>}</div>}
     {data?.partial && <p role="status" className={styles.alert}>HubSpot returned more notes than this page reads at once, so the oldest sign-ins and applications may be missing from these counts.</p>}
 
-    <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>
+    {(!section || !data) && <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>}
 
     <section className={styles.tiles} aria-label="Totals. Select one to see the people in it.">
       {tiles.map(tile => <button type="button" key={tile.key} className={`${styles.tile} ${tile.key === 'today' ? styles.todayTile : ''} ${openTile === tile.key ? styles.tileOpen : ''}`} disabled={!data} aria-expanded={openTile === tile.key} aria-controls="tile-people" onClick={() => toggleTile(tile.key)}>
@@ -243,11 +252,12 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     </section>}
 
     <section className={styles.card} aria-labelledby="days-title">
-      <div className={styles.sectionHeading}><h2 id="days-title">Attendance by event day and office</h2><span>Newest first · Eastern time · Select a day or a number to see who signed in</span></div>
+      <div className={styles.sectionHeading}><h2 id="days-title">Attendance by event day and office</h2><span>Newest first · Eastern time · Select a day or a number to see who signed in</span><SectionToggle collapsed={!daysOpen} onToggle={() => setDaysOpen(value => !value)} label="Attendance by event day and office" controls="attendance-days" /></div>
+      {daysOpen && <div id="attendance-days">
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead><tr><th scope="col">Event day</th>{data?.offices.map(office => <th scope="col" key={office.key}>{office.label}</th>)}<th scope="col">Sign-ins</th><th scope="col">Online applications</th></tr></thead>
-          <tbody>{data?.days.map(row => {
+          <tbody>{data?.days.slice(dayRows.start, dayRows.end).map(row => {
             const dayOpen = openDay?.day === row.day && openDay.office === null;
             return <Fragment key={row.day}>
               <tr className={openDay?.day === row.day ? styles.rowOpen : undefined}>
@@ -268,6 +278,8 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
         </table>
       </div>
       {data && !data.days.length && <p className={styles.empty}>No sign-ins or applications yet.</p>}
+      {data && data.days.length > DAYS_PER_PAGE && <PanelPager count={data.days.length} page={dayRows.page} size={DAYS_PER_PAGE} label="Event days" onPage={next => { setDayPage(next); setOpenDay(null); }} numbers />}
+      </div>}
     </section>
 
     {/* The Applications page's list, ten a page, sharing this board's Refresh and Approve and Deny. Its title opens
@@ -287,6 +299,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
         <li><strong>Applications</strong>: the same list as the Applications page, every application sent from the application page, newest first. Someone who applies twice is listed twice. <strong>Did not meet a required item</strong> have no recruiting ticket, because the application page creates one only when every required item is met; <strong>Need a private conversation</strong> answered a question the hiring team should discuss with them; <strong>Still at Hiring Event</strong> already had a ticket at Hiring Event, which applying does not move.</li>
         <li><strong>Approve</strong> and <strong>Deny</strong> save the decision as a note on the person&apos;s recruiting ticket. The same decision shows in every list here and on the Applications page.</li>
         <li><strong>Names and emails</strong>: point at a name for the recruit&apos;s CRM details, their sign-ins and, in lists of people who applied, everything they entered on the application, with quick links to add a note, task, meeting or calendar event, or to call, text or email them. Selecting an email opens New Email with your offer templates. The sign-in date filter narrows Signed in, Applied and Hired to people who signed in on the chosen day or dates.</li>
+        {section && <li>{hint}</li>}
         <li>Numbers come from HubSpot each time this page loads and every minute while it is open. The Applications list reads again on Refresh and whenever a new application comes in. The lists show what each person entered when signing in or applying. Like the rest of the recruiting workspace, they are visible only to recruiting editors.</li>
       </ul>
     </details>
