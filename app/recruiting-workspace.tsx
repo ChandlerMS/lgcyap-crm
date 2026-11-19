@@ -390,7 +390,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const queuePage = QUEUE_PAGES.find(item => item.id === route.view);
   const eventAttendanceView = route.view === "event-attendance";
   const applicationsView = route.view === "applications";
-  const embeddedView = Boolean(queuePage) || eventAttendanceView;
+  const embeddedView = Boolean(queuePage) || eventAttendanceView || route.view === "loa";
   const sidebarView = sidebarViewFor(activeView);
   const hubspotTool = HUBSPOT_TOOLS.find(item => item.id === route.view && item.id !== "recruits");
   const activityPage = ACTIVITY_PAGES.find(page => page.id === route.view) ?? null;
@@ -431,6 +431,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     <a className="nav-link" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="chart" /><span>Leaderboard</span></a>
     <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="list-numbered" /><span>Queues</span></a>
     <a className="nav-link" href="#sales" aria-current={route.view === "sales" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "sales"); navigateFromMenu(); }}><Icon name="money" /><span>Sales</span></a>
+    <a className="nav-link" href="#loa" aria-current={route.view === "loa" ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="file" /><span>LOA</span></a>
     <a className="nav-link" href="#calls" aria-current={route.view === "calls" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "calls"); navigateFromMenu(); }}><Icon name="phone" /><span>Calls</span></a>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.id === "contract-agents" ? <div className="nav-group" key={tool.id} onMouseEnter={() => enterNav("agents")} onMouseLeave={leaveNav}>
@@ -522,6 +523,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     // Calls and Recruits open from their panel titles on the Recruits page, so their pages lead back there.
     // Add Recruits opens from its button on the dashboard, so it leads back there too.
     const dashboardLink = route.view !== "today" || route.id ? <div className="dashboard-back-row"><a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a></div> : null;
+    if (route.view === "loa") return <>{dashboardLink}<iframe className="queue-workspace-frame" src="https://legacyportal.io/" title="LOA · Legacy Portal" /></>;
     if (queuePage) return <>{dashboardLink}<iframe key={queuePage.id} className="queue-workspace-frame" src="https://queue.lgcyap.com/embed" title="Shopper and Standard vs Preferred live queues" allow="fullscreen; screen-wake-lock" /></>;
     if (eventAttendanceView) return <>{dashboardLink}<iframe className="queue-workspace-frame" src="/event-attendance?embedded=1" title="Hiring event attendance" /></>;
     // Online applications are live HubSpot records, read for the admin team; demo data leaves them unloaded.
