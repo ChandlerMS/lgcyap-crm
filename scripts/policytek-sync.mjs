@@ -12,7 +12,7 @@ try {
     parsePolicytekCapture(JSON.parse(raw));
     init.method = 'POST'; init.headers['Content-Type'] = 'application/json'; init.body = raw;
   } else if (process.argv[2] !== '--plan') throw Error('Use --plan or --publish capture.json');
-  const response = await fetch('https://lgcyap-crm.vercel.app/api/policytek-sync', init);
+  const response = await fetch('https://crm.lgcyap.com/api/policytek-sync', init);
   if (!response.ok) throw Error(`Sync HTTP ${response.status}`);
   console.log(JSON.stringify(await response.json()));
 } catch {
