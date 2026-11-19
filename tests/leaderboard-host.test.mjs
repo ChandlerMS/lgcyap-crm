@@ -35,7 +35,7 @@ test('only the Leaderboard hostname root opens the TV page, and its sign-in goes
   assert.ok(rules.beforeFiles.some(rule => rule.source === '/' && rule.destination === '/queue' && rule.has?.[0]?.value === 'queue.lgcyap.com'));
   // leaderboard.lgcyap.com/standard and /shopper open their single-board pages.
   for (const board of ['standard', 'shopper']) {
-    const rule = rules.beforeFiles.find(item => item.source === `/${board}`);
+    const rule = rules.beforeFiles.find(item => item.source === `/${board}` && item.has?.[0]?.value === "leaderboard.lgcyap.com");
     assert.equal(rule.destination, `/leaderboard-tv/${board}`);
     assert.deepEqual(rule.has, [{ type: 'host', value: 'leaderboard.lgcyap.com' }]);
   }
