@@ -1007,5 +1007,10 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 .cal-preview button:focus-visible, .cal-preview a:focus-visible, .cal-preview input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 @media (max-width: 600px) { .cal-preview-cell { min-height: 56px; padding: 3px; } .cal-preview-event > span:first-child { display: none; } .summary-preview .cal-preview-day li { grid-template-columns: 1fr; gap: 2px; } }
 
-.policytek-popup-notice { position: fixed; right: 16px; bottom: 90px; z-index: 56; max-width: min(360px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--gold); border-radius: 12px; background: #090909; color: var(--text); box-shadow: 0 4px 24px #0008; }
-.policytek-popup-notice a { color: var(--gold); text-decoration: underline; }
+/* Keep the embedded dialer above the launchers and within the viewport. */
+.policytek-panel { bottom: 90px; width: 440px; max-height: calc(100dvh - 106px); }
+.policytek-frame { height: min(640px, calc(100dvh - 190px)); }
+@media (max-width: 600px) {
+  .policytek-panel { right: 8px; bottom: 120px; max-height: calc(100dvh - 136px); }
+  .policytek-frame { height: min(640px, calc(100dvh - 220px)); }
+}
