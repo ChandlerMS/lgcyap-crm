@@ -122,7 +122,10 @@ test('Event Attendance emails open New Email with the templates, names take a ho
 
     // A hover handler wraps each name, and the date filter sits under the title.
     const hovered = renderToStaticMarkup(table({ hover: person => ({ 'data-hover': person.name }), filter: createElement('div', { id: 'date-filter' }) }));
-    assert.match(hovered, /<h3>Everyone who signed in <span>2<\/span><\/h3><div id="date-filter"><\/div>/);
+    assert.match(hovered, /<h3>Everyone who signed in <span>2<\/span><\/h3>/);
+    assert.match(hovered, />Export CSV<\/button>/);
+    assert.match(hovered, />Export XLS<\/button>/);
+    assert.match(hovered, /<div id="date-filter"><\/div>/);
     assert.match(hovered, /<th scope="row"><span class="[^"]*" data-hover="Pat Example QA"><a href="\/#recruit\/101" target="_top"/);
 
     // On the dashboard, Applications loads but keeps its list collapsed under the counts until one is selected.

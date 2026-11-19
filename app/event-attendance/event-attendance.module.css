@@ -52,6 +52,10 @@
 .peopleHead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .peopleHead button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit;font-size:13px}
 .peopleBlock{margin-top:16px}.peopleBlock+.peopleBlock{margin-top:24px}
+.peopleListHead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:14px}
+.peopleExport{margin-left:auto}.peopleExport>div{display:flex;flex-wrap:wrap;gap:10px}
+.peopleExport button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:8px 14px;min-height:40px;cursor:pointer;font:inherit;font-size:13px}
+.peopleExport button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.peopleExport button:disabled{opacity:.5;cursor:not-allowed}
 .peopleBlock h3{margin:0;font-size:16px;font-weight:600}.peopleBlock h3 span{color:var(--gold);font-variant-numeric:tabular-nums;margin-left:6px}
 .peopleTable th,.peopleTable td{text-align:left;white-space:normal;font-size:14px;vertical-align:top;min-width:90px}
 .peopleTable th:first-child{min-width:150px}
