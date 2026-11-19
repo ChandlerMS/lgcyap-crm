@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TV_DEFAULTS, tvBoardLabel, tvConfig, tvSlide } from '../app/leaderboard-tv/tv-model.mjs';
+import { TV_BOARD_PAGES, TV_BOARDS, TV_DEFAULTS, tvBoardLabel, tvConfig, tvSearch, tvSlide } from '../app/leaderboard-tv/tv-model.mjs';
 import { rowLimitHeight } from '../app/row-limit.mjs';
 
 test('TV settings come from the link and fall back to safe defaults', () => {
@@ -9,14 +9,32 @@ test('TV settings come from the link and fall back to safe defaults', () => {
   assert.deepEqual(defaults.periods, ['day']);
   assert.equal(defaults.seconds, 20);
   assert.equal(defaults.rows, 10);
-  assert.deepEqual(defaults.slides.map(slide => slide.key), ['sp:day', 'shopper:day', 'whatsapp:day']);
+  assert.deepEqual(defaults.slides.map(slide => slide.key), ['sp:day', 'shopper:day']);
   const custom = tvConfig('?boards=Shopper,sp,bogus,sp&periods=day,month&seconds=3&rows=40');
   assert.deepEqual(custom.slides.map(slide => slide.key), ['shopper:day', 'shopper:month', 'sp:day', 'sp:month']);
   assert.equal(custom.seconds, 8);
   assert.equal(custom.rows, 15);
   assert.deepEqual(tvConfig('board=source&period=week').slides.map(slide => slide.key), ['source:week']);
-  assert.deepEqual(tvConfig('boards=nothing&periods=year').slides.map(slide => slide.key), ['sp:day', 'shopper:day', 'whatsapp:day']);
+  assert.deepEqual(tvConfig('boards=nothing&periods=year').slides.map(slide => slide.key), ['sp:day', 'shopper:day']);
   assert.equal(tvBoardLabel('sp'), 'Standard vs. Preferred');
+});
+
+test('WhatsApp Sales is not a TV board, even when a link asks for it', () => {
+  assert.deepEqual(TV_BOARDS, ['sp', 'shopper', 'source']);
+  assert.deepEqual(tvConfig('boards=whatsapp').slides.map(slide => slide.key), ['sp:day', 'shopper:day']);
+  assert.deepEqual(tvConfig('boards=whatsapp,shopper').slides.map(slide => slide.key), ['shopper:day']);
+  assert.equal(tvConfig('', 'whatsapp').boards.join(), 'sp,shopper');
+});
+
+test('/standard and /shopper each show one board; their links may still choose periods', () => {
+  assert.deepEqual(TV_BOARD_PAGES, { standard: 'sp', shopper: 'shopper' });
+  assert.deepEqual(tvConfig('', 'sp').slides.map(slide => slide.key), ['sp:day']);
+  // The page's board wins over a boards option in its link.
+  assert.deepEqual(tvConfig('boards=shopper,source&periods=day,month&seconds=45', 'sp').slides.map(slide => slide.key), ['sp:day', 'sp:month']);
+  assert.deepEqual(tvConfig('', 'shopper').slides.map(slide => slide.key), ['shopper:day']);
+  // Only the TV options are kept from a page's search params.
+  assert.equal(tvSearch({ periods: 'day,month', seconds: '30', utm: 'x', rows: '<script>', boards: ['a', 'b'] }), 'periods=day%2Cmonth&seconds=30');
+  assert.equal(tvSearch({}), '');
 });
 
 test('a slide ranks by premium, keeps unattributed rows out, and shows the CRM totals', () => {
@@ -47,7 +65,7 @@ test('a slide shows at most the configured rows and says how many more there are
 
 test('an unavailable board explains itself instead of showing zeros', () => {
   assert.deepEqual(tvSlide({ status: 'connection-required', rows: [], error: { message: 'Connect PolicyTek.' } }, 'shopper'), { available: false, message: 'Connect PolicyTek.' });
-  assert.equal(tvSlide(null, 'whatsapp').available, false);
+  assert.deepEqual(tvSlide(null, 'shopper'), { available: false, message: 'This leaderboard is not available right now.' });
 });
 
 test('dashboard panels size to exactly ten rows, measured from the real rows', () => {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import config from '../next.config.ts';
-import { leaderboardAccessResponse, leaderboardReadOrigin, leaderboardSessionHeaders } from '../lib/leaderboard-host.mjs';
+import { leaderboardAccessResponse, leaderboardReadOrigin, leaderboardReturnPath, leaderboardSessionHeaders } from '../lib/leaderboard-host.mjs';
 import { queueSessionHeaders } from '../lib/queue-host.mjs';
 import { handleLeaderboardRequest } from '../lib/leaderboard.mjs';
 
@@ -33,6 +33,12 @@ test('only the Leaderboard hostname root opens the TV page, and its sign-in goes
   assert.deepEqual(tv.has, [{ type: 'host', value: 'leaderboard.lgcyap.com' }]);
   // The Queue rewrite is untouched.
   assert.ok(rules.beforeFiles.some(rule => rule.source === '/' && rule.destination === '/queue' && rule.has?.[0]?.value === 'queue.lgcyap.com'));
+  // leaderboard.lgcyap.com/standard and /shopper open their single-board pages.
+  for (const board of ['standard', 'shopper']) {
+    const rule = rules.beforeFiles.find(item => item.source === `/${board}`);
+    assert.equal(rule.destination, `/leaderboard-tv/${board}`);
+    assert.deepEqual(rule.has, [{ type: 'host', value: 'leaderboard.lgcyap.com' }]);
+  }
   const redirects = await config.redirects();
   const onLeaderboard = path => redirects.find(rule => rule.source === path && rule.has?.some(condition => condition.value === 'leaderboard.lgcyap.com'));
   assert.equal(onLeaderboard('/sign-in').destination, `${canonical}/leaderboard-access`);
@@ -69,6 +75,26 @@ test('handoff requires the CRM host, an approved verified session and an unexpir
   assert.equal(unavailable.headers.get('set-cookie'), null);
   const signedOut = await leaderboardAccessResponse(request, { ...options, getSession: async () => null });
   assert.equal(signedOut.headers.get('location'), `${canonical}/sign-in?return_to=%2Fleaderboard-access`);
+});
+
+test('after sign-in a TV returns to its own board page and options, never anywhere else', async () => {
+  const access = returnTo => `${canonical}/leaderboard-access?return_to=${encodeURIComponent(returnTo)}`;
+  for (const [returnTo, want] of [
+    ['/leaderboard-tv/standard', '/standard'], ['/leaderboard-tv/shopper?periods=day,month&seconds=30', '/shopper?periods=day%2Cmonth&seconds=30'],
+    ['/standard', '/standard'], ['/shopper/', '/shopper'], ['/leaderboard-tv?boards=sp', '/?boards=sp'], ['/', '/'],
+    ['https://evil.invalid/standard', '/'], ['//evil.invalid/shopper', '/'], ['/leaderboard-tv/whatsapp', '/'], ['/queue', '/'],
+    ['/standard?rows=<script>&utm=x', '/standard'], ['/api/leaderboard', '/'],
+  ]) assert.equal(leaderboardReturnPath(access(returnTo)), want, returnTo);
+  assert.equal(leaderboardReturnPath(`${canonical}/leaderboard-access`), '/');
+  const options = { baseURL: canonical, getSession: async () => ({ session: { token: 'synthetic', expiresAt: new Date(Date.now() + 60000) } }), authorize: () => true };
+  const signedIn = new Request(access('/leaderboard-tv/standard?periods=day,month'), { headers: { Cookie: '__Secure-better-auth.session_token=synthetic.signed' } });
+  assert.equal((await leaderboardAccessResponse(signedIn, options)).headers.get('location'), `${leaderboard}/standard?periods=day%2Cmonth`);
+  // Signing in on the CRM first keeps the board for the trip back.
+  const signedOut = await leaderboardAccessResponse(new Request(access('/leaderboard-tv/shopper')), { ...options, getSession: async () => null });
+  const next = new URL(signedOut.headers.get('location'));
+  assert.equal(next.origin + next.pathname, `${canonical}/sign-in`);
+  assert.equal(next.searchParams.get('return_to'), '/leaderboard-access?return_to=%2Fshopper');
+  assert.equal(leaderboardReturnPath(`${canonical}${next.searchParams.get('return_to')}`), '/shopper');
 });
 
 test('Leaderboard session adaptation is confined to its exact host and never masks CRM or Queue sign-in', () => {
