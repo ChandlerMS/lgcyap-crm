@@ -10,10 +10,10 @@
 .dates input[aria-invalid="true"] { border-color: var(--error); }
 .description { margin: 12px 0 24px; color: var(--muted); font-size: 13px; }
 .context { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 20px 46px; margin: 0; }
+.stats { display: grid; align-items: start; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 20px 46px; margin: 0; }
 .stats div { display: flex; flex-direction: column-reverse; gap: 7px; min-width: 110px; }
 .stats dt { color: var(--muted); font-size: 12px; line-height: 1.4; }
-.stats dd { margin: 0; color: var(--text); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.stats dd { margin: 0; color: var(--gold); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .error { color: var(--error); margin: -12px 0 20px; font-size: 13px; }
 .note { color: var(--muted); margin: 12px 0 0; font-size: 12px; }
 /* The aside spans the title and totals rows on the right, and stays hidden where it could only fit by pushing the pipeline down. */
@@ -26,10 +26,14 @@
 @media (max-width: 1000px) { .stats { margin-left: 0; gap: 18px 30px; } }
 @media (max-width: 620px) { .section { margin-bottom: 26px; } .stats { width: 100%; gap: 18px; } .stats div { min-width: 0; flex: 1; } .stats dd { font-size: 30px; } }
 
-/* Period selector and recruit actions lead; the three totals sit to their right. */
+/* Period, totals, then recruit actions share the desktop heading row. */
+.actions { min-width: 0; }
 @container (min-width: 900px) {
-  .heading { grid-template-columns: minmax(0, 1.7fr) minmax(330px, 1fr); align-items: center; }
-  .heading > .stats { grid-column: 2; grid-row: 1; gap: 20px; }
+  .heading { grid-template-columns: minmax(180px, max-content) minmax(300px, 1fr) max-content; align-items: center; column-gap: 16px; }
+  .heading > .titleRow { grid-column: 1; grid-row: 1; }
+  .heading > .stats { grid-column: 2; grid-row: 1; gap: 16px; }
+  .heading > .actions { grid-column: 3; grid-row: 1; }
   .heading > .dates { grid-column: 1 / -1; }
 }
-.title select { width: auto; min-width: 180px; field-sizing: content; }
+.stats div { min-width: 0; }
+.title select { width: auto; min-width: min(180px, 100%); field-sizing: content; }

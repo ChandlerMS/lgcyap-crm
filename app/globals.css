@@ -837,3 +837,6 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .shopper-sales-frame { display: block; width: 100%; min-height: 620px; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 210px); border: 0; border-radius: 8px; background: #fff; }
 
 .sales-records { min-width: 0; contain: layout paint; }
+
+.today-summaries .summary-chips-heading h2 { font-size: clamp(20px, 1.7vw, 24px); column-gap: 10px; }
+.today-summaries .summary-chips-heading h2 > span { margin-left: 0; }

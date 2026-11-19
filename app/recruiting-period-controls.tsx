@@ -34,13 +34,13 @@ export default function RecruitingPeriodControls({ records, stages, selection, o
             {RECRUITING_PERIODS.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
           </select>
         </h1>
-        {actions}
       </div>
       <dl className={styles.stats} aria-label="Recruiting totals for the selected period">
         <div><dt>Total recruits</dt><dd>{stats.total}</dd></div>
         <div><dt>Recruits contacted</dt><dd>{stats.contactedCount}</dd></div>
         <div><dt>Percentage contacted</dt><dd>{stats.contactedPercentage}%</dd></div>
       </dl>
+      {actions && <div className={styles.actions}>{actions}</div>}
       {aside && <div className={styles.aside}>{aside}</div>}
       {(selection.preset === "date" || selection.preset === "range") && <div className={styles.dates}>
         <label>{selection.preset === "date" ? "Date" : "Start date"}<input type="date" min="0001-01-01" max="9999-12-31" required value={selection.startDate ?? ""} onChange={event => onSelectionChange({ ...selection, startDate: event.target.value })} aria-invalid={!period.valid} /></label>
