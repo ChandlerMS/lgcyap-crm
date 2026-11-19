@@ -36,9 +36,9 @@ export function leadDataCsv(rows, noAgent = null) {
   return [['Rank', 'Agent', ...LEAD_DATA_METRICS.map(metric => metric.label)], ...lines].map(line => line.map(leaderboardCsvCell).join(',')).join('\r\n') + '\r\n';
 }
 
-/** e.g. lead-data-ringcentral-instant-disconnects-2026-11-01-to-2026-11-03.csv */
+/** e.g. call-analytics-ringcentral-instant-disconnects-2026-11-01-to-2026-11-03.csv */
 export function leadDataCsvFilename(sourceLabel, metricLabel, startDate, endDate) {
   const slug = `${sourceLabel}-${metricLabel}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const dates = startDate ? endDate && endDate !== startDate ? `-${startDate}-to-${endDate}` : `-${startDate}` : '';
-  return `lead-data-${slug}${dates}.csv`;
+  return `call-analytics-${slug}${dates}.csv`;
 }

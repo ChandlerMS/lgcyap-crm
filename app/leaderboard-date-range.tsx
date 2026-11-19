@@ -10,7 +10,7 @@ export type LeaderboardPeriodId = "day" | "week" | "month" | "custom";
 type CustomView = "yesterday" | "lastweek" | "lastmonth" | "choose" | "range";
 const CUSTOM_VIEWS: { id: CustomView; label: string }[] = [{ id: "yesterday", label: "Yesterday" }, { id: "lastweek", label: "Last week" }, { id: "lastmonth", label: "Last month" }, { id: "choose", label: "Choose" }, { id: "range", label: "Range" }];
 
-/** The Daily, Weekly, Monthly and Custom date range shared by the Leaderboard and Lead Data pages. */
+/** The Daily, Weekly, Monthly and Custom date range shared by the Leaderboard and Call Analytics pages. */
 export function useLeaderboardDates() {
   const [period, setPeriod] = useState<LeaderboardPeriodId>("day");
   const [range, setRange] = useState({ from: "", to: "" });

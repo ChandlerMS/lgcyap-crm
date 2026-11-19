@@ -1,5 +1,8 @@
 /* Black and gold, matching the Standard vs Preferred board and the workspace tokens in globals.css. */
 .board{min-height:100vh;background:var(--canvas);color:var(--text);padding:clamp(16px,3vw,40px);color-scheme:dark}
+/* A section of the Recruiting Dashboard: no page padding, and a title sized like the dashboard's other panels. */
+.section{min-height:0;padding:0;background:none}
+.section .header h2{margin:0 0 8px;font-size:clamp(28px,3vw,34px);font-weight:600;letter-spacing:-.025em;color:var(--text)}
 .header{display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid #6d633e;padding-bottom:24px}
 .identity{display:flex;align-items:center;gap:24px}.logo{width:120px;height:auto;object-fit:contain}
 .brand{color:var(--muted);margin:0 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase}

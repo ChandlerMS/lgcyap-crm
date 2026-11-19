@@ -1,5 +1,6 @@
 .section { width: 100%; min-width: 0; margin: 0 0 36px; container-type: inline-size; }
 .heading { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.titleRow { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; min-width: 0; }
 .title { margin: 0; min-width: 0; }
 .title select { display: block; max-width: 100%; color: var(--text); background: transparent; border: 0; border-bottom: 1px solid #64532c; border-radius: 0; padding: 0 28px 4px 0; font-size: clamp(30px, 3vw, 40px); font-weight: 600; line-height: 1.25; letter-spacing: -.035em; }
 .title option { font-size: 16px; background: #141414; color: var(--text); }

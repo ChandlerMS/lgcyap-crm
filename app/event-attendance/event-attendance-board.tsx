@@ -50,7 +50,10 @@ function validReport(value: unknown): value is Report {
     && isNumber(report.applications?.total) && Array.isArray(report.stages) && Array.isArray(report.offices) && Array.isArray(report.days);
 }
 
-export default function EventAttendanceBoard() {
+// As a section of the Recruiting Dashboard it drops the logo and page title and sits under the page's own heading.
+export default function EventAttendanceBoard({ section = false }: { section?: boolean }) {
+  const Root = section ? 'section' : 'main';
+  const Title = section ? 'h2' : 'h1';
   const [data, setData] = useState<Report | null>(null);
   const [error, setError] = useState('');
   const [signInNeeded, setSignInNeeded] = useState(false);
@@ -127,10 +130,10 @@ export default function EventAttendanceBoard() {
     { label: 'Hired', value: people.hired, note: `${share(people.hired, people.applied)} of applicants · ${share(people.hired, people.signedIn)} of sign-ins` },
   ] : [];
 
-  return <main className={styles.board}>
+  return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
     <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span></div>
     <header className={styles.header}>
-      <div className={styles.identity}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} /><div><p className={styles.brand}>Legacy Agency Partners</p><h1>Event Attendance</h1><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists</p></div></div>
+      <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<Title id="event-attendance-title">Event Attendance</Title><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists</p></div></div>
       <div className={styles.controls}>
         <a className={styles.action} href={HUBSPOT_SOURCE_URL} target="_blank" rel="noopener noreferrer" title="Opens the Recruiting tickets from the sign-in page, the application page and imported lists. If HubSpot shows another pipeline, choose Recruiting.">Open in HubSpot <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>
         <button type="button" disabled={!data} onClick={() => data && download(attendanceCsvFilename(data.fetchedAt), attendanceCsv(data))}>Export CSV</button>
@@ -226,5 +229,5 @@ export default function EventAttendanceBoard() {
         <li>Numbers come from HubSpot each time this page loads and every minute while it is open. The lists show what each person entered when signing in or applying, with their current stage. Like the rest of the recruiting workspace, they are visible only to recruiting editors. Application answers, including which required item was missed, stay in HubSpot.</li>
       </ul>
     </details>
-  </main>;
+  </Root>;
 }

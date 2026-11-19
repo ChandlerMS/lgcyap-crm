@@ -46,13 +46,13 @@ export default function LeadData({ onUnauthorized }: { onUnauthorized: () => voi
       const response = await fetch("/api/lead-data", { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ period, ...(period === "custom" ? range : {}) }), signal: controller.signal });
       if (requestRef.current !== controller) return;
       if (response.status === 401) { setData(null); unauthorizedRef.current(); return; }
-      if (!response.ok) { setError(response.status === 403 ? "This account cannot access Lead Data." : "Lead Data could not be loaded. Try Refresh."); return; }
+      if (!response.ok) { setError(response.status === 403 ? "This account cannot access Call Analytics." : "Call Analytics could not be loaded. Try Refresh."); return; }
       const result = await response.json() as Result;
       if (requestRef.current !== controller) return;
-      if (result.board !== "lead-data" || result.period !== period || !result.policytek || !result.ringcentral) throw new Error("Unexpected Lead Data response");
+      if (result.board !== "lead-data" || result.period !== period || !result.policytek || !result.ringcentral) throw new Error("Unexpected Call Analytics response");
       setData(result);
     } catch {
-      if (requestRef.current === controller) setError(controller.signal.aborted ? "Loading Lead Data timed out. Try Refresh." : "Lead Data could not be loaded. Check the connection and try Refresh.");
+      if (requestRef.current === controller) setError(controller.signal.aborted ? "Loading Call Analytics timed out. Try Refresh." : "Call Analytics could not be loaded. Check the connection and try Refresh.");
     } finally { window.clearTimeout(timeout); if (requestRef.current === controller) { requestRef.current = null; setLoading(false); } }
   }, [period, range]);
   useEffect(() => { startTransition(() => { setData(null); void load(); }); return () => { requestRef.current?.abort(); requestRef.current = null; }; }, [load]);
@@ -69,7 +69,7 @@ export default function LeadData({ onUnauthorized }: { onUnauthorized: () => voi
 
   const current = data?.period === period && (period !== "custom" || (data.startDate === range.from && data.endDate === range.to)) ? data : null;
   const ring = current?.ringcentral.status === "available" ? current.ringcentral : null;
-  const sourceLabel = LEAD_DATA_SOURCES.find(value => value.id === source)?.label ?? "Lead Data";
+  const sourceLabel = LEAD_DATA_SOURCES.find(value => value.id === source)?.label ?? "Call Analytics";
   const metricLabel = LEAD_DATA_METRICS.find(value => value.id === metric)?.label ?? "Calls";
   const ranked = rankLeadDataRows(ring?.rows ?? [], metric) as (Row & { rank: number })[];
   const rows = filterLeaderboardRows(sortLeadDataRows(ranked, metric, rowSort), query) as (Row & { rank: number })[];
@@ -93,15 +93,15 @@ export default function LeadData({ onUnauthorized }: { onUnauthorized: () => voi
   };
   const compareRows = leadDataCompareRows(ring?.rows ?? []) as Row[];
   const policytekEmpty = <div className={styles.empty} role="status"><h3>PolicyTek is not connected yet</h3><p>{current?.policytek.message ?? "Loading…"}</p></div>;
-  const ringEmpty = <div className={styles.empty} role="status">{loading && !current ? "Loading Lead Data…" : <><h3>RingCentral data unavailable</h3><p>{current?.ringcentral.message ?? "Lead Data could not be loaded. Try Refresh."}</p></>}</div>;
+  const ringEmpty = <div className={styles.empty} role="status">{loading && !current ? "Loading Call Analytics…" : <><h3>RingCentral data unavailable</h3><p>{current?.ringcentral.message ?? "Call Analytics could not be loaded. Try Refresh."}</p></>}</div>;
   return <section className={styles.leaderboard} aria-labelledby="lead-data-title" aria-busy={loading}>
-    <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Lead quality</p><h1 id="lead-data-title" tabIndex={-1}>Lead Data</h1><p>Instant Disconnects and Short Duration Calls by agent.</p></header>
-    <div className={styles.boardTabs} role="group" aria-label="Lead data source">{LEAD_DATA_SOURCES.map(value => <button key={value.id} type="button" aria-pressed={source === value.id} onClick={() => setSource(value.id as Source)}>{value.label}</button>)}</div>
+    <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Lead quality</p><h1 id="lead-data-title" tabIndex={-1}>Call Analytics</h1><p>Instant Disconnects and Short Duration Calls by agent.</p></header>
+    <div className={styles.boardTabs} role="group" aria-label="Call Analytics source">{LEAD_DATA_SOURCES.map(value => <button key={value.id} type="button" aria-pressed={source === value.id} onClick={() => setSource(value.id as Source)}>{value.label}</button>)}</div>
     {source !== "compare" && <div className={styles.boardTabs} role="group" aria-label="Call type">{LEAD_DATA_METRICS.map(value => <button key={value.id} type="button" aria-pressed={metric === value.id} onClick={() => setMetric(value.id as Metric)}>{value.label}</button>)}</div>}
-    <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Lead data period" /><button className="btn btn-secondary" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
+    <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Call Analytics period" /><button className="btn btn-secondary" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
     <LeaderboardRangeForm dates={dates} />
     <div className={styles.source}><span>{source === "policytek" ? "PolicyTek" : ring?.source ?? "RingCX reports"}</span>{source !== "policytek" && ring?.fetchedAt && <span>Updated {updated(ring.fetchedAt)}</span>}{current?.startDate && <span>{current.startDate}{current.endDate !== current.startDate ? ` – ${current.endDate}` : ""} · Eastern time</span>}</div>
-    {error && <div className={styles.alert} role="alert"><strong>{ring ? "Showing the last loaded numbers" : "Lead Data unavailable"}</strong><p>{error}</p></div>}
+    {error && <div className={styles.alert} role="alert"><strong>{ring ? "Showing the last loaded numbers" : "Call Analytics unavailable"}</strong><p>{error}</p></div>}
     {source !== "policytek" && ring?.notice && <p className={styles.notice} role="status">{ring.notice}</p>}
     {source === "compare" ? <div className={styles.compare}>
       <section className={styles.card} aria-labelledby="lead-compare-policytek"><div className={styles.cardHeading}><h2 id="lead-compare-policytek">PolicyTek</h2><p>{periodLabel}</p></div>{policytekEmpty}</section>

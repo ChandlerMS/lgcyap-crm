@@ -249,14 +249,17 @@ test('an export has both counts, ends with calls that have no agent, and opens n
   const csv = leadDataCsv([{ rank: 1, name: '=Bad, Name', instantDisconnects: 2, shortDuration: 3 }], { instantDisconnects: 4, shortDuration: 5 });
   assert.equal(csv, `Rank,Agent,Instant Disconnects,Short Duration Calls\r\n1,"'=Bad, Name",2,3\r\n,No agent (N/A),4,5\r\n`);
   assert.ok(!leadDataCsv([], null).includes('No agent'));
-  assert.equal(leadDataCsvFilename('RingCentral', 'Instant Disconnects', '2026-11-01', '2026-11-03'), 'lead-data-ringcentral-instant-disconnects-2026-11-01-to-2026-11-03.csv');
-  assert.equal(leadDataCsvFilename('RingCentral', 'Short Duration Calls', '2026-11-03', '2026-11-03'), 'lead-data-ringcentral-short-duration-calls-2026-11-03.csv');
+  assert.equal(leadDataCsvFilename('RingCentral', 'Instant Disconnects', '2026-11-01', '2026-11-03'), 'call-analytics-ringcentral-instant-disconnects-2026-11-01-to-2026-11-03.csv');
+  assert.equal(leadDataCsvFilename('RingCentral', 'Short Duration Calls', '2026-11-03', '2026-11-03'), 'call-analytics-ringcentral-short-duration-calls-2026-11-03.csv');
 });
 
-test('Lead Data sits directly under Leaderboard and has its own address', () => {
-  assert.deepEqual(WORKSPACE_EXTRA_PAGES.map(page => page.id), ['leaderboard', 'lead-data']);
-  assert.equal(WORKSPACE_EXTRA_PAGES[1].label, 'Lead Data');
-  assert.deepEqual(resolveWorkspaceRoute('#lead-data'), { view: 'lead-data' });
+test('Call Analytics (formerly Lead Data) pairs with Leaderboard and keeps its own address', () => {
+  assert.deepEqual(WORKSPACE_EXTRA_PAGES.map(page => page.id), ['leaderboard', 'call-analytics']);
+  assert.equal(WORKSPACE_EXTRA_PAGES[1].label, 'Call Analytics');
+  assert.deepEqual(resolveWorkspaceRoute('#call-analytics'), { view: 'call-analytics' });
+  // Saved Lead Data links still open the page.
+  assert.deepEqual(resolveWorkspaceRoute('#lead-data'), { view: 'call-analytics' });
+  assert.match(readFileSync('app/lead-data.tsx', 'utf8'), />Call Analytics<\/h1>/);
 });
 
 test('the page offers the requested tabs and shares its date controls with the leaderboard', () => {

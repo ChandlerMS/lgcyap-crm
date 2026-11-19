@@ -94,6 +94,18 @@ svg { flex-shrink: 0; }
 .pipeline-pages .nav-link { min-height: 44px; font-size: 15px; padding: 10px 22px; gap: 12px; }
 .pipeline-pages .nav-branch { margin: 0 0 0 7px; }
 .pipeline-pages .nav-flow-caption { margin: 14px 22px 4px; font-size: 15px; letter-spacing: 0; text-transform: none; }
+/* Recruiting Dashboard stands alone at the top of the sidebar, above a gold rule. */
+.nav-gold-divider { height: 3px; flex-shrink: 0; margin: 2px 28px 10px; border-radius: 2px; background: var(--gold); }
+/* Queues opens and closes the live queue links listed under it. */
+.nav-group-toggle { width: 100%; border: 0; background: transparent; cursor: pointer; }
+.nav-group-toggle > .icon:last-child { width: 16px; height: 16px; margin-left: auto; color: var(--muted); transition: transform 160ms ease; }
+.nav-group-toggle[aria-expanded="false"] > .icon:last-child { transform: rotate(-90deg); }
+.nav-group-pages { display: flex; flex-direction: column; gap: 2px; margin: 2px 14px 6px 39px; border-left: 1px solid #5a4b28; }
+.nav-group-pages[hidden] { display: none; }
+.nav-group-pages .nav-link { min-height: 44px; padding: 10px 14px 10px 17px; gap: 12px; }
+.nav-group-pages .nav-link .icon { width: 17px; height: 17px; }
+.nav-group-pages .nav-link[aria-current="page"]::before { width: 2px; }
+@media (prefers-reduced-motion: reduce) { .nav-group-toggle > .icon:last-child { transition: none; } }
 .nav-hubspot-tool { justify-content: center; text-align: center; min-height: 44px; padding-top: 10px; padding-bottom: 10px; font-size: 15px; gap: 13px; }
 .nav-hubspot-tool > .icon { width: 20px; height: 20px; margin-left: 0; }
 .desktop-sidebar-close { position: absolute; top: 6px; right: 6px; min-height: 32px; padding: 6px; color: var(--muted); }
@@ -530,6 +542,18 @@ a.summary-chip:hover { border-color: var(--gold); }
 }
 
 @media (max-width: 520px) { .source-bar { flex-wrap: wrap; } .source-summary { min-width: 0; max-width: 100%; overflow-wrap: anywhere; } }
+
+/* Event Attendance sits between the pipeline and the HubSpot panels. */
+.today-attendance { margin: 0 0 56px; }
+
+/* Leaderboard ⇄ Call Analytics, at the top of both pages. */
+.page-switch { display: flex; gap: 4px; width: fit-content; max-width: 100%; margin: 0 auto 28px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: #141414; }
+.page-switch a { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 22px; border-radius: 999px; color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.page-switch a:hover { color: var(--text); }
+.page-switch a[aria-current="page"] { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); color: #0a0905; }
+.page-switch a:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (forced-colors: active) { .page-switch a[aria-current="page"] { forced-color-adjust: none; background: Highlight; color: HighlightText; } }
+@media (max-width: 420px) { .page-switch a { padding: 8px 14px; } }
 
 /* Under the pipeline: Meetings | Calendar, then Recruits | Calls, as two columns. */
 .today-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 56px 40px; margin-bottom: 40px; }

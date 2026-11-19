@@ -106,9 +106,14 @@ with reserved fictional phones and example.invalid email addresses. Demo edits
 and stage moves live only in browser memory and reset on reload. They never write
 to HubSpot. Live tools and intake cannot mount beneath a demo label.
 
-Recruiting Dashboard opens the main recruiting pipeline page (`#today`), where
-stage links open their filtered queues. Add Recruits is its own sidebar page
-(`#add-recruits`). The full sidebar also collapses.
+Recruiting Dashboard heads the sidebar, above a gold rule, and opens the main
+recruiting pipeline page (`#today`), where stage links open their filtered queues.
+Add Recruits (`#add-recruits`) opens from the button beside the dashboard's
+reporting period. Event Attendance is a section of the dashboard between the
+pipeline and Meetings and Calendar; saved `#event-attendance` links still open
+its full page. Below the gold rule come Leaderboard (with a toggle to Call
+Analytics) and Queues (Shopper and Standard vs Preferred, which open and close
+under it). The full sidebar also collapses.
 Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar and
 Meetings use the existing approved-user session. CRM tables have sortable columns,
 global search and in-app detail views. Contacts, tickets, tasks, companies and
@@ -450,7 +455,7 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
 ## Queue (PolicyTek live calls and availability)
 
-Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows Available and On Live Calls under two totals, Total Calls Today (sales agents' PolicyTek calls since midnight Eastern, read once a minute; past PolicyTek's 999-call page the day is read in halves until each part fits, and the total shows a + if PolicyTek would not split it further) and Average Wait Time (the average wait of the agents in Available), polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
+Open **Queues → Shopper** in the recruiting sidebar, or visit `/queue` (which shows Shopper and Standard vs Preferred together; `?source=shopper` or `?source=svp` shows one). Approved employees use the existing Google sign-in. The board shows Available and On Live Calls under two totals, Total Calls Today (sales agents' PolicyTek calls since midnight Eastern, read once a minute; past PolicyTek's 999-call page the day is read in halves until each part fits, and the total shows a + if PolicyTek would not split it further) and Average Wait Time (the average wait of the agents in Available), polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
 
 Set these **server-only** environment variables in the Vercel project before deploying:
 

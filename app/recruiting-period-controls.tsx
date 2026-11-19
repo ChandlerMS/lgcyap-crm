@@ -17,20 +17,25 @@ type Props = {
   partial?: boolean;
   // Shown beside the title and totals when there is room, within their height.
   aside?: ReactNode;
+  // Page actions on the title's line, such as Add Recruits.
+  actions?: ReactNode;
 };
 
-export default function RecruitingPeriodControls({ records, stages, selection, onSelectionChange, basis = "createdAt", now, partial = false, aside }: Props) {
+export default function RecruitingPeriodControls({ records, stages, selection, onSelectionChange, basis = "createdAt", now, partial = false, aside, actions }: Props) {
   const period = resolveRecruitingPeriod(selection, now);
   const stats = recruitingPeriodStats(records, stages, period, basis);
   const usesCreated = basis === "createdAt";
   return <section className={styles.section} aria-labelledby="today-period-title">
     <div className={styles.heading}>
-      <h1 id="today-period-title" className={styles.title} tabIndex={-1}>
-        <label className="sr-only" htmlFor="recruiting-reporting-period">Reporting period</label>
-        <select id="recruiting-reporting-period" value={selection.preset} onChange={event => onSelectionChange({ ...selection, preset: event.target.value })} aria-describedby="recruiting-period-description">
-          {RECRUITING_PERIODS.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
-        </select>
-      </h1>
+      <div className={styles.titleRow}>
+        <h1 id="today-period-title" className={styles.title} tabIndex={-1}>
+          <label className="sr-only" htmlFor="recruiting-reporting-period">Reporting period</label>
+          <select id="recruiting-reporting-period" value={selection.preset} onChange={event => onSelectionChange({ ...selection, preset: event.target.value })} aria-describedby="recruiting-period-description">
+            {RECRUITING_PERIODS.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
+          </select>
+        </h1>
+        {actions}
+      </div>
       <dl className={styles.stats} aria-label="Recruiting totals for the selected period">
         <div><dt>Total recruits</dt><dd>{stats.total}</dd></div>
         <div><dt>Recruits contacted</dt><dd>{stats.contactedCount}</dd></div>

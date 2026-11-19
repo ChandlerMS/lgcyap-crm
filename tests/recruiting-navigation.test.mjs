@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { STAGE_PAGES, STAGES, TERMINAL_STAGE_IDS } from '../lib/recruiting-config.mjs';
 import {
-  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, resolveWorkspaceRoute, stagePageForRecord,
-  recordsForStagePage, unmappedStageRecords,
+  WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, QUEUE_PAGES, resolveWorkspaceRoute, stagePageForRecord,
+  recordsForStagePage, unmappedStageRecords, sidebarViewFor,
 } from '../app/recruiting-navigation.mjs';
 
 test('canonical stages are shared while each entry path has its own sidebar order', () => {
@@ -19,13 +19,56 @@ test('canonical stages are shared while each entry path has its own sidebar orde
   assert.equal(STAGE_PAGES.find(page => page.id === 'completed').stageId, '1416243218');
 });
 
-test('Recruiting Dashboard opens the pipeline and Add Recruits is its own sidebar page', () => {
-  assert.deepEqual(SIDEBAR_RECRUITING_PAGES.map(page => [page.label, page.id]), [['Recruiting Dashboard', 'today'], ['Add Recruits', 'add-recruits']]);
-  for (const page of SIDEBAR_RECRUITING_PAGES) assert.deepEqual(resolveWorkspaceRoute(`#${page.id}`), { view: page.id });
-  // Both are direct links, so neither sits behind a row that only opens and closes.
+test('Recruiting Dashboard heads the sidebar alone and Add Recruits opens from a dashboard button', () => {
+  assert.deepEqual(SIDEBAR_RECRUITING_PAGES.map(page => [page.label, page.id, page.icon]), [['Recruiting Dashboard', 'today', 'funnel']]);
+  assert.deepEqual(resolveWorkspaceRoute('#today'), { view: 'today' });
+  assert.deepEqual(resolveWorkspaceRoute('#add-recruits'), { view: 'add-recruits' });
+  // Pages reached from another page light up that page's sidebar link.
+  assert.equal(sidebarViewFor('add-recruits'), 'today');
+  assert.equal(sidebarViewFor('event-attendance'), 'today');
+  assert.equal(sidebarViewFor('call-analytics'), 'leaderboard');
+  assert.equal(sidebarViewFor('inbox'), 'inbox');
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
+  // The dashboard is a direct link, not a row that only opens and closes.
   assert.match(workspace, /SIDEBAR_RECRUITING_PAGES\.map\(navigationLink\)/);
   assert.doesNotMatch(workspace, /nav-recruits|recruit-pages/);
+  // Sidebar order: Recruiting Dashboard, a gold rule, Leaderboard, Queues, then the HubSpot tools.
+  const nav = workspace.slice(workspace.indexOf('const navigation = <>'), workspace.indexOf('const leaderboardSwitch'));
+  const order = ['SIDEBAR_RECRUITING_PAGES.map(navigationLink)', 'nav-gold-divider', 'navigationLink(WORKSPACE_EXTRA_PAGES[0])', '<span>Queues</span>', 'QUEUE_PAGES.map(navigationLink)', 'SIDEBAR_HUBSPOT_TOOLS.map'].map(token => nav.indexOf(token));
+  assert.ok(order.every(index => index >= 0), 'every sidebar entry is present');
+  assert.deepEqual([...order].sort((a, b) => a - b), order);
+  // Add Recruits, Call Analytics and Event Attendance open from their pages, not the sidebar.
+  assert.doesNotMatch(nav, /add-recruits|WORKSPACE_EXTRA_PAGES\.map|event-attendance|Event Attendance/);
+  // Add Recruits is a button on the dashboard.
+  assert.match(workspace, /actions=\{<a className="btn btn-primary add-recruits-button" href="#add-recruits">/);
+});
+
+test('Queues lists Shopper and Standard vs Preferred, and each opens on its own', () => {
+  assert.deepEqual(QUEUE_PAGES.map(page => [page.label, page.id, page.source]), [['Shopper', 'queue', 'shopper'], ['Standard vs Preferred', 'ringcx', 'svp']]);
+  for (const page of QUEUE_PAGES) assert.deepEqual(resolveWorkspaceRoute(`#${page.id}`), { view: page.id });
+  const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
+  assert.match(workspace, /aria-expanded=\{queuesExpanded\} aria-controls="nav-queues"/);
+  assert.match(workspace, /<div id="nav-queues" className="nav-group-pages" hidden=\{!queuesExpanded\}>/);
+  assert.match(workspace, /src=\{`\/queue\?embedded=1&source=\$\{queuePage\.source\}`\}/);
+  const queue = readFileSync('app/queue/page.tsx', 'utf8');
+  assert.match(queue, /if \(source === "shopper"\) return <QueueBoard embedded=\{embedded\} \/>;/);
+  assert.match(queue, /if \(source === "svp"\) return <RingCxDashboard \/>;/);
+  // Without a source, the page (and queue.lgcyap.com) still shows both together.
+  assert.match(queue, /return <UnifiedQueue embedded=\{embedded\} \/>;/);
+});
+
+test('Event Attendance is a dashboard section between the pipeline and Meetings, and its saved page link still works', () => {
+  const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
+  const today = workspace.slice(workspace.indexOf('if (route.view === "today")'));
+  const pipeline = today.indexOf('<RecruitPipeline'), attendance = today.indexOf('<EventAttendanceBoard section />'), meetings = today.indexOf('recruitsPagePanel("meetings")');
+  assert.ok(pipeline >= 0 && pipeline < attendance && attendance < meetings);
+  assert.deepEqual(resolveWorkspaceRoute('#event-attendance'), { view: 'event-attendance' });
+});
+
+test('Leaderboard and Call Analytics switch with a toggle at the top of both pages', () => {
+  const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
+  assert.match(workspace, /if \(callAnalyticsView\) return <>\{leaderboardSwitch\}<LeadData /);
+  assert.match(workspace, /if \(leaderboardView\) return <>\{leaderboardSwitch\}<Leaderboard /);
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {

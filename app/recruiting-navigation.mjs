@@ -28,13 +28,14 @@ export const WORKSPACE_NAV_GROUPS = Object.freeze([
   { id: 'outcomes', label: 'Outcomes', branch: false, items: [page('completed', 'completed')] },
 ].map(group => Object.freeze({ ...group, items: Object.freeze(group.items) })));
 export const WORKSPACE_NAV = Object.freeze([
-  Object.freeze({ id: 'today', label: 'Recruiting Dashboard', icon: 'home' }),
+  Object.freeze({ id: 'today', label: 'Recruiting Dashboard', icon: 'funnel' }),
   Object.freeze({ id: 'add-recruits', label: 'Add Recruits', icon: 'add-person' }),
   ...WORKSPACE_NAV_GROUPS.flatMap(group => group.items),
 ]);
 
-// Recruiting pages with their own sidebar links. The stage queues open from the pipeline page instead.
-export const SIDEBAR_RECRUITING_PAGES = Object.freeze(WORKSPACE_NAV.slice(0, 2));
+// Recruiting Dashboard heads the sidebar on its own. Add Recruits opens from a button on the dashboard,
+// and the stage queues open from the pipeline.
+export const SIDEBAR_RECRUITING_PAGES = Object.freeze(WORKSPACE_NAV.slice(0, 1));
 
 // Destinations read from this portal's native HubSpot navigation.
 export const HUBSPOT_TOOLS = Object.freeze([
@@ -53,11 +54,26 @@ export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'calendar', label: 'Calendar' },
   { id: 'calls', label: 'Calls' },
 ].map(tool => Object.freeze(tool)));
-export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'lead-data', label: 'Lead Data', icon: 'chart' })]);
+// Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
+export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);
+// Live queues listed under Queues in the sidebar. Each opens on its own here; queue.lgcyap.com still shows both together.
+export const QUEUE_PAGES = Object.freeze([
+  { id: 'queue', label: 'Shopper', icon: 'phone', source: 'shopper' },
+  { id: 'ringcx', label: 'Standard vs Preferred', icon: 'phone', source: 'svp' },
+].map(page => Object.freeze(page)));
+// The sidebar link that stands for a page reached from another page: Add Recruits and the full Event Attendance page
+// (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
+export function sidebarViewFor(view) {
+  if (view === 'add-recruits' || view === 'event-attendance') return 'today';
+  if (view === 'call-analytics') return 'leaderboard';
+  return view;
+}
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (value === 'queue' || value === 'ringcx' || value === 'event-attendance') return { view: value };
+  // Call Analytics was named Lead Data; saved links still open it.
+  if (value === 'lead-data') return { view: 'call-analytics' };
   if (value === 'contacts') return { view: 'contract-agents' };
   // Tasks and the full Follow Up list left the Recruits page; saved links still open it.
   if (value === 'follow-up' || value === 'tasks') return { view: 'today' };

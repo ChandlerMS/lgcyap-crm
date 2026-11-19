@@ -1,6 +1,6 @@
-# Lead Data
+# Call Analytics (formerly Lead Data)
 
-The Lead Data page (`/#lead-data`, directly under Leaderboard) shows Instant Disconnects and Short Duration Calls by agent, with the same date controls as the Leaderboard.
+The Call Analytics page (`/#call-analytics`; saved `/#lead-data` links still open it) opens from the toggle at the top of the Leaderboard page and shows Instant Disconnects and Short Duration Calls by agent, with the same date controls as the Leaderboard.
 
 ## RingCentral
 

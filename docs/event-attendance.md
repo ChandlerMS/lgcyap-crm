@@ -1,6 +1,6 @@
 # Event Attendance
 
-The sidebar link **Event Attendance** opens `#event-attendance`, which shows `/event-attendance?embedded=1` in the workspace frame, like Shopper and Standard vs Preferred. The page reads `POST /api/event-attendance` with an empty JSON body. It uses the recruiting workspace's sign-in, editor list and origin checks, and its own HubSpot connection.
+The board is a section of the Recruiting Dashboard, between the pipeline and Meetings and Calendar (Demo data leaves it unloaded, like the HubSpot panels). It has no sidebar link. Saved `#event-attendance` links still open the full page, `/event-attendance?embedded=1` in the workspace frame, with Recruiting Dashboard selected in the sidebar. The page reads `POST /api/event-attendance` with an empty JSON body. It uses the recruiting workspace's sign-in, editor list and origin checks, and its own HubSpot connection.
 
 ## What it counts
 
