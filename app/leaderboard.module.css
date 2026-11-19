@@ -89,7 +89,7 @@
 .chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 27px minmax(100px, 22%) 52px 64px 72px 72px minmax(30px, 1fr) minmax(48px, auto); }
 @media (max-width: 1100px) { .tilesWithCallTotals { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 800px) { .chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 25px minmax(75px, 24%) 44px 52px 60px 60px minmax(20px, 1fr) auto; } }
-@media (max-width: 560px) { .tilesWithCallTotals { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 23px repeat(4, minmax(0, 1fr)) auto; gap: 4px 6px; } .chartHead.withCallTotals { font-size: 10px; } .withCallTotals .barTrack, .chartHead.withCallTotals > span:nth-child(2), .chartHead.withCallTotals > span:nth-child(7) { display: none; } .withCallTotals .medal { grid-row: span 2; } .withCallTotals .name { grid-column: 2 / -1; } }
+@media (max-width: 560px) { .tilesWithCallTotals { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 23px repeat(4, minmax(0, 1fr)) auto; gap: 4px 6px; } .chartHead.withCallTotals { font-size: 10px; } .withCallTotals .barTrack, .chartHead.withCallTotals > span:nth-child(2), .chartHead.withCallTotals > span:nth-last-child(2) { display: none; } .withCallTotals .medal { grid-row: span 2; } .withCallTotals .name { grid-column: 2 / -1; } }
 .rowTools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; margin: -8px 0 20px; }
 .rowTools > p { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
 .rowTools .export { margin-left: auto; }
@@ -111,3 +111,25 @@
 .notes { display: flex; flex-direction: column; gap: 12px; }
 
 .tvLink { display: inline-flex; align-items: center; padding: 9px 16px; border: 1px solid #6d633e; border-radius: 5px; color: var(--gold); text-decoration: none; font-size: 14px; }.tvLink:hover { background: #282311; }.tvLink:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* Sales precedes Calls on the Shopper and Standard vs Preferred agent boards. */
+.chart.withSales li, .chartHead.withSales { grid-template-columns: 27px minmax(100px, 22%) 48px 52px 64px minmax(30px, 1fr) minmax(48px, auto); }
+.chart.withSales.withCallTotals li, .chartHead.withSales.withCallTotals { grid-template-columns: 27px minmax(100px, 20%) 48px 52px 64px 72px 72px minmax(30px, 1fr) minmax(48px, auto); }
+@media (max-width: 1100px) {
+  .chart.withSales.withCallTotals li, .chartHead.withSales.withCallTotals { grid-template-columns: 23px repeat(5, minmax(0, 1fr)) auto; gap: 4px 6px; }
+  .chartHead.withSales.withCallTotals { font-size: 10px; }
+  .withSales.withCallTotals .barTrack, .chartHead.withSales.withCallTotals > span:nth-child(2), .chartHead.withSales.withCallTotals > span:nth-last-child(2) { display: none; }
+  .withSales.withCallTotals .medal { grid-row: span 2; }
+  .withSales.withCallTotals .name { grid-column: 2 / -1; }
+}
+@media (max-width: 800px) {
+  .chart.withSales li, .chartHead.withSales { grid-template-columns: 25px minmax(75px, 22%) 40px 44px 52px minmax(20px, 1fr) auto; }
+}
+@media (max-width: 560px) {
+  .chart.withSales li, .chartHead.withSales { grid-template-columns: 23px repeat(3, minmax(0, 1fr)) auto; gap: 4px 6px; }
+  .chart.withSales.withCallTotals li, .chartHead.withSales.withCallTotals { grid-template-columns: 23px repeat(5, minmax(0, 1fr)) auto; }
+  .chartHead.withSales { font-size: 10px; }
+  .withSales .barTrack, .chartHead.withSales > span:nth-child(2), .chartHead.withSales > span:nth-last-child(2) { display: none; }
+  .withSales .medal { grid-row: span 2; }
+  .withSales .name { grid-column: 2 / -1; }
+}

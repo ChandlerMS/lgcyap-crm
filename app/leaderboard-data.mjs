@@ -81,12 +81,13 @@ export function sourceLeaderboardValue(row, field) {
 /** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
 export function leaderboardSortFields(board) {
   const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : 'Calls';
-  return [{ field: 'production', label: keys.secondLabel }, { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
+  return [{ field: 'production', label: keys.secondLabel }, ...(['shopper', 'sp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
 }
 
 /** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
 export function leaderboardSortValue(row, board, field) {
   if (field === 'name') return typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null;
+  if (field === 'sales') return nonnegative(row[leaderboardMetrics(board).first]);
   if (field === 'production') return signedNumber(row[leaderboardMetrics(board).second]);
   if (board === 'sp') return nonnegative({ calls: row.inboundCalls, closeRate: row.soldPerInboundLog, connected: row.connectedCalls, abandoned: row.abandonedCalls }[field]);
   if (board === 'whatsapp') return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
@@ -99,7 +100,7 @@ export function leaderboardSortValue(row, board, field) {
  */
 export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', direction: 'desc' }) {
   const rows = rankedRows.map((row, index) => ({ ...row, rank: index + 1 }));
-  if (!['name', 'calls', 'closeRate', 'connected', 'abandoned', 'production'].includes(sort.field)) return rows;
+  if (!['name', 'sales', 'calls', 'closeRate', 'connected', 'abandoned', 'production'].includes(sort.field)) return rows;
   const direction = sort.direction === 'asc' ? 1 : -1;
   return rows.sort((a, b) => {
     const unattributed = Number(a.attributed === false) - Number(b.attributed === false);
@@ -123,16 +124,18 @@ export function leaderboardCsvCell(value) {
  */
 export function leaderboardCsv(rows, board) {
   const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
+  const sales = ['shopper', 'sp'].includes(board);
   const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
-  const header = ['Rank', source ? 'Source' : 'Agent', source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), keys.firstLabel, keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
+  const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
   const lines = rows.map(row => [
     row.attributed === false ? '' : row.rank ?? '',
     typeof row.name === 'string' ? row.name : '',
+    ...(sales ? [fixed(leaderboardSortValue(row, board, 'sales'), 0)] : []),
     fixed(leaderboardSortValue(row, board, 'calls'), 0),
     percent(leaderboardSortValue(row, board, 'closeRate')),
     ...callTotals.map(column => fixed(leaderboardSortValue(row, board, column.field), 0)),
-    fixed(nonnegative(row[keys.first]), 0),
+    ...(sales ? [] : [fixed(nonnegative(row[keys.first]), 0)]),
     fixed(signedNumber(row[keys.second]), 2),
     ...(source ? [fixed(nonnegative(row.spend), 2), fixed(sourceLeaderboardValue(row, 'roas'), 2)] : []),
   ]);
