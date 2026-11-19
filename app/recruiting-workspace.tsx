@@ -560,7 +560,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         <FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} />
         {recruitsPagePanel("meetings")}
         {recruitsPagePanel("calendar")}
-        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} />
+        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} />
         {recruitsPagePanel("calls")}
       </div>
     </>;
