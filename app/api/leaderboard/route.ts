@@ -5,7 +5,7 @@ import { leaderboardReadOrigin } from '@/lib/leaderboard-host.mjs';
 
 import { readPolicytekLeaderboard } from '@/lib/policytek.mjs';
 import { getPolicytekDb } from '@/db/policytek.mjs';
-import { readWhatsappLeaderboard } from '@/lib/whatsapp-sales.mjs';
+import { readWhatsappLeaderboard, readPendingWhatsappStandardPreferred } from '@/lib/whatsapp-sales.mjs';
 import { getWhatsappDb } from '@/db/whatsapp.mjs';
 import { applySvpCalls, readSvpCalls } from '@/lib/svp-calls.mjs';
 import { getSvpCallsDb } from '@/db/svp-calls.mjs';
@@ -27,7 +27,8 @@ async function handle(request: Request) {
     authorizeUser: user => editorAllowed(user, process.env.RECRUITING_EDITOR_EMAILS),
     // The TV page at leaderboard.lgcyap.com reads the same data from its own exact origin.
     allowedOrigin: leaderboardReadOrigin(request, process.env.BETTER_AUTH_URL),
-    readData: async input => input.board === 'sp' ? readStandardPreferred(input)
+    readData: async input => input.board === 'whatsapp-sp' ? readPendingWhatsappStandardPreferred(input)
+      : input.board === 'sp' ? readStandardPreferred(input)
       : input.board === 'whatsapp' ? readWhatsappLeaderboard(input, { db: await getWhatsappDb() })
       : readPolicytekLeaderboard(input, { db: await getPolicytekDb() }),
   });

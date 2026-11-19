@@ -45,8 +45,9 @@ production (to the cent), connected calls and queue sold. Tests: `tests/whatsapp
 ## Leaderboard navigation
 
 WhatsApp Sales has its own top-level tab beside Leaderboard and Call Analytics.
-Its All view reads the combined imported reports; Standard vs Preferred uses the
-existing HubSpot Standard vs Preferred leaderboard. The imported reports have no
-Shopper/Standard classification, so these are explicitly labeled data sources,
-not a derived split of the WhatsApp sales rows. Daily, Weekly, Monthly and Custom
-periods and the policies-sold/annual-premium ranking controls remain available.
+Its All view reads the combined imported reports. Standard vs Preferred is a
+separate WhatsApp dataset, awaiting separately supplied spreadsheets. Until those
+files are provided and an importer is implemented for them, that view returns an
+explicit unavailable state with empty rows, rather than using HubSpot or All
+figures. Daily, Weekly, Monthly and Custom periods and the policies-sold/annual-
+premium ranking controls remain available for both views.
