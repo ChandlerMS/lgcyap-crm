@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { parsePolicytekCapture, policytekReportUrl, savePolicytekSnapshot, readPolicytekLeaderboard, policytekSyncPlan } from '../lib/policytek.mjs';
 import { handlePolicytekSync } from '../lib/policytek-sync-handler.mjs';
 import { rankLeaderboardRows } from '../app/leaderboard-data.mjs';
-import { policytekRefreshActive, policytekSnapshotStale, policytekNextRefreshDelay, policytekCaptureActive, policytekCaptureStale, policytekCaptureResumes } from '../lib/policytek-schedule.mjs';
+import { policytekRefreshActive, policytekSnapshotStale, policytekNextRefreshDelay, policytekCaptureActive, policytekCaptureStale, policytekCaptureResumes, policytekRequestLookbackMs } from '../lib/policytek-schedule.mjs';
 
 const now = Date.parse('2026-11-03T15:00:00Z'), secret = 'a'.repeat(64);
 const schema = await readFile(new URL('../migrations/0005_policytek_snapshots.sql', import.meta.url), 'utf8');
@@ -200,3 +200,24 @@ test('same-name source rows retain independent metrics and totals without mergin
   assert.throws(() => parsePolicytekCapture(shopper, now));
 });
 
+test('Custom ranges picked Friday night or over the weekend are still captured on Monday', async () => {
+  const db = new PGlite();
+  const at = text => Date.parse(text);
+  const custom = plan => plan.filter(job => job.startDate.startsWith('2026-10')).map(job => `${job.board}:${job.startDate}`).sort();
+  const pick = (from, when) => readPolicytekLeaderboard({ board: 'shopper', period: 'custom', from, to: from }, { db, now: at(when) });
+  try {
+    await db.exec(schema);
+    await pick('2026-10-06', '2026-11-06T22:00:00-05:00');
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-09T09:30:00-05:00'))), ['shopper:2026-10-06', 'source:2026-10-06']);
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-10T09:30:00-05:00'))), []);
+    await db.query('DELETE FROM policytek_report_requests');
+    await pick('2026-10-07', '2026-11-08T15:00:00-05:00');
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-09T09:30:00-05:00'))), ['shopper:2026-10-07', 'source:2026-10-07']);
+    await db.query('DELETE FROM policytek_report_requests');
+    // A Thursday-morning pick had its full 24 weekday hours by Friday morning.
+    await pick('2026-10-05', '2026-11-05T09:00:00-05:00');
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-09T09:30:00-05:00'))), []);
+    assert.equal(policytekRequestLookbackMs(at('2026-11-09T09:30:00-05:00')), 72 * 3600000);
+    assert.equal(policytekRequestLookbackMs(at('2026-11-10T09:30:00-05:00')), 24 * 3600000);
+  } finally { await db.close(); }
+});
