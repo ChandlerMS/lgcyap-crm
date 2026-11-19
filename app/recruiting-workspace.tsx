@@ -386,6 +386,8 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const activityPage = ACTIVITY_PAGES.find(page => page.id === route.view) ?? null;
   // Add Task and Add Follow-Up save to HubSpot, so they appear only for live data and accounts that can save.
   const canAddActivity = canEdit && !demoMode;
+  const meetingAction = (view: string, trigger: "plus" | "button") => canAddActivity && ["meetings", "calendar"].includes(view)
+    ? <RecruitQuickActions kinds={["meeting"]} recruits={activityRecruits(all)} trigger={trigger} meetingLabel={view === "calendar" ? "Add to Calendar" : "Add Meeting"} /> : undefined;
   // The top bar only appears when it has something to hold: the data source switch and search.
   const pageName = route.id ? selected?.name ?? "Recruit" : hubspotTool?.label ?? pathPage?.label ?? NAV.find(item => item.id === route.view)?.label ?? (route.view === "recruits" ? "Recruits" : "Today");
   const filteredSuffix = data?.partial ? " loaded" : "";
@@ -508,7 +510,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (demoMode) return <section className="today-panel" aria-labelledby={`today-${id}-title`}><div className="follow-up-heading"><h2 id={`today-${id}-title`}>{pageHref ? <a className="panel-title-link" href={pageHref}>{tool.label}</a> : tool.label}</h2></div><p className="helper">This panel shows live HubSpot records. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section>;
     // Meetings shows five rows a page (up to 25 by choice); Calls shows ten; Tasks shows five with numbered pages and Add Task.
     // Tasks and Meetings rows, and Calendar weeks, stay collapsed until the pointer is over them.
-    const paging = id === "meetings" ? { pageSize: 5, pageSizes: [5, 10, 15, 20, 25], hoverRows: true } : id === "calls" ? { pageSize: 10 } : id === "calendar" ? { hoverRows: true }
+    const paging = id === "meetings" ? { pageSize: 5, pageSizes: [5, 10, 15, 20, 25], hoverRows: true, headerAction: meetingAction(id, "button") } : id === "calls" ? { pageSize: 10 } : id === "calendar" ? { hoverRows: true, headerAction: meetingAction(id, "button") }
       : id === "tasks" ? { pageSize: 5, pageNumbers: true, hoverRows: true, headerAction: canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : undefined } : {};
     return <HubSpotWorkspace compact tool={tool.id} label={tool.label} pageHref={pageHref} onUnauthorized={expiredSignIn} {...paging} {...panelReports[tool.id]} />;
   }
@@ -522,7 +524,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (demoMode && hubspotTool) return <>{dashboardLink}{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;
     // Tasks opens from the dashboard's Tasks summary: HubSpot tasks assigned to you, with the same view and edits as other HubSpot pages.
     if (activityPage && demoMode) return <>{dashboardLink}{heading(activityPage.label, "This page shows live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, activityPage.id)}>Open live {activityPage.label}</button></>;
-    if (activityPage) return <>{dashboardLink}<HubSpotWorkspace key={activityPage.id} tool={activityPage.id} label={activityPage.label} description={activityPage.description} headerAction={activityPage.id === "tasks" && canAddActivity && data ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : undefined} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
+    if (activityPage) return <>{dashboardLink}<HubSpotWorkspace key={activityPage.id} tool={activityPage.id} label={activityPage.label} description={activityPage.description} headerAction={activityPage.id === "tasks" && canAddActivity && data ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : meetingAction(activityPage.id, "button")} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (pathPage) return <>{dashboardLink}<RecruitPathPage key={`${pathPage.id}:${demoMode}`} view={pathPage.id} label={pathPage.label} demoRecords={demoMode ? recordsForStagePage(demoRecords, pathPage.id) as Recruit[] : undefined} onUnauthorized={expiredSignIn} /></>;
     if (callAnalyticsView) return <>{dashboardLink}{leaderboardSwitch}<LeadData onUnauthorized={expiredSignIn} /></>;
     if (leaderboardView) return <>{dashboardLink}{leaderboardSwitch}<Leaderboard onUnauthorized={expiredSignIn} /></>;
@@ -545,7 +547,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} actions={<div className="dashboard-actions"><a className="btn btn-primary add-recruits-button" href="#add-recruits"><Icon name="add-person" />Add Recruits</a><a className="btn btn-secondary" href="#recruits"><Icon name="people" />Recruits</a><a className="btn btn-secondary" href="#contract-agents"><Icon name="people" />Agents</a></div>} aside={<div className="today-summaries">
         <RecruitTaskChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} lead={canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="plus" /> : undefined} />
         <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} />
-        <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} />
+        <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} />
       </div>} />
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}

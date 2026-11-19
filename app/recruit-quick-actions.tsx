@@ -6,6 +6,7 @@ type Done = { message: string; url?: string };
 export type ActivityRecruit = { id: string; name: string; detail?: string };
 type Props = {
   recruitId?: string; recruitName?: string;
+  meetingLabel?: "Add Meeting" | "Add to Calendar";
   // The actions offered, in order. A recruit's row offers all four.
   kinds?: readonly Kind[];
   // Without a recruitId the dialog first asks which recruit, from this list (Add Task and Add Follow-Up on the dashboard).
@@ -35,7 +36,7 @@ function Glyph({ kind }: { kind: Kind }) {
 }
 
 // Note, Task, Follow up and Meeting for one recruit. Each saves a HubSpot note, task or meeting assigned to you on that recruit.
-export default function RecruitQuickActions({ recruitId, recruitName = "", kinds = ALL_KINDS, recruits, trigger = "icons" }: Props) {
+export default function RecruitQuickActions({ recruitId, recruitName = "", kinds = ALL_KINDS, recruits, trigger = "icons", meetingLabel = "Add Meeting" }: Props) {
   const uid = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<Kind | null>(null);
@@ -102,15 +103,15 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
   }
 
   const buttons = kinds.map(item => trigger === "plus"
-    ? <button key={item} type="button" className="summary-add" onClick={() => open(item)} title={LABELS[item]}><span aria-hidden="true">+</span><span className="sr-only">{LABELS[item]}</span></button>
+    ? <button key={item} type="button" className="summary-add" onClick={() => open(item)} title={(item === "meeting" ? meetingLabel : LABELS[item])}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
     : trigger === "button"
-      ? <button key={item} type="button" className="btn btn-secondary panel-add-button" onClick={() => open(item)}><span className="panel-add-plus" aria-hidden="true">+</span>{LABELS[item]}</button>
+      ? <button key={item} type="button" className="btn btn-secondary panel-add-button" onClick={() => open(item)}><span className="panel-add-plus" aria-hidden="true">+</span>{(item === "meeting" ? meetingLabel : LABELS[item])}</button>
       : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
   return <>
     {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}
     <dialog ref={dialogRef} className="modal quick-action-dialog" aria-labelledby={`${uid}-title`} onCancel={event => { event.preventDefault(); close(); }}>
       {kind && <form onSubmit={event => void submit(event)} noValidate={false}>
-        <div className="dialog-header"><h2 id={`${uid}-title`}>{TITLES[kind]}{name && <span className="muted"> · {name}</span>}</h2><button type="button" className="btn btn-quiet" aria-label="Close" disabled={busy} onClick={close}>×</button></div>
+        <div className="dialog-header"><h2 id={`${uid}-title`}>{kind === "meeting" ? meetingLabel : TITLES[kind]}{name && <span className="muted"> · {name}</span>}</h2><button type="button" className="btn btn-quiet" aria-label="Close" disabled={busy} onClick={close}>×</button></div>
         <div className="dialog-body form-grid">
           {done ? <p className="quick-action-done" role="status">{done.message}{done.url && <> <a className="text-link" href={done.url} target="_blank" rel="noopener noreferrer">Open the recruit in HubSpot<span className="sr-only"> (opens in a new tab)</span></a></>}</p> : <>
             {picking && <div className="field quick-action-recruit">

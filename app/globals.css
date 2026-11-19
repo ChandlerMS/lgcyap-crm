@@ -799,3 +799,6 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 /* Recruits panel: Note, Add Task, Follow up and Add Meeting are plain white icons with no border or box. */
 .recruits-panel .quick-action-button { border-color: transparent; background: transparent; color: #fff; }
 .recruits-panel .quick-action-button:hover { border-color: transparent; background: #ffffff17; color: #fff; }
+/* Keep summary titles and counts inside their column beside the Add control. */
+.summary-chips-heading h2 { display: flex; flex-wrap: wrap; align-items: baseline; min-width: 0; max-width: 100%; }
+.summary-chips-heading h2 > a { min-width: 0; overflow-wrap: anywhere; }

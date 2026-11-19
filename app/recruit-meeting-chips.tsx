@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { upcomingMeetingChips, weekMeetingChips } from "./dashboard-activity.mjs";
 import { MEETINGS_CHANGED_EVENT } from "./recruit-quick-actions";
 import SummaryChips, { type SummaryChip } from "./summary-chips";
@@ -9,7 +9,7 @@ type State = { status: "loading" } | { status: "ready"; result: MeetingsResult }
 const FAILED = "Meetings could not be loaded from HubSpot.";
 // Meetings and Calendar beneath Tasks and Follow up: one read of your HubSpot meetings feeds both. Each title opens its
 // page and previews on hover; a chip opens that meeting in HubSpot.
-export default function RecruitMeetingChips({ live, now, onUnauthorized }: { live: boolean; now: number; onUnauthorized: () => void }) {
+export default function RecruitMeetingChips({ live, now, onUnauthorized, meetingLead, calendarLead }: { live: boolean; now: number; onUnauthorized: () => void; meetingLead?: ReactNode; calendarLead?: ReactNode }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const unauthorizedRef = useRef(onUnauthorized);
@@ -47,9 +47,9 @@ export default function RecruitMeetingChips({ live, now, onUnauthorized }: { liv
     : state.status === "failed" ? <>{state.message} <button className="text-link" onClick={() => { setState({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></>
     : none;
   return <>
-    <SummaryChips id="meeting-chips-title" className="meeting-chips" title="Meetings" href="#meetings" count={count(meetings)} note="Yours, upcoming" chips={meetings}
+    <SummaryChips id="meeting-chips-title" className="meeting-chips" title="Meetings" href="#meetings" lead={meetingLead} count={count(meetings)} note="Yours, upcoming" chips={meetings}
       empty={waiting("No upcoming meetings assigned to you.")} more={{ href: "#meetings", label: "upcoming meetings" }} />
-    <SummaryChips id="calendar-chips-title" className="calendar-chips" title="Calendar" href="#calendar" count={count(calendar)} note="Next 7 days" chips={calendar}
+    <SummaryChips id="calendar-chips-title" className="calendar-chips" title="Calendar" href="#calendar" lead={calendarLead} count={count(calendar)} note="Next 7 days" chips={calendar}
       empty={waiting("Nothing scheduled in the next 7 days.")} more={{ href: "#calendar", label: "meetings this week" }} />
   </>;
 }
