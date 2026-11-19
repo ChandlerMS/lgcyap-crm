@@ -1,5 +1,6 @@
 const collator = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true });
 export const LEADERBOARD_BOARDS = Object.freeze([
+  { id: 'all', label: 'All' },
   { id: 'shopper', label: 'Shopper' },
   { id: 'sp', label: 'Standard vs. Preferred' },
   { id: 'source', label: 'Source Performance' },
@@ -30,7 +31,7 @@ export function leaderboardCallsRefreshDelay(now = Date.now()) {
 }
 
 export function leaderboardMetrics(board) {
-  return board === 'sp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
+  return board === 'sp' || board === 'all' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     // Total Production in the imported reports is annual premium, confirmed by the report owner.
     : ['whatsapp', 'whatsapp-sp'].includes(board) ? { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     : { first: 'submitted', second: 'premium', firstLabel: 'Submitted', secondLabel: 'Submitted premium' };
@@ -80,8 +81,8 @@ export function sourceLeaderboardValue(row, field) {
 
 /** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
 export function leaderboardSortFields(board) {
-  const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : 'Calls';
-  return [{ field: 'production', label: keys.secondLabel }, ...(['shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
+  const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : board === 'all' ? 'Calls / leads' : 'Calls';
+  return [{ field: 'production', label: keys.secondLabel }, ...(['all', 'shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: board === 'all' ? 'Sales / activity' : 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
 }
 
 /** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
@@ -89,7 +90,7 @@ export function leaderboardSortValue(row, board, field) {
   if (field === 'name') return typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null;
   if (field === 'sales') return nonnegative(row[leaderboardMetrics(board).first]);
   if (field === 'production') return signedNumber(row[leaderboardMetrics(board).second]);
-  if (board === 'sp') return nonnegative({ calls: row.inboundCalls, closeRate: row.soldPerInboundLog, connected: row.connectedCalls, abandoned: row.abandonedCalls }[field]);
+  if (board === 'sp' || board === 'all') return nonnegative({ calls: row.inboundCalls, closeRate: row.soldPerInboundLog, connected: row.connectedCalls, abandoned: row.abandonedCalls }[field]);
   if (['whatsapp', 'whatsapp-sp'].includes(board)) return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
   return field === 'calls' ? nonnegative(row.leads) : field === 'closeRate' ? sourceLeaderboardValue(row, 'closeRate') : null;
 }
@@ -124,10 +125,10 @@ export function leaderboardCsvCell(value) {
  */
 export function leaderboardCsv(rows, board) {
   const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
-  const sales = ['shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board);
+  const sales = ['all', 'shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board);
   const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
-  const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
+  const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : board === 'all' ? 'Calls / leads' : 'Calls', board === 'all' ? 'Sales / activity' : 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
   const lines = rows.map(row => [
     row.attributed === false ? '' : row.rank ?? '',
     typeof row.name === 'string' ? row.name : '',
@@ -154,4 +155,45 @@ export function filterLeaderboardRows(rows, query) {
   const fold = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const words = fold(query).split(/\s+/).filter(Boolean);
   return words.length ? rows.filter(row => { const name = fold(row.name); return words.every(word => name.includes(word)); }) : rows;
+}
+
+/** Align named agents across two source snapshots without inventing activity for an absent source/row. */
+export function leaderboardComparisonRows(left, right, metric = 'ap', query = '', sort = undefined) {
+  const agents = new Map();
+  for (const [side, result] of [['left', left], ['right', right]]) {
+    if (result?.status !== 'available' || !Array.isArray(result.rows)) continue;
+    const keys = leaderboardMetrics(result.board);
+    result.rows.forEach((row, index) => {
+      const name = typeof row.name === 'string' ? row.name.normalize('NFC').trim().replace(/\s+/g, ' ') : '';
+      const key = row.attributed === false || !name ? `${side}:unattributed:${index}` : `named:${name.toLowerCase()}`;
+      const entry = agents.get(key) ?? { name: name || 'Name not recorded', left: null, right: null };
+      const counts = nonnegative(row[keys.first]), amount = signedNumber(row[keys.second]);
+      const previous = entry[side];
+      entry[side] = previous ? {
+        sales: previous.sales === null || counts === null ? null : previous.sales + counts,
+        premium: previous.premium === null || amount === null ? null : (Math.round(previous.premium * 100) + Math.round(amount * 100)) / 100,
+      } : { sales: counts, premium: amount === null ? null : Math.round(amount * 100) / 100 };
+      agents.set(key, entry);
+    });
+  }
+  const field = sort?.field === 'name' ? 'name' : sort?.field === 'sales' ? 'sales' : sort?.field === 'production' || sort?.field === 'premium' ? 'premium' : metric === 'ap' ? 'premium' : 'sales';
+  const direction = sort?.direction === 'asc' ? 1 : -1;
+  const value = row => {
+    const values = [row.left?.[field], row.right?.[field]].filter(value => typeof value === 'number' && Number.isFinite(value));
+    return values.length ? Math.max(...values) : null;
+  };
+  return filterLeaderboardRows([...agents.values()], query).sort((a, b) => {
+    if (field === 'name') return collator.compare(a.name, b.name) * direction;
+    const first = value(a), second = value(b);
+    if (first === null || second === null) return first === null && second === null ? collator.compare(a.name, b.name) : first === null ? 1 : -1;
+    return (first - second) * direction || collator.compare(a.name, b.name);
+  });
+}
+
+/** Export the same paired rows shown in the comparison, with no replacement of missing values by zero. */
+export function leaderboardComparisonCsv(rows, leftLabel, rightLabel) {
+  const value = (row, side, key) => typeof row[side]?.[key] === 'number' && Number.isFinite(row[side][key]) ? row[side][key] : '';
+  const header = ['Agent', `${leftLabel} policies sold`, `${leftLabel} annual premium`, `${rightLabel} policies sold`, `${rightLabel} annual premium`];
+  return [header, ...rows.map(row => [row.name, value(row, 'left', 'sales'), value(row, 'left', 'premium'), value(row, 'right', 'sales'), value(row, 'right', 'premium')])]
+    .map(line => line.map(leaderboardCsvCell).join(',')).join('\r\n') + '\r\n';
 }
