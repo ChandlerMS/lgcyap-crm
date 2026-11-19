@@ -1,14 +1,14 @@
 # HubSpot and Vercel connection
 
-Audited 2026-11-04 and updated 2026-11-05. Code facts come from GitHub `main` at `28b54c6`. Access changes whenever someone reconnects a connector or edits a HubSpot permission, so re-check it before relying on it.
+Audited 2026-11-04 and updated 2026-11-05. Code facts come from GitHub `main` at `28b54c6`; the production address and Next.js version were rechecked on 2026-11-19 against `main` at `306cbb9`. Access changes whenever someone reconnects a connector or edits a HubSpot permission, so re-check it before relying on it.
 
 ## Goal
 
-The owner wants this project connected to HubSpot to update the database and tie everything in with the Vercel app at https://lgcyap-crm.vercel.app. The app was already connected to HubSpot when this was written. What "updating the database" covers is still open (open item 4).
+The owner wants this project connected to HubSpot to update the database and tie everything in with the Vercel app at https://crm.lgcyap.com. The app was already connected to HubSpot when this was written. The owner confirmed on 2026-11-05 that "updating the database" means full read and write on the HubSpot instance. Rule 1 on approval still applies until the owner says otherwise.
 
 ## Private notes
 
-This repository is public. Login details, HubSpot owner IDs, record counts, pipeline history and notes on related private work live in `CLAUDE.local.md`, which Git ignores. It exists only in the checkout at `C:\Users\Chand\Documents\GitHub\lgcyap-crm`, so read it from there when working in another worktree. Keep those details out of tracked files, commit messages and pull request text.
+This repository is public for now (open item 4). Login details, HubSpot owner IDs, record counts, pipeline history and notes on related private work live in `CLAUDE.local.md`, which Git ignores. It exists only in the checkout at `C:\Users\Chand\Documents\GitHub\lgcyap-crm`, so read it from there when working in another worktree. Keep those details out of tracked files, commit messages and pull request text.
 
 ## Accounts
 
@@ -17,9 +17,9 @@ This repository is public. Login details, HubSpot owner IDs, record counts, pipe
 | HubSpot portal | `50894788` (lgcyap.com), US/Eastern, USD |
 | Vercel account | ChandlerMS (stated by the owner) |
 | Vercel team and project | `main-team8`, `legacy-recruiting-private` (`prj_tAhuHcbCr3HXxant1EGPbaFLjc6E`) |
-| Production URL | https://lgcyap-crm.vercel.app |
-| GitHub | `ChandlerMS/lgcyap-crm`, production branch `main`. Public according to GitHub's API on 2026-11-05, although `README.md` calls it private (open item 5). |
-| App stack | Next.js 16.4.3 on Node 24, Google sign-in through Better Auth, exact email allowlist |
+| Production URL | https://crm.lgcyap.com. `https://lgcyap-crm.vercel.app` redirects there. |
+| GitHub | `ChandlerMS/lgcyap-crm`, production branch `main`. The owner wants it private, but GitHub's API still reported it public on 2026-11-05 (open item 4). |
+| App stack | Next.js 16.4.6 on Node 24, Google sign-in through Better Auth, exact email allowlist |
 | App database | Neon Postgres: sign-ins, save logs, sync state, imported call and sales reports. CRM records stay in HubSpot. |
 
 ## Working in this repo
@@ -124,7 +124,7 @@ Tables by feature:
 ## Checking the live app
 
 - **Anonymous.** `POST /api/recruits` returns 401, and `/` returns 307 to `/sign-in`. Last run 2026-11-05.
-- **Signed in.** The main data reads, such as `POST /api/recruits` and `POST /api/leaderboard`, enforce the exact app origin, so run them from a tab on `lgcyap-crm.vercel.app`. Check the tab's host first: one stray fetch on 2026-11-04 hit `app.hubspot.com` and got a harmless 404.
+- **Signed in.** The main data reads, such as `POST /api/recruits` and `POST /api/leaderboard`, enforce the exact app origin, so run them from a tab on `crm.lgcyap.com`. Check the tab's host first: one stray fetch on 2026-11-04 hit `app.hubspot.com` and got a harmless 404.
 - **Capabilities.** `POST /api/recruits` also returns `capabilities`.
 - **Baseline.** The latest counts and capability values are in `CLAUDE.local.md`. Calls, Meetings and Tasks are per signed-in user.
 
@@ -160,7 +160,8 @@ Sales pipeline `default`: `closedwon` Sold, `1378710284` Underwriting, `13787102
 7. **Test records.** Do not create test records in production without approval. Use the fixture pattern in `docs/drag-drop-all-stages-verification-2026-11-03.md`. `scripts/verify-lifecycle-live.mjs` runs only with `--approved-test` in a Production build, and it archives only the fixtures it created.
 8. **Single writer.** Vercel Production is the only writer. Preview and the Sites backup stay read-only. See `README.md` before changing this.
 9. **Deployments.** Production ships only by landing on `main` through the Vercel Git integration. See `AGENTS.md`. Pushing to `main` deploys, so treat a push as a production release.
-10. **Secrets.** Never put tokens, environment values or customer records in code, docs, chat or logs. Variable names are fine. The repository is public, so anything pushed can be read by anyone and stays in Git history. Use a role instead of a staff email where a role works.
+10. **Secrets.** Never put tokens, environment values or customer records in code, docs, chat or logs. Variable names are fine. The repository is public for now, so anything pushed can be read by anyone and stays in Git history. Use a role instead of a staff email where a role works.
+11. **Other agents.** Codex also manages HubSpot in some instances, so re-read a record right before changing it and do not assume Claude made the last edit.
 
 ## Write gates
 
@@ -203,10 +204,9 @@ Zero recruits in the app is not automatically a fault. Read the pipeline state i
 
 Remove each item once it is resolved.
 
-1. **Connector login and access.** The owner has not confirmed which HubSpot login Claude should use. Reading and writing custom objects through the connector may need a reconnect and a permission change.
+1. **Connector login and access.** The owner decided on 2026-11-05 that Claude should use the owner's own HubSpot login, with full read and write. The connector has not been reconnected yet, so `get_user_details` still shows another login. After reconnecting, run `discover_hubspot_schema`: custom objects may still need a permission change in HubSpot before they can be written.
 2. **Vercel connector.** Not connected yet. It should be signed in as ChandlerMS. Until then, deployments and build logs cannot be checked from Claude.
-3. **Worker contract.** `CLAUDE.md` describes Claude as a file-only worker under a Codex coordinator, yet recent merged work came directly from `claude/*` branches. The coordinator and worker paths in `docs/collaboration/README.md` do not exist on this computer, while the PolicyTek sync still runs from a Codex chat. The owner needs to decide which process applies.
-4. **Meaning of "updating the database".** The owner has not said whether this means HubSpot records, HubSpot structure, the app's Postgres database, app code, or a mix.
-5. **Repository visibility.** GitHub's API reported `ChandlerMS/lgcyap-crm` as public on 2026-11-05, while `README.md` calls it private. The owner needs to decide which is intended. Do not change the visibility without updating the build guard first: `scripts/verify-production-source.mjs` runs `git ls-remote` with no credentials and rejects the build if that read fails, so making the repository private would probably block Production builds. That comes from reading the code and was not tested on Vercel.
+3. **Worker contract.** `CLAUDE.md` describes Claude as a file-only worker under a Codex coordinator, yet recent merged work came directly from `claude/*` branches. The coordinator and worker paths in `docs/collaboration/README.md` do not exist on this computer, while the PolicyTek sync still runs from a Codex chat. The owner confirmed on 2026-11-05 that Codex still manages HubSpot in some other instances, so both are in use. Whether the `CLAUDE.md` contract also binds sessions the owner runs directly has not been decided.
+4. **Repository visibility.** The owner decided on 2026-11-05 that the repository should be private. GitHub's API still reported it public that day, with no forks. Do not change the visibility until the build guard can read a private repository: `scripts/verify-production-source.mjs` runs `git ls-remote` with no credentials and rejects the build if that read fails, so making it private first would probably block Production builds. That comes from reading the code and was not tested on Vercel. The order is: give the guard a read-only GitHub token through a Vercel environment variable, deploy that, make the repository private, then confirm a Production build passes. Also confirm that Vercel's Git integration can still deploy from a private repository.
 
 More open items are in `CLAUDE.local.md`.
