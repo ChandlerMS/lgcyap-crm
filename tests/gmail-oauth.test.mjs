@@ -7,7 +7,7 @@ import { PGlite } from '@electric-sql/pglite';
 const env = { GOOGLE_CLIENT_ID: 'synthetic-client', GOOGLE_CLIENT_SECRET: 'synthetic-secret', BETTER_AUTH_SECRET: 'synthetic-gmail-secret-at-least-thirty-two-characters', BETTER_AUTH_URL: 'https://crm.example.invalid', VERCEL: '1', VERCEL_ENV: 'production', RECRUITING_EDITOR_EMAILS: 'editor@example.invalid,other@example.invalid' };
 const user = { userId: 'editor-1', email: 'editor@example.invalid' };
 const now = new Date('2026-11-19T14:00:00Z');
-const scope = 'openid email https://www.googleapis.com/auth/gmail.compose';
+const scope = 'openid email https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly';
 
 async function database() {
   const db = new PGlite();
@@ -103,6 +103,7 @@ test('consent must verify email and existing Google subject, and grant offline G
       { profile: { sub: '' } },
       { token: { refresh_token: '' } },
       { token: { scope: 'openid email' } },
+      { token: { scope: 'openid email https://www.googleapis.com/auth/gmail.compose' } },
       { token: { access_token: '' } },
     ]) {
       const { request } = await connectionRequest();
@@ -167,5 +168,19 @@ test('draft request schema persists metadata, defaults timestamps and enforces o
     assert.equal(row.message_id, null);
     assert.equal(row.thread_id, null);
     assert.deepEqual(Object.keys(row).sort(), ['created_at', 'draft_id', 'message_id', 'payload_hash', 'request_id', 'status', 'thread_id', 'updated_at', 'user_id']);
+  } finally { await db.close(); }
+});
+
+test('old compose-only connections cannot read the mailbox before renewed Google consent', async () => {
+  const { finishGmailConnection } = await import('../lib/gmail-oauth.mjs');
+  const { getGmailAccess } = await import('../lib/gmail-connection.mjs');
+  const db = await database(), google = provider();
+  try {
+    const { request } = await connectionRequest();
+    await finishGmailConnection(request, { user, env, db, fetchImpl: google.fetchImpl, now });
+    await db.query('UPDATE gmail_connection SET scope=$1', ['openid email https://www.googleapis.com/auth/gmail.compose']);
+    let calls = 0;
+    await assert.rejects(getGmailAccess({ user, env, db, requireRead: true, fetchImpl: async () => { calls++; throw Error('must not fetch'); } }), e => e.code === 'GMAIL_PERMISSION_REQUIRED');
+    assert.equal(calls, 0);
   } finally { await db.close(); }
 });

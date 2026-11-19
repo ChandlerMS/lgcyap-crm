@@ -66,6 +66,9 @@ test('status validates the current Google subject, exposes no credentials, and p
     await db.query('INSERT INTO gmail_connection VALUES ($1,$2,$3,$4,$5,now())', [user.userId, user.email, 'google-sub-1', 'sensitive-encrypted-token', 'openid email https://www.googleapis.com/auth/gmail.compose']);
     response = await read(); body = await response.json();
     assert.equal(body.connected, true);
+    assert.equal(body.canRead, false, 'old compose permission requires reconnection before reading mail');
+    await db.query('UPDATE gmail_connection SET scope=$1', ['openid email https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly']);
+    assert.equal((await (await read()).json()).canRead, true);
     assert.equal(JSON.stringify(body).includes('sensitive'), false);
     assert.equal(body.google_sub, undefined);
     await db.query('UPDATE "account" SET "accountId"=$1', ['different']);
@@ -100,7 +103,7 @@ test('callbacks redirect to Email and clear state on success and any authorizati
     await db.query('INSERT INTO "account" VALUES ($1,$2,$3,$4)', ['account-1', user.userId, 'google', 'google-sub-1']);
     const start = startGmailConnection({ user, env });
     const callback = new Request(`${env.BETTER_AUTH_URL}/api/auth/callback/google?code=sensitive-code&state=${new URL(start.url).searchParams.get('state')}`, { headers: { Cookie: start.cookie.split(';')[0] } });
-    const fetchImpl = async url => Response.json(String(url).includes('/token') ? { access_token: 'synthetic-access', refresh_token: 'synthetic-refresh', scope: 'openid email https://www.googleapis.com/auth/gmail.compose' } : { email: user.email, sub: 'google-sub-1', email_verified: true });
+    const fetchImpl = async url => Response.json(String(url).includes('/token') ? { access_token: 'synthetic-access', refresh_token: 'synthetic-refresh', scope: 'openid email https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly' } : { email: user.email, sub: 'google-sub-1', email_verified: true });
     for (const [options, result] of [
       [{ getUser, fetchImpl }, 'connected'],
       [{ getUser: async () => null, fetchImpl }, 'error'],
