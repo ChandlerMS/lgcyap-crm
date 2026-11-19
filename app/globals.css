@@ -1055,7 +1055,11 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 
 /* Keep each title, count, add control and disclosure together, in reading order. */
 .expansion-scope { display: contents; }
-.expand-collapse-controls { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 18px; }
+.expand-collapse-controls { display: flex; gap: 8px; justify-content: flex-start; margin-bottom: 18px; }
+.expand-collapse-arrow { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid var(--gold); border-radius: 6px; background: transparent; color: var(--gold); cursor: pointer; }
+.expand-collapse-arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.expand-collapse-arrow:hover { background: #d5ad2420; }
+.expand-collapse-arrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .section-title-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .section-title-controls > :is(h1, h2, h3) { margin-bottom: 0; }
 .follow-up-heading, .summary-card-head { justify-content: flex-start; }
@@ -1185,4 +1189,4 @@ button.gold-close:focus-visible{outline:2px solid var(--gold,#e3bf3b);outline-of
 .dashboard-toolbar .source-bar { flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-start; padding: 0; gap: 8px 16px; }
 .dashboard-toolbar .source-summary { flex-direction: row; flex-wrap: wrap; align-items: center; }
 .dashboard-toolbar .updated-at { flex-basis: auto; }
-.dashboard-toolbar .expand-collapse-controls { flex-shrink: 0; margin: 0 0 0 auto; }
+.dashboard-toolbar .expand-collapse-controls { flex-shrink: 0; order: -1; margin: 0; }

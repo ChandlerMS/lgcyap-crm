@@ -31,7 +31,7 @@ export function ExpandCollapseControls() {
   const context = useContext(Context);
   if (!context) return null;
   return <div className="expand-collapse-controls" role="group" aria-label="Page sections">
-    <button type="button" className="btn btn-quiet" onClick={() => context.setExpanded(true)}>Expand All</button>
-    <button type="button" className="btn btn-quiet" onClick={() => context.setExpanded(false)}>Collapse All</button>
+    <button type="button" className="expand-collapse-arrow" aria-label="Expand All" title="Expand All" onClick={() => context.setExpanded(true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+    <button type="button" className="expand-collapse-arrow" aria-label="Collapse All" title="Collapse All" onClick={() => context.setExpanded(false)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg></button>
   </div>;
 }

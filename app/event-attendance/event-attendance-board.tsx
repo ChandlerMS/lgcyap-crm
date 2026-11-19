@@ -239,8 +239,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     {busy && !data ? <p>Loading recruits…</p> : data && <AttendanceDetails selection={selection} visits={visits} applicants={applicants} canAdd={canAddActivity ?? Boolean(data.canReview)} />}
   </main>;
   return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
-    {!section && <ExpandCollapseControls />}
-    {!section && <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
+    {!section && <div className={styles.topRow}><ExpandCollapseControls /><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
     <header className={styles.header} data-section-heading>
       <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<div className="section-title-controls"><Title id="event-attendance-title">{section ? <a className="panel-title-link" href="#event-attendance">Event Attendance</a> : "Event Attendance"}</Title><SectionToggle /></div><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists{section && <> · <span role="status" className={error ? styles.updatedWarning : styles.updated}>{statusText}</span></>}</p></div></div>
       <div className={styles.controls}>

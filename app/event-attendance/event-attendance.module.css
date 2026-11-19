@@ -11,7 +11,7 @@
 /* The header's buttons stay small enough to share one row beside the title. */
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex:none}
 /* The update time sits alone in the page's top-right corner, above the logo row and its buttons. */
-.topRow{display:flex;justify-content:flex-end;margin:-6px 0 10px}
+.topRow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin:-6px 0 10px}.topRow :global(.expand-collapse-controls){margin:0}
 .status{white-space:nowrap;font-size:13px;color:var(--gold);border:1px solid #6d633e;border-radius:999px;padding:6px 12px}.status:before{content:'●';margin-right:7px}.warning{color:#f1c678}
 .controls button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 11px;cursor:pointer;font:inherit;font-size:13px;line-height:1.3;white-space:nowrap}
 /* The dashboard's collapse chevron keeps its own look among the buttons. */
