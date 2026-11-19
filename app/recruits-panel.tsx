@@ -25,20 +25,37 @@ export default function RecruitsPanel({ records, partial, canAddActivity = false
   const [sort, setSort] = useState<{ field: string; direction: "asc" | "desc" }>({ field: "name", direction: "asc" });
   const [page, setPage] = useState(1);
   const [addedOn, setAddedOn] = useState("");
+  const [filters, setFilters] = useState({ office: "", stage: "", name: "" });
   const dateInputId = useId();
   const dateForm = useRef<HTMLFormElement>(null);
   const [openedAt] = useState(() => Date.now());
   const hover = useRecruitHoverCard({ now: now ?? openedAt, canAdd: canAddActivity });
-  const rows = sortRecruitRows(addedOn ? records.filter(record => hubspotDateKey(record.createdAt) === addedOn) : records, sort) as PipelineRecruit[];
+  const offices = [...new Set(records.map(record => record.office?.trim() || "Not recorded"))].sort((a, b) => a.localeCompare(b));
+  const stages = [...new Set(records.map(record => record.stage?.trim() || "Not recorded"))].sort((a, b) => a.localeCompare(b));
+  const filtered = Boolean(addedOn || filters.office || filters.stage || filters.name);
+  const rows = sortRecruitRows(records.filter(record => (!addedOn || hubspotDateKey(record.createdAt) === addedOn)
+    && (!filters.office || (record.office?.trim() || "Not recorded") === filters.office)
+    && (!filters.stage || (record.stage?.trim() || "Not recorded") === filters.stage)
+    && (!filters.name || (record.name || [record.firstName, record.lastName].filter(Boolean).join(" ")).toLocaleLowerCase("en-US").includes(filters.name.toLocaleLowerCase("en-US")))), sort) as PipelineRecruit[];
   const view = pageWindow(rows.length, page, PAGE);
   return <section className={`today-panel recruits-panel ${styles.compact}`} aria-labelledby="today-recruits-title">
     <div className={styles.heading} data-section-heading><div className="section-title-controls"><h2 id="today-recruits-title"><a className="panel-title-link" href="#recruits">Recruits</a> <span className={styles.headingCount}>{rows.length}{partial ? "+" : ""}</span></h2><div className="panel-heading-actions">{headerAction}<SectionToggle /></div></div><div className={styles.headingActions}>{showHubSpotLink && <RecruitsHubSpotLink />}{onRefresh && <button type="button" className="btn btn-secondary" disabled={refreshing || refreshDisabled} onClick={onRefresh}>{refreshing ? "Loading…" : "Refresh"}</button>}</div></div>
-    <form ref={dateForm} className={styles.providerSearch} onSubmit={event => { event.preventDefault(); const input = new window.FormData(event.currentTarget); setAddedOn(String(input.get("addedOn") ?? "")); setPage(1); }}>
-      <label htmlFor={dateInputId}>Date added (Eastern Time)</label>
-      <div><input id={dateInputId} name="addedOn" type="date" /><button type="submit" className="btn btn-primary">Search date</button><button type="button" className="btn btn-secondary" onClick={() => { dateForm.current?.reset(); setAddedOn(""); setPage(1); }}>Clear date</button></div>
+    <form ref={dateForm} className="recruits-filter-form" onSubmit={event => {
+      event.preventDefault(); const input = new window.FormData(event.currentTarget);
+      setAddedOn(String(input.get("addedOn") ?? ""));
+      setFilters({ office: String(input.get("office") ?? ""), stage: String(input.get("stage") ?? ""), name: String(input.get("name") ?? "").trim() }); setPage(1);
+    }}>
+      <label htmlFor={dateInputId}>Date added (Eastern Time)<input id={dateInputId} name="addedOn" type="date" /></label>
+      <label>Office<select name="office"><option value="">All offices</option>{offices.map(office => <option key={office} value={office}>{office}</option>)}</select></label>
+      <label>Stage<select name="stage"><option value="">All stages</option>{stages.map(stage => <option key={stage} value={stage}>{stage}</option>)}</select></label>
+      <label>Name<input name="name" type="search" placeholder="Search recruit name" maxLength={200} /></label>
+      <label>Sort by<select name="sort" value={`${sort.field}:${sort.direction}`} onChange={event => { const [field, direction] = event.target.value.split(":"); setSort({ field, direction: direction === "desc" ? "desc" : "asc" }); setPage(1); }}>
+        <option value="name:asc">Name · A–Z</option><option value="name:desc">Name · Z–A</option><option value="office:asc">Office · A–Z</option><option value="office:desc">Office · Z–A</option><option value="stage:asc">Stage · A–Z</option><option value="stage:desc">Stage · Z–A</option><option value="createdAt:desc">Date added · Newest</option><option value="createdAt:asc">Date added · Oldest</option><option value="lastContactedAt:desc">Last contacted · Newest</option><option value="lastContactedAt:asc">Last contacted · Oldest</option>
+      </select></label>
+      <div className="recruits-filter-actions"><button type="submit" className="btn btn-primary">Search</button><button type="button" className="btn btn-secondary" onClick={() => { const field = dateForm.current?.elements.namedItem("addedOn") as HTMLInputElement | null; if (field) field.value = ""; setAddedOn(""); setPage(1); }}>Clear date</button><button type="button" className="btn btn-secondary" onClick={() => { dateForm.current?.reset(); setAddedOn(""); setFilters({ office: "", stage: "", name: "" }); setSort({ field: "name", direction: "asc" }); setPage(1); }}>Clear filters</button></div>
     </form>
-    <p className="helper" role="status">{addedOn ? `${rows.length} matching recruits of ${records.length} loaded recruits. Searches Date added in Eastern Time.` : `${records.length} loaded recruits, regardless of the Today date selection or pipeline search.`}{partial && " Only loaded records are searched; more recruits may be available in HubSpot."}</p>
-    {!rows.length ? <p className="helper">{addedOn ? "No loaded recruits were added on this date." : "No recruits are loaded."}</p> : <>
+    <p className="helper" role="status">{filtered ? `${rows.length} matching recruits of ${records.length} loaded recruits. Dates use Eastern Time.` : `${records.length} loaded recruits, regardless of the Today date selection or pipeline search.`}{partial && " Only loaded records are searched; more recruits may be available in HubSpot."}</p>
+    {!rows.length ? <p className="helper">{filters.office || filters.stage || filters.name ? "No loaded recruits match these filters." : addedOn ? "No loaded recruits were added on this date." : "No recruits are loaded."}</p> : <>
       <div className="table-wrap"><table className="data-table"><thead><tr>{COLUMNS.map(([field, label]) => <th key={field} aria-sort={sort.field === field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="column-sort" onClick={() => { setSort({ field, direction: sort.field === field && sort.direction === "asc" ? "desc" : "asc" }); setPage(1); }}>{label}{sort.field === field ? sort.direction === "asc" ? " ↑" : " ↓" : ""}</button></th>)}<th><span className="sr-only">Contact tools, notes and tasks</span></th></tr></thead>
         <tbody>{rows.slice(view.start, view.end).map(record => {
           const name = record.name || [record.firstName, record.lastName].filter(Boolean).join(" ") || "Unnamed recruit";
