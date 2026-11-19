@@ -74,6 +74,7 @@ test('templates can be selected and previewed before one explicit in-app send', 
     assert.equal(ui.button('Send email'), undefined);
     await fillOffer(ui);
     await ui.click('Preview email');
+    assert.equal(ui.requests.find(request => request.body?.action === 'preview').body.fields.acceptBy, '2026-12-01');
     const frame = document.querySelector('iframe[title="Complete email preview"]');
     assert.equal(frame.getAttribute('sandbox'), '');
     assert.match(frame.getAttribute('srcdoc'), /Complete branded offer.*All terms and dates/);
