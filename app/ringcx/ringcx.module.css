@@ -16,3 +16,20 @@
 
 /* Available agents show their time in state on the right, sized and colored like the Shopper board's call timers. */
 .rosterGrid .timedRow{grid-template-columns:auto 1fr auto}.stateTime{grid-column:3;grid-row:1/span 2;align-self:center;color:var(--gold);font-size:clamp(16px,1.45vw,25px);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* A source group inside the shared Queue page. */
+.grouped { min-height: 0; padding: 20px; }
+.grouped .header { flex-wrap: wrap; align-items: flex-start; gap: 14px; padding-bottom: 16px; }
+.grouped .header h2 { margin: 0 0 6px; color: var(--gold); font-size: 24px; font-weight: 600; }
+.grouped .rosterGrid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.grouped .live { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.grouped .live article:nth-child(3) { border-left: 0; padding-left: 0; }
+.grouped .live aside { grid-column: auto; border-top: 0; border-left: 1px solid var(--line); padding: 0 0 0 18px; display: flex; align-items: flex-start; }
+.grouped .live article > p { font-size: 48px; }
+.grouped .live article > p.waitValue { font-size: 30px; }
+.grouped .note, .grouped .agentMetrics, .grouped footer, .grouped .rosterHead p, .grouped .sectionHeading span, .grouped .live article > span, .grouped .live aside > span, .grouped .live aside p { font-size: 14px; }
+.grouped .rosterHead h3 { font-size: 20px; }
+@media(max-width:600px) { .grouped { padding: 14px; } }
+
+.grouped .live h3, .grouped .daily h3 { font-size: 18px; font-weight: 500; margin: 0; }
+.grouped .rosterHead h3 { margin: 0; font-size: 20px; font-weight: 600; }

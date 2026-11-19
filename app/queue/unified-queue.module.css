@@ -1,0 +1,23 @@
+.page { min-height: 100dvh; padding: clamp(16px, 2vw, 32px); background: var(--canvas); color: var(--text); }
+.header { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 24px; }
+.logo { width: 100px; height: auto; }
+.header h1 { margin: 0 0 4px; color: var(--gold); font-size: 28px; letter-spacing: .08em; text-transform: uppercase; }
+.header p { margin: 0; color: var(--muted); font-size: 16px; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-left: auto; font-size: 14px; }
+.actions a, .actions button { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; color: var(--gold); background: var(--panel); text-decoration: none; cursor: pointer; }
+.actions a:hover, .actions button:hover { border-color: var(--gold); }
+.actions a:focus-visible, .actions button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.group { min-width: 0; border: 1px solid #6d633e; border-radius: 8px; overflow: hidden; }
+/* Each integration retains its own refresh and unavailable state. */
+.group :global(.queue-grouped) { height: auto; min-height: 0; padding: 20px; }
+.group :global(.queue-title) h2 { margin: 0; font-size: 24px; font-weight: 600; color: var(--gold); }
+.group :global(.queue-title) p { font-size: 14px; }
+.group :global(.queue-board), .group :global(.queue-stats) { grid-template-columns: minmax(0, 1fr); }
+.group :global(.queue-stat) h3, .group :global(.queue-col-head) h3 { font-size: 18px; }
+.group :global(.queue-count) { font-size: 38px; }
+.group :global(.queue-name), .group :global(.queue-timer) { font-size: 18px; }
+.group :global(.queue-meta) { font-size: 14px; }
+.group :global(.queue-foot) { font-size: 14px; line-height: 1.6; }
+@media (min-width: 1200px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .header { gap: 12px; }.logo { width: 72px; }.actions { margin-left: 0; width: 100%; }.group :global(.queue-grouped) { padding: 14px; } }

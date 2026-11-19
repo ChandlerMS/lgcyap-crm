@@ -4,11 +4,19 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg"],
   async redirects() {
-    return [{ source: "/apply/:path*", destination: "/v2/apply/:path*", permanent: false }];
+    return [
+      { source: "/sign-in", has: [{ type: "host", value: "queue.lgcyap.com" }], destination: "https://crm.lgcyap.com/queue-access", permanent: false },
+      { source: "/sign-out", has: [{ type: "host", value: "queue.lgcyap.com" }], destination: "https://crm.lgcyap.com/sign-out", permanent: false },
+      { source: "/apply/:path*", destination: "/v2/apply/:path*", permanent: false },
+    ];
   },
   async rewrites() {
     // The unmodified source generates this callback URL for optional V2 Google setup.
-    return [{ source: "/api/google/callback", destination: "/api/v2/google/callback" }];
+    return {
+      beforeFiles: [{ source: "/", has: [{ type: "host", value: "queue.lgcyap.com" }], destination: "/queue" }],
+      afterFiles: [{ source: "/api/google/callback", destination: "/api/v2/google/callback" }],
+      fallback: [],
+    };
   },
   async headers() {
     const security = [
@@ -25,7 +33,7 @@ const nextConfig: NextConfig = {
         { key: "X-Frame-Options", value: "SAMEORIGIN" },
         { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" },
       ] })),
-      ...["/", "/queue", "/ringcx", "/event-attendance", "/v2/:path*", "/sign-in", "/sign-out", "/api/:path*"].map(source => ({ source, headers: privatePage })),
+      ...["/", "/queue", "/ringcx", "/event-attendance", "/v2/:path*", "/sign-in", "/sign-out", "/queue-access", "/api/:path*"].map(source => ({ source, headers: privatePage })),
     ];
   },
 };

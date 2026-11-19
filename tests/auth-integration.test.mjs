@@ -238,3 +238,44 @@ test('an external exception alone removes the Workspace chooser restriction whil
     assert.ok(url.searchParams.get('scope').split(' ').every(scope => ['openid', 'email', 'profile'].includes(scope)));
   } finally { await db.close(); }
 });
+
+test('Queue handoff shares only a genuinely verified session and rejects forged, unapproved, expired and revoked sessions', async () => {
+  const { queueAccessResponse, queueSessionHeaders } = await import('../lib/queue-host.mjs');
+  const production = { ...env, BETTER_AUTH_URL: 'https://crm.lgcyap.com' };
+  const { db, auth } = await setup(production);
+  try {
+    const now = new Date();
+    const expiry = new Date(now.getTime() + 60000);
+    await db.query('INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt") VALUES ($1,$2,$3,true,$4,$4)', ['queue-user', 'Synthetic Editor', email, now]);
+    await db.query('INSERT INTO "session" (id, token, "userId", "expiresAt", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$5)', ['queue-session', 'queue-token', 'queue-user', expiry, now]);
+    const signed = `queue-token.${await makeSignature('queue-token', env.BETTER_AUTH_SECRET)}`;
+    const options = { baseURL: production.BETTER_AUTH_URL, getSession: headers => auth.api.getSession({ headers }), authorize: session => Boolean(sessionUser(session, email)) };
+    const request = value => new Request('https://crm.lgcyap.com/queue-access', { headers: { Cookie: `__Secure-better-auth.session_token=${encodeURIComponent(value)}` } });
+    const accepted = await queueAccessResponse(request(signed), options);
+    assert.equal(accepted.status, 307);
+    assert.equal(accepted.headers.get('location'), 'https://queue.lgcyap.com/');
+    const cookie = accepted.headers.get('set-cookie');
+    assert.ok(cookie.startsWith(`__Secure-lgcy-queue.session_token=${encodeURIComponent(signed)};`));
+    assert.match(cookie, /Domain=lgcyap.com/);
+    // The Queue API's standard Better Auth check verifies this same cookie.
+    const queueSession = await auth.api.getSession({ headers: queueSessionHeaders(new Headers({ Host: 'queue.lgcyap.com', Origin: 'https://queue.lgcyap.com', Cookie: cookie.split(';')[0] }), production.BETTER_AUTH_URL) });
+    assert.equal(sessionUser(queueSession, email)?.userId, 'queue-user');
+    const forged = await queueAccessResponse(request('queue-token.forged'), options);
+    assert.equal(forged.headers.get('set-cookie'), null);
+    const unapproved = await queueAccessResponse(request(signed), { ...options, authorize: session => Boolean(sessionUser(session, 'someone.else@example.invalid')) });
+    assert.equal(unapproved.status, 403);
+    assert.equal(unapproved.headers.get('set-cookie'), null);
+    await db.query('UPDATE "session" SET "expiresAt" = $1', [new Date(Date.now() - 60000)]);
+    assert.equal((await queueAccessResponse(request(signed), options)).headers.get('set-cookie'), null);
+    await db.query('DELETE FROM "session"');
+    assert.equal(await auth.api.getSession({ headers: queueSessionHeaders(new Headers({ Host: 'queue.lgcyap.com', Origin: 'https://queue.lgcyap.com', Cookie: cookie.split(';')[0] }), production.BETTER_AUTH_URL) }), null);
+    assert.equal((await queueAccessResponse(request(signed), options)).headers.get('set-cookie'), null);
+    // A later CRM login must recover even though the old Queue cookie is still present.
+    await db.query('INSERT INTO "session" (id, token, "userId", "expiresAt", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$5)', ['new-session', 'new-token', 'queue-user', expiry, now]);
+    const newSigned = `new-token.${await makeSignature('new-token', env.BETTER_AUTH_SECRET)}`;
+    const relogin = new Request('https://crm.lgcyap.com/queue-access', { headers: { Cookie: `${cookie.split(';')[0]}; __Secure-better-auth.session_token=${encodeURIComponent(newSigned)}` } });
+    const recovered = await queueAccessResponse(relogin, options);
+    assert.equal(recovered.status, 307);
+    assert.ok(recovered.headers.get('set-cookie').startsWith(`__Secure-lgcy-queue.session_token=${encodeURIComponent(newSigned)};`));
+  } finally { await db.close(); }
+});

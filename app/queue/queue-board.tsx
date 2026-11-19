@@ -36,15 +36,19 @@ function waited(ms: number) {
   return m < 1 ? "just now" : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${two(m % 60)}m`;
 }
 
-function Column({ kind, title, count, empty, children }: { kind: "calls" | "available"; title: string; count: number | null; empty: string | null; children: ReactNode }) {
-  return <section className={`queue-col is-${kind}`} aria-labelledby={`queue-${kind}-title`}><div className="queue-col-head"><h2 id={`queue-${kind}-title`}>{title}</h2><span className="queue-count" aria-label={title}>{count ?? "–"}</span></div><ol className="queue-list">{children}</ol>{empty && <p className="queue-empty">{empty}</p>}</section>;
+function Column({ kind, title, count, empty, children, grouped = false }: { grouped?: boolean; kind: "calls" | "available"; title: string; count: number | null; empty: string | null; children: ReactNode }) {
+  const Heading = grouped ? "h3" : "h2";
+  return <section className={`queue-col is-${kind}`} aria-labelledby={`queue-${kind}-title`}><div className="queue-col-head"><Heading id={`queue-${kind}-title`}>{title}</Heading><span className="queue-count" aria-label={title}>{count ?? "–"}</span></div><ol className="queue-list">{children}</ol>{empty && <p className="queue-empty">{empty}</p>}</section>;
 }
 
 function Row({ kind, name, meta, timer, dim }: { kind: "call" | "ready"; name: string; meta: string; timer: string; dim?: boolean }) {
   return <li className={`queue-row is-${kind}${dim ? " is-dim" : ""}`}><span className="queue-avatar" aria-hidden="true">{initials(name)}</span><span className="queue-who"><span className="queue-name">{name}</span><span className="queue-meta">{meta}</span></span><span className="queue-timer">{timer}</span></li>;
 }
 
-export default function QueueBoard({ embedded = false }: { embedded?: boolean }) {
+export default function QueueBoard({ embedded = false, grouped = false }: { embedded?: boolean; grouped?: boolean }) {
+  const Heading = grouped ? "h2" : "h1";
+  const Content = grouped ? "div" : "main";
+  const Subheading = grouped ? "h3" : "h2";
   const [board, setBoard] = useState<Board | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [tick, setTick] = useState<number | null>(null); // this screen's clock, once a second
@@ -100,37 +104,37 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
   const waits = board && now !== null ? board.available.filter(agent => agent.since !== null).map(agent => now - (agent.since as number)) : [];
   const averageWait = waits.length ? waits.reduce((sum, wait) => sum + wait, 0) / waits.length : null;
 
-  return <div className="queue-page">
+  return <div className={`queue-page${grouped ? " queue-grouped" : ""}`}>
     <header className="queue-top">
-      <Image unoptimized className="queue-logo" src="/legacy-logo.png" alt="Legacy Agency Partners" width="164" height="107" priority />
-      <div className="queue-title"><h1>Shopper</h1><p>Legacy Agency Partners</p></div>
+      {!grouped && <Image unoptimized className="queue-logo" src="/legacy-logo.png" alt="Legacy Agency Partners" width="164" height="107" priority />}
+      <div className="queue-title"><Heading>Shopper</Heading><p>{grouped ? "PolicyTek · Live call queue" : "Legacy Agency Partners"}</p></div>
       <div className="queue-top-right">
         <span className="queue-state" data-state={state} role="status"><span className="queue-pulse" aria-hidden="true" />{stateText}</span>
         <time className="queue-clock">{tick === null ? "" : new Date(tick).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
-        {!embedded && <Link className="queue-icon-btn" href="/" aria-label="Back to the recruiting workspace" title="Recruiting workspace"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" /></svg></Link>}
-        <button className="queue-icon-btn" type="button" aria-label="Full screen" title="Full screen" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
+        {!embedded && !grouped && <Link className="queue-icon-btn" href="/" aria-label="Back to the recruiting workspace" title="Recruiting workspace"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" /></svg></Link>}
+        {!grouped && <button className="queue-icon-btn" type="button" aria-label="Full screen" title="Full screen" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>}
       </div>
     </header>
 
     {notice && <p className="queue-notice" role="alert">{notice}{problem === "sign_in" && <> <a href="/sign-in?return_to=%2F%23queue" target="_top">Sign in</a></>}</p>}
 
     <section className="queue-stats" aria-label="Today">
-      <div className="queue-stat"><h2>Total Calls Today</h2><span className="queue-count">{callsToday}</span></div>
-      <div className="queue-stat"><h2>Average Wait Time</h2><span className="queue-count">{averageWait === null ? "–" : averageWait < 60000 ? "<1m" : waited(averageWait)}</span></div>
+      <div className="queue-stat"><Subheading>Total Calls Today</Subheading><span className="queue-count">{callsToday}</span></div>
+      <div className="queue-stat"><Subheading>Average Wait Time</Subheading><span className="queue-count">{averageWait === null ? "–" : averageWait < 60000 ? "<1m" : waited(averageWait)}</span></div>
     </section>
 
-    <main className="queue-board">
-      <Column kind="available" title="Available" count={board ? board.available.length : null} empty={empty(board?.available, "No one is available.")}>
+    <Content className="queue-board">
+      <Column grouped={grouped} kind="available" title="Available" count={board ? board.available.length : null} empty={empty(board?.available, "No one is available.")}>
         {board?.available.map(agent => <Row key={agent.id} kind="ready" name={agent.name} dim={agent.dim}
           meta={agent.idle ? "Available · idle" : "Available"}
           timer={now === null || agent.since === null ? "" : waited(now - agent.since)} />)}
       </Column>
-      <Column kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>
+      <Column grouped={grouped} kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>
         {board?.calls.map(call => <Row key={call.id} kind="call" name={call.name}
           meta={[call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "Call", call.source].filter(Boolean).join(" · ")}
           timer={now === null ? "" : stopwatch(now - call.since)} />)}
       </Column>
-    </main>
+    </Content>
 
     <p className="queue-foot">Live from PolicyTek, updated every 5 seconds. Longest wait and longest call first. Total calls today counts sales agents’ calls since midnight Eastern and updates every minute; average wait is across the agents in Available. On DND and Offline are not shown.</p>
   </div>;
