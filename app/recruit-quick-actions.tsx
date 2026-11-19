@@ -69,6 +69,13 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
     dialogRef.current?.showModal();
   };
   const close = () => { if (busy) return; dialogRef.current?.close(); setKind(null); };
+  // A mouse click outside the pop-up (on the dimmed backdrop) closes it, unless it is saving. The press must start
+  // outside too, so dragging a text selection out of a field never closes it.
+  const pressedOutsideRef = useRef(false);
+  const onBackdrop = (event: { target: EventTarget; currentTarget: HTMLDialogElement; clientX: number; clientY: number }) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return event.target === event.currentTarget && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom);
+  };
   const choose = (id: string) => {
     const next = (recruits ?? []).find(item => item.id === id) ?? null;
     // A different recruit is a different request.
@@ -109,9 +116,11 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
       : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
   return <>
     {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}
-    <dialog ref={dialogRef} className="modal quick-action-dialog" aria-labelledby={`${uid}-title`} onCancel={event => { event.preventDefault(); close(); }}>
+    <dialog ref={dialogRef} className="modal quick-action-dialog" aria-labelledby={`${uid}-title`} onCancel={event => { event.preventDefault(); close(); }}
+      onPointerDown={event => { pressedOutsideRef.current = onBackdrop(event); }}
+      onClick={event => { const outside = pressedOutsideRef.current && onBackdrop(event); pressedOutsideRef.current = false; if (outside) close(); }}>
       {kind && <form onSubmit={event => void submit(event)} noValidate={false}>
-        <div className="dialog-header"><h2 id={`${uid}-title`}>{kind === "meeting" ? meetingLabel : TITLES[kind]}{name && <span className="muted"> · {name}</span>}</h2><button type="button" className="btn btn-quiet" aria-label="Close" disabled={busy} onClick={close}>×</button></div>
+        <div className="dialog-header"><h2 id={`${uid}-title`}>{kind === "meeting" ? meetingLabel : TITLES[kind]}{name && <span className="muted"> · {name}</span>}</h2><button type="button" className="btn btn-quiet dialog-close" aria-label="Close" disabled={busy} onClick={close}><span aria-hidden="true">×</span></button></div>
         <div className="dialog-body form-grid">
           {done ? <p className="quick-action-done" role="status">{done.message}{done.url && <> <a className="text-link" href={done.url} target="_blank" rel="noopener noreferrer">Open the recruit in HubSpot<span className="sr-only"> (opens in a new tab)</span></a></>}</p> : <>
             {picking && <div className="field quick-action-recruit">

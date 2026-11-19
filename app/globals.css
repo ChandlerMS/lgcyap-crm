@@ -230,6 +230,11 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 24px 28px; border-bottom: 1px solid var(--line); }
 .dialog-header h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
 .dialog-header .btn { min-width: 44px; padding: 10px; }
+/* The pop-up close X: large and gold. */
+.dialog-header .btn.dialog-close { display: inline-grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; min-width: 52px; padding: 0; border: 1px solid transparent; border-radius: 50%; color: var(--gold); font-size: 40px; font-weight: 300; line-height: 1; }
+.dialog-header .btn.dialog-close span { display: block; margin-top: -4px; }
+.dialog-header .btn.dialog-close:hover:not(:disabled) { border-color: #6d633e; background: #2b2718; color: #f0d078; }
+.dialog-header .btn.dialog-close:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .dialog-body { padding: 26px 28px; }
 .dialog-actions { padding: 20px 28px 24px; border-top: 1px solid var(--line); justify-content: flex-end; }
 .dialog-body + .dialog-actions { margin-top: 0; }
