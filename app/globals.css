@@ -801,6 +801,19 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .summary-preview p { margin: 0 0 8px; }
 .summary-preview-open { font-weight: 600; }
 
+/* Inbox's interactive preview separates conversation details from its row actions. */
+#inbox-summary-preview { box-sizing: border-box; padding: 20px 24px; line-height: 1.6; }
+#inbox-summary-preview > .summary-preview-close { display: flex; margin: 0 0 12px auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; }
+#inbox-summary-preview .summary-preview-head { align-items: center; flex-wrap: wrap; gap: 12px 20px; padding-bottom: 16px; margin-bottom: 0; border-bottom: 1px solid var(--line); }
+#inbox-summary-preview .summary-preview-list > li { gap: 12px; padding: 18px 0; }
+#inbox-summary-preview .summary-preview-list > li:first-child { border-top: 0; }
+#inbox-summary-preview .summary-preview-row { align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+#inbox-summary-preview .summary-preview-row > .summary-preview-select { min-height: 36px; white-space: normal; line-height: 1.5; }
+#inbox-summary-preview .summary-preview-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 2px; }
+#inbox-summary-preview .summary-preview-actions > .text-link { justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; line-height: 1.5; }
+#inbox-summary-preview .summary-preview-actions > .text-link:hover { border-color: var(--gold); }
+@media (max-width: 480px) { #inbox-summary-preview { padding: 16px; } }
+
 /* The Follow up page. */
 .title-count { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; font-size: .6em; }
 .follow-up-days { color: var(--gold); font-variant-numeric: tabular-nums; }
