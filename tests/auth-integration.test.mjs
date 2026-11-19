@@ -279,3 +279,35 @@ test('Queue handoff shares only a genuinely verified session and rejects forged,
     assert.ok(recovered.headers.get('set-cookie').startsWith(`__Secure-lgcy-queue.session_token=${encodeURIComponent(newSigned)};`));
   } finally { await db.close(); }
 });
+
+test('Leaderboard TV handoff shares only a genuinely verified session and rejects forged, unapproved, expired and revoked sessions', async () => {
+  const { leaderboardAccessResponse, leaderboardSessionHeaders } = await import('../lib/leaderboard-host.mjs');
+  const production = { ...env, BETTER_AUTH_URL: 'https://crm.lgcyap.com' };
+  const { db, auth } = await setup(production);
+  try {
+    const now = new Date();
+    const expiry = new Date(now.getTime() + 60000);
+    await db.query('INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt") VALUES ($1,$2,$3,true,$4,$4)', ['tv-user', 'Synthetic Editor', email, now]);
+    await db.query('INSERT INTO "session" (id, token, "userId", "expiresAt", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$5)', ['tv-session', 'tv-token', 'tv-user', expiry, now]);
+    const signed = `tv-token.${await makeSignature('tv-token', env.BETTER_AUTH_SECRET)}`;
+    const options = { baseURL: production.BETTER_AUTH_URL, getSession: headers => auth.api.getSession({ headers }), authorize: session => Boolean(sessionUser(session, email)) };
+    const request = value => new Request('https://crm.lgcyap.com/leaderboard-access', { headers: { Cookie: `__Secure-better-auth.session_token=${encodeURIComponent(value)}` } });
+    const accepted = await leaderboardAccessResponse(request(signed), options);
+    assert.equal(accepted.status, 307);
+    assert.equal(accepted.headers.get('location'), 'https://leaderboard.lgcyap.com/');
+    const cookie = accepted.headers.get('set-cookie');
+    assert.ok(cookie.startsWith(`__Secure-lgcy-leaderboard.session_token=${encodeURIComponent(signed)};`));
+    // The leaderboard API's standard Better Auth check verifies this same cookie on the TV host.
+    const tvHeaders = () => leaderboardSessionHeaders(new Headers({ Host: 'leaderboard.lgcyap.com', Origin: 'https://leaderboard.lgcyap.com', Cookie: cookie.split(';')[0] }), production.BETTER_AUTH_URL);
+    assert.equal(sessionUser(await auth.api.getSession({ headers: tvHeaders() }), email)?.userId, 'tv-user');
+    assert.equal((await leaderboardAccessResponse(request('tv-token.forged'), options)).headers.get('set-cookie'), null);
+    const unapproved = await leaderboardAccessResponse(request(signed), { ...options, authorize: session => Boolean(sessionUser(session, 'someone.else@example.invalid')) });
+    assert.equal(unapproved.status, 403);
+    assert.equal(unapproved.headers.get('set-cookie'), null);
+    await db.query('UPDATE "session" SET "expiresAt" = $1', [new Date(Date.now() - 60000)]);
+    assert.equal((await leaderboardAccessResponse(request(signed), options)).headers.get('set-cookie'), null);
+    // Signing out of the CRM (deleting the session) ends the TV's access too.
+    await db.query('DELETE FROM "session"');
+    assert.equal(await auth.api.getSession({ headers: tvHeaders() }), null);
+  } finally { await db.close(); }
+});

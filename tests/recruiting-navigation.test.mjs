@@ -39,8 +39,16 @@ test('Dashboard heads the sidebar alone and Add Recruits opens from a dashboard 
   assert.deepEqual([...order].sort((a, b) => a - b), order);
   // Add Recruits, Call Analytics and Event Attendance open from their pages, not the sidebar.
   assert.doesNotMatch(nav, /add-recruits|WORKSPACE_EXTRA_PAGES\.map|event-attendance|Event Attendance/);
-  // Add Recruits is a button on the dashboard.
-  assert.match(workspace, /actions=\{<a className="btn btn-primary add-recruits-button" href="#add-recruits">/);
+  // Add Recruits is a button on the dashboard, followed by Recruits and Agents (Contract Agents).
+  const actions = workspace.slice(workspace.indexOf('actions={<div className="dashboard-actions">'), workspace.indexOf('</div>}', workspace.indexOf('actions={<div className="dashboard-actions">')));
+  const links = ['href="#add-recruits"', 'href="#recruits"', 'href="#contract-agents"'].map(token => actions.indexOf(token));
+  assert.ok(links.every(index => index > 0), 'Add Recruits, Recruits and Agents are all present');
+  assert.deepEqual([...links].sort((a, b) => a - b), links);
+  assert.match(actions, /<a className="btn btn-primary add-recruits-button" href="#add-recruits">/);
+  assert.match(actions, />Recruits<\/a>/);
+  assert.match(actions, />Agents<\/a>/);
+  assert.deepEqual(resolveWorkspaceRoute('#recruits'), { view: 'recruits' });
+  assert.deepEqual(resolveWorkspaceRoute('#contract-agents'), { view: 'contract-agents' });
 });
 
 test('Queues opens the unified site while saved source routes remain available', () => {

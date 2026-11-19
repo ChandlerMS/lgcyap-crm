@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionCookie } from "better-auth/cookies";
 import { queueSessionHeaders } from "@/lib/queue-host.mjs";
+import { leaderboardSessionHeaders } from "@/lib/leaderboard-host.mjs";
 import { getAuth } from "@/lib/auth";
 import { safeReturnPath, sessionUser } from "@/lib/auth-policy.mjs";
 
@@ -13,7 +14,8 @@ export class AuthUnavailableError extends Error {
 }
 
 export async function getAppUser(): Promise<AppUser | null> {
-  const requestHeaders = queueSessionHeaders(await headers(), process.env.BETTER_AUTH_URL);
+  // Each adapter acts only on its own host (queue. or leaderboard.lgcyap.com); elsewhere headers pass through unchanged.
+  const requestHeaders = leaderboardSessionHeaders(queueSessionHeaders(await headers(), process.env.BETTER_AUTH_URL), process.env.BETTER_AUTH_URL);
   // This is only an optimization; Better Auth verifies the actual session below.
   if (!getSessionCookie(requestHeaders)) return null;
   const auth = getAuth();

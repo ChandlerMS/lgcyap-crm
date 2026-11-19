@@ -566,7 +566,10 @@ a.summary-chip:hover { border-color: var(--gold); }
 .activity-body { white-space: pre-wrap; line-height: 1.65; max-height: 480px; overflow: auto; }
 .activity-entry summary { cursor: pointer; color: var(--gold); padding: 8px 0; }
 .today-overview > section { min-width: 0; margin-bottom: 0; }
+/* 350px holds until the rows are measured; then the panel fits exactly ten rows before it scrolls. */
 .recruits-panel .table-wrap { max-height: 350px; overflow: auto; }
+/* Add Recruits, Recruits and Agents sit together beside the reporting period. */
+.dashboard-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 /* Four columns fit a half-width panel; the full Recruits list keeps the wide table. */
 .recruits-panel .data-table { min-width: 0; }
 @media (max-width: 1200px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 44px; } }

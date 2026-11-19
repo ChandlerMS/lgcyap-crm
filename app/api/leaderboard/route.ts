@@ -1,6 +1,7 @@
 import { getAppUser } from '@/app/app-auth';
 import { editorAllowed } from '@/lib/hubspot-write.mjs';
 import { handleLeaderboardRequest, readLeaderboard } from '@/lib/leaderboard.mjs';
+import { leaderboardReadOrigin } from '@/lib/leaderboard-host.mjs';
 
 import { readPolicytekLeaderboard } from '@/lib/policytek.mjs';
 import { getPolicytekDb } from '@/db/policytek.mjs';
@@ -24,7 +25,8 @@ async function handle(request: Request) {
   return handleLeaderboardRequest(request, {
     getUser: getAppUser,
     authorizeUser: user => editorAllowed(user, process.env.RECRUITING_EDITOR_EMAILS),
-    allowedOrigin: process.env.BETTER_AUTH_URL,
+    // The TV page at leaderboard.lgcyap.com reads the same data from its own exact origin.
+    allowedOrigin: leaderboardReadOrigin(request, process.env.BETTER_AUTH_URL),
     readData: async input => input.board === 'sp' ? readStandardPreferred(input)
       : input.board === 'whatsapp' ? readWhatsappLeaderboard(input, { db: await getWhatsappDb() })
       : readPolicytekLeaderboard(input, { db: await getPolicytekDb() }),
