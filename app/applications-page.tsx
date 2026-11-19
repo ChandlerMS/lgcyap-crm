@@ -20,8 +20,9 @@ type Report = {
 };
 type Status = "all" | "not-met" | "flagged" | "waiting";
 // Inside Event Attendance: its review state, a number that changes whenever it should read the applications again,
-// and whether links leave the board's own page (which may sit in the workspace frame) for the top window.
-export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean };
+// whether links leave the board's own page (which may sit in the workspace frame) for the top window, and wait, true
+// until the board's own first read is done, so the two HubSpot reads never run at the same moment.
+export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean; wait?: boolean };
 const SECTION_PAGE_SIZE = 10;
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const SINCE = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
@@ -57,8 +58,11 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
   // On its own page the list keeps its own review state; in Event Attendance it shares the board's.
   const ownReview = useEventReviews({ reviews: report?.reviews, reviewComplete: report?.reviewComplete, canReview: report?.canReview, onSignedOut: () => unauthorized.current(), onStale: refresh });
   const reviewer = board?.review ?? ownReview;
-  // Each Refresh starts a new read; state changes only once HubSpot answers.
+  const waiting = board?.wait ?? false;
+  // Each Refresh starts a new read; state changes only once HubSpot answers. In Event Attendance the first read
+  // waits for the board's, and shows the loading message meanwhile.
   useEffect(() => {
+    if (waiting) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -72,7 +76,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
       } finally { if (!controller.signal.aborted) setLoading(false); }
     })();
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, waiting]);
 
   const search = query.trim().toLowerCase();
   const all = report?.applications ?? [];

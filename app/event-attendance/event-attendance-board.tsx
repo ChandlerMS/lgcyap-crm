@@ -67,7 +67,10 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   const [openTile, setOpenTile] = useState<Tile | null>(null);
   const [openDay, setOpenDay] = useState<{ day: string; office: string | null } | null>(null);
   // The Applications section reads the Applications page's list again on Refresh, or when a new application shows in the counts.
+  // Its reads always follow this board's, never alongside it: the dashboard already sends HubSpot many reads at once.
   const [appsReload, setAppsReload] = useState(0);
+  const [appsReady, setAppsReady] = useState(false);
+  const appsAfterRead = useRef(false);
   const appsTotal = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const active = useRef<AbortController | null>(null);
@@ -95,7 +98,14 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
       setData(result); setTodayKey(TODAY.format(Date.parse(result.fetchedAt))); setError(''); setSignInNeeded(false);
     } catch (failure) {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Event attendance could not refresh.');
-    } finally { if (!controller.signal.aborted) setBusy(false); active.current = null; }
+    } finally {
+      // Whether this read worked or not, the Applications section may read now.
+      if (!controller.signal.aborted) {
+        setBusy(false); setAppsReady(true);
+        if (appsAfterRead.current) { appsAfterRead.current = false; setAppsReload(value => value + 1); }
+      }
+      active.current = null;
+    }
   }, []);
   useEffect(() => {
     const initial = setTimeout(() => void refresh(), 0);
@@ -116,7 +126,8 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   // Approve and Deny in every list here, the Applications section included, share one state.
   const review = useEventReviews({ reviews: data?.reviews, reviewComplete: data?.reviewComplete, canReview: data?.canReview, onSignedOut: () => { setSignInNeeded(true); setData(null); }, onStale: () => void refresh() });
   const reviewActions = review.actions;
-  const refreshAll = () => { void refresh(); setAppsReload(value => value + 1); };
+  // Refresh reads this board, then the Applications section. A read already under way picks up the request.
+  const refreshAll = () => { appsAfterRead.current = true; void refresh(); };
   const applicationsSignedOut = useCallback(() => { setSignInNeeded(true); setError('Your sign-in has expired. Sign in again to see applications.'); }, []);
   const tiles: { key: Tile; label: string; value: string; note: string }[] = [
     { key: 'signedIn', label: 'Signed in', value: count(people?.signedIn), note: `People · ${count(data?.signIns)} sign-ins in all` },
@@ -202,7 +213,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     {/* The Applications page's list, ten a page, sharing this board's Refresh and Approve and Deny. Its title opens
         the full page: in the dashboard by its route, and from this page's own frame in the top window. */}
     <div className={styles.card}>
-      <ApplicationsPage onUnauthorized={applicationsSignedOut} board={{ review, reload: appsReload, topWindow: !section }} />
+      <ApplicationsPage onUnauthorized={applicationsSignedOut} board={{ review, reload: appsReload, topWindow: !section, wait: !appsReady }} />
     </div>
 
     <details className={styles.card}>
