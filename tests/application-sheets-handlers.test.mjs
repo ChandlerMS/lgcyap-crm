@@ -27,8 +27,10 @@ test('cron and notification authorization fail closed and do not initialize the 
   const url = `${env.BETTER_AUTH_URL}/api/cron/application-sheets`;
   assert.equal((await handleApplicationSheetsJob(new Request(url), { env, getDb })).status, 401);
   const valid = new Request(url, { headers: { Authorization: `Bearer ${env.CRON_SECRET}` } });
-  const result = await handleApplicationSheetsJob(valid, { env, getDb: async () => ({}), sync: async () => ({ status: 'synced' }) });
+  let scheduled;
+  const result = await handleApplicationSheetsJob(valid, { env, getDb: async () => ({}), sync: async options => { scheduled = options.scheduled; return { status: 'synced' }; } });
   assert.equal((await result.json()).status, 'synced');
+  assert.equal(scheduled, true, 'cron calls run only as the once-a-morning job');
   const notify = new Request(`${env.BETTER_AUTH_URL}/api/applications/sheets/notify`, { method: 'POST', headers: { Authorization: `Bearer ${env.CRON_SECRET}` } });
   assert.equal((await handleApplicationSheetsJob(notify, { env, getDb, notification: true })).status, 401);
   const failure = await handleApplicationSheetsJob(valid, { env, getDb: async () => ({}), sync: async () => { throw new Error('secret-provider-body'); } });

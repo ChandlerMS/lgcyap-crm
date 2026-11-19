@@ -28,10 +28,11 @@ test('invalid sign-in date filters are rejected', () => {
   for (const startDate of ['invalid', '2026-02-30', '2026-99-99']) assert.throws(() => exportFilters({ startDate }), /valid sign-in dates/);
 });
 
-test('monthly Recruits updater is scheduled every minute and its entry points are live', async () => {
+test('monthly Sheets updaters are called only around 9 am Eastern and their entry points are live', async () => {
   const { readFile } = await import('node:fs/promises');
   const config = JSON.parse(await readFile('vercel.json', 'utf8'));
-  for (const path of ['/api/cron/sign-in-sheets', '/api/cron/application-sheets']) assert.ok(config.crons.some(job => job.path === path && job.schedule === '* * * * *'));
+  // 13:00-15:45 UTC covers 9 am Eastern in both standard and daylight time; the handler does one run a day.
+  for (const path of ['/api/cron/sign-in-sheets', '/api/cron/application-sheets']) assert.ok(config.crons.some(job => job.path === path && job.schedule === '*/15 13-15 * * *'));
   for (const path of ['app/api/cron/sign-in-sheets/route.ts', 'app/api/event-attendance/sheets/notify/route.ts', 'app/api/event-attendance/sheets/route.ts']) {
     const source = await readFile(path, 'utf8');
     assert.doesNotMatch(source, /status: 410/); assert.match(source, /SignInSheets/);

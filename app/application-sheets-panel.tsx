@@ -75,7 +75,7 @@ export default function ApplicationSheetsPanel({ report = "applications" }: { re
   return <aside className={styles.sheetsPanel} aria-label={title}>
     <div>
       <h2>{title}</h2>
-      <p>One Sheet each month, with Monday–Sunday weekly tabs. New {report === "sign-ins" ? "sign-ins" : "submissions"}, stage and review changes, and edits to recruit fields are checked every minute after they reach HubSpot. A full refresh runs every morning at 9 am Eastern.</p>
+      <p>One Sheet each month, with Monday–Sunday weekly tabs. It updates once each morning at 9 am Eastern with any new {report === "sign-ins" ? "sign-ins" : "submissions"}, stage and review changes, and edits to recruit fields since the last update.{connection?.canConnect ? " Sync now updates it right away." : ""}</p>
       {connection && <p>{connection.connected ? `Connected to ${connection.owner}.` : `Connect ${connection.owner} to enable automatic updates.`}{connection.lastSuccessAt && ` Last checked ${WHEN.format(new Date(connection.lastSuccessAt))}.`}</p>}
       {connection?.current && <a className="text-link" href={connection.current.url} target="_blank" rel="noopener noreferrer">Open {connection.current.title} ↗</a>}
       {!!connection?.current?.sharedWith?.length && <p>Shared with {connection.current.sharedWith.join(" and ")}.</p>}
