@@ -9,7 +9,7 @@ export default function UnifiedQueue({ embedded = false }: { embedded?: boolean 
   return <main className={styles.page}>
     <header className={styles.header}>
       <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />
-      <div><h1>Queue</h1><p>Shopper and Standard vs Preferred</p></div>
+      <div><h1>Queues</h1><p>Shopper and Standard vs Preferred</p></div>
       <div className={styles.actions}>
         {!embedded && <a href="https://crm.lgcyap.com/">Recruiting workspace</a>}
         <button type="button" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}>Full screen</button>

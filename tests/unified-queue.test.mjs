@@ -35,7 +35,7 @@ test('Queue renders both named live dashboards at once without nested main landm
     const imported = await import(pathToFileURL(`${process.cwd()}/${outfile}`).href);
     const Page = imported.default.default;
     const html = renderToStaticMarkup(createElement(Page));
-    assert.match(html, /<h1[^>]*>Queue<\/h1>/);
+    assert.match(html, /<h1[^>]*>Queues<\/h1>/);
     assert.match(html, /<h2[^>]*>Shopper<\/h2>/);
     assert.match(html, /<h2[^>]*>Standard vs Preferred<\/h2>/);
     assert.match(html, /Connecting to PolicyTek/);
