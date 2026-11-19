@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
+import { sharingSchema } from '../db/application-sheets.mjs';
 const env = { GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', BETTER_AUTH_SECRET: 'synthetic-encryption-secret-more-than-32-characters', BETTER_AUTH_URL: 'https://crm.example.invalid', VERCEL_ENV: 'production', HUBSPOT_ACCESS_TOKEN: 'synthetic-hubspot' };
 const user = { userId: 'owner-1', email: 'chandler@lgcyap.com' };
 const now = () => new Date('2026-11-19T14:00:00Z');
@@ -9,15 +10,17 @@ const report = { partial: false, applications: [{ id: '1', at: '2026-11-19T13:00
 async function database() {
   const db = new PGlite();
   await db.exec(await readFile(new URL('../migrations/0015_application_sheets.sql', import.meta.url), 'utf8'));
+  await db.exec(sharingSchema('application_sheets_months'));
   return db;
 }
-function provider({ email = user.email, failWrite = false } = {}) {
-  const calls = [], files = [];
+function provider({ email = user.email, failWrite = false, refuseShare = [] } = {}) {
+  const calls = [], files = [], shares = [];
   const fetchImpl = async (url, init = {}) => {
     url = String(url); calls.push({ url, ...init });
     let body;
     if (url === 'https://oauth2.googleapis.com/token') body = { access_token: 'synthetic-access', refresh_token: 'synthetic-refresh', scope: 'openid email https://www.googleapis.com/auth/drive.file' };
     else if (url === 'https://openidconnect.googleapis.com/v1/userinfo') body = { email, email_verified: true };
+    else if (url.includes('/permissions?')) { const share = JSON.parse(init.body); if (refuseShare.includes(share.emailAddress)) return Response.json({ error: { message: 'sensitive provider text' } }, { status: 403 }); shares.push({ url, ...share }); body = { id: `permission-${shares.length}` }; }
     else if (url.includes('/drive/v3/files?')) body = { files };
     else if (url === 'https://www.googleapis.com/drive/v3/files' && init.method === 'POST') { const file = { id: 'synthetic-file', ...JSON.parse(init.body) }; files.push(file); body = file; }
     else if (url.endsWith(':batchUpdate')) { if (failWrite) return Response.json({ error: { message: 'sensitive provider text' } }, { status: 403 }); body = {}; }
@@ -25,7 +28,7 @@ function provider({ email = user.email, failWrite = false } = {}) {
     else throw new Error('Unexpected synthetic URL: ' + url);
     return Response.json(body);
   };
-  return { fetchImpl, calls, files };
+  return { fetchImpl, calls, files, shares };
 }
 async function connect(db, fetchImpl, account = user) {
   const { startSheetsConnection, finishSheetsConnection } = await import('../lib/application-sheets-oauth.mjs');
@@ -172,5 +175,80 @@ test('initiating report is encrypted into OAuth state and returned only after ve
     assert.equal(JSON.parse(unseal(cookie.slice(cookie.indexOf('=') + 1), env.BETTER_AUTH_SECRET)).report, 'sign-ins');
     const request = new Request(`https://crm.example.invalid/api/auth/callback/google?code=synthetic&state=${new URL(start.url).searchParams.get('state')}`, { headers: { cookie } });
     assert.equal((await finishSheetsConnection(request, { user, env, db, fetchImpl: google.fetchImpl, now: now() })).report, 'sign-ins');
+  } finally { await db.close(); }
+});
+test('each new month is shared once with Sarah and Carlos as editors, with Google email notices', async () => {
+  const { syncApplicationSheets, applicationSheetsStatus } = await import('../lib/application-sheets-sync.mjs');
+  const db = await database(), google = provider();
+  try {
+    await connect(db, google.fetchImpl);
+    const options = { db, env, fetchImpl: google.fetchImpl, readReport: async () => report };
+    const first = await syncApplicationSheets({ ...options, now: now() });
+    assert.equal(first.shared, 2);
+    assert.deepEqual(google.shares.map(share => [share.emailAddress, share.role, share.type]), [['sarah@lgcyap.com', 'writer', 'user'], ['carlos@fam1life.net', 'writer', 'user']]);
+    assert.ok(google.shares.every(share => share.url.startsWith('https://www.googleapis.com/drive/v3/files/synthetic-file/permissions?') && new URL(share.url).searchParams.get('sendNotificationEmail') === 'true'));
+    await syncApplicationSheets({ ...options, now: new Date('2026-11-19T14:01:00Z') });
+    await syncApplicationSheets({ ...options, now: new Date('2026-11-20T14:00:00Z'), force: true });
+    assert.equal(google.shares.length, 2, 'a completed share is never repeated');
+    const status = await applicationSheetsStatus({ db, user, now: now() });
+    assert.deepEqual(status.current.sharedWith, ['sarah@lgcyap.com', 'carlos@fam1life.net']);
+    assert.deepEqual(status.current.sharePending, []);
+    assert.equal(status.current.shareFailed, false);
+  } finally { await db.close(); }
+});
+test('a refused share keeps the rows syncing and retries the next morning or on Sync now', async () => {
+  const { syncApplicationSheets, applicationSheetsStatus } = await import('../lib/application-sheets-sync.mjs');
+  const db = await database(), refused = provider({ refuseShare: ['carlos@fam1life.net'] });
+  const permissionCalls = google => google.calls.filter(call => call.url.includes('/permissions?')).length;
+  try {
+    await connect(db, refused.fetchImpl);
+    const options = { db, env, readReport: async () => report };
+    const first = await syncApplicationSheets({ ...options, fetchImpl: refused.fetchImpl, now: now() });
+    assert.equal(first.status, 'synced');
+    assert.equal(first.shared, 1);
+    const connection = (await db.query('SELECT last_error, last_success_at FROM application_sheets_connection')).rows[0];
+    assert.equal(connection.last_error, null);
+    assert.notEqual(connection.last_success_at, null);
+    const status = await applicationSheetsStatus({ db, user, now: now() });
+    assert.deepEqual(status.current.sharedWith, ['sarah@lgcyap.com']);
+    assert.deepEqual(status.current.sharePending, ['carlos@fam1life.net']);
+    assert.equal(status.current.shareFailed, true);
+    assert.equal(JSON.stringify(status).includes('sensitive provider text'), false);
+    await syncApplicationSheets({ ...options, fetchImpl: refused.fetchImpl, now: new Date('2026-11-19T20:00:00Z') });
+    assert.equal(permissionCalls(refused), 2, 'no retry later the same day');
+    const accepted = provider();
+    await syncApplicationSheets({ ...options, fetchImpl: accepted.fetchImpl, now: new Date('2026-11-20T13:00:00Z') });
+    assert.equal(permissionCalls(accepted), 0, 'no retry before 9 am Eastern');
+    await syncApplicationSheets({ ...options, fetchImpl: accepted.fetchImpl, now: new Date('2026-11-20T14:05:00Z') });
+    assert.deepEqual(accepted.shares.map(share => share.emailAddress), ['carlos@fam1life.net'], 'Sarah is not shared twice');
+    const after = await applicationSheetsStatus({ db, user, now: now() });
+    assert.deepEqual(after.current.sharePending, []);
+    assert.equal(after.current.shareFailed, false);
+    const forced = provider({ refuseShare: ['carlos@fam1life.net'] });
+    await db.query("UPDATE application_sheets_months SET shared_with = '{sarah@lgcyap.com}', share_checked_day = '2026-11-20'");
+    await syncApplicationSheets({ ...options, fetchImpl: forced.fetchImpl, now: new Date('2026-11-20T15:00:00Z'), force: true });
+    assert.equal(permissionCalls(forced), 1, 'Sync now retries a pending share at once');
+  } finally { await db.close(); }
+});
+test('a review decision or a recruit field edit rewrites the month on the next check', async () => {
+  const { syncApplicationSheets } = await import('../lib/application-sheets-sync.mjs');
+  const db = await database(), google = provider();
+  try {
+    await connect(db, google.fetchImpl);
+    const base = { partial: false, applications: [{ ...report.applications[0], ticket: { id: '77', stage: 'Application', url: 'https://app.hubspot.com/synthetic' } }], reviews: {}, records: { 77: { properties: { orientation_office: 'orlando' } } } };
+    let current = base;
+    const options = { db, env, fetchImpl: google.fetchImpl, readReport: async () => current };
+    const writes = () => google.calls.filter(call => call.url.endsWith(':batchUpdate'));
+    const cells = () => JSON.parse(writes().at(-1).body).requests.flatMap(request => request.updateCells?.rows ?? []).flatMap(row => row.values.map(cell => cell.userEnteredValue?.stringValue));
+    await syncApplicationSheets({ ...options, now: now() });
+    assert.ok(cells().includes('Not reviewed') && cells().includes('Orlando'));
+    current = { ...base, reviews: { 77: { status: 'approved', reviewedAt: '2026-11-19T14:00:30.000Z' } } };
+    await syncApplicationSheets({ ...options, now: new Date('2026-11-19T14:01:00Z') });
+    assert.equal(writes().length, 2);
+    assert.ok(cells().includes('Approved'));
+    current = { ...current, records: { 77: { properties: { orientation_office: 'miami' } } } };
+    await syncApplicationSheets({ ...options, now: new Date('2026-11-19T14:02:00Z') });
+    assert.equal(writes().length, 3);
+    assert.ok(cells().includes('Miami') && !cells().includes('Orlando'));
   } finally { await db.close(); }
 });

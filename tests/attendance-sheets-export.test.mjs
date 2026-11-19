@@ -28,13 +28,12 @@ test('invalid sign-in date filters are rejected', () => {
   for (const startDate of ['invalid', '2026-02-30', '2026-99-99']) assert.throws(() => exportFilters({ startDate }), /valid sign-in dates/);
 });
 
-test('retired updater has no schedule and its public entry points return gone', async () => {
+test('monthly Recruits updater is scheduled every minute and its entry points are live', async () => {
   const { readFile } = await import('node:fs/promises');
   const config = JSON.parse(await readFile('vercel.json', 'utf8'));
-  assert.ok(!config.crons.some(job => job.path === '/api/cron/sign-in-sheets'));
-  assert.ok(config.crons.some(job => job.path === '/api/cron/application-sheets'));
+  for (const path of ['/api/cron/sign-in-sheets', '/api/cron/application-sheets']) assert.ok(config.crons.some(job => job.path === path && job.schedule === '* * * * *'));
   for (const path of ['app/api/cron/sign-in-sheets/route.ts', 'app/api/event-attendance/sheets/notify/route.ts', 'app/api/event-attendance/sheets/route.ts']) {
     const source = await readFile(path, 'utf8');
-    assert.match(source, /status: 410/); assert.doesNotMatch(source, /syncSignInSheets/);
+    assert.doesNotMatch(source, /status: 410/); assert.match(source, /SignInSheets/);
   }
 });

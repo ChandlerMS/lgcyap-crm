@@ -22,7 +22,7 @@ test('monthly Sheets panel shows owner status and current link, runs repair, and
     globalThis.fetch = async (path, options = {}) => {
       assert.equal(path, signIns ? '/api/event-attendance/sheets' : '/api/applications/sheets');
       if (options.method === 'POST') { submitted = JSON.parse(options.body); return Response.json({ ...status, error: null, result: { status: 'synced' } }); }
-      return Response.json(hidden ? { visible: false } : signIns ? { ...status, current: { ...status.current, title: '11-26 Sign-Ins' } } : status);
+      return Response.json(hidden ? { visible: false } : signIns ? { ...status, current: { ...status.current, title: '11-26 Recruits' } } : status);
     };
     root = createRoot(document.getElementById('app'));
     await act(async () => root.render(h(Panel)));
@@ -36,8 +36,8 @@ test('monthly Sheets panel shows owner status and current link, runs repair, and
     assert.equal(document.querySelector('[role="alert"]'), null);
     signIns = true;
     await act(async () => root.render(h(Panel, { key: 'sign-ins', report: 'sign-ins' })));
-    assert.match(document.body.textContent, /Monthly sign-in Sheets/);
-    assert.match(document.querySelector('a').textContent, /11-26 Sign-Ins/);
+    assert.match(document.body.textContent, /Monthly Recruits Sheets/);
+    assert.match(document.querySelector('a').textContent, /11-26 Recruits/);
     await act(async () => root.unmount());
     hidden = true; signIns = false; root = createRoot(document.getElementById('app'));
     await act(async () => root.render(h(Panel)));
