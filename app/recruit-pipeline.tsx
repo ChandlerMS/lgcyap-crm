@@ -68,10 +68,10 @@ function recruiterLabel(recruit: PipelineRecruit) {
 }
 const PATH_NAMES: Record<string, string> = RECRUITING_PATHS;
 const ROUTE_NAMES: Record<string, string> = LICENSE_ROUTES;
-type HoverAnchor = { id: string; top: number; right: number; bottom: number; left: number };
+export type HoverAnchor = { id: string; top: number; right: number; bottom: number; left: number };
 
 /** Details and quick contact actions for one recruit, shown beside its name on hover or keyboard focus. */
-function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, actions, onPointerEnter, onPointerLeave }: { recruit: PipelineRecruit; anchor: HoverAnchor; id: string; now: number; stageLabel: string; hint: string; actions?: ReactNode; onPointerEnter: () => void; onPointerLeave: () => void }) {
+export function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, actions, onPointerEnter, onPointerLeave }: { recruit: PipelineRecruit; anchor: HoverAnchor; id: string; now: number; stageLabel: string; hint: string; actions?: ReactNode; onPointerEnter: () => void; onPointerLeave: () => void }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   useLayoutEffect(() => {

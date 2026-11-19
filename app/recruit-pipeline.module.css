@@ -264,3 +264,14 @@
 .face .stage[data-tone="completed"] { --tone-from: #3d301c; --tone-to: #876117; --tone-accent: #f0c23a; }
 @media (max-width: 600px) { .view3d { grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 6px; } .turnRail span { font-size: 24px; } .face { padding: 12px 10px 16px; } }
 @media (prefers-reduced-motion: reduce) { .prism { transition: none; } }
+
+/* Recruit names stay collapsed under each stage's heading and open over the board while the pointer is on the stage
+   (or keyboard focus is inside it), so the board never shifts. They stay closed while a recruit is dragged or the
+   pipeline turns. A stage's pop-out still lists everyone. */
+.stage:hover, .stage:has(:focus-visible) { z-index: 30; }
+.stage .stageContent, .stage.expanded .stageContent, .face .stage .stageContent { position: absolute; top: calc(100% - 1px); left: 0; right: 0; z-index: 30; padding: 4px 10px 6px; border: 1px solid #4a4028; border-top: 0; border-radius: 0 0 10px 10px; background: #15140f; box-shadow: 0 16px 30px #000b; visibility: hidden; opacity: 0; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease, visibility 0s linear .14s; }
+.stage .stageContent:empty { display: none; }
+.stage:hover .stageContent, .stage:has(:focus-visible) .stageContent { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
+.dragging .stage .stageContent { visibility: hidden; opacity: 0; transition: none; }
+.face .stage .stageContent { background: #17150f; }
+@media (prefers-reduced-motion: reduce) { .stage .stageContent { transform: none; transition: none; } }
