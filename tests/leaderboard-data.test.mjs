@@ -127,7 +127,7 @@ test('ranked rows re-sort by name, calls, close rate and production per board, k
 
 import { LEADERBOARD_BOARDS, leaderboardCsv, leaderboardCsvFilename } from '../app/leaderboard-data.mjs';
 test('Standard vs. Preferred sits right of Shopper in the board tabs', () => {
-  assert.deepEqual(LEADERBOARD_BOARDS.map(value => value.label), ['Shopper', 'Standard vs. Preferred', 'Source Performance', 'WhatsApp Sales']);
+  assert.deepEqual(LEADERBOARD_BOARDS.map(value => value.label), ['All', 'Shopper', 'Standard vs. Preferred', 'Source Performance', 'WhatsApp Sales']);
 });
 test('the export is the rows as shown, with raw numbers, blanks for missing values and safe text', () => {
   const rows = sortLeaderboardRows([
