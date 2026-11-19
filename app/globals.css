@@ -879,3 +879,6 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .summary-card-more { align-self: flex-start; margin-top: auto; padding-top: 6px; color: var(--gold); font-size: 12px; font-weight: 600; text-decoration: none; }
 a.summary-card-more:hover { text-decoration: underline; }
 .summary-card a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+/* Recruits flyout: the hiring-event sites open in a new tab, marked with a small external-link icon. */
+.nav-site-link { justify-content: space-between; }
+.nav-site-link .icon { width: 14px; height: 14px; color: #a79b76; }

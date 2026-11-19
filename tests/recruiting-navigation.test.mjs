@@ -4,8 +4,14 @@ import { readFileSync } from 'node:fs';
 import { STAGE_PAGES, STAGES, TERMINAL_STAGE_IDS } from '../lib/recruiting-config.mjs';
 import {
   WORKSPACE_NAV, WORKSPACE_NAV_GROUPS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, QUEUE_PAGES, resolveWorkspaceRoute, stagePageForRecord,
-  recordsForStagePage, unmappedStageRecords, sidebarViewFor,
+  recordsForStagePage, unmappedStageRecords, sidebarViewFor, RECRUITS_SITE_LINKS,
 } from '../app/recruiting-navigation.mjs';
+
+test('the Recruits flyout ends with the hiring-event sign-in sites, which open in a new tab', () => {
+  assert.deepEqual(RECRUITS_SITE_LINKS.map(link => [link.label, link.href]), [['Sign-In', 'https://signin.lgcyap.com/'], ['QR Code Sign-in', 'https://signinqr.lgcyap.com/']]);
+  const flyout = readFileSync(new URL('../app/recruiting-workspace.tsx', import.meta.url), 'utf8');
+  assert.match(flyout, /RECRUITS_SITE_LINKS\.map\(item => <a className="nav-link nav-site-link" key=\{item\.id\} href=\{item\.href\} target="_blank" rel="noopener noreferrer"/);
+});
 
 test('canonical stages are shared while each entry path has its own sidebar order', () => {
   assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Dashboard', 'Add Recruits']);
@@ -175,7 +181,7 @@ test('Recruits path pages include every matching stage without mixing paths or i
   ];
   assert.deepEqual(recordsForStagePage(records,'referrals').map(r=>r.id),['1','3','5']);
   assert.deepEqual(recordsForStagePage(records,'recruiters').map(r=>r.id),['2','4']);
-  for(const view of ['referrals','recruiters','event-attendance']) {
+  for(const view of ['referrals','recruiters','event-attendance','applications']) {
     assert.deepEqual(resolveWorkspaceRoute('#'+view),{view});
     assert.equal(sidebarViewFor(view),'recruits');
   }
