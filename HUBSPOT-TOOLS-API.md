@@ -75,7 +75,7 @@ HTTP boundary failures remain 401 (no session), 403 (allowlist/origin), 404 (unk
 
 ## Deliberate product limits
 
-These are connected views built inside the app. Customer Success health-score calculation, plays, automation and native workspace seat behavior are not recreated. The full Inbox page remains read-only. The dashboard Inbox hover preview supports plain-text replies through the separate guarded `/api/inbox-reply` endpoint; see [Inbox replies](docs/inbox-replies.md). Attachments remain in HubSpot. Calls display logged records; calling stays with the approved recruit HubSpot calling buttons. Calendar is a view of CRM meetings, not HubSpot's marketing campaign calendar or a complete connected Google calendar. Scheduling links and meeting availability remain in HubSpot. Supported existing-record edits are listed below.
+These are connected views built inside the app. Customer Success health-score calculation, plays, automation and native workspace seat behavior are not recreated. The full Inbox page and dashboard Inbox hover preview support plain-text replies through the guarded `/api/inbox-reply` endpoint and close/reopen/restore through `/api/inbox-thread`. New-conversation actions open HubSpot’s native Inbox; see [Inbox replies](docs/inbox-replies.md). Attachments remain in HubSpot. Calls display logged records; calling stays with the approved recruit HubSpot calling buttons. Calendar is a view of CRM meetings, not HubSpot's marketing campaign calendar or a complete connected Google calendar. Scheduling links and meeting availability remain in HubSpot. Supported existing-record edits are listed below.
 
 ## Reviewed existing-record edits
 

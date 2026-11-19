@@ -22,6 +22,7 @@ test('Inbox hover Open shows the correct conversation, preserves drafts across c
     const SupportSummary = require(`${process.cwd()}/${dir}/bundle.cjs`).default;
     globalThis.fetch = async (url, options) => {
       const input = JSON.parse(options.body);
+      if (url === '/api/inbox-thread') return Response.json({ threadId: input.threadId, status: 'OPEN', archived: false, contextToken: 'synthetic' });
       if (url === '/api/inbox-reply') {
         if (input.action === 'prepare') return Response.json({ threadId: input.threadId, contextToken: 'synthetic', senderLabel: 'agent@example.test', recipientLabel: 'customer@example.test', channelLabel: 'Email' });
         sends++;
