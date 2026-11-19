@@ -1111,3 +1111,14 @@ main.content:has(.shopper-embed) { max-width: none; padding-inline: 16px; }
 main.content.sales-calls-content { padding-top: 16px; }
 .sales-calls-content .dashboard-back-row { margin-bottom: 12px; }
 .sales-calls-content .sales-heading { margin-top: 12px; }
+
+/* Keep the left launchers in the workspace beside the expanded desktop sidebar. */
+@media (min-width: 801px) {
+  body:has(.app-shell:not(.sidebar-collapsed)) .floating-actions,
+  body:has(.app-shell:not(.sidebar-collapsed)) .support-panel {
+    left: calc(var(--sidebar-width) + 16px);
+  }
+  body:has(.app-shell:not(.sidebar-collapsed)) .support-panel {
+    max-width: calc(100vw - var(--sidebar-width) - 32px);
+  }
+}
