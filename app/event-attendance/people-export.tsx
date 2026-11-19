@@ -3,7 +3,7 @@ import SignedInSheetExport from './signed-in-sheet-export';
 import { useState } from 'react';
 import styles from './event-attendance.module.css';
 
-export default function PeopleExport({ rows, title, googleExport }: { rows: readonly object[]; title: string; googleExport?: { startDate: string; endDate: string } }) {
+export default function PeopleExport({ rows, title, googleExport }: { rows: readonly object[]; title: string; googleExport?: { startDate: string; endDate: string; office?: string; name?: string; review?: string; sort?: string } }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const download = async (format: 'csv' | 'xlsx') => {

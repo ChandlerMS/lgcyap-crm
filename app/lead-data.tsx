@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 
 import Image from "next/image";
 import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -102,8 +103,8 @@ export default function LeadData({ onUnauthorized, navigation }: { onUnauthorize
     <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Call Analytics period" /><button className="btn btn-secondary" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
     <LeaderboardRangeForm dates={dates} />
     <div className={styles.source}><span>{source === "policytek" ? "PolicyTek" : ring?.source ?? "RingCX reports"}</span>{source !== "policytek" && ring?.fetchedAt && <span>Updated {updated(ring.fetchedAt)}</span>}{current?.startDate && <span>{current.startDate}{current.endDate !== current.startDate ? ` – ${current.endDate}` : ""} · Eastern time</span>}</div>
-    {error && <div className={styles.alert} role="alert"><strong>{ring ? "Showing the last loaded numbers" : "Call Analytics unavailable"}</strong><p>{error}</p></div>}
-    {source !== "policytek" && ring?.notice && <p className={styles.notice} role="status">{ring.notice}</p>}
+    {error && <DismissibleNotice className={styles.alert} role="alert"><strong>{ring ? "Showing the last loaded numbers" : "Call Analytics unavailable"}</strong><p>{error}</p></DismissibleNotice>}
+    {source !== "policytek" && ring?.notice && <DismissibleNotice className={styles.notice} role="status">{ring.notice}</DismissibleNotice>}
     {source === "compare" ? <div className={styles.compare}>
       <section className={styles.card} aria-labelledby="lead-compare-policytek"><div className={styles.cardHeading}><h2 id="lead-compare-policytek">PolicyTek</h2><p>{periodLabel}</p></div>{policytekEmpty}</section>
       <section className={styles.card} aria-labelledby="lead-compare-ringcentral"><div className={styles.cardHeading}><h2 id="lead-compare-ringcentral">RingCentral</h2><p>{periodLabel}</p></div>

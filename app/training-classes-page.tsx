@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { easternInput, easternLocalToIso, repeatedOccurrence, validateClass, TRAINING_ZONE } from "../lib/training-classes.mjs";
@@ -105,10 +106,10 @@ export default function TrainingClassesPage({ onUnauthorized, onDirtyChange, onB
   const visible = classes.filter(item => view === "past" ? Date.parse(item.endAt) <= now : Date.parse(item.endAt) > now).sort((a, b) => view === "past" ? b.startAt.localeCompare(a.startAt) : a.startAt.localeCompare(b.startAt));
   return <section className={styles.page} aria-labelledby="page-title">
     <div className="page-head"><div><h1 id="page-title" className="page-title" tabIndex={-1}>Training Classes</h1><p className="subheading">Class schedule · All times shown in Eastern Time</p></div><div className="header-actions"><button type="button" className="btn btn-secondary" disabled={loading || busy} onClick={() => void refresh()}>{loading ? "Loading…" : "Refresh schedule"}</button>{canManage && <button ref={addButton} type="button" className="btn btn-primary" disabled={uncertain || loading || busy || Boolean(draft || cancelTarget)} onClick={() => { trigger.current = addButton.current; createId.current = window.crypto.randomUUID(); setConflict(false); setLatest(null); setDraft("new"); setSaveError(""); setNotice(""); }}>Add class</button>}</div></div>
-    {error && <div className="connection-alert" role="alert"><p>{error}</p>{loaded && <p>Showing the previously loaded schedule.</p>}</div>}
+    {error && <DismissibleNotice className="connection-alert" role="alert"><p>{error}</p>{loaded && <p>Showing the previously loaded schedule.</p>}</DismissibleNotice>}
     {uncertain && <p className="helper" role="status">Refresh the schedule to resolve the previous save before making further changes.</p>}
-    {notice && <p className="save-notice" role="status">{notice}</p>}
-    {saveError && <div className="connection-alert" role="alert"><p>{saveError}</p>{uncertain && <p>Refresh the schedule and check the class before saving again.</p>}</div>}
+    {notice && <DismissibleNotice className="save-notice" role="status">{notice}</DismissibleNotice>}
+    {saveError && <DismissibleNotice className="connection-alert" role="alert"><p>{saveError}</p>{uncertain && <p>Refresh the schedule and check the class before saving again.</p>}</DismissibleNotice>}
     {conflict && draft && draft !== "new" && <section className={styles.confirm}>
       <p>Your draft is preserved. Load the latest saved class and review it before applying these edits.</p>
       <button type="button" className="btn btn-secondary" disabled={loading} onClick={async () => { const rows = await refresh(); const value = rows?.find(item => item.id === draft.id); if (value) setLatest(value); }}>Review latest class</button>

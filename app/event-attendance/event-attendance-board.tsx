@@ -1,8 +1,10 @@
 'use client';
+import DismissibleNotice from '../dismissible-notice';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useEventReviews, type Review } from '../event-review';
 import ApplicationsPage, { type Application } from '../applications-page';
+import { filterSignedIn } from '../../lib/signed-in-filters.mjs';
 import PanelPager from '../panel-pager';
 import { pageWindow } from '../panel-pager.mjs';
 import { ExpandCollapseControls, useExpandCollapse } from '../expand-collapse';
@@ -90,6 +92,10 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   // The Applications list's applications once loaded, for the answers in each applicant's hover card.
   const [applications, setApplications] = useState<Application[] | undefined>(undefined);
   // The attendee lists' sign-in date filter: '' for any date, an event day, or 'range' between from and to.
+  const [signedInOffice, setSignedInOffice] = useState('all');
+  const [signedInName, setSignedInName] = useState('');
+  const [signedInReview, setSignedInReview] = useState('all');
+  const [signedInSort, setSignedInSort] = useState('original');
   const [signedOn, setSignedOn] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -195,6 +201,14 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     </>}
     {dateActive && <button type="button" className={styles.linkButton} onClick={clearDate}>Clear date</button>}
   </div>;
+  const signedInFilters = { office: signedInOffice, name: signedInName, review: signedInReview, sort: signedInSort };
+  const signedInControls = <>{dateFilter}<div className={styles.dateFilter} role="group" aria-label="Filter and sort signed-in recruits">
+    <label><span>Office</span><select value={signedInOffice} onChange={event => setSignedInOffice(event.target.value)}><option value="all">All offices</option>{Array.from(new Set(attendees.map(person => person.office))).sort().map(office => <option key={office} value={office}>{officeLabel(office)}</option>)}</select></label>
+    <label><span>Name</span><input type="search" maxLength={200} placeholder="Search names" value={signedInName} onChange={event => setSignedInName(event.target.value)} /></label>
+    <label><span>Approval status</span><select value={signedInReview} onChange={event => setSignedInReview(event.target.value)}><option value="all">All statuses</option><option value="approved">Approved</option><option value="denied">Denied</option><option value="pending">Not reviewed</option></select></label>
+    <label><span>Sort by</span><select value={signedInSort} onChange={event => setSignedInSort(event.target.value)}><option value="original">Default order</option><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="office">Office</option></select></label>
+    <button type="button" className={styles.linkButton} onClick={() => { clearDate(); setSignedInOffice('all'); setSignedInName(''); setSignedInReview('all'); setSignedInSort('original'); }}>Clear filters</button>
+  </div></>;
   const dayRows = pageWindow(data?.days.length ?? 0, dayPage, DAYS_PER_PAGE);
   const statusText = error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading';
   const hint = <>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</>;
@@ -207,7 +221,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   useExpandCollapse(expanded => { if (!expanded) { setOpenTile(null); setOpenDay(null); } });
   const tileList = () => {
     const dated = dateActive ? 'No one in this list signed in on the chosen dates.' : '';
-    if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={byDate(attendees)} columns={attendeeColumns} googleExport={{ startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={dateFilter} empty={dated || 'No one has signed in yet.'} />;
+    if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={filterSignedIn(byDate(attendees), signedInFilters, review.reviews, Boolean(data?.reviewComplete))} columns={attendeeColumns} googleExport={{ ...signedInFilters, startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={signedInControls} empty={attendees.length ? 'No signed-in recruits match these filters.' : 'No one has signed in yet.'} />;
     if (openTile === 'applied') return <PeopleTable title={`Signed in${dateNote} and applied online`} rows={byDate(attendees.filter(person => person.appliedAt))} columns={appliedColumns} actions={reviewActions} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has applied online yet.'} />;
     if (openTile === 'hired') return <PeopleTable title={`Signed in${dateNote} and reached Completed`} rows={byDate(attendees.filter(person => person.stageId === COMPLETED_STAGE_ID))} columns={hiredColumns} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has reached Completed yet.'} />;
     if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications yet today." /></>;
@@ -238,13 +252,13 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     </header>
     {!section && <p className={styles.hint}>{hint}</p>}
 
-    {importError && <p role="alert" className={styles.alert}>{importError}</p>}
+    {importError && <DismissibleNotice role="alert" className={styles.alert}>{importError}</DismissibleNotice>}
     {importFile && <AttendeeImport key={importFile.id} fileName={importFile.name} attendees={importFile.attendees} onClose={() => setImportFile(null)} onImported={() => void refresh()} />}
 
     {data?.reviewNotice && <p role="status" className={styles.hint}>{data.reviewNotice}</p>}
-    {review.error && <div className={styles.alert} role="alert">{review.error} {review.retry ? <button type="button" onClick={review.retry}>Retry review</button> : <button type="button" onClick={() => void refresh()}>Refresh statuses</button>}</div>}
-    {error &&<div role="alert" className={styles.alert}><p>{error}{data ? ' The last numbers received are shown below.' : ''}</p>{signInNeeded && <a href="/sign-in?return_to=%2F%23event-attendance" target="_top">Sign in</a>}</div>}
-    {data?.partial && <p role="status" className={styles.alert}>HubSpot returned more notes than this page reads at once, so the oldest sign-ins and applications may be missing from these counts.</p>}
+    {review.error && <DismissibleNotice className={styles.alert} role="alert">{review.error} {review.retry ? <button type="button" onClick={review.retry}>Retry review</button> : <button type="button" onClick={() => void refresh()}>Refresh statuses</button>}</DismissibleNotice>}
+    {error &&<DismissibleNotice role="alert" className={styles.alert}><p>{error}{data ? ' The last numbers received are shown below.' : ''}</p>{signInNeeded && <a href="/sign-in?return_to=%2F%23event-attendance" target="_top">Sign in</a>}</DismissibleNotice>}
+    {data?.partial && <DismissibleNotice role="status" className={styles.alert}>HubSpot returned more notes than this page reads at once, so the oldest sign-ins and applications may be missing from these counts.</DismissibleNotice>}
 
     {(!section || !data) && <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>}
 
@@ -257,7 +271,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
       </button>)}
     </section>
     {openTile && data && <section id="tile-people" className={`${styles.card} ${styles.peoplePanel}`} aria-label={`${tiles.find(tile => tile.key === openTile)?.label} — people`}>
-      <div className={styles.peopleHead}><p className={styles.muted}>Point at a name for details and quick actions, select it to open the recruit, or select an email to write with your templates.</p><button type="button" onClick={() => setOpenTile(null)}>Close</button></div>
+      <div className={styles.peopleHead}><p className={styles.muted}>Point at a name for details and quick actions, select it to open the recruit, or select an email to write with your templates.</p><button type="button" className="gold-close" aria-label="Close people list" title="Close" onClick={() => setOpenTile(null)}>×</button></div>
       {tileList()}
     </section>}
 

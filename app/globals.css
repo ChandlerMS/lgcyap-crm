@@ -1172,3 +1172,9 @@ main.content.sales-calls-content { padding-top: 16px; }
 .recruits-filter-form input:focus-visible, .recruits-filter-form select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .recruits-filter-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width:600px) { .recruits-filter-form > label { flex-basis: 100%; } }
+
+.dismissible-notice{position:relative;padding-right:54px!important}
+.dismissible-notice>.gold-close{position:absolute;top:10px;right:10px}
+button.gold-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;color:var(--gold,#e3bf3b);font-size:24px;line-height:1;cursor:pointer}
+button.gold-close:hover{background:rgba(227,191,59,.1)}
+button.gold-close:focus-visible{outline:2px solid var(--gold,#e3bf3b);outline-offset:2px}

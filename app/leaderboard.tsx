@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 
 import Image from "next/image";
 import { pageWindow } from "./panel-pager.mjs";
@@ -168,13 +169,13 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
     </section>
     <footer className={styles.notes} aria-label="Leaderboard notes">
       <div className={styles.source}><span>{current?.source ?? (board === "sp" ? "HubSpot" : board === "whatsapp" ? "WhatsApp Sales" : "PolicyTek")}</span>{current?.fetchedAt && <span>Updated {updated(current.fetchedAt)}</span>}{current?.startDate && <span>{current.startDate}{current.endDate && current.endDate !== current.startDate ? ` – ${current.endDate}` : ""} · Eastern time</span>}</div>
-      {error && <div className={styles.alert} role="alert"><strong>{available ? "Showing the last loaded leaderboard" : "Leaderboard unavailable"}</strong><p>{error}</p></div>}
-      {board !== "whatsapp" && retryAt && <p className={styles.notice} role="status">Refresh is available after {updated(new Date(retryAt).toISOString())}.</p>}
-      {current?.notice && <p className={styles.notice} role="status">{current.notice}</p>}
-      {board === "sp" && current?.callNotice && <p className={styles.notice} role="status">{current.callNotice}</p>}
-      {current?.calls?.partial && <p className={styles.alert} role="status">Incomplete call results: the call total covers loaded logs only.</p>}
-      {current?.partial && <p className={styles.alert} role="status">{board === "sp" ? "Incomplete results: totals and rankings shown cover the loaded records only." : board === "whatsapp" ? "Incomplete results: part of this range has not been imported yet, so totals and rankings cover imported days only." : "Incomplete named rows: report totals may include activity not attributed to the names shown."}</p>}
-      {missingMetrics > 0 && <p className={styles.notice}>{missingMetrics} record{missingMetrics === 1 ? " lacks" : "s lack"} the selected metric and {missingMetrics === 1 ? "is" : "are"} not ranked.</p>}
+      {error && <DismissibleNotice className={styles.alert} role="alert"><strong>{available ? "Showing the last loaded leaderboard" : "Leaderboard unavailable"}</strong><p>{error}</p></DismissibleNotice>}
+      {board !== "whatsapp" && retryAt && <DismissibleNotice className={styles.notice} role="status">Refresh is available after {updated(new Date(retryAt).toISOString())}.</DismissibleNotice>}
+      {current?.notice && <DismissibleNotice className={styles.notice} role="status">{current.notice}</DismissibleNotice>}
+      {board === "sp" && current?.callNotice && <DismissibleNotice className={styles.notice} role="status">{current.callNotice}</DismissibleNotice>}
+      {current?.calls?.partial && <DismissibleNotice className={styles.alert} role="status">Incomplete call results: the call total covers loaded logs only.</DismissibleNotice>}
+      {current?.partial && <DismissibleNotice className={styles.alert} role="status">{board === "sp" ? "Incomplete results: totals and rankings shown cover the loaded records only." : board === "whatsapp" ? "Incomplete results: part of this range has not been imported yet, so totals and rankings cover imported days only." : "Incomplete named rows: report totals may include activity not attributed to the names shown."}</DismissibleNotice>}
+      {missingMetrics > 0 && <DismissibleNotice className={styles.notice}>{missingMetrics} record{missingMetrics === 1 ? " lacks" : "s lack"} the selected metric and {missingMetrics === 1 ? "is" : "are"} not ranked.</DismissibleNotice>}
       <p className={styles.foot}>{board === "whatsapp" ? "Daily agent reports by sale date" : board === "sp" ? "HubSpot Sold deals by close date" : board === "shopper" ? "PolicyTek Agent Report by submit date" : "PolicyTek Source Performance"}</p>
       <p className={styles.foot}>{board === "whatsapp" ? `Imported from the LAP Daily Agent Reports${current?.dataThrough ? ` · activity through ${current.dataThrough}` : ""}. Total production is the reports' own figure, not HubSpot annual premium. ${whatsappCalls?.basis === "monthly" ? "Calls are the monthly call totals entered for January–June 2026 and Close is sales ÷ calls." : `Calls are connected (answered) inbound queue calls and Close is queue sold ÷ calls, recorded from ${whatsappCalls?.coverageStart ?? "2026-06-17"}.`} Re-run the import after regenerating the reports.` : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : `PolicyTek browser sync · every 15 minutes, ${POLICYTEK_CAPTURE_HOURS}. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, the Claude app open, and PolicyTek signed in.`}</p>
     </footer>

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 type ExportResult = { url: string; count: number };
-export default function SignedInSheetExport({ count, filters, disabled }: { count: number; filters: { startDate: string; endDate: string }; disabled?: boolean }) {
+export default function SignedInSheetExport({ count, filters, disabled }: { count: number; filters: { startDate: string; endDate: string; office?: string; name?: string; review?: string; sort?: string }; disabled?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState<ExportResult | null>(null);

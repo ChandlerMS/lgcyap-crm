@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import RecruitsPanel from "./recruits-panel";
@@ -52,7 +53,7 @@ export default function RecruitPathPage({ view, label, demoRecords, onUnauthoriz
   return <>
     <div className="page-heading"><h1 className="page-title" id="page-title" tabIndex={-1}>{label}</h1>{!demoRecords && <button className="btn btn-secondary" disabled={busy} onClick={() => void load()}>{busy ? "Loading…" : "Refresh"}</button>}</div>
     <p className="helper">All stages in the {label} recruiting path.</p>
-    {error && <p role="alert" className="connection-alert">{error} <button className="text-link" disabled={busy} onClick={() => void load(failedAfterRef.current)}>Retry</button></p>}
+    {error && <DismissibleNotice role="alert" className="connection-alert">{error} <button className="text-link" disabled={busy} onClick={() => void load(failedAfterRef.current)}>Retry</button></DismissibleNotice>}
     {busy && !result && !demoRecords ? <p role="status">Loading {label.toLowerCase()} recruits…</p> : <>
       {!demoRecords && result?.partial && <p role="status">Showing {rows.length} of {result.total} recruits. {result.continuation ? "Load more to include the remaining records." : "HubSpot returned an incomplete result. Use Refresh to try again."}</p>}
       <RecruitsPanel nativeLinks={!demoRecords} records={rows} partial={!demoRecords && result?.partial} canAddActivity={!demoRecords && result?.capabilities?.canEdit === true} />

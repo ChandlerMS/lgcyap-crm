@@ -142,3 +142,4 @@
 .unlinkedActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .unlinkedActions a, .unlinkedActions button { color: #dfbf62; border: 1px solid #79662f; border-radius: 6px; padding: 7px 10px; background: #211d10; }
 .countDetails :global(.add-activity-button), .countDetails :global(.communication-button) { color: #dfbf62; border-color: #79662f; background: #211d10; }
+.peopleHead button:global(.gold-close){width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;color:var(--gold);font-size:24px}

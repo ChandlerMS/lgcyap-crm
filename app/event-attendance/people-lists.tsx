@@ -71,7 +71,7 @@ export const applicantColumns: Column<Applicant>[] = [
 
 // total is the whole list's size when rows is one page of it. hover gives each name its details card (from
 // useRecruitHoverCard's bind); filter sits under the title, such as the sign-in date filter.
-export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions, total = rows.length, hover, filter, googleExport }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode; total?: number; hover?: (row: T) => object; filter?: ReactNode; googleExport?: { startDate: string; endDate: string } }) {
+export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions, total = rows.length, hover, filter, googleExport }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode; total?: number; hover?: (row: T) => object; filter?: ReactNode; googleExport?: { startDate: string; endDate: string; office?: string; name?: string; review?: string; sort?: string } }) {
   return <div className={styles.peopleBlock}>
     <div className={styles.peopleListHead}><h3>{title} <span>{total}</span></h3><PeopleExport title={title} rows={rows} googleExport={googleExport} /></div>
     {filter}

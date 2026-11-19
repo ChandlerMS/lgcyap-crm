@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 
 import { startTransition, useEffect, useRef, useState } from "react";
 import styles from "./svp-dispositions.module.css";
@@ -63,7 +64,7 @@ export default function SvpDispositions({ onUnauthorized }: { onUnauthorized: ()
   };
   return <section className={styles.page} aria-labelledby="page-title">
     <header className="sales-heading"><h1 className="page-title" id="page-title" tabIndex={-1}>Standard vs Preferred Dispositions</h1><a className="btn btn-secondary" href="https://ringcx.ringcentral.com/analytics/voice/historical/reports/aadxn5qBRud2" target="_blank" rel="noopener noreferrer">Open RingCX report<span className="sr-only"> (opens in a new tab)</span></a></header>
-    <p className={styles.notice}>Uploaded call-history snapshot · Final = Yes · Times are US/Eastern. This view does not update automatically from RingCX.{data && <> {NUMBER.format(data.snapshotTotal)} rows · {data.from} through {data.to}.</>}</p>
+    <DismissibleNotice className={styles.notice}>Uploaded call-history snapshot · Final = Yes · Times are US/Eastern. This view does not update automatically from RingCX.{data && <> {NUMBER.format(data.snapshotTotal)} rows · {data.from} through {data.to}.</>}</DismissibleNotice>
     <form className={styles.filters} onSubmit={event => { event.preventDefault(); setRequest(current => ({ filters: draft, page: 1, refresh: current.refresh + 1 })); }}>
       <div className={styles.grid}>
         <label>From date<input type="date" value={draft.from} max={draft.to || undefined} onChange={event => change("from", event.target.value)} /></label>
@@ -84,7 +85,7 @@ export default function SvpDispositions({ onUnauthorized }: { onUnauthorized: ()
       {loading ? <p role="status">Loading call history…</p> : data && <>
         <dl className={styles.metrics}><div><dt>Matching calls</dt><dd>{NUMBER.format(data.total)}</dd></div><div><dt>Agents</dt><dd>{NUMBER.format(data.agents)}</dd></div><div><dt>Dispositions</dt><dd>{data.dispositions.length}</dd></div><div><dt>Average interaction</dt><dd>{data.averageInteraction === null ? "—" : `${data.averageInteraction.toFixed(1)}s`}</dd></div></dl>
         <details className={styles.breakdown}><summary>Disposition breakdown ({data.dispositions.length})</summary><ul>{data.dispositions.map(item => <li key={item.name}><span>{item.name}</span><strong>{NUMBER.format(item.count)}</strong></li>)}</ul></details>
-        <p className={styles.notice} role="status">{data.total ? `Showing ${NUMBER.format((data.page - 1) * data.pageSize + 1)}–${NUMBER.format(Math.min(data.page * data.pageSize, data.total))} of ${NUMBER.format(data.total)} matching calls` : "No calls match these filters."}</p>
+        <DismissibleNotice className={styles.notice} role="status">{data.total ? `Showing ${NUMBER.format((data.page - 1) * data.pageSize + 1)}–${NUMBER.format(Math.min(data.page * data.pageSize, data.total))} of ${NUMBER.format(data.total)} matching calls` : "No calls match these filters."}</DismissibleNotice>
         <div className={styles.table} role="region" aria-label="Call history results" tabIndex={0}><table><thead><tr>{data.columns.map(column => <th scope="col" key={column}>{column}</th>)}</tr></thead><tbody>{data.rows.map((row, index) => <tr key={`${data.page}-${index}`}>{row.map((value, column) => <td key={column}>{[6, 7].includes(column) && safeUrl(value) ? <a href={safeUrl(value)!} target="_blank" rel="noopener noreferrer">{column === 6 ? "Recording" : "Summary"}<span className="sr-only"> (opens in a new tab)</span></a> : value || "—"}</td>)}</tr>)}</tbody></table></div>
         <nav className={styles.pagination} aria-label="Call history pages"><button className="btn btn-secondary" type="button" disabled={data.page <= 1} onClick={() => setRequest(current => ({ ...current, page: data.page - 1 }))}>Previous</button><span>Page {NUMBER.format(data.page)} of {NUMBER.format(data.pages)}</span><button className="btn btn-secondary" type="button" disabled={data.page >= data.pages} onClick={() => setRequest(current => ({ ...current, page: data.page + 1 }))}>Next</button></nav>
       </>}

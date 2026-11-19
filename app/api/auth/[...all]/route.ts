@@ -30,7 +30,7 @@ async function handle(request: Request) {
   if (request.method === 'GET' && url.pathname.endsWith('/callback/google') && url.searchParams.get('state')?.startsWith(ATTENDANCE_EXPORT_PREFIX)) {
     let user = null;
     try { user = await getAppUser(); } catch { /* Return the export sign-in error. */ }
-    return finishAttendanceExport(request, { user, env: process.env, readData: () => readEventAttendance({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN }) });
+    return finishAttendanceExport(request, { user, env: process.env, readData: () => readEventAttendance({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN, includeReviews: true, reviewSecrets: [process.env.EVENT_REVIEW_HMAC_SECRET, process.env.BETTER_AUTH_SECRET, ...(process.env.EVENT_REVIEW_PREVIOUS_SECRETS ?? '').split(',')].filter((value): value is string => Boolean(value)) }) });
   }
   return handleAuthRequest(request);
 }

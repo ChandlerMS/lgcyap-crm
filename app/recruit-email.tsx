@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import SummaryChips from './summary-chips';
 import RecruitCombobox from './recruit-combobox';
@@ -165,7 +166,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
       <div className="email-compose-head"><h2 id="email-compose-title">New Email</h2><button className="btn btn-quiet" type="button" aria-label="Close email" onClick={() => { close(); dialog.current?.close(); }}>×</button></div>
       {disabled ? <p className="helper">Email is unavailable in demo mode.</p> : <>
         <p className="helper">Prepare your message here, then review and send the draft in Gmail.</p>
-        {error && <p role="alert" className="connection-alert">{error}</p>}
+        {error && <DismissibleNotice role="alert" className="connection-alert">{error}</DismissibleNotice>}
         {checking && <p role="status">Checking Gmail draft access…</p>}
         {!checking && status && gmail && <>
           <div className="email-connect gmail-draft-connection"><p>Signed in as <strong>{status.sender}</strong>. {gmail.connected ? `Gmail connected: ${gmail.email}` : 'Connect your matching Google account to create drafts.'}</p><p className="helper">Google’s draft permission includes sending. This app only creates drafts; you choose Send in Gmail.</p>
