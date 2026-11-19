@@ -1,13 +1,13 @@
 import { getAppUser } from '@/app/app-auth';
 import { getPool } from '@/db/pool.mjs';
-import { handleRecruitRequest, readRecruitingData } from '@/lib/hubspot.mjs';
+import { handleRecruitRequest, readRecruitingData, recruitPathReadOptions } from '@/lib/hubspot.mjs';
 import { createPostgresLedger, editorAllowed, writeCapability } from '@/lib/hubspot-write.mjs';
 import { checkContactCreationCapability, createContactPostgresLedger } from '@/lib/hubspot-contact-create.mjs';
 import { checkRecruitIntakeCapability, createRecruitIntakePostgresLedger } from '@/lib/recruit-intake.mjs';
 import { lifecycleEnabled, lifecycleReadStatus } from '@/lib/recruit-lifecycle-sync.mjs';
 
-async function readWithLifecycleStatus() {
-  const data = await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN, includeContacts: true });
+async function readWithLifecycleStatus(request: Request) {
+  const data = await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN, includeContacts: true, ...recruitPathReadOptions(request.url) });
   if (!lifecycleEnabled()) return data;
   try { return { ...data, recruits: await lifecycleReadStatus(getPool(), data.recruits) }; }
   catch { return { ...data, recruits: data.recruits.map((recruit: (typeof data.recruits)[number]) => ({ ...recruit, lifecycleSync: { status: 'unavailable' } })) }; }
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     authorizeUser: visitor => editorAllowed(visitor, process.env.RECRUITING_EDITOR_EMAILS),
     allowedOrigin: process.env.BETTER_AUTH_URL,
     readData: async () => ({
-      ...await readWithLifecycleStatus(),
+      ...await readWithLifecycleStatus(request),
       capabilities: {
         canCreateRecruit: await checkRecruitIntakeCapability(user, {
           editorEmails: process.env.RECRUITING_EDITOR_EMAILS,

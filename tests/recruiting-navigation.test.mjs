@@ -25,7 +25,7 @@ test('Dashboard heads the sidebar alone and Add Recruits opens from a dashboard 
   assert.deepEqual(resolveWorkspaceRoute('#add-recruits'), { view: 'add-recruits' });
   // Pages reached from another page light up that page's sidebar link.
   assert.equal(sidebarViewFor('add-recruits'), 'today');
-  assert.equal(sidebarViewFor('event-attendance'), 'today');
+  assert.equal(sidebarViewFor('event-attendance'), 'recruits');
   assert.equal(sidebarViewFor('call-analytics'), 'leaderboard');
   assert.equal(sidebarViewFor('inbox'), 'inbox');
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
@@ -159,4 +159,22 @@ test('Inbox message search destinations resolve to their exact conversation with
   assert.deepEqual(resolveWorkspaceRoute('#help-desk'), { view: 'help-desk' });
   assert.deepEqual(resolveWorkspaceRoute('#tickets'), { view: 'tickets' });
   assert.deepEqual(resolveWorkspaceRoute('#inbox/thread/../12345'), { view: 'today' });
+});
+
+
+test('Recruits path pages include every matching stage without mixing paths or inferring missing paths', () => {
+  const records = [
+    {id:'1',recruitingPath:'genpop',stageId:'1473318768'},
+    {id:'2',recruitingPath:'mass_recruiting',stageId:'1473318769'},
+    {id:'3',recruitingPath:'genpop',stageId:'1416243218'},
+    {id:'4',recruitingPath:'mass_recruiting',stageId:'1473318773'},
+    {id:'5',recruitingPath:'genpop',stageId:'unknown'},
+    {id:'6',recruitingPath:''},
+  ];
+  assert.deepEqual(recordsForStagePage(records,'referrals').map(r=>r.id),['1','3','5']);
+  assert.deepEqual(recordsForStagePage(records,'recruiters').map(r=>r.id),['2','4']);
+  for(const view of ['referrals','recruiters','event-attendance']) {
+    assert.deepEqual(resolveWorkspaceRoute('#'+view),{view});
+    assert.equal(sidebarViewFor(view),'recruits');
+  }
 });

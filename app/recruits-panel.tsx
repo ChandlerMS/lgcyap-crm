@@ -13,7 +13,7 @@ const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", 
 const contacted = (value?: string | null) => { const instant = Date.parse(value ?? ""); return Number.isFinite(instant) ? date.format(instant) : "Never"; };
 // Every loaded recruit, ten to a page and sorted by name like the full Recruits list; filters and the board stay on that page.
 // canAddActivity shows Note, Task and Follow up on live rows for accounts that can save to HubSpot.
-export default function RecruitsPanel({ records, partial, canAddActivity = false }: { records: readonly PipelineRecruit[]; partial?: boolean; canAddActivity?: boolean }) {
+export default function RecruitsPanel({ records, partial, canAddActivity = false, nativeLinks = false }: { records: readonly PipelineRecruit[]; partial?: boolean; canAddActivity?: boolean; nativeLinks?: boolean }) {
   const [sort, setSort] = useState<{ field: string; direction: "asc" | "desc" }>({ field: "name", direction: "asc" });
   const [page, setPage] = useState(1);
   const rows = sortRecruitRows(records, sort) as PipelineRecruit[];
@@ -25,7 +25,7 @@ export default function RecruitsPanel({ records, partial, canAddActivity = false
       <div className="table-wrap"><table className="data-table"><thead><tr>{COLUMNS.map(([field, label]) => <th key={field} aria-sort={sort.field === field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="column-sort" onClick={() => { setSort({ field, direction: sort.field === field && sort.direction === "asc" ? "desc" : "asc" }); setPage(1); }}>{label}{sort.field === field ? sort.direction === "asc" ? " ↑" : " ↓" : ""}</button></th>)}<th><span className="sr-only">Contact tools, notes and tasks</span></th></tr></thead>
         <tbody>{rows.slice(view.start, view.end).map(record => {
           const name = record.name || [record.firstName, record.lastName].filter(Boolean).join(" ") || "Unnamed recruit";
-          return <tr key={record.id}><td><a className="text-link" href={`#recruit/${encodeURIComponent(record.id)}`}>{name}</a></td><td>{record.stage || "Not recorded"}</td><td>{contacted(record.lastContactedAt)}</td><td className="communication-cell"><div className="recruit-row-tools"><RecruitCommunications recruitName={name} recruitId={record.id} phone={record.phone} hubspotUrl={record.hubspotUrl ?? ""} isDemo={record.isDemo} />{canAddActivity && !record.isDemo && <RecruitQuickActions recruitId={record.id} recruitName={name} />}</div></td></tr>;
+          return <tr key={record.id}><td><a className="text-link" href={nativeLinks && !record.isDemo ? record.hubspotUrl : `#recruit/${encodeURIComponent(record.id)}`} target={nativeLinks && !record.isDemo ? "_blank" : undefined} rel={nativeLinks && !record.isDemo ? "noopener noreferrer" : undefined}>{name}</a></td><td>{record.stage || "Not recorded"}</td><td>{contacted(record.lastContactedAt)}</td><td className="communication-cell"><div className="recruit-row-tools"><RecruitCommunications recruitName={name} recruitId={record.id} phone={record.phone} hubspotUrl={record.hubspotUrl ?? ""} isDemo={record.isDemo} />{canAddActivity && !record.isDemo && <RecruitQuickActions recruitId={record.id} recruitName={name} />}</div></td></tr>;
         })}</tbody></table></div>
       <PanelPager count={rows.length} page={view.page} size={PAGE} label="Recruits" onPage={setPage} />
     </>}

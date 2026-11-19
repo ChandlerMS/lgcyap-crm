@@ -56,6 +56,15 @@ export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'calendar', label: 'Calendar' },
   { id: 'calls', label: 'Calls' },
 ].map(tool => Object.freeze(tool)));
+// Full recruiting paths include every stage, including completed and withdrawn records.
+export const RECRUIT_PATH_PAGES = Object.freeze([
+  Object.freeze({ id: 'referrals', label: 'Referrals', recruitingPath: 'genpop' }),
+  Object.freeze({ id: 'recruiters', label: 'Recruiters', recruitingPath: 'mass_recruiting' }),
+]);
+export const RECRUITS_CHILD_PAGES = Object.freeze([
+  ...RECRUIT_PATH_PAGES,
+  Object.freeze({ id: 'event-attendance', label: 'Event Attendance' }),
+]);
 // Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);
 // Preserve saved source routes; the Queues sidebar link embeds the combined Queue site.
@@ -66,7 +75,8 @@ export const QUEUE_PAGES = Object.freeze([
 // The sidebar link that stands for a page reached from another page: Add Recruits, Tasks, Follow up and the full
 // Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {
-  if (['add-recruits', 'event-attendance', 'tasks', 'follow-up'].includes(view)) return 'today';
+  if (['add-recruits', 'tasks', 'follow-up'].includes(view)) return 'today';
+  if (RECRUITS_CHILD_PAGES.some(page => page.id === view)) return 'recruits';
   if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
   if (view === 'call-analytics') return 'leaderboard';
   return view;
@@ -75,6 +85,7 @@ export function sidebarViewFor(view) {
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
+  if (RECRUIT_PATH_PAGES.some(page => page.id === value)) return { view: value };
   if (value === 'queue' || value === 'ringcx' || value === 'event-attendance') return { view: value };
   // Call Analytics was named Lead Data; saved links still open it.
   if (value === 'lead-data') return { view: 'call-analytics' };
@@ -100,6 +111,8 @@ export function stagePageForRecord(record) {
 }
 
 export function recordsForStagePage(records, view) {
+  const pathPage = RECRUIT_PATH_PAGES.find(page => page.id === view);
+  if (pathPage) return records.filter(record => record.recruitingPath === pathPage.recruitingPath);
   const page = stagePageForView(view);
   return page ? records.filter(record => record.stageId === page.stageId
     && (!page.recruitingPath || record.recruitingPath === page.recruitingPath)

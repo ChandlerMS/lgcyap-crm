@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readRecruitingData, normalizeRecruit, handleRecruitRequest as handleBoundary, RecruitingError } from '../lib/hubspot.mjs';
+import { readRecruitingData, recruitPathReadOptions, normalizeRecruit, handleRecruitRequest as handleBoundary, RecruitingError } from '../lib/hubspot.mjs';
 import { RECRUIT_PROPERTIES, PIPELINE_ID, PORTAL_ID } from '../lib/recruiting-config.mjs';
 
 const handleRecruitRequest = (request, options) => handleBoundary(request, { allowedOrigin: 'https://private.example', ...options });
@@ -310,4 +310,27 @@ test('read origin is pinned to configured application URL rather than a caller-s
   assert.equal((await handleRecruitRequest(forged, deps)).status, 403);
   assert.equal((await handleBoundary(request(), deps)).status, 403);
   assert.equal(calls, 0);
+});
+
+
+test('path reads select the exact path and continue beyond the dashboard slice with a fixed ID boundary', async () => {
+  let count=0;
+  const result=await readRecruitingData({accessToken:token,recruitingPath:'genpop',fetchImpl:async(url,init)=>{
+    const body=JSON.parse(init.body);const filters=body.filterGroups[0].filters;
+    assert.deepEqual(filters,[{propertyName:'hs_pipeline',operator:'EQ',value:PIPELINE_ID},{propertyName:'recruiting_path',operator:'EQ',value:'genpop'}]);
+    const rows=Array.from({length:100},(_,i)=>fixture(String(count*100+i+1),{recruiting_path:'genpop'}));count++;
+    return response(rows,1001,String(count*100));
+  }});
+  assert.equal(result.loadedCount,1000);assert.equal(result.continuation,'1000');
+  const more=await readRecruitingData({accessToken:token,recruitingPath:'genpop',afterId:result.continuation,fetchImpl:async(url,init)=>{
+    assert.deepEqual(JSON.parse(init.body).filterGroups[0].filters.at(-1),{propertyName:'hs_object_id',operator:'GT',value:'1000'});
+    return response([fixture('9001',{recruiting_path:'genpop',hs_pipeline_stage:'1416243218'})],1);
+  }});
+  assert.equal(more.recruits[0].id,'9001');assert.equal(more.partial,false);assert.equal(more.continuation,null);
+});
+
+test('path selectors and provider records cannot escape the fixed recruiting scope', async () => {
+  assert.deepEqual(recruitPathReadOptions('https://crm.invalid/api/recruits?path=referrals&after=123'),{recruitingPath:'genpop',afterId:'123'});
+  for(const query of ['path=constructor','path=referrals&after=bad','path=referrals&path=recruiters','after=123'])assert.throws(()=>recruitPathReadOptions('https://crm.invalid/api/recruits?'+query),{code:'INVALID_REQUEST'});
+  await assert.rejects(readRecruitingData({accessToken:token,recruitingPath:'genpop',fetchImpl:async()=>response([fixture('9',{recruiting_path:'mass_recruiting'})],1)}));
 });
