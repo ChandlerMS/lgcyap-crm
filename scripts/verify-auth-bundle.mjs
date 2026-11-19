@@ -16,5 +16,6 @@ const gmailChunks = await Promise.all(gmailTrace.files.filter(file => file.endsW
 const gmailBundle = gmailChunks.join('\n');
 assert.ok(gmailBundle.includes('CREATE TABLE IF NOT EXISTS gmail_connection'), 'Gmail connection schema must be bundled into its API function');
 assert.ok(gmailBundle.includes('CREATE TABLE IF NOT EXISTS gmail_draft_requests'), 'Gmail duplicate protection schema must be bundled into its API function');
+assert.ok(gmailBundle.includes('CREATE TABLE IF NOT EXISTS gmail_send_requests'), 'Gmail send duplicate protection schema must be bundled into its API function');
 assert.ok(!gmailBundle.includes('/_next/static/media/0017_gmail_drafts'), 'Gmail must not read a public SQL asset URL');
 console.log('Production Gmail bundle contains executable connection and draft request schema SQL.');

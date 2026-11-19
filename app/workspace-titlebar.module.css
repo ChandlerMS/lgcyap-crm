@@ -35,3 +35,8 @@
 
 /* Borderless title-bar controls retain their active and focus treatments. */
 .mode, .search input, .support a { border: 0; }
+
+.support { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.support a { position: relative; justify-content: center; width: 40px; height: 40px; padding: 8px; box-sizing: border-box; }
+.support .badge { position: absolute; top: -3px; right: -3px; font-size: 10px; }
+@media(max-width:720px) { .support { flex: 1 1 auto; }.support a { width: 36px; height: 36px; padding: 7px; } }

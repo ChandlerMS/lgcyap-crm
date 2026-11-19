@@ -31,8 +31,8 @@ export function leaderboardCallsRefreshDelay(now = Date.now()) {
 
 export function leaderboardMetrics(board) {
   return board === 'sp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
-    // The imported daily reports record "Number of Sales" and "Total Production", not annual premium.
-    : board === 'whatsapp' ? { first: 'sales', second: 'production', firstLabel: 'Sales', secondLabel: 'Total production' }
+    // Total Production in the imported reports is annual premium, confirmed by the report owner.
+    : board === 'whatsapp' ? { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     : { first: 'submitted', second: 'premium', firstLabel: 'Submitted', secondLabel: 'Submitted premium' };
 }
 
@@ -81,7 +81,7 @@ export function sourceLeaderboardValue(row, field) {
 /** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
 export function leaderboardSortFields(board) {
   const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : 'Calls';
-  return [{ field: 'production', label: keys.secondLabel }, ...(['shopper', 'sp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
+  return [{ field: 'production', label: keys.secondLabel }, ...(['shopper', 'sp', 'whatsapp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
 }
 
 /** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
@@ -124,7 +124,7 @@ export function leaderboardCsvCell(value) {
  */
 export function leaderboardCsv(rows, board) {
   const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
-  const sales = ['shopper', 'sp'].includes(board);
+  const sales = ['shopper', 'sp', 'whatsapp'].includes(board);
   const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
   const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];

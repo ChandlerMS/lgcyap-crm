@@ -18,7 +18,7 @@ test('Shopper and Standard vs Preferred show Sales before Calls with their own s
     const Leaderboard = require(`${process.cwd()}/${dir}/bundle.cjs`).default;
     globalThis.fetch = async (_url, options) => {
       const input = JSON.parse(options.body);
-      return Response.json({ ...input, status: 'available', source: 'Synthetic', partial: false, rows: Array.from({ length: input.board === 'shopper' ? 61 : 1 }, (_, index) => ({ name: `Agent ${String(index + 1).padStart(2, '0')}`, sales: 3, annualPremium: 1000, inboundCalls: 20, soldPerInboundLog: .15, submitted: 7, premium: 2000 - index, leads: 40, connectedCalls: 22, abandonedCalls: 2 })) });
+      return Response.json({ ...input, status: 'available', source: 'Synthetic', partial: false, rows: Array.from({ length: input.board === 'shopper' ? 61 : 1 }, (_, index) => ({ name: `Agent ${String(index + 1).padStart(2, '0')}`, sales: 3, production: 1000, annualPremium: 1000, inboundCalls: 20, soldPerInboundLog: .15, submitted: 7, premium: 2000 - index, leads: 40, connectedCalls: 22, abandonedCalls: 2 })) });
     };
     root = createRoot(document.getElementById('app'));
     const wait = () => new Promise(resolve => setTimeout(resolve, 30));
@@ -57,6 +57,24 @@ test('Shopper and Standard vs Preferred show Sales before Calls with their own s
     assert.match(agents()[0].textContent, /Agent 01/);
     assert.equal(pager().querySelector('select').value, '1');
     assert.ok([...document.querySelectorAll('button')].some(button => button.getAttribute('aria-label')?.startsWith('Sort by Sales')));
+    await act(async () => { root.render(createElement(Leaderboard, { key: 'whatsapp', initialBoard: 'whatsapp', onUnauthorized() { assert.fail('Unexpected sign-out'); } })); await wait(); });
+    await act(async () => { await wait(); });
+    assert.equal(document.querySelector('h1').textContent, 'WhatsApp Sales');
+    const views = document.querySelector('[aria-label="WhatsApp Sales views"]');
+    assert.deepEqual([...views.querySelectorAll('button')].map(button => button.textContent), ['All', 'Standard vs Preferred']);
+    const ranks = document.querySelector('[aria-label="Rank by"]');
+    assert.deepEqual([...ranks.querySelectorAll('button')].map(button => button.textContent), ['Policies sold', 'Annual premium']);
+    assert.deepEqual([...document.querySelector('[aria-label="Leaderboard period"]').querySelectorAll('button')].map(button => button.textContent), ['Daily', 'Weekly', 'Monthly', 'Custom']);
+    assert.doesNotMatch(document.body.textContent, /Total production/);
+    assert.match(document.querySelector('ol').textContent, /Sales: 3/);
+    await act(async () => { views.querySelectorAll('button')[1].click(); await wait(); });
+    await act(async () => { await wait(); });
+    assert.equal(views.querySelectorAll('button')[1].getAttribute('aria-pressed'), 'true');
+    assert.match(document.querySelector('ol').textContent, /Total Calls Connected/);
+    await act(async () => { views.querySelectorAll('button')[0].click(); await wait(); });
+    await act(async () => { await wait(); });
+    assert.equal(views.querySelectorAll('button')[0].getAttribute('aria-pressed'), 'true');
+
   } finally {
     if (root) await act(async () => root.unmount());
     globalThis.window = before.window; globalThis.document = before.document; globalThis.fetch = before.fetch; globalThis.IS_REACT_ACT_ENVIRONMENT = before.flag;

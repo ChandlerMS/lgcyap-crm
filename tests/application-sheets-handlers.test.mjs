@@ -27,8 +27,10 @@ test('cron and notification authorization fail closed and do not initialize the 
   const url = `${env.BETTER_AUTH_URL}/api/cron/application-sheets`;
   assert.equal((await handleApplicationSheetsJob(new Request(url), { env, getDb })).status, 401);
   const valid = new Request(url, { headers: { Authorization: `Bearer ${env.CRON_SECRET}` } });
-  const result = await handleApplicationSheetsJob(valid, { env, getDb: async () => ({}), sync: async () => ({ status: 'synced' }) });
+  let scheduled;
+  const result = await handleApplicationSheetsJob(valid, { env, getDb: async () => ({}), sync: async options => { scheduled = options.scheduled; return { status: 'synced' }; } });
   assert.equal((await result.json()).status, 'synced');
+  assert.equal(scheduled, true, 'cron calls run only as the once-a-morning job');
   const notify = new Request(`${env.BETTER_AUTH_URL}/api/applications/sheets/notify`, { method: 'POST', headers: { Authorization: `Bearer ${env.CRON_SECRET}` } });
   assert.equal((await handleApplicationSheetsJob(notify, { env, getDb, notification: true })).status, 401);
   const failure = await handleApplicationSheetsJob(valid, { env, getDb: async () => ({}), sync: async () => { throw new Error('secret-provider-body'); } });
@@ -41,7 +43,7 @@ test('connection status is owner-only and non-owner reads do not initialize the 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { visible: false });
 });
-test('retired Sign-Ins consent returns to Event Attendance without scheduling an updater', async () => {
+test('Google consent started from Recruits returns to Event Attendance and starts its own first sync', async () => {
   const { handleApplicationSheetsCallback } = await import('../lib/application-sheets-handlers.mjs');
   let applications = 0, signIns = 0; const pending = [];
   const response = await handleApplicationSheetsCallback(new Request(`${env.BETTER_AUTH_URL}/api/auth/callback/google?state=application-sheets.synthetic&code=synthetic`), {
@@ -50,7 +52,19 @@ test('retired Sign-Ins consent returns to Event Attendance without scheduling an
   });
   await Promise.all(pending);
   assert.equal(new URL(response.headers.get('location')).hash, '#event-attendance');
+  assert.equal(new URL(response.headers.get('location')).searchParams.get('application_sheets'), 'connected');
   assert.equal(applications, 0);
-  assert.equal(signIns, 0);
-  assert.equal(new URL(response.headers.get('location')).searchParams.get('application_sheets'), 'error');
+  assert.equal(signIns, 1);
+});
+test('people the Sheets are shared with see the link and status but cannot connect or sync', async () => {
+  const { handleApplicationSheets } = await import('../lib/application-sheets-handlers.mjs');
+  const viewerEnv = { ...env, RECRUITING_EDITOR_EMAILS: `${env.RECRUITING_EDITOR_EMAILS},sarah@lgcyap.com` };
+  const sarah = async () => ({ userId: 'sarah', email: 'Sarah@lgcyap.com' });
+  const status = async ({ user }) => ({ canConnect: user.email === 'chandler@lgcyap.com', current: { title: '11-26 Recruits' } });
+  const response = await handleApplicationSheets(new Request(`${viewerEnv.BETTER_AUTH_URL}/api/event-attendance/sheets`), { env: viewerEnv, getUser: sarah, getDb: async () => ({}), status, report: 'sign-ins' });
+  const body = await response.json();
+  assert.equal(body.visible, true);
+  assert.equal(body.canConnect, false);
+  assert.equal(body.current.title, '11-26 Recruits');
+  for (const action of ['connect', 'sync']) assert.equal((await handleApplicationSheets(request(action), { env: viewerEnv, getUser: sarah, getDb: () => { throw new Error('No access'); } })).status, 403);
 });

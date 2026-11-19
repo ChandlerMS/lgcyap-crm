@@ -22,7 +22,7 @@
 .versionOne :global(.topbar) { top: var(--crm-titlebar-height, 56px); }
 @media (max-width: 720px) { .bar { gap: 12px; padding: 0 12px; } .brand span, .note { display: none; } .tabs { margin-left: auto; } .tabs a { min-width: 90px; padding: 0 12px; } }
 
-.withControls { height: auto; min-height: 56px; gap: 16px; padding-top: 6px; padding-bottom: 6px; flex-wrap: wrap; }
+.withControls { height: auto; min-height: 56px; gap: 16px; padding-top: 6px; padding-bottom: 6px; padding-right: 54px; flex-wrap: wrap; }
 .withControls .tabs { align-self: stretch; min-height: 44px; }.withControls .tabs a { min-width: 84px; padding: 0 10px; }
 .controlHost { flex: 1; min-width: 480px; }
 @media(max-width:1300px) { .withControls .brand span { display: none; }.withControls { gap: 12px; }.withControls .brand { font-size: 12px; letter-spacing: .06em; } }

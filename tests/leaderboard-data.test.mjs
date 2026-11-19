@@ -121,8 +121,8 @@ test('ranked rows re-sort by name, calls, close rate and production per board, k
   assert.deepEqual(shopper.map(row => row.name), ['B', 'A']);
   assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Sales', 'Calls', 'Close rate', 'Total Calls Connected', 'Total Calls Abandoned', 'Alphabetical']);
   assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Submitted premium', 'Leads', 'Close rate', 'Alphabetical']);
-  assert.deepEqual(leaderboardSortFields('whatsapp').map(option => option.field), ['production', 'calls', 'closeRate', 'name']);
-  assert.equal(leaderboardSortFields('whatsapp')[0].label, 'Total production');
+  assert.deepEqual(leaderboardSortFields('whatsapp').map(option => option.field), ['production', 'sales', 'calls', 'closeRate', 'name']);
+  assert.equal(leaderboardSortFields('whatsapp')[0].label, 'Annual premium');
 });
 
 import { LEADERBOARD_BOARDS, leaderboardCsv, leaderboardCsvFilename } from '../app/leaderboard-data.mjs';

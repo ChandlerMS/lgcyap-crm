@@ -5,7 +5,7 @@ const signIn = (id, at, extra = {}) => ({ noteId: id, ticketId: '99', name: '=Sy
 test('Sign-Ins has attendance columns and preserves repeated visits in the correct Eastern month/week', async () => {
   const { buildSignInWorkbooks } = await import('../lib/sign-in-sheets-layout.mjs');
   const books = buildSignInWorkbooks({ partial: false, visits: [signIn('2', '2026-12-01T05:01:00Z'), signIn('1', '2026-12-01T04:59:00Z', { imported: true })], attendees: [{ ticketId: '99', signIns: 2, firstDay: '2026-11-30', lastDay: '2026-12-01', appliedAt: '2026-12-01T06:00:00Z' }] }, new Date('2026-12-01T14:00:00Z'));
-  assert.deepEqual(books.map(book => book.title), ['11-26 Sign-Ins', '12-26 Sign-Ins']);
+  assert.deepEqual(books.map(book => book.title), ['11-26 Recruits', '12-26 Recruits']);
   const rows = books[0].tabs[5].values, headers = rows[0];
   for (const label of ['Name', 'Phone', 'Email', 'Office', 'Signed in (Eastern)', 'How they heard', 'License', 'Sign-in source', 'Current recruiting stage', 'HubSpot recruit']) assert.ok(headers.includes(label));
   assert.equal(rows[1][headers.indexOf('Name')], '=Synthetic');

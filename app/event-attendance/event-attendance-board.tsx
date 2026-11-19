@@ -193,22 +193,24 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   const byDate = (rows: Attendee[]) => dateActive ? rows.filter(person => (visitsByTicket.get(person.ticketId)?.map(visit => visit.day) ?? [person.firstDay, person.lastDay]).some(onDate)) : rows;
   const dateNote = !dateActive ? '' : signedOn !== 'range' ? ` on ${dayLabel(signedOn)}` : from && to ? ` from ${dayLabel(from)} to ${dayLabel(to)}` : from ? ` on or after ${dayLabel(from)}` : ` on or before ${dayLabel(to)}`;
   const clearDate = () => { setSignedOn(''); setFrom(''); setTo(''); };
-  const dateFilter = <div className={styles.dateFilter} role="group" aria-label="Filter by sign-in date">
+  const dateControls = <>
     <label><span>Signed in</span><select value={signedOn} onChange={event => setSignedOn(event.target.value)}><option value="">Any date</option>{signInDays.map(day => <option key={day} value={day}>{dayLabel(day)}</option>)}<option value="range">Date range…</option></select></label>
-    {signedOn === 'range' && <>
-      <label><span>From</span><input type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
-      <label><span>To</span><input type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
-    </>}
-    {dateActive && <button type="button" className={styles.linkButton} onClick={clearDate}>Clear date</button>}
-  </div>;
+    <div className={styles.dateRangeFields}>
+      <label><span>From</span><input type="date" disabled={signedOn !== 'range'} value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
+      <label><span>To</span><input type="date" disabled={signedOn !== 'range'} value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
+    <button type="button" disabled={!dateActive} className={styles.linkButton} onClick={clearDate}>Clear date</button>
+    </div>
+  </>;
+  const dateFilter = <div className={styles.dateFilter} role="group" aria-label="Filter by sign-in date">{dateControls}</div>;
   const signedInFilters = { office: signedInOffice, name: signedInName, review: signedInReview, sort: signedInSort };
-  const signedInControls = <>{dateFilter}<div className={styles.dateFilter} role="group" aria-label="Filter and sort signed-in recruits">
+  const signedInControls = <div className={`${styles.dateFilter} ${styles.peopleFilters}`} role="group" aria-label="Filter and sort signed-in recruits">
+    {dateControls}
     <label><span>Office</span><select value={signedInOffice} onChange={event => setSignedInOffice(event.target.value)}><option value="all">All offices</option>{Array.from(new Set(attendees.map(person => person.office))).sort().map(office => <option key={office} value={office}>{officeLabel(office)}</option>)}</select></label>
     <label><span>Name</span><input type="search" maxLength={200} placeholder="Search names" value={signedInName} onChange={event => setSignedInName(event.target.value)} /></label>
     <label><span>Approval status</span><select value={signedInReview} onChange={event => setSignedInReview(event.target.value)}><option value="all">All statuses</option><option value="approved">Approved</option><option value="denied">Denied</option><option value="pending">Not reviewed</option></select></label>
     <label><span>Sort by</span><select value={signedInSort} onChange={event => setSignedInSort(event.target.value)}><option value="original">Default order</option><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="office">Office</option></select></label>
     <button type="button" className={styles.linkButton} onClick={() => { clearDate(); setSignedInOffice('all'); setSignedInName(''); setSignedInReview('all'); setSignedInSort('original'); }}>Clear filters</button>
-  </div></>;
+  </div>;
   const dayRows = pageWindow(data?.days.length ?? 0, dayPage, DAYS_PER_PAGE);
   const statusText = error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading';
   const hint = <>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</>;
@@ -221,7 +223,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   useExpandCollapse(expanded => { if (!expanded) { setOpenTile(null); setOpenDay(null); } });
   const tileList = () => {
     const dated = dateActive ? 'No one in this list signed in on the chosen dates.' : '';
-    if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={filterSignedIn(byDate(attendees), signedInFilters, review.reviews, Boolean(data?.reviewComplete))} columns={attendeeColumns} googleExport={{ ...signedInFilters, startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={signedInControls} empty={attendees.length ? 'No signed-in recruits match these filters.' : 'No one has signed in yet.'} />;
+    if (openTile === 'signedIn') return <><PeopleTable title={`Everyone who signed in${dateNote}`} rows={filterSignedIn(byDate(attendees), signedInFilters, review.reviews, Boolean(data?.reviewComplete))} columns={attendeeColumns} googleExport={{ ...signedInFilters, startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={signedInControls} empty={attendees.length ? 'No signed-in recruits match these filters.' : 'No one has signed in yet.'} /></>;
     if (openTile === 'applied') return <PeopleTable title={`Signed in${dateNote} and applied online`} rows={byDate(attendees.filter(person => person.appliedAt))} columns={appliedColumns} actions={reviewActions} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has applied online yet.'} />;
     if (openTile === 'hired') return <PeopleTable title={`Signed in${dateNote} and reached Completed`} rows={byDate(attendees.filter(person => person.stageId === COMPLETED_STAGE_ID))} columns={hiredColumns} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has reached Completed yet.'} />;
     if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications yet today." /></>;
@@ -239,8 +241,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     {busy && !data ? <p>Loading recruits…</p> : data && <AttendanceDetails selection={selection} visits={visits} applicants={applicants} canAdd={canAddActivity ?? Boolean(data.canReview)} />}
   </main>;
   return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
-    {!section && <ExpandCollapseControls />}
-    {!section && <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
+    {!section && <div className={styles.topRow}><ExpandCollapseControls /><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
     <header className={styles.header} data-section-heading>
       <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<div className="section-title-controls"><Title id="event-attendance-title">{section ? <a className="panel-title-link" href="#event-attendance">Event Attendance</a> : "Event Attendance"}</Title><SectionToggle /></div><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists{section && <> · <span role="status" className={error ? styles.updatedWarning : styles.updated}>{statusText}</span></>}</p></div></div>
       <div className={styles.controls}>

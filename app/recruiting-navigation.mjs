@@ -77,14 +77,14 @@ export const RECRUITS_CHILD_PAGES = Object.freeze([
   ...RECRUIT_PORTAL_PAGES,
   Object.freeze({ id: 'training-classes', label: 'Training Classes' }),
 ]);
-// The hiring-event sites, first in the Recruits flyout. They refuse to be framed (they take personal details and a photo ID),
-// so each opens in its own tab, which also suits putting the QR screen on a TV.
+// The presentation leads the flyout and opens inside the CRM. Personal sign-in
+// remains a separate site because it collects attendee details and a photo ID.
 export const RECRUITS_SITE_LINKS = Object.freeze([
-  Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/' }),
-  Object.freeze({ id: 'sign-in-qr', label: 'QR Code Sign-in', href: 'https://signinqr.lgcyap.com/' }),
+  Object.freeze({ id: 'qr-code-presentation', label: 'QR Code Presentation', href: '#qr-code-presentation', embedded: true }),
+  Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/', embedded: false }),
 ]);
 // Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
-export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);
+export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' }), Object.freeze({ id: 'whatsapp-sales', label: 'WhatsApp Sales', icon: 'chart' })]);
 // Preserve saved source routes; the Queues sidebar link embeds the combined Queue site.
 export const QUEUE_PAGES = Object.freeze([
   { id: 'queue', label: 'Shopper', icon: 'phone', source: 'shopper' },
@@ -100,12 +100,14 @@ export function sidebarViewFor(view) {
   if (['add-recruits', ...DASHBOARD_PAGES].includes(view)) return 'today';
   if (RECRUITS_CHILD_PAGES.some(page => page.id === view)) return 'recruits';
   if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
-  if (view === 'call-analytics') return 'leaderboard';
+  if (view === 'call-analytics' || view === 'whatsapp-sales') return 'leaderboard';
   return view;
 }
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
+  // Gmail now uses the native Email workspace, including saved sidebar links.
+  if (value === 'gmail') return { view: 'email' };
   if (externalWorkspacePage(value)) return { view: value };
   if (value === 'calls/shopper' || value === 'calls/shopper-dispositions' || value === 'calls/standard' || value === 'calls/standard-dispositions') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };

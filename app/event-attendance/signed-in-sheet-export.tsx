@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type ExportResult = { url: string; count: number };
-export default function SignedInSheetExport({ count, filters, disabled }: { count: number; filters: { startDate: string; endDate: string; office?: string; name?: string; review?: string; sort?: string }; disabled?: boolean }) {
+export default function SignedInSheetExport({ count, filters, disabled, feedbackTarget }: { feedbackTarget: HTMLElement | null; count: number; filters: { startDate: string; endDate: string; office?: string; name?: string; review?: string; sort?: string }; disabled?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState<ExportResult | null>(null);
@@ -39,10 +40,11 @@ export default function SignedInSheetExport({ count, filters, disabled }: { coun
       connection.close(); stop(); setError(problem instanceof Error ? problem.message : 'The export could not start.');
     }
   };
-  return <div className="application-export">
+  return <>
     <button type="button" disabled={disabled || busy || !count} onClick={() => void exportSheet()}>{busy ? 'Exporting…' : 'Export to Google Sheets'}</button>
-    {busy && <p role="status">Complete the Google Drive connection in the popup using your CRM Google account.</p>}
+    {feedbackTarget && createPortal(<>{busy && <p role="status">Complete the Google Drive connection in the popup using your CRM Google account.</p>}
     {error && <p role="alert">{error}</p>}
     {saved && <p role="status">Saved {saved.count} recruits. <a href={saved.url} target="_blank" rel="noopener noreferrer">Open Google Sheet</a></p>}
-  </div>;
+    </>, feedbackTarget)}
+  </>;
 }

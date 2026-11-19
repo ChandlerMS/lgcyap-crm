@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADMIN_PAGES, AGENT_PORTAL_PAGES, GOOGLE_WORKSPACE_PAGES, RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
+import { ADMIN_PAGES, AGENT_PORTAL_PAGES, GOOGLE_WORKSPACE_PAGES, RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE, QR_PRESENTATION_PAGE, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
 import { resolveWorkspaceRoute, sidebarViewFor } from '../app/recruiting-navigation.mjs';
 
 test('Admin and Agents keep each requested destination and distinguish RingEX from RingCX', () => {
@@ -19,8 +19,8 @@ test('Admin and Agents keep each requested destination and distinguish RingEX fr
   assert.notEqual(ADMIN_PAGES[1].detail, ADMIN_PAGES[2].detail);
 });
 test('every embedded route resolves independently and highlights its parent menu', () => {
-  for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE]) {
-    assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id);
+  for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE, QR_PRESENTATION_PAGE]) {
+    assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id === 'gmail' ? 'email' : page.id);
     assert.equal(externalWorkspacePage(page.id), page);
     assert.equal(sidebarViewFor(page.id), page.group === 'agents' ? 'contract-agents' : page.group);
   }
@@ -38,12 +38,17 @@ test('each console renders its exact iframe and a working external fallback', as
   try {
     await build({ entryPoints: ['app/external-workspace.tsx'], outfile: `${dir}/page.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*'], logLevel: 'silent' });
     const Page = createRequire(import.meta.url)(`${process.cwd()}/${dir}/page.cjs`).default;
-    for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE]) {
+    for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE, QR_PRESENTATION_PAGE]) {
       const html = renderToStaticMarkup(createElement(Page, { view: page.id }));
       assert.ok(html.includes(`src="${page.url}"`));
       assert.ok(html.includes(`href="${page.url}" target="_blank" rel="noopener noreferrer"`));
       assert.ok(html.includes(`title="${page.label} · ${page.detail}"`));
-      if (page.id === "lead-payments") assert.match(html, /<div class="shopper-embed lead-payments-embed"><iframe[^>]*class="shopper-embed-frame"/);
+      if (page.id === "qr-code-presentation") {
+        assert.match(html, /class="qr-presentation-frame"/);
+        assert.match(html, /allow="fullscreen"/);
+        assert.ok(html.includes('src="https://comp.lgcyagent.com/#1."'));
+      }
+      else if (page.id === "lead-payments") assert.match(html, /<div class="shopper-embed lead-payments-embed"><iframe[^>]*class="shopper-embed-frame"/);
       else if (page.id === "knowledge-center") assert.match(html, /<div class="shopper-embed knowledge-center-embed"><iframe[^>]*class="shopper-embed-frame"/);
       else if (page.id === "contracting-portal") assert.match(html, /<div class="shopper-embed"><iframe[^>]*class="shopper-embed-frame"/);
       else assert.match(html, /class="policytek-frame"/);

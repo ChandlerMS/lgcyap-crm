@@ -30,7 +30,7 @@ Migration `0006_whatsapp_sales.sql` is additive. Reverse it with
 
 ## Labels and limits
 
-- "Total production" is the reports' own figure, not HubSpot annual premium.
+- The report owner confirmed that "Total Production" is annual premium. The WhatsApp Sales view displays it as "Annual premium" and "Number of Sales" as "Policies sold"; imported values are unchanged.
 - On the page, "Calls" = connected (answered) inbound queue calls and "Close" = queue sold ÷ those calls, both from
   the dialer report. Close is not derived from sales rows. Other boards keep their own labels (HubSpot shows inbound
   call logs and sold/log ratio, which are not answered calls or a close rate). Unmapped dialer seats count in totals but in no agent's row.
@@ -41,3 +41,12 @@ Migration `0006_whatsapp_sales.sql` is additive. Reverse it with
 All 29 monthly reports (2024-07 to 2026-11, 38,489 agent-days, 6,790 queue rows) were validated. Imported into an
 in-memory database, every one of 739 days matched the Total row Excel computed on that day's sheet for sales,
 production (to the cent), connected calls and queue sold. Tests: `tests/whatsapp-sales.test.mjs`.
+
+## Leaderboard navigation
+
+WhatsApp Sales has its own top-level tab beside Leaderboard and Call Analytics.
+Its All view reads the combined imported reports; Standard vs Preferred uses the
+existing HubSpot Standard vs Preferred leaderboard. The imported reports have no
+Shopper/Standard classification, so these are explicitly labeled data sources,
+not a derived split of the WhatsApp sales rows. Daily, Weekly, Monthly and Custom
+periods and the policies-sold/annual-premium ranking controls remain available.

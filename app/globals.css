@@ -1055,7 +1055,11 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 
 /* Keep each title, count, add control and disclosure together, in reading order. */
 .expansion-scope { display: contents; }
-.expand-collapse-controls { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 18px; }
+.expand-collapse-controls { display: flex; gap: 8px; justify-content: flex-start; margin-bottom: 18px; }
+.expand-collapse-arrow { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid var(--gold); border-radius: 6px; background: transparent; color: var(--gold); cursor: pointer; }
+.expand-collapse-arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.expand-collapse-arrow:hover { background: #d5ad2420; }
+.expand-collapse-arrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .section-title-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .section-title-controls > :is(h1, h2, h3) { margin-bottom: 0; }
 .follow-up-heading, .summary-card-head { justify-content: flex-start; }
@@ -1134,6 +1138,23 @@ main.content.sales-calls-content { padding-top: 16px; }
 .inbox-thread-controls { flex-shrink: 0; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
 .inbox-thread-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
+/* A CSS workspace view preserves mounted forms, embedded sessions, and sidebar preferences. */
+.workspace-view-control { position: fixed; z-index: 100; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid #806a35; border-radius: 6px; background: #14130f; color: var(--gold); box-shadow: 0 2px 8px #0005; cursor: pointer; }
+.workspace-view-control:hover { background: #302714; border-color: var(--gold); }
+.workspace-view-control:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+html[data-workspace-fullscreen="true"] { --crm-titlebar-height: 0px !important; }
+html[data-workspace-fullscreen="true"] [data-workspace-chrome="title"],
+html[data-workspace-fullscreen="true"] .app-shell .sidebar,
+html[data-workspace-fullscreen="true"] .app-shell .topbar,
+html[data-workspace-fullscreen="true"] .app-shell .sidebar-fab,
+html[data-workspace-fullscreen="true"] .app-shell .mobile-backdrop,
+html[data-workspace-fullscreen="true"] .workspace > .source-bar { display: none; }
+html[data-workspace-fullscreen="true"] .app-shell { min-height: 100dvh; }
+html[data-workspace-fullscreen="true"] .workspace { margin-left: 0; padding-top: 0; }
+html[data-workspace-fullscreen="true"] body:has(.app-shell) .floating-actions,
+html[data-workspace-fullscreen="true"] body:has(.app-shell) .support-panel { left: max(16px, env(safe-area-inset-left)); }
+html[data-workspace-fullscreen="true"] body:has(.app-shell) .support-panel { max-width: calc(100vw - 32px); }
+
 /* Email keeps mailbox status separate from recipient and compose actions. */
 .email-panel-heading, .email-panel-actions, .email-connection-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .email-panel-heading, .email-connection-heading { justify-content: space-between; }
@@ -1178,3 +1199,52 @@ main.content.sales-calls-content { padding-top: 16px; }
 button.gold-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;color:var(--gold,#e3bf3b);font-size:24px;line-height:1;cursor:pointer}
 button.gold-close:hover{background:rgba(227,191,59,.1)}
 button.gold-close:focus-visible{outline:2px solid var(--gold,#e3bf3b);outline-offset:2px}
+
+/* Inline workspace status shares the dashboard disclosure controls without a tab bar. */
+.source-bar { border: 0; background: transparent; }
+.dashboard-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-bottom: 18px; }
+.dashboard-toolbar .source-bar { flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-start; padding: 0; gap: 8px 16px; }
+.dashboard-toolbar .source-summary { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.dashboard-toolbar .updated-at { flex-basis: auto; }
+.dashboard-toolbar .expand-collapse-controls { flex-shrink: 0; order: -1; margin: 0; }
+/* In-app Gmail mailbox and reviewed sending. */
+.gmail-compose-dialog .gmail-compose-connection p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.gmail-send-receipt { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px; border: 1px solid var(--gold, #b99b55); border-radius: 10px; }
+.gmail-send-receipt h3, .gmail-send-receipt p { flex: 1 1 100%; margin: 0; overflow-wrap: anywhere; }
+.gmail-inapp-email .gmail-email-actions { margin: 14px 0; }
+.gmail-mailbox-toolbar, .gmail-mailbox-toolbar [role="group"], .gmail-mailbox-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.gmail-mailbox-toolbar { justify-content: space-between; margin-bottom: 16px; }
+.gmail-mailbox-toolbar h3 { margin: 0; overflow-wrap: anywhere; }
+.gmail-message-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line, #444); border-radius: 10px; overflow: hidden; }
+.gmail-message-list li + li { border-top: 1px solid var(--line, #444); }
+.gmail-message-row { width: 100%; display: grid; grid-template-columns: minmax(130px, 1fr) minmax(150px, 2fr) auto; gap: 8px 16px; padding: 15px 16px; text-align: left; border: 0; color: var(--text, #eee); background: var(--panel, #17191f); cursor: pointer; font: inherit; font-size: 13px; }
+.gmail-message-row:hover, .gmail-message-row.is-selected { background: #b99b5514; }
+.gmail-message-row:focus-visible { outline: 2px solid var(--gold, #b99b55); outline-offset: -3px; }
+.gmail-message-row.is-unread .gmail-message-subject { font-weight: 700; }
+.gmail-message-correspondent, .gmail-message-subject, .gmail-message-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gmail-message-row time, .gmail-message-snippet { color: var(--muted, #aaa); font-size: 12px; }
+.gmail-message-snippet { grid-column: 1 / -1; }
+.gmail-mailbox-pager { justify-content: flex-end; margin: 14px 0 20px; font-size: 13px; }
+.gmail-message-reader { border: 1px solid var(--line, #444); border-radius: 10px; padding: 20px; margin-top: 20px; }
+.gmail-message-reader dl { display: grid; gap: 10px; font-size: 13px; margin: 0 0 16px; }
+.gmail-message-reader dl > div { display: grid; grid-template-columns: 45px 1fr; gap: 12px; }
+.gmail-message-reader dt { color: var(--muted, #aaa); }
+.gmail-message-reader dd { margin: 0; overflow-wrap: anywhere; }
+.gmail-message-reader iframe { display: block; width: 100%; height: min(640px, 65dvh); min-height: 320px; margin-top: 16px; border: 1px solid var(--line, #444); border-radius: 8px; background: white; }
+.gmail-message-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; font-size: 14px; }
+@media (max-width: 680px) { .gmail-message-row { grid-template-columns: minmax(0, 1fr) auto; } .gmail-message-subject { grid-column: 1 / -1; grid-row: 2; } .gmail-message-reader { padding: 14px; } .gmail-mailbox-pager { justify-content: center; } }
+
+/* Presentation keeps the site's own responsive slide layout at its natural zoom. */
+main.content:has(.qr-presentation-workspace) { max-width: none; padding: 12px 16px 16px; }
+main.content:has(.qr-presentation-workspace) > .dashboard-back-row { margin-bottom: 12px; }
+.qr-presentation-workspace { display: flex; flex-direction: column; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 150px); min-height: 600px; }
+.qr-presentation-heading { align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.qr-presentation-heading .page-title { font-size: 24px; margin-bottom: 0; }
+.qr-presentation-heading .subheading { display: none; }
+.qr-presentation-embed { flex: 1; min-height: 0; width: 100%; border-radius: 8px; overflow: hidden; background: #0a0a0b; }
+.qr-presentation-frame { display: block; width: 100%; height: 100%; border: 0; }
+html[data-workspace-fullscreen="true"] main.content:has(.qr-presentation-workspace) { padding: 0; }
+html[data-workspace-fullscreen="true"] main.content:has(.qr-presentation-workspace) > .dashboard-back-row,
+html[data-workspace-fullscreen="true"] .qr-presentation-heading { display: none; }
+html[data-workspace-fullscreen="true"] .qr-presentation-workspace { height: 100dvh; min-height: 0; }
+html[data-workspace-fullscreen="true"] .qr-presentation-embed { border-radius: 0; }
