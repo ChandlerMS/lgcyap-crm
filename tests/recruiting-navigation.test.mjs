@@ -175,7 +175,7 @@ test('Recruits path pages include every matching stage without mixing paths or i
   ];
   assert.deepEqual(recordsForStagePage(records,'referrals').map(r=>r.id),['1','3','5']);
   assert.deepEqual(recordsForStagePage(records,'recruiters').map(r=>r.id),['2','4']);
-  for(const view of ['referrals','recruiters','event-attendance']) {
+  for(const view of ['referrals','recruiters','event-attendance','applications']) {
     assert.deepEqual(resolveWorkspaceRoute('#'+view),{view});
     assert.equal(sidebarViewFor(view),'recruits');
   }
