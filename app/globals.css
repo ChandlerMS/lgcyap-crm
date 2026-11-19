@@ -1150,3 +1150,17 @@ main.content.sales-calls-content { padding-top: 16px; }
 .email-connection-card p { font-size: 13px; line-height: 1.7; max-width: 75ch; }
 .email-connection-card > .text-link { margin-top: 14px; }
 @media (max-width: 720px) { .email-connection-card dl { grid-template-columns: 1fr; gap: 14px; } .email-panel-heading { align-items: flex-start; } .email-panel-actions { width: 100%; } .email-view-tabs > .btn { flex: 1 1 160px; } }
+
+/* Gmail draft composition keeps the reviewed message and provider result visible. */
+.gmail-compose-dialog .gmail-draft-connection p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.gmail-email-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.gmail-offer-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.gmail-offer-fields:empty { display: none; }
+.gmail-complete-preview { padding-top: 18px; border-top: 1px solid var(--line, #444); }
+.gmail-complete-preview > p, .gmail-draft-receipt > p { overflow-wrap: anywhere; }
+.gmail-complete-preview iframe { height: min(640px, 65dvh); min-height: 320px; }
+.gmail-draft-receipt { padding: 18px; border: 1px solid var(--gold, #b99b55); border-radius: 10px; }
+.gmail-draft-receipt h3 { margin-top: 0; }
+.gmail-native-email .gmail-email-actions { margin: 16px 0; }
+.gmail-compose-dialog fieldset:disabled { opacity: .7; }
+@media (max-width: 600px) { .gmail-email-actions > .btn { flex: 1 1 180px; text-align: center; } }

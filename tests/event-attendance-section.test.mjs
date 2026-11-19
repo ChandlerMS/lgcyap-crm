@@ -116,7 +116,7 @@ test('Event Attendance emails open New Email with the templates, names take a ho
     const inWorkspace = renderToStaticMarkup(createElement(RecruitEmailProvider, { recruits: [], disabled: false }, table()));
     assert.match(inWorkspace, /<button type="button" class="[^"]*" title="Write an email to Pat Example QA with your templates">pat@example\.com<span class="sr-only"> \(opens New Email\)<\/span><\/button>/);
     assert.match(inWorkspace, /<a href="mailto:sam@example\.com">sam@example\.com<\/a>/);
-    assert.match(inWorkspace, /<dialog class="email-dialog"/);
+    assert.match(inWorkspace, /<dialog class="email-dialog(?: [^"]*)?"/);
     // Without the workspace's email (demo data), every address stays a mail link.
     assert.match(renderToStaticMarkup(table()), /<a href="mailto:pat@example\.com">pat@example\.com<\/a>/);
 

@@ -21,7 +21,7 @@ test('Email composes through the existing provider and compact Inbox retains ref
     await writeFile(`${dir}/entry.tsx`, `export {default as Email} from '../../app/recruit-email-panel'; export {RecruitEmailProvider} from '../../app/recruit-email'; export {default as Inbox} from '../../app/inbox-workspace'; export {default as HubSpotWorkspace} from '../../app/hubspot-workspace'; export {DashboardSection} from '../../app/dashboard-section';`);
     await build({ entryPoints: [`${dir}/entry.tsx`], outfile: `${dir}/bundle.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*', 'react-dom', 'react-dom/*'], loader: { '.css': 'empty' }, logLevel: 'silent' });
     const { Email, RecruitEmailProvider, Inbox, DashboardSection, HubSpotWorkspace } = require(`${process.cwd()}/${dir}/bundle.cjs`);
-    globalThis.fetch = async (url, options) => { if (url === '/api/email?connection=1') return Response.json({ canRead: false }); requests.push({ url, body: JSON.parse(options.body) }); if (url === '/api/recruit-email') return Response.json({ recipient: { name: 'Alex', email: 'alex@example.test' }, contactUrl: 'https://app.hubspot.com/contacts/50894788/contact/123', templates: [] }); return Response.json({ status: 'available', tool: 'inbox', records: [], complete: true, continuation: null }); };
+    globalThis.fetch = async (url, options = {}) => { if (url === '/api/gmail') return Response.json({ available: true, connected: false, email: 'staff@example.test', inboxUrl: 'https://mail.google.com/mail/?authuser=staff%40example.test#inbox', draftsUrl: 'https://mail.google.com/mail/?authuser=staff%40example.test#drafts' }); const body = JSON.parse(options.body); requests.push({ url, body }); if (url === '/api/recruit-email') return Response.json(body.action === 'status' ? { sender: 'staff@example.test', available: true, templates: [] } : { recipient: { name: 'Alex', email: 'alex@example.test' }, templates: [] }); return Response.json({ status: 'available', tool: 'inbox', records: [], complete: true, continuation: null }); };
     let refreshed = 0;
     root = createRoot(document.getElementById('app'));
     await act(async () => root.render(h(RecruitEmailProvider, { recruits: [{ id: '123', name: 'Alex', email: 'alex@example.test' }], disabled: false }, h(DashboardSection, { id: 'email', label: 'Email' }, h(Email, { recruits: [{ id: '123', name: 'Alex', email: 'alex@example.test' }, { id: 'demo', name: 'Test', email: 'test@example.test', isDemo: true }], onRefresh: () => refreshed++ })))));
@@ -35,10 +35,11 @@ test('Email composes through the existing provider and compact Inbox retains ref
     const compose = button('New Email'); assert.ok(compose.classList.contains('summary-add'));
     assert.equal(compose.querySelector('[aria-hidden="true"]').textContent, '+');
     assert.equal(compose.nextElementSibling.getAttribute('aria-label'), 'Collapse Email');
-    const emailNative = [...document.querySelectorAll('[data-section-heading] a')].find(link => link.textContent.startsWith('Open in HubSpot'));
+    assert.equal([...document.querySelectorAll('[data-section-heading] a')].some(link => link.textContent.startsWith('Open Gmail')), false, 'native Gmail access uses the account-bound inbox link in the connection card');
+    const emailNative = document.querySelector('[aria-label="Gmail connection"] a[href$="#inbox"]');
     assert.ok(emailNative);
+    assert.match(emailNative.href, /authuser=staff%40example.test/);
     assert.equal(emailNative.target, '_blank');
-    assert.ok(emailNative.querySelector('svg'));
     assert.equal([...document.querySelectorAll('button')].filter(item => item.getAttribute('aria-label') === 'New Email').length, 1);
     assert.equal(document.querySelectorAll('[aria-label="Collapse Email"]').length, 1);
     await act(async () => button('Close email').click());
@@ -60,7 +61,6 @@ test('Email composes through the existing provider and compact Inbox retains ref
     assert.equal(document.querySelectorAll('[data-section-heading] .btn-primary').length, 0, 'there is no duplicate text compose button');
     const inboxNative = [...document.querySelectorAll('[data-section-heading] a')].find(link => link.textContent.startsWith('Open in HubSpot'));
     assert.ok(inboxNative.querySelector('svg'));
-    assert.equal(inboxNative.className, emailNative.className);
     assert.equal(newConversation.href, 'https://app.hubspot.com/live-messages/50894788');
     assert.equal(newConversation.target, '_blank');
     const before = requests.length;

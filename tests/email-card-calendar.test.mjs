@@ -44,6 +44,8 @@ test('the Email card links to its workspace and keeps explicit compose actions f
   const email = readFileSync('app/recruit-email.tsx', 'utf8');
   assert.match(email, /<button type="button" className="summary-add" title="New Email" disabled=\{disabled\} onClick=\{\(\) => open\(\)\}><span aria-hidden="true">\+<\/span><span className="sr-only">New Email<\/span><\/button>/);
   assert.match(email, /preview href="#email"/);
+  assert.match(email, /Newest recruits · draft in Gmail/);
+  assert.doesNotMatch(email, /Open in HubSpot|compose in HubSpot/);
   assert.match(email, /onSelect: \(\) => open\(r\.id, r\.name\)/);
   assert.doesNotMatch(email, /lead=\{<button className="btn btn-quiet email-new-button"/, 'the text button beside the title is gone');
   const chips = readFileSync('app/summary-chips.tsx', 'utf8');
