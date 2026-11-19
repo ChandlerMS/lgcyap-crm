@@ -156,6 +156,8 @@
 @keyframes hoverCardIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .hoverCard { animation: none; } }
 .hoverActions { margin: 0 0 12px; }
+/* A card with more below the details (Event Attendance's sign-ins and application answers) is wider and scrolls within the window. */
+.hoverCardWide { width: 480px; max-height: calc(100vh - 24px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .hoverAdd { margin: 0 0 12px; }
 
 /* Stage pop-out: a floating panel with the stage's recruits in a large grid. Rendered in document.body. */

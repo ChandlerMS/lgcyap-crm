@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { SectionToggle, useCollapsibleCards, useDashboardCollapse } from "./dashboard-section";
 import SummaryPreview from "./summary-preview";
 
 // badge is the short gold value on a row; detail is its spoken and hover form; previewDetail is a fuller line for
@@ -14,7 +15,11 @@ const ROWS = 3;
 const PREVIEW = 6;
 const newTab = (external?: boolean) => external ? { target: "_blank", rel: "noopener noreferrer" } : {};
 // A compact dashboard card: title and count with its plus, a one-line note, the next few items, then "+N more".
+// Among the dashboard's collapsible cards it also has a chevron that folds it to its title row.
 export default function SummaryChips({ id, title, count, note, chips, empty, more, className, href, lead, previewActions }: Props) {
+  const collapsible = useCollapsibleCards();
+  const { collapsed: folded, toggle } = useDashboardCollapse(`card:${id}`);
+  const collapsed = collapsible && folded;
   const rest = Math.max(0, chips.length - ROWS);
   const moreHref = more.href ?? href;
   const moreText = <>+{rest} more<span className="sr-only"> {more.label}</span></>;
@@ -28,8 +33,8 @@ export default function SummaryChips({ id, title, count, note, chips, empty, mor
         <a className="text-link summary-preview-open" href={href}>Open {title}</a>
       </>}
     </SummaryPreview>;
-  return <section className={`summary-chips summary-card${className ? ` ${className}` : ""}`} aria-labelledby={id}>
-    <div className="summary-card-head">{heading}{lead && <div className="summary-card-add">{lead}</div>}</div>
+  return <section id={`${id}-card`} className={`summary-chips summary-card${className ? ` ${className}` : ""}${collapsed ? " is-collapsed" : ""}`} aria-labelledby={id}>
+    <div className="summary-card-head">{heading}{lead && <div className="summary-card-add">{lead}</div>}{collapsible && <SectionToggle collapsed={collapsed} onToggle={toggle} label={title} controls={`${id}-card`} />}</div>
     <p className="summary-card-note">{note}</p>
     {!chips.length ? <p className="summary-card-empty">{empty}</p> : <ul className="summary-card-list">
       {chips.slice(0, ROWS).map(chip => {

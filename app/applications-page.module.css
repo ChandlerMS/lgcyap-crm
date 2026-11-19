@@ -8,6 +8,11 @@
 .lede { max-width: 760px; margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .headActions { display: flex; align-items: center; gap: 14px; }
 .updated { color: var(--muted); font-size: 12px; }
+/* In Event Attendance the list starts collapsed under its title; this button opens and closes it. */
+.listToggle { padding: 5px 11px; border: 1px solid #6d633e; border-radius: 6px; background: #1a180f; color: var(--gold); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.listToggle:hover { background: #282311; }
+.listToggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.inBoard:not(:has(#applications-list)) .head { margin-bottom: 0; }
 
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
 .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding: 12px 14px; border: 1px solid #2c2818; border-radius: 10px; background: #13120e; color: var(--text); font: inherit; text-align: left; cursor: pointer; }

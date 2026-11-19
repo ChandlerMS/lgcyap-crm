@@ -7,7 +7,7 @@ import PanelPager from "./panel-pager";
 import { pageWindow } from "./panel-pager.mjs";
 
 type Row = { label: string; value: string };
-type Application = {
+export type Application = {
   id: string; at: string; day: string; name: string; preferredName: string; email: string; phone: string; city: string; state: string; zip: string;
   office: string; officeKey: string | null; license: string; startDate: string; heardAbout: string; referredBy: string;
   requirementsMet: boolean | null; missed: string[]; flags: string[]; outcome: "new-ticket" | "existing-ticket" | "contact-only" | "unknown"; outcomeText: string;
@@ -21,9 +21,10 @@ type Report = {
 type Status = "all" | "not-met" | "flagged" | "waiting";
 // Inside Event Attendance: its review state, a number that changes whenever it should read the applications again,
 // whether links leave the board's own page (which may sit in the workspace frame) for the top window, wait, true
-// until the board's own first read is done, so the two HubSpot reads never run at the same moment, and afterRead,
-// which changes each time a board read finishes, so a failed read here tries again right after the board's next one.
-export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean; wait?: boolean; afterRead?: number };
+// until the board's own first read is done, so the two HubSpot reads never run at the same moment, afterRead,
+// which changes each time a board read finishes, so a failed read here tries again right after the board's next one,
+// and onApplications, where to hand each loaded list (the board's name cards show an applicant's answers).
+export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean; wait?: boolean; afterRead?: number; onApplications?: (applications: Application[]) => void };
 const SECTION_PAGE_SIZE = 10;
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const SINCE = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
@@ -50,8 +51,13 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
   const [page, setPage] = useState(1);
   // The applicant whose photo ID is open, if any.
   const [photoFor, setPhotoFor] = useState<Application | null>(null);
+  // In Event Attendance the list starts collapsed under its title; it still loads, for the counts and the name cards.
+  const [listOpen, setListOpen] = useState(!board);
   const unauthorized = useRef(onUnauthorized);
   useEffect(() => { unauthorized.current = onUnauthorized; }, [onUnauthorized]);
+  const handOff = useRef(board?.onApplications);
+  useEffect(() => { handOff.current = board?.onApplications; });
+  useEffect(() => { if (report) handOff.current?.(report.applications); }, [report]);
   const refresh = useCallback(() => { setLoading(true); setAttempt(value => value + 1); }, []);
   // The board's Refresh, and a new application in its counts, read the list again.
   const [boardReload, setBoardReload] = useState(board?.reload);
@@ -115,6 +121,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
       <div className={styles.headActions}>
         {report && <span className={styles.updated}>Updated {WHEN.format(Date.parse(report.fetchedAt))}</span>}
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
+        {board && <button type="button" className={styles.listToggle} aria-expanded={listOpen} aria-controls="applications-list" onClick={() => setListOpen(value => !value)}>{listOpen ? "Hide applications" : summary ? `Show ${summary.total} application${summary.total === 1 ? "" : "s"}` : "Show applications"}<span aria-hidden="true">{listOpen ? " ▲" : " ▼"}</span></button>}
       </div>
     </div>
     {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}{board ? " This list tries again after the next automatic update, within a minute." : ""}</p></div>}
@@ -123,7 +130,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
     {!board && report?.reviewNotice && <p className="partial-notice" role="status">{report.reviewNotice}</p>}
     {!board && reviewer.error && <div className="connection-alert" role="alert"><strong>Review not saved</strong><p>{reviewer.error}</p>{reviewer.retry ? <button type="button" className="btn btn-secondary" onClick={reviewer.retry}>Retry review</button> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>Refresh statuses</button>}</div>}
     {!report && loading && <p className={styles.empty} role="status">Loading applications from HubSpot…</p>}
-    {report && <>
+    {report && listOpen && <div id="applications-list">
       <div className={styles.tiles} role="group" aria-label="Filter by status">
         {tiles.map(tile => <button key={tile.key} type="button" className={`${styles.tile} ${tile.tone ?? ""}`} aria-pressed={status === tile.key} onClick={() => filter(tile.key === status ? "all" : tile.key)}>
           <strong>{tile.value ?? 0}</strong><span>{tile.label}</span>
@@ -188,7 +195,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         })}
       </ol>}
       {board && <PanelPager count={shown.length} page={page} size={SECTION_PAGE_SIZE} label="Applications" onPage={setPage} numbers />}
-    </>}
+    </div>}
     {photoFor?.photos?.length ? <PhotoIdViewer key={photoFor.id} photos={photoFor.photos} name={photoFor.name || "this applicant"} onClose={() => setPhotoFor(null)} /> : null}
   </section>;
 }

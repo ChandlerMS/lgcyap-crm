@@ -4,6 +4,7 @@ import PanelPager from "./panel-pager";
 import { pageWindow } from "./panel-pager.mjs";
 import RecruitCommunications from "./recruit-communications";
 import RecruitQuickActions, { type ActivityRecruit } from "./recruit-quick-actions";
+import { SectionToggle } from "./dashboard-section";
 import { followUpRecruits } from "./recruit-follow-up.mjs";
 import type { PipelineRecruit } from "./recruit-pipeline";
 
@@ -21,7 +22,7 @@ export default function FollowUpPanel({ records, now, partial, canAddActivity = 
   const view = pageWindow(rows.length, page, PAGE);
   return <section className="today-panel follow-up-panel" aria-labelledby="today-follow-up-title">
     <div className="follow-up-heading"><h2 id="today-follow-up-title"><a className="panel-title-link" href="#follow-up">Follow up</a> <span>{rows.length}{partial ? "+" : ""}</span></h2>
-      {canAddActivity && <div className="panel-heading-actions"><RecruitQuickActions kinds={["follow-up"]} recruits={recruits} trigger="button" /></div>}</div>
+      <div className="panel-heading-actions">{canAddActivity && <RecruitQuickActions kinds={["follow-up"]} recruits={recruits} trigger="button" />}<SectionToggle /></div></div>
     <p className="helper">No contact for more than 15 days, longest waiting first. Point at a row for details.</p>
     {!rows.length ? <p className="helper">No one is waiting more than 15 days.</p> : <>
       <div className="table-wrap"><table className="data-table hover-rows"><thead><tr><th scope="col">Recruit</th><th scope="col">Waiting</th></tr></thead>

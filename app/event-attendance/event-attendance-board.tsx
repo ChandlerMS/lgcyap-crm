@@ -1,12 +1,16 @@
 'use client';
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useEventReviews, type Review } from '../event-review';
-import ApplicationsPage from '../applications-page';
+import ApplicationsPage, { type Application } from '../applications-page';
+import { SectionToggle } from '../dashboard-section';
+import { useRecruitHoverCard } from '../recruit-hover';
+import type { PipelineRecruit } from '../recruit-pipeline';
 import styles from './event-attendance.module.css';
+import AttendeeDetails from './attendee-details';
 import AttendeeImport, { type AttendeeValues } from './attendee-import';
 import { ATTENDEE_TEMPLATE_CSV, HUBSPOT_SOURCE_URL, attendanceCsv, attendanceCsvFilename, parseAttendeeFile } from './attendance-files.mjs';
-import { applicantColumns, appliedColumns, attendeeColumns, hiredColumns, PeopleTable, visitColumns, type Applicant, type Attendee, type Visit } from './people-lists';
+import { applicantColumns, appliedColumns, attendeeColumns, hiredColumns, officeLabel, PeopleTable, phoneText, visitColumns, type Applicant, type Attendee, type Person, type Visit } from './people-lists';
 
 const COMPLETED_STAGE_ID = '1416243218';
 type Tile = 'signedIn' | 'applied' | 'hired' | 'today';
@@ -52,7 +56,9 @@ function validReport(value: unknown): value is Report {
 }
 
 // As a section of the Recruiting Dashboard it drops the logo and page title and sits under the page's own heading.
-export default function EventAttendanceBoard({ section = false }: { section?: boolean }) {
+// There, recruits are the dashboard's loaded recruiting records, whose CRM details fill each name's hover card, and
+// canAddActivity is whether this account can save notes, tasks and meetings (on its own page, recruiting reviewers can).
+export default function EventAttendanceBoard({ section = false, recruits, canAddActivity, now }: { section?: boolean; recruits?: readonly PipelineRecruit[]; canAddActivity?: boolean; now?: number }) {
   const Root = section ? 'section' : 'main';
   const Title = section ? 'h2' : 'h1';
   const [data, setData] = useState<Report | null>(null);
@@ -73,6 +79,12 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   const [boardReads, setBoardReads] = useState(0);
   const appsAfterRead = useRef(false);
   const appsTotal = useRef<number | null>(null);
+  // The Applications list's applications once loaded, for the answers in each applicant's hover card.
+  const [applications, setApplications] = useState<Application[] | undefined>(undefined);
+  // The attendee lists' sign-in date filter: '' for any date, an event day, or 'range' between from and to.
+  const [signedOn, setSignedOn] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
   const active = useRef<AbortController | null>(null);
   async function chooseFile(file: File | undefined) {
@@ -130,6 +142,51 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   // Refresh reads this board, then the Applications section. A read already under way picks up the request.
   const refreshAll = () => { appsAfterRead.current = true; void refresh(); };
   const applicationsSignedOut = useCallback(() => { setSignInNeeded(true); setError('Your sign-in has expired. Sign in again to see applications.'); }, []);
+  // Names open a card with the recruit's CRM details, their sign-ins and, in lists of applicants, their application.
+  const hover = useRecruitHoverCard({ now: now ?? (data ? Date.parse(data.fetchedAt) : 0), canAdd: canAddActivity ?? Boolean(data?.canReview), mini: true });
+  const loaded = useMemo(() => new Map((recruits ?? []).map(recruit => [recruit.id, recruit])), [recruits]);
+  const visitsByTicket = useMemo(() => {
+    const map = new Map<string, Visit[]>();
+    for (const visit of data?.visits ?? []) if (visit.ticketId) map.set(visit.ticketId, [...(map.get(visit.ticketId) ?? []), visit]);
+    return map;
+  }, [data?.visits]);
+  const attendeeByTicket = useMemo(() => new Map((data?.attendees ?? []).map(person => [person.ticketId, person])), [data?.attendees]);
+  const applicationIndex = useMemo(() => {
+    const byTicket = new Map<string, Application>(), byEmail = new Map<string, Application>();
+    // Newest first, so each person's latest application wins.
+    for (const item of applications ?? []) {
+      if (item.ticket?.id && !byTicket.has(item.ticket.id)) byTicket.set(item.ticket.id, item);
+      const key = item.email.trim().toLowerCase();
+      if (key && !byEmail.has(key)) byEmail.set(key, item);
+    }
+    return { byTicket, byEmail };
+  }, [applications]);
+  const applicationFor = (person: Person) => applications === undefined ? undefined
+    : (person.ticketId ? applicationIndex.byTicket.get(person.ticketId) : undefined) ?? (person.email ? applicationIndex.byEmail.get(person.email.trim().toLowerCase()) : undefined) ?? null;
+  // application: also show what they entered on the application; applicant: the row is an application.
+  const hoverFor = (mode: 'crm' | 'application', applicant = false) => (person: Person) => {
+    const record = person.ticketId ? loaded.get(person.ticketId) : undefined;
+    const recruit: PipelineRecruit = record ?? { id: person.ticketId ?? `attendee-${person.email || person.name}`, name: person.name, phone: person.phone, email: person.email, office: person.office ? officeLabel(person.office) : null, stage: person.stage, hubspotUrl: person.hubspotUrl ?? '' };
+    // Outside the dashboard, or for a record it hasn't loaded, the card shows what the sign-in recorded.
+    const rows: [string, string][] | undefined = record ? undefined : [['Phone', person.phone ? phoneText(person.phone) : 'Not recorded'], ['Email', person.email || 'Not recorded'], ['Office', person.office ? officeLabel(person.office) : 'Not recorded'], ['Recruiting record', person.ticketId ? person.stage || 'Stage not recorded' : 'No recruiting ticket']];
+    const appliedAt = applicant ? (person as Applicant).at : person.ticketId ? attendeeByTicket.get(person.ticketId)?.appliedAt ?? null : null;
+    return hover.bind(recruit, { rows, actions: Boolean(person.ticketId), extra: () => <AttendeeDetails visits={person.ticketId ? visitsByTicket.get(person.ticketId) ?? [] : []} appliedAt={appliedAt} showApplication={mode === 'application'} application={mode === 'application' ? applicationFor(person) : undefined} /> });
+  };
+  const crmHover = hoverFor('crm'), applicationHover = hoverFor('application'), applicantHover = hoverFor('application', true);
+  const signInDays = data?.days.filter(row => row.signIns > 0).map(row => row.day) ?? [];
+  const dateActive = signedOn === 'range' ? Boolean(from || to) : Boolean(signedOn);
+  const onDate = (day: string) => signedOn === 'range' ? (!from || day >= from) && (!to || day <= to) : day === signedOn;
+  const byDate = (rows: Attendee[]) => dateActive ? rows.filter(person => (visitsByTicket.get(person.ticketId)?.map(visit => visit.day) ?? [person.firstDay, person.lastDay]).some(onDate)) : rows;
+  const dateNote = !dateActive ? '' : signedOn !== 'range' ? ` on ${dayLabel(signedOn)}` : from && to ? ` from ${dayLabel(from)} to ${dayLabel(to)}` : from ? ` on or after ${dayLabel(from)}` : ` on or before ${dayLabel(to)}`;
+  const clearDate = () => { setSignedOn(''); setFrom(''); setTo(''); };
+  const dateFilter = <div className={styles.dateFilter} role="group" aria-label="Filter by sign-in date">
+    <label><span>Signed in</span><select value={signedOn} onChange={event => setSignedOn(event.target.value)}><option value="">Any date</option>{signInDays.map(day => <option key={day} value={day}>{dayLabel(day)}</option>)}<option value="range">Date range…</option></select></label>
+    {signedOn === 'range' && <>
+      <label><span>From</span><input type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
+      <label><span>To</span><input type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
+    </>}
+    {dateActive && <button type="button" className={styles.linkButton} onClick={clearDate}>Clear date</button>}
+  </div>;
   const tiles: { key: Tile; label: string; value: string; note: string }[] = [
     { key: 'signedIn', label: 'Signed in', value: count(people?.signedIn), note: `People · ${count(data?.signIns)} sign-ins in all` },
     { key: 'applied', label: 'Applied', value: count(people?.applied), note: `${share(people?.applied, people?.signedIn)} of people who signed in` },
@@ -137,15 +194,16 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     { key: 'today', label: 'Today', value: data ? count(today?.signIns ?? 0) : '—', note: `Sign-ins · ${data ? count(today?.applications ?? 0) : '—'} applications` },
   ];
   const tileList = () => {
-    if (openTile === 'signedIn') return <PeopleTable title="Everyone who signed in" rows={attendees} columns={attendeeColumns} actions={reviewActions} empty="No one has signed in yet." />;
-    if (openTile === 'applied') return <PeopleTable title="Signed in and applied online" rows={attendees.filter(person => person.appliedAt)} columns={appliedColumns} actions={reviewActions} empty="No one who signed in has applied online yet." />;
-    if (openTile === 'hired') return <PeopleTable title="Signed in and reached Completed" rows={attendees.filter(person => person.stageId === COMPLETED_STAGE_ID)} columns={hiredColumns} empty="No one who signed in has reached Completed yet." />;
-    if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} empty="No online applications yet today." /></>;
+    const dated = dateActive ? 'No one in this list signed in on the chosen dates.' : '';
+    if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={byDate(attendees)} columns={attendeeColumns} actions={reviewActions} hover={crmHover} filter={dateFilter} empty={dated || 'No one has signed in yet.'} />;
+    if (openTile === 'applied') return <PeopleTable title={`Signed in${dateNote} and applied online`} rows={byDate(attendees.filter(person => person.appliedAt))} columns={appliedColumns} actions={reviewActions} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has applied online yet.'} />;
+    if (openTile === 'hired') return <PeopleTable title={`Signed in${dateNote} and reached Completed`} rows={byDate(attendees.filter(person => person.stageId === COMPLETED_STAGE_ID))} columns={hiredColumns} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has reached Completed yet.'} />;
+    if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications yet today." /></>;
     return null;
   };
   const dayList = (day: string, office: string | null) => office
-    ? <PeopleTable title={`Signed in at ${officeName(office)} on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day && visit.office === office)} columns={visitColumns} actions={reviewActions} empty="No sign-ins." />
-    : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} actions={reviewActions} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} actions={reviewActions} empty="No online applications this day." /></>;
+    ? <PeopleTable title={`Signed in at ${officeName(office)} on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day && visit.office === office)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins." />
+    : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications this day." /></>;
 
   return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
     <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span></div>
@@ -156,6 +214,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
         <button type="button" disabled={!data} onClick={() => data && download(attendanceCsvFilename(data.fetchedAt), attendanceCsv(data))}>Export CSV</button>
         {data?.canImport && <><input ref={fileRef} type="file" accept=".csv,.xlsx" className="sr-only" tabIndex={-1} aria-label="Choose a sign-in list to import (CSV or Excel)" onChange={event => void chooseFile(event.target.files?.[0])} /><button type="button" disabled={reading || Boolean(importFile)} onClick={() => fileRef.current?.click()}>{reading ? 'Reading file…' : 'Import attendees'}</button></>}
         <button type="button" disabled={busy} onClick={refreshAll}>{busy ? 'Refreshing…' : 'Refresh'}</button>
+        <SectionToggle />
       </div>
     </header>
     <p className={styles.hint}>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</p>
@@ -179,7 +238,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
       </button>)}
     </section>
     {openTile && data && <section id="tile-people" className={`${styles.card} ${styles.peoplePanel}`} aria-label={`${tiles.find(tile => tile.key === openTile)?.label} — people`}>
-      <div className={styles.peopleHead}><p className={styles.muted}>Select a name to open the recruit in the CRM.</p><button type="button" onClick={() => setOpenTile(null)}>Close</button></div>
+      <div className={styles.peopleHead}><p className={styles.muted}>Point at a name for details and quick actions, select it to open the recruit, or select an email to write with your templates.</p><button type="button" onClick={() => setOpenTile(null)}>Close</button></div>
       {tileList()}
     </section>}
 
@@ -201,7 +260,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
                 <td className={styles.total}>{count(row.signIns)}</td><td>{count(row.applications)}</td>
               </tr>
               {openDay?.day === row.day && <tr className={styles.detailRow}><td id={`day-${row.day}`} colSpan={data.offices.length + 3}>
-                <div className={styles.peopleHead}><p className={styles.muted}>Select a name to open the recruit in the CRM.</p><button type="button" onClick={() => setOpenDay(null)}>Close</button></div>
+                <div className={styles.peopleHead}><p className={styles.muted}>Point at a name for details and quick actions, or select it to open the recruit in the CRM.</p><button type="button" onClick={() => setOpenDay(null)}>Close</button></div>
                 {dayList(row.day, openDay.office)}
               </td></tr>}
             </Fragment>;
@@ -214,7 +273,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     {/* The Applications page's list, ten a page, sharing this board's Refresh and Approve and Deny. Its title opens
         the full page: in the dashboard by its route, and from this page's own frame in the top window. */}
     <div className={styles.card}>
-      <ApplicationsPage onUnauthorized={applicationsSignedOut} board={{ review, reload: appsReload, topWindow: !section, wait: boardReads === 0, afterRead: boardReads }} />
+      <ApplicationsPage onUnauthorized={applicationsSignedOut} board={{ review, reload: appsReload, topWindow: !section, wait: boardReads === 0, afterRead: boardReads, onApplications: setApplications }} />
     </div>
 
     <details className={styles.card}>
@@ -227,8 +286,10 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
         <li><strong>Office</strong>: the office the person picked when signing in.</li>
         <li><strong>Applications</strong>: the same list as the Applications page, every application sent from the application page, newest first. Someone who applies twice is listed twice. <strong>Did not meet a required item</strong> have no recruiting ticket, because the application page creates one only when every required item is met; <strong>Need a private conversation</strong> answered a question the hiring team should discuss with them; <strong>Still at Hiring Event</strong> already had a ticket at Hiring Event, which applying does not move.</li>
         <li><strong>Approve</strong> and <strong>Deny</strong> save the decision as a note on the person&apos;s recruiting ticket. The same decision shows in every list here and on the Applications page.</li>
+        <li><strong>Names and emails</strong>: point at a name for the recruit&apos;s CRM details, their sign-ins and, in lists of people who applied, everything they entered on the application, with quick links to add a note, task, meeting or calendar event, or to call, text or email them. Selecting an email opens New Email with your offer templates. The sign-in date filter narrows Signed in, Applied and Hired to people who signed in on the chosen day or dates.</li>
         <li>Numbers come from HubSpot each time this page loads and every minute while it is open. The Applications list reads again on Refresh and whenever a new application comes in. The lists show what each person entered when signing in or applying. Like the rest of the recruiting workspace, they are visible only to recruiting editors.</li>
       </ul>
     </details>
+    {hover.card}
   </Root>;
 }

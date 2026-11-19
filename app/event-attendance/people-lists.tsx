@@ -1,8 +1,9 @@
 'use client';
 import type { ReactNode } from 'react';
+import { useRecruitEmail } from '../recruit-email';
 import styles from './event-attendance.module.css';
 
-type Person = { ticketId: string | null; name: string; email: string; phone: string; office: string; stageId: string; stage: string; hubspotUrl: string | null };
+export type Person = { ticketId: string | null; name: string; email: string; phone: string; office: string; stageId: string; stage: string; hubspotUrl: string | null };
 export type Visit = Person & { day: string; at: string; heardAbout: string; license: string; source: string; imported: boolean };
 export type Applicant = Person & { day: string; at: string; license?: string; fromAttendee: boolean };
 export type Attendee = Person & { ticketId: string; signIns: number; firstDay: string; lastDay: string; appliedAt: string | null };
@@ -13,10 +14,10 @@ const DAY = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', 
 const TIME = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const OFFICE_LABELS: Record<string, string> = { orlando: 'Orlando', miami: 'Miami', tampa: 'Tampa', other: 'Not recorded' };
 
+export const officeLabel = (key: string) => OFFICE_LABELS[key] ?? (key || '—');
 export const shortDay = (day: string) => { const time = Date.parse(`${day}T12:00:00Z`); return Number.isFinite(time) ? DAY.format(time) : day; };
-const when = (iso: string | null) => { const time = iso ? Date.parse(iso) : NaN; return Number.isFinite(time) ? TIME.format(time) : '—'; };
-const officeLabel = (key: string) => OFFICE_LABELS[key] ?? (key || '—');
-function phoneText(value: string) {
+export const when = (iso: string | null) => { const time = iso ? Date.parse(iso) : NaN; return Number.isFinite(time) ? TIME.format(time) : '—'; };
+export function phoneText(value: string) {
   const digits = value.replace(/\D/g, '');
   const local = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
   return local.length === 10 ? `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}` : value;
@@ -25,7 +26,16 @@ function phoneText(value: string) {
 // The recruit opens in the workspace around this frame.
 const nameCell = (row: Person) => row.ticketId ? <a href={`/#recruit/${row.ticketId}`} target="_top" title="Open this recruit in the CRM">{row.name}</a> : row.name;
 const phoneCell = (row: Person) => row.phone ? <a href={`tel:${row.phone.replace(/[^\d+]/g, '')}`}>{phoneText(row.phone)}</a> : '—';
-const emailCell = (row: Person) => row.email ? <a href={`mailto:${row.email}`}>{row.email}</a> : '—';
+// The address opens the CRM's New Email pop-up, with the offer templates, for anyone with a recruiting ticket. Without
+// a ticket, or outside the workspace's email (demo data, sign-in expired), it stays a plain mail link.
+function EmailCell({ row }: { row: Person }) {
+  const email = useRecruitEmail();
+  if (!row.email) return '—';
+  if (!row.ticketId || email.disabled) return <a href={`mailto:${row.email}`}>{row.email}</a>;
+  const ticketId = row.ticketId;
+  return <button type="button" className={styles.emailButton} title={`Write an email to ${row.name} with your templates`} onClick={() => email.open(ticketId, row.name)}>{row.email}<span className="sr-only"> (opens New Email)</span></button>;
+}
+const emailCell = (row: Person) => <EmailCell row={row} />;
 const contact: Column<Person>[] = [
   { label: 'Name', render: nameCell }, { label: 'Phone', render: phoneCell }, { label: 'Email', render: emailCell }, { label: 'Office', render: row => officeLabel(row.office) },
 ];
@@ -58,13 +68,15 @@ export const applicantColumns: Column<Applicant>[] = [
   { label: 'Signed in at an event', render: row => row.fromAttendee ? 'Yes' : 'No' },
 ];
 
-// total is the whole list's size when rows is one page of it.
-export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions, total = rows.length }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode; total?: number }) {
+// total is the whole list's size when rows is one page of it. hover gives each name its details card (from
+// useRecruitHoverCard's bind); filter sits under the title, such as the sign-in date filter.
+export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions, total = rows.length, hover, filter }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode; total?: number; hover?: (row: T) => object; filter?: ReactNode }) {
   return <div className={styles.peopleBlock}>
     <h3>{title} <span>{total}</span></h3>
+    {filter}
     {rows.length ? <div className={styles.tableWrap}><table className={`${styles.table} ${styles.peopleTable}`}>
       <thead><tr>{columns.map(column => <th scope="col" key={column.label}>{column.label}</th>)}{actions && <th scope="col">Review and notes</th>}</tr></thead>
-      <tbody>{rows.map((row, index) => <tr key={`${row.ticketId ?? 'none'}-${index}`}>{columns.map((column, at) => at === 0 ? <th scope="row" key={column.label}>{column.render(row)}</th> : <td key={column.label}>{column.render(row)}</td>)}{actions && <td>{actions(row)}</td>}</tr>)}</tbody>
+      <tbody>{rows.map((row, index) => <tr key={`${row.ticketId ?? 'none'}-${index}`}>{columns.map((column, at) => at === 0 ? <th scope="row" key={column.label}>{hover ? <span className={styles.hoverName} {...hover(row)}>{column.render(row)}</span> : column.render(row)}</th> : <td key={column.label}>{column.render(row)}</td>)}{actions && <td>{actions(row)}</td>}</tr>)}</tbody>
     </table></div> : <p className={styles.empty}>{empty}</p>}
   </div>;
 }

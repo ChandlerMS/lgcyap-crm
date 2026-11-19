@@ -70,8 +70,13 @@ const PATH_NAMES: Record<string, string> = RECRUITING_PATHS;
 const ROUTE_NAMES: Record<string, string> = LICENSE_ROUTES;
 export type HoverAnchor = { id: string; top: number; right: number; bottom: number; left: number };
 
-/** Details and quick contact actions for one recruit, shown beside its name on hover or keyboard focus. */
-export function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, actions, onPointerEnter, onPointerLeave }: { recruit: PipelineRecruit; anchor: HoverAnchor; id: string; now: number; stageLabel: string; hint: string; actions?: ReactNode; onPointerEnter: () => void; onPointerLeave: () => void }) {
+/**
+ * Details and quick contact actions for one recruit, shown beside its name on hover or keyboard focus.
+ * communications replaces the Call, Text and Email row (null leaves it out); rows replaces the recruit's details when
+ * only a few are known, as for an Event Attendance sign-in that isn't loaded in the dashboard; extra adds more below,
+ * such as an application's answers, in a wider card that scrolls within the window.
+ */
+export function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, actions, communications, rows: givenRows, extra, onPointerEnter, onPointerLeave }: { recruit: PipelineRecruit; anchor: HoverAnchor; id: string; now: number; stageLabel: string; hint: string; actions?: ReactNode; communications?: ReactNode; rows?: [string, string][]; extra?: ReactNode; onPointerEnter: () => void; onPointerLeave: () => void }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   useLayoutEffect(() => {
@@ -82,7 +87,7 @@ export function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, a
   const name = recruitName(recruit);
   const path = recruit.recruitingPath ? PATH_NAMES[recruit.recruitingPath] ?? "Not recorded" : "Not recorded";
   const route = recruit.licenseRoute ? ROUTE_NAMES[recruit.licenseRoute] ?? "Not chosen" : "Not chosen";
-  const rows: [string, string][] = [
+  const rows: [string, string][] = givenRows ?? [
     ["Phone", recruit.phone || "Not recorded"],
     ["Email", recruit.email || "Not recorded"],
     ["Recruiter", recruiterLabel(recruit)],
@@ -95,13 +100,15 @@ export function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, a
     ["Last contacted", dateLabel(recruit.lastContactedAt)],
     ["Added", dateLabel(recruit.createdAt)],
   ];
-  return createPortal(<div ref={cardRef} id={id} role="group" aria-label={`Details for ${name}`} className={styles.hoverCard} onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}
+  return createPortal(<div ref={cardRef} id={id} role="group" aria-label={`Details for ${name}`} className={extra ? `${styles.hoverCard} ${styles.hoverCardWide}` : styles.hoverCard} onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}
     style={position ? { top: position.top, left: position.left } : { top: anchor.top, left: anchor.right + 12, visibility: "hidden" }}>
     <p className={styles.hoverName}>{name}</p>
-    <p className={styles.hoverStage}><span>{recruit.stage || stageLabel}</span>{recruit.recruitingPath ? <span>{path}</span> : <span className={styles.hoverWarning}>Path not recorded</span>}</p>
-    <div className={styles.hoverActions}><RecruitCommunications labeled recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
+    <p className={styles.hoverStage}>{(recruit.stage || stageLabel) && <span>{recruit.stage || stageLabel}</span>}{recruit.recruitingPath ? <span>{path}</span> : !givenRows && <span className={styles.hoverWarning}>Path not recorded</span>}</p>
+    {communications !== undefined ? communications && <div className={styles.hoverActions}>{communications}</div>
+      : <div className={styles.hoverActions}><RecruitCommunications labeled recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>}
     {actions}
     <dl className={styles.hoverDetails}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    {extra}
     {hint && <p className={styles.hoverHint}>{hint}</p>}
   </div>, document.body);
 }
