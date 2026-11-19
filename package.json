@@ -26,12 +26,12 @@
     "lead-data:import": "node scripts/lead-data-import.mjs"
   },
   "dependencies": {
-    "@next/env": "16.4.3",
+    "@next/env": "16.4.6",
     "@vercel/functions": "3.6.1",
     "@vercel/speed-insights": "^2.0.0",
     "better-auth": "1.7.14",
     "fflate": "0.8.3",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "pg": "8.23.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",
@@ -49,7 +49,7 @@
     "@types/sanitize-html": "^2.16.2",
     "esbuild": "0.28.2",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "typescript": "5.9.3"
   },
   "type": "module",

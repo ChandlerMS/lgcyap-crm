@@ -41,7 +41,10 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
     try { setStatus(await mailApi({ action: 'status' })); setStatusError(''); }
     catch (e) { setStatusError(e instanceof Error ? e.message : 'Email is unavailable.'); }
   }, [disabled]);
-  useEffect(() => { void loadStatus(); }, [loadStatus]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadStatus(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadStatus]);
   useEffect(() => {
     if (!target || disabled) return;
     let active = true;
