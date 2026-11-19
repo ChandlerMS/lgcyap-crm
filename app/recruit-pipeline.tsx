@@ -105,7 +105,7 @@ export function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, a
     <p className={styles.hoverName}>{name}</p>
     <p className={styles.hoverStage}>{(recruit.stage || stageLabel) && <span>{recruit.stage || stageLabel}</span>}{recruit.recruitingPath ? <span>{path}</span> : !givenRows && <span className={styles.hoverWarning}>Path not recorded</span>}</p>
     {communications !== undefined ? communications && <div className={styles.hoverActions}>{communications}</div>
-      : <div className={styles.hoverActions}><RecruitCommunications labeled recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>}
+      : <div className={styles.hoverActions}><RecruitCommunications recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>}
     {actions}
     <dl className={styles.hoverDetails}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     {extra}
@@ -546,7 +546,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
         <a className={styles.popoutName} href={recordHref(recruit)}>{name}</a>
         {path ? <span className={styles.popoutChip}>{path}</span> : unrecordedPath(recruit) ? <span className={`${styles.popoutChip} ${styles.popoutWarning}`}>Path not recorded</span> : null}
       </div>
-      <RecruitCommunications labeled recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} />
+      <RecruitCommunications recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} />
       <dl className={styles.popoutDetails}>
         <div><dt>Phone</dt><dd>{recruit.phone || "Not recorded"}</dd></div>
         <div><dt>Email</dt><dd>{recruit.email || "Not recorded"}</dd></div>

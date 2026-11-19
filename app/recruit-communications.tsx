@@ -27,7 +27,7 @@ export default function RecruitCommunications({ recruitName, recruitId, hubspotU
   const buttonClass = mini ? "mini-action-button" : labeled ? "communication-button communication-button-labeled" : "communication-button";
   return <div className={mini ? "mini-communications" : labeled ? "recruit-communications recruit-communications-labeled" : "recruit-communications"} role="group" aria-label={`Contact tools for ${recruitName}`}>
     {(["call", "text", "email"] as const).map(action => {
-      const content = <><CommunicationIcon action={action} />{mini ? <span aria-hidden="true">{ACTION_LABELS[action]}</span> : labeled && <span className="communication-label" aria-hidden="true">{ACTION_LABELS[action]}</span>}</>;
+      const content = <><CommunicationIcon action={action} />{!mini && labeled && <span className="communication-label" aria-hidden="true">{ACTION_LABELS[action]}</span>}</>;
       const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
       const ringAction = action !== "email";
       const available = action === "call" && !isDemo && ringCentral.configured && Boolean(number);

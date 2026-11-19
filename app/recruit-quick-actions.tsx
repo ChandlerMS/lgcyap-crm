@@ -27,7 +27,6 @@ const dayLabel = (day: string) => { const time = Date.parse(`${day}T12:00:00Z`);
 const PRESETS = [{ id: "1", label: "Tomorrow", days: 1 }, { id: "3", label: "In 3 days", days: 3 }, { id: "7", label: "Next week", days: 7 }, { id: "date", label: "Pick a date", days: 0 }] as const;
 const TITLES: Record<Kind, string> = { note: "Quick note", task: "Add task", "follow-up": "Follow up", meeting: "Add Meeting" };
 const LABELS: Record<Kind, string> = { note: "Add Note", task: "Add Task", "follow-up": "Add Follow-Up", meeting: "Add Meeting" };
-const SHORT: Record<Kind, string> = { note: "Note", task: "Task", "follow-up": "Follow-Up", meeting: "Meeting" };
 const ALL_KINDS: readonly Kind[] = ["note", "task", "follow-up", "meeting"];
 const PICKER_LIMIT = 100;
 const newId = () => crypto.randomUUID();
@@ -121,9 +120,9 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
     : trigger === "button"
       ? <button key={item} type="button" className="summary-add panel-add-button" title={(item === "meeting" ? meetingLabel : LABELS[item])} onClick={() => open(item)}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
       : trigger === "labeled"
-        ? <button key={item} type="button" className="add-activity-button" onClick={() => open(item)}><Glyph kind={item} /><span>{item === "meeting" ? meetingLabel : LABELS[item]}</span>{recruitName && <span className="sr-only"> for {recruitName}</span>}</button>
+        ? <button key={item} type="button" className="add-activity-button" title={item === "meeting" ? meetingLabel : LABELS[item]} onClick={() => open(item)}><Glyph kind={item} calendar={item === "meeting" && meetingLabel === "Add to Calendar"} /><span className="sr-only">{item === "meeting" ? meetingLabel : LABELS[item]}</span>{recruitName && <span className="sr-only"> for {recruitName}</span>}</button>
       : trigger === "mini"
-        ? <button key={item} type="button" className="mini-action-button" onClick={() => open(item)} title={`${item === "meeting" ? meetingLabel : LABELS[item]}${recruitName ? ` for ${recruitName}` : ""}`}><Glyph kind={item} calendar={item === "meeting" && meetingLabel === "Add to Calendar"} /><span aria-hidden="true">{item === "meeting" && meetingLabel === "Add to Calendar" ? "Calendar" : SHORT[item]}</span><span className="sr-only">{item === "meeting" ? meetingLabel : LABELS[item]}{recruitName && ` for ${recruitName}`}</span></button>
+        ? <button key={item} type="button" className="mini-action-button" onClick={() => open(item)} title={`${item === "meeting" ? meetingLabel : LABELS[item]}${recruitName ? ` for ${recruitName}` : ""}`}><Glyph kind={item} calendar={item === "meeting" && meetingLabel === "Add to Calendar"} /><span className="sr-only">{item === "meeting" ? meetingLabel : LABELS[item]}{recruitName && ` for ${recruitName}`}</span></button>
       : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
   return <>
     {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}

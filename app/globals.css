@@ -748,7 +748,7 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .quick-action-recruit select option:checked { background: #2b2718; color: var(--gold); }
 /* Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar in the hover pop-ups. */
 .add-activity-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
-.add-activity-button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border: 1px solid #4a4028; border-radius: 999px; background: #14130f; color: #f4f1e8; font: inherit; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; }
+.add-activity-button { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 1px solid #4a4028; border-radius: 5px; background: #14130f; color: #f4f1e8; font: inherit; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; }
 .add-activity-button .icon { width: 15px; height: 15px; color: var(--gold); }
 .add-activity-button:hover { border-color: var(--gold); background: #211d10; }
 .add-activity-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -920,7 +920,7 @@ a.summary-card-more:hover { text-decoration: underline; }
 /* A recruit hover card's small quick links: Note, Task, Meeting, Calendar, Call, Text and Email. */
 .mini-actions { display: flex; flex-wrap: wrap; gap: 4px 3px; }
 .mini-communications { display: contents; }
-.mini-action-button { display: inline-flex; align-items: center; gap: 3px; min-height: 26px; padding: 0 7px; border: 1px solid #4a4028; border-radius: 999px; background: #14130f; color: #f4f1e8; font: inherit; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; }
+.mini-action-button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid #4a4028; border-radius: 5px; background: #14130f; color: #f4f1e8; font: inherit; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; }
 .mini-action-button .icon { width: 13px; height: 13px; color: var(--gold); }
 .mini-action-button:hover:not(:disabled) { border-color: var(--gold); background: #211d10; }
 .mini-action-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

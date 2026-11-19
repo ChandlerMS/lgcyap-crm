@@ -1,10 +1,10 @@
-const fields = new Set(['name', 'phone', 'email', 'recruiter', 'stage', 'timeInStage', 'lastContactedAt']);
+const fields = new Set(['name', 'phone', 'email', 'recruiter', 'stage', 'timeInStage', 'lastContactedAt', 'createdAt', 'office']);
 const collator = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
 
 export function sortRecruitRows(records, sort = { field: 'name', direction: 'asc' }) {
   if (!fields.has(sort.field) || !['asc', 'desc'].includes(sort.direction)) return [...records];
   const valueOf = record => {
-    if (['timeInStage', 'lastContactedAt'].includes(sort.field)) {
+    if (['timeInStage', 'lastContactedAt', 'createdAt'].includes(sort.field)) {
       const raw = record[sort.field === 'timeInStage' ? 'enteredStageAt' : sort.field];
       const instant = typeof raw === 'string' && raw ? Date.parse(raw) : NaN;
       return Number.isFinite(instant) ? instant * (sort.field === 'timeInStage' ? -1 : 1) : null;
