@@ -5,6 +5,8 @@ import PhotoIdViewer, { type PhotoNote } from "./photo-id-viewer";
 import { useEventReviews, type EventReviews, type Review } from "./event-review";
 import { useExpandCollapse } from "./expand-collapse";
 import PanelPager from "./panel-pager";
+import ApplicationExportButton from "./application-export-button";
+import { filterApplications } from "../lib/application-filters.mjs";
 import { pageWindow } from "./panel-pager.mjs";
 
 type Row = { label: string; value: string };
@@ -35,7 +37,6 @@ const OUTCOMES: Record<Application["outcome"], string> = {
   "contact-only": "No recruiting ticket: a required item was not met",
   unknown: "Recorded in HubSpot",
 };
-const matches = (item: Application, search: string) => !search || [item.name, item.preferredName, item.email, item.phone, item.city].some(value => value.toLowerCase().includes(search));
 
 // Every online agent application in one place for the admin team: who applied and when, any required item they did
 // not meet, what needs a private conversation, where the record is now, the Approved or Denied review, and every
@@ -89,10 +90,8 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
     return () => controller.abort();
   }, [attempt, waiting]);
 
-  const search = query.trim().toLowerCase();
   const all = report?.applications ?? [];
-  const shown = all.filter(item => matches(item, search) && (office === "all" || (item.officeKey ?? "other") === office)
-    && (status === "all" || (status === "not-met" && item.requirementsMet === false) || (status === "flagged" && item.flags.length > 0) || (status === "waiting" && item.waitingAtHiringEvent)));
+  const shown = filterApplications(all, { query, office, status }) as Application[];
   // The page lists every match; the Event Attendance section shows them ten a page.
   const view = board ? pageWindow(shown.length, page, SECTION_PAGE_SIZE) : { start: 0, end: shown.length };
   const toggle = (id: string) => setOpen(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -128,6 +127,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         <p className={styles.lede}>Online agent applications from apply.lgcyap.com, newest first{report ? ` since ${SINCE.format(Date.parse(`${report.since}T12:00:00Z`))}` : ""}. Answers are private: share them only with the hiring team.</p>
       </div>
       <div className={styles.headActions}>
+        <ApplicationExportButton filters={{ query, office, status }} count={shown.length} disabled={loading || !report || report.partial} />
         {report && <span className={styles.updated}>Updated {WHEN.format(Date.parse(report.fetchedAt))}</span>}
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
       </div>
