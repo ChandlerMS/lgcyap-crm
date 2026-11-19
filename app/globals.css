@@ -1084,7 +1084,9 @@ body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-contain
 
 .launcher-brand-icon { display: inline-block; flex: 0 0 24px; width: 24px; height: 24px; background-position: center; background-repeat: no-repeat; background-size: contain; }
 
-#legacy-bot-dock { display: contents; }
+#legacy-bot-dock { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; pointer-events: auto; flex: 0 1 auto; }
+.support-panel { left: max(16px, env(safe-area-inset-left)); right: auto; }
+@media (max-width: 800px) { #legacy-bot-dock { gap: 8px; } }
 
 /* Icon-only bottom controls retain their spoken labels and native hover titles. */
 .floating-actions .legacy-bot-launcher, .legacy-bot-control .legacy-bot-launcher { width: 54px; height: 54px; padding: 0; gap: 0; justify-content: center; }
