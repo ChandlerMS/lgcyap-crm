@@ -53,3 +53,6 @@ yarn-error.log*
 /lib/generated/onboard-runtime.mjs
 !.env.example
 .vercel
+
+# HubSpot knowledge base snippet built by scripts/hubspot-kb-theme.mjs
+/kb-theme-snippet.html
