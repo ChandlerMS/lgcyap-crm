@@ -110,3 +110,30 @@ test('unknown stage is unmapped without writes', async () => {
   assert.equal((await f.run()).status, 'unmapped');
   assert.equal(f.writes.length, 0);
 });
+
+test('ticket names sync both ways and an old baseline adopts a new blank field safely', async () => {
+  const f = fixture({ ...ticket, subject: 'Original ticket name' }, recruit({ ...ticket, subject: 'Original ticket name' }));
+  assert.equal((await f.run()).status, 'synced');
+  delete f.state.baseline.ticket.subject; delete f.state.baseline.recruit.subject;
+  delete f.pair.recruit.properties.subject;
+  assert.equal((await f.run()).status, 'synced');
+  assert.equal(f.pair.recruit.properties.subject, 'Original ticket name');
+  f.pair.recruit.properties.subject = 'Updated in HubSpot';
+  assert.equal((await f.run()).status, 'synced');assert.equal(f.pair.ticket.properties.subject, 'Updated in HubSpot');
+  f.pair.ticket.properties.subject = 'Updated in app';
+  assert.equal((await f.run()).status, 'synced');assert.equal(f.pair.recruit.properties.subject, 'Updated in app');
+  f.pair.recruit.properties.subject = '';
+  assert.equal((await f.run()).status, 'unmapped');assert.equal(f.pair.ticket.properties.subject, 'Updated in app');
+});
+
+test('confirmed intent from before field expansion resolves before adopting ticket name', async () => {
+  const f = fixture({ ...ticket, subject: 'Original ticket name' }, recruit({ ...ticket, subject: 'Original ticket name' }));
+  await f.run();
+  const desired = structuredClone(f.state.baseline);
+  delete desired.ticket.subject; delete desired.recruit.subject;
+  await f.store.put('t1', { ...f.state, status: 'uncertain', pending: { kind: 'update', desired } });
+  f.pair.recruit.properties.subject = '';
+  assert.equal((await f.run()).status, 'synced');
+  assert.equal(f.pair.recruit.properties.subject, 'Original ticket name');
+  assert.equal(f.state.pending, null);
+});

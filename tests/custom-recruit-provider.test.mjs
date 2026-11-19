@@ -11,6 +11,8 @@ const ticket = { id: '101', properties: { ...blankSync, hs_pipeline: PIPELINE_ID
 const person = { id: '201', properties: { firstname: 'Synthetic', lastname: 'Person', email: 'synthetic@example.invalid', phone: '5550100' } };
 function fake(options = {}) {
   const calls = [], definitions = new Map((options.existing ?? APPROVED_RECRUIT_PROPERTIES).map(p => [p.name, structuredClone(p)]));
+  const nativeRecruit = structuredClone(options.nativeRecruit ?? customRecruit);
+  const sourceTicket = options.ticket ?? ticket, sourceContact = options.person ?? person;
   let tickets = options.tickets ?? ['101'];
   const fetchImpl = async (url, init) => {
     const u = new URL(url), path = u.pathname, method = init.method, body = init.body ? JSON.parse(init.body) : undefined;
@@ -42,11 +44,12 @@ function fake(options = {}) {
       tickets = ['102']; return reply({ id: '102', properties: body.properties });
     }
     if (path === `/crm/v3/objects/${OBJECT}` && method === 'POST') return reply({ id: '301', properties: body.properties });
-    if (path.startsWith('/crm/v3/objects/tickets/')) return readReply({ ...ticket, id: path.split('/').at(-1) });
-    if (path.startsWith('/crm/v3/objects/contacts/')) return reply(person);
+    if (path.startsWith('/crm/v3/objects/tickets/')) return readReply({ ...sourceTicket, id: path.split('/').at(-1) });
+    if (path.startsWith('/crm/v3/objects/contacts/')) return readReply(sourceContact);
     if (path.startsWith(`/crm/v3/objects/${OBJECT}/`)) {
       if (u.searchParams.has('idProperty')) return options.keyed ? readReply(options.keyed) : reply({}, 404);
-      return readReply({ ...(options.nativeRecruit ?? customRecruit), id: path.split('/').at(-1) });
+      if (method === 'PATCH' && !options.ignorePatch) Object.assign(nativeRecruit.properties, body.properties);
+      return readReply({ ...nativeRecruit, id: path.split('/').at(-1) });
     }
     throw new Error(`Unexpected fake route ${method} ${path}`);
   };
@@ -62,9 +65,9 @@ for (const [label, identity] of [['wrong portal', { hubId: '999' }], ['wrong app
     assert.equal(f.calls.length, 1); assert.deepEqual(f.writes(), []);
   });
 }
-test('setup creates exactly the ten approved missing properties in the existing group', async () => {
+test('setup creates exactly the fifteen approved missing properties in the existing group', async () => {
   const f = fake({ existing: [] }); await f.provider.verifyAndSetup();
-  const writes = f.writes(); assert.equal(writes.length, 10);
+  const writes = f.writes(); assert.equal(writes.length, 15);
   assert.deepEqual(writes.map(c => c.body.name), APPROVED_RECRUIT_PROPERTIES.map(p => p.name));
   for (const call of writes) {
     const expected = APPROVED_RECRUIT_PROPERTIES.find(p => p.name === call.body.name);
@@ -164,3 +167,36 @@ for (const [license, expected] of [['Not licensed', 'unlicensed'], ['Florida 2-1
     assert.equal(Object.hasOwn(properties, 'licensing_started'), false);
   });
 }
+
+test('source timestamps mirror the ticket and latest linked Contact activity without reverse writes', async () => {
+  const sourceTicket = structuredClone(ticket), sourceContact = structuredClone(person);
+  sourceTicket.properties.createdate = '2026-10-10T12:00:00Z';
+  sourceTicket.properties.hs_lastmodifieddate = '2026-11-19T10:00:00Z';
+  sourceTicket.properties.hs_v2_date_entered_current_stage = '2026-11-18T08:00:00Z';
+  sourceTicket.properties.hs_lastcontacted = '2026-11-17T09:00:00Z';
+  sourceContact.properties.notes_last_contacted = '2026-11-19T11:00:00Z';
+  const custom = { ...structuredClone(customRecruit), properties: { ...structuredClone(customRecruit.properties), crm_ticket_id:'101' } };
+  const f = fake({ nativeRecruit: custom, ticket: sourceTicket, person: sourceContact });
+  await f.provider.syncSourceMetadata('101','301');
+  const writes = f.writes();assert.equal(writes.length,1);assert.equal(writes[0].path,`/crm/v3/objects/${OBJECT}/301`);
+  assert.deepEqual(writes[0].body.properties, { source_ticket_created_at:'2026-10-10T12:00:00.000Z', source_ticket_updated_at:'2026-11-19T10:00:00.000Z', source_ticket_stage_entered_at:'2026-11-18T08:00:00.000Z', source_last_contacted_at:'2026-11-19T11:00:00.000Z' });
+  await f.provider.syncSourceMetadata('101','301');
+  assert.equal(f.writes().length, 1, 'unchanged source data is a no-op');
+});
+
+test('source timestamp readback failure retries from current values without reverse writes', async () => {
+  const source = structuredClone(ticket); source.properties.createdate = '2026-10-10T12:00:00Z';
+  const f = fake({ ticket: source, ignorePatch: true });
+  await assert.rejects(f.provider.syncSourceMetadata('101', '301'), { code: 'source_metadata_uncertain' });
+  assert.equal(f.writes().length, 1);
+  assert.equal(f.writes()[0].path, `/crm/v3/objects/${OBJECT}/301`);
+});
+test('invalid source dates and changed Contact associations stop metadata writes', async () => {
+  const source = structuredClone(ticket); source.properties.createdate = 'invalid';
+  const f = fake({ ticket: source });
+  await assert.rejects(f.provider.syncSourceMetadata('101', '301'), { code: 'invalid_source_timestamp' });
+  assert.deepEqual(f.writes(), []);
+  const changed = fake({ customContacts: ['202'] });
+  await assert.rejects(changed.provider.syncSourceMetadata('101', '301'), { code: 'association_changed' });
+  assert.deepEqual(changed.writes(), []);
+});

@@ -51,6 +51,7 @@ function providerFixture(stage = 'hiring-event') {
     async patchTicket(id, props) { writes.push(['ticket', props]); Object.assign(ticket.properties, props); },
     async patchRecruit(id, props) { writes.push(['recruit', props]); Object.assign(recruit.properties, props); },
     async linkRecruit(...ids) { writes.push(['link', ...ids]); },
+    async syncSourceMetadata() {},
   };
   return { provider, ticket, recruit, writes, notes };
 }
@@ -228,4 +229,15 @@ test('a recent-custom search timeout preserves earlier full-scan cursor and pend
   assert.equal((await store.get('101')).status, 'synced');
   assert.equal(result.processed, 1); assert.equal(result.synced, 1);
   assert.equal(result.attention, 1); assert.equal(result.remaining, true);
+});
+
+test('source metadata runs only after successful editable-field reconciliation and link confirmation', async t => {
+  const { pool, store } = await database(t); const f = providerFixture('application');
+  f.provider.syncSourceMetadata = async (...ids) => { assert.equal(f.writes.at(-1)[0], 'link'); f.writes.push(['metadata', ...ids]); };
+  assert.equal((await syncCustomRecruit('101', { pool, store, provider: f.provider, secret })).status, 'synced');
+  assert.deepEqual(f.writes.at(-1), ['metadata', '101', '202']);
+  f.ticket.properties.recruit_name = 'Changed in app'; f.recruit.properties.recruit_name = 'Changed in HubSpot';
+  f.writes.length = 0;
+  assert.equal((await syncCustomRecruit('101', { pool, store, provider: f.provider, secret })).status, 'conflict');
+  assert.deepEqual(f.writes, []);
 });

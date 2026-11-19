@@ -45,8 +45,8 @@ export default function RecruitPathPage({ view, label, demoRecords, onUnauthoriz
     }
   }, [view]);
   useEffect(() => {
-    if (!demoRecords) void load();
-    return () => { const request = requestRef.current; requestRef.current = null; request?.abort(); };
+    const timer = window.setTimeout(() => { if (!demoRecords) void load(); }, 0);
+    return () => { window.clearTimeout(timer); const request = requestRef.current; requestRef.current = null; request?.abort(); };
   }, [load, demoRecords]);
   const rows = demoRecords ?? result?.recruits ?? [];
   return <>
