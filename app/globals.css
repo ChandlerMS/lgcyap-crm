@@ -1048,9 +1048,9 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 .panel-heading-actions { flex: none; }
 
 .admin-destination small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
-.sidebar-bottom > .nav-group { margin-bottom: 8px; }
+.sidebar-bottom > .nav-group { margin: 0 -24px 8px; }
 .external-workspace { min-width: 0; }
-.admin-menu-trigger { display: flex; align-items: center; }
+.admin-menu-trigger { display: flex; align-items: center; justify-content: flex-start; padding-right: 24px; text-align: left; }
 .admin-menu-trigger > a { flex: 1; min-width: 0; }
 .admin-menu-toggle { flex: none; padding: 8px; color: var(--gold); }
 .admin-menu-toggle .icon { width: 16px; height: 16px; transform: rotate(-90deg); }
