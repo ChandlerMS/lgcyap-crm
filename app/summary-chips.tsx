@@ -1,5 +1,6 @@
 "use client";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import SummaryPreview from "./summary-preview";
 import { fitFollowUpChips } from "./recruit-follow-up.mjs";
 
 // badge is the short gold value on the chip; detail is its spoken and hover form; previewDetail is a fuller line for
@@ -40,15 +41,15 @@ export default function SummaryChips({ id, title, count, note, chips, empty, mor
   const shown = Math.min(fit, chips.length), rest = chips.length - shown;
   const moreText = <>+{rest} more<span className="sr-only"> {more.label}</span></>;
   // The lead stays outside the heading, so its dialog never holds the hover preview open.
-  const heading = <div className={`summary-chips-heading${href ? " has-preview" : ""}`}>
-      <h2 id={id}>{href ? <a className="summary-chips-link" href={href}>{title}<span className="sr-only"> page</span></a> : title}{count && <span>{count}</span>}</h2><span className="muted">{note}</span>
-      {href && <div className="summary-preview" id={`${id}-preview`}>
+  const heading = <SummaryPreview id={`${id}-preview`} enabled={Boolean(href)} heading={<>
+      <h2 id={id}>{href ? <a className="summary-chips-link" href={href}>{title}<span className="sr-only"> page</span></a> : title}{count && <span>{count}</span>}</h2><span className="muted">{note}</span></>}>
+      {href && <>
         <p className="summary-preview-title">{title}{count ? ` · ${count}` : ""}</p>
         {chips.length ? <ul>{chips.slice(0, PREVIEW).map(chip => <li key={chip.id}>{chip.href ? <a href={chip.href} {...newTab(chip.external)}>{chip.name}</a> : <span>{chip.name}</span>}<span className="muted">{chip.previewDetail ?? chip.detail}</span></li>)}</ul> : <p className="muted">{empty}</p>}
         {chips.length > PREVIEW && <p className="muted">+{chips.length - PREVIEW} more</p>}
         <a className="text-link summary-preview-open" href={href}>Open {title}</a>
-      </div>}
-    </div>;
+      </>}
+    </SummaryPreview>;
   return <section className={`summary-chips${className ? ` ${className}` : ""}`} aria-labelledby={id}>
     {lead ? <div className="summary-chips-top">{lead}{heading}</div> : heading}
     {!chips.length ? <p className="summary-chips-empty muted">{empty}</p> : <ul className="summary-chip-list" ref={listRef}>

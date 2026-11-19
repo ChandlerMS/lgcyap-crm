@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import TvHudLinks from "./tv-hud-links";
 import SidebarFlyout from "./sidebar-flyout";
 import WorkspaceTitlebar from "./workspace-titlebar";
 
@@ -176,6 +177,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const [liveLoading, setLoading] = useState(true);
   const [liveError, setError] = useState<ReadError | null>(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [leaderboardHud, setLeaderboardHud] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -280,7 +282,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         window.history.replaceState(null, "", "#add-recruits");
         setSaveNotice("Submit or clear your recruit entries before leaving Add Recruits."); return;
       }
-      setRoute(getRoute()); setPage(1);
+      setLeaderboardHud(false); setRoute(getRoute()); setPage(1);
     };
     window.addEventListener("hashchange", updateRoute);
     startTransition(() => { void refresh(); });
@@ -417,7 +419,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
     <div className="nav-group" onMouseEnter={() => enterNav("leaderboard")} onMouseLeave={leaveNav}>
-      <a className="nav-link nav-group-toggle" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "leaderboard"} aria-controls="leaderboard-tv-links" onKeyDown={event => focusFlyout(event, "leaderboard-tv-links", "leaderboard")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "leaderboard" ? null : "leaderboard"); }}><Icon name="chart" /><span>Leaderboard</span><Icon name="chevron" /></a>
+      <a className="nav-link nav-group-toggle" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "leaderboard"} aria-controls="leaderboard-tv-links" onKeyDown={event => focusFlyout(event, "leaderboard-tv-links", "leaderboard")} onClick={() => { setLeaderboardHud(false); setHoveredNav(null); setExpandedNav(value => value === "leaderboard" ? null : "leaderboard"); }}><Icon name="chart" /><span>Leaderboard</span><Icon name="chevron" /></a>
       <SidebarFlyout onEnter={() => enterNav("leaderboard")} onLeave={leaveNav} id="leaderboard-tv-links" hidden={(hoveredNav ?? expandedNav) !== "leaderboard"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>
         <a className="nav-link" href="https://leaderboard.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper TV Leaderboard</a>
         <a className="nav-link" href="https://leaderboard.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred TV Leaderboard</a>
@@ -439,7 +441,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <SidebarFlyout onEnter={() => enterNav("recruits")} onLeave={leaveNav} id="recruit-path-links" hidden={(hoveredNav ?? expandedNav) !== "recruits"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>{RECRUITS_CHILD_PAGES.map(item => <a className="nav-link" key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined} onClick={navigateFromMenu}>{item.label}</a>)}</SidebarFlyout>
     </div> : <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode && tool.id !== "recruits") switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
-  const leaderboardSwitch = <nav className="page-switch" aria-label="Leaderboard and Call Analytics">{WORKSPACE_EXTRA_PAGES.map(item => <a key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined}>{item.label}</a>)}</nav>;
+  const leaderboardSwitch = <nav className="page-switch" aria-label="Leaderboard and Call Analytics">{WORKSPACE_EXTRA_PAGES.map(item => <a key={item.id} href={`#${item.id}`} onClick={() => setLeaderboardHud(false)} aria-current={!leaderboardHud && route.view === item.id ? "page" : undefined}>{item.label}</a>)}<button type="button" aria-pressed={leaderboardHud} onClick={() => setLeaderboardHud(true)}>TV HUD</button></nav>;
 
   function savedRecruit(recruit: Recruit, replayed: boolean) {
     setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? preserveRecruiter(item, recruit) : item) } : null);
@@ -526,8 +528,8 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (activityPage && demoMode) return <>{dashboardLink}{heading(activityPage.label, "This page shows live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, activityPage.id)}>Open live {activityPage.label}</button></>;
     if (activityPage) return <>{dashboardLink}<HubSpotWorkspace key={activityPage.id} tool={activityPage.id} label={activityPage.label} description={activityPage.description} headerAction={activityPage.id === "tasks" && canAddActivity && data ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : meetingAction(activityPage.id, "button")} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (pathPage) return <>{dashboardLink}<RecruitPathPage key={`${pathPage.id}:${demoMode}`} view={pathPage.id} label={pathPage.label} demoRecords={demoMode ? recordsForStagePage(demoRecords, pathPage.id) as Recruit[] : undefined} onUnauthorized={expiredSignIn} /></>;
-    if (callAnalyticsView) return <>{dashboardLink}{leaderboardSwitch}<LeadData onUnauthorized={expiredSignIn} /></>;
-    if (leaderboardView) return <>{dashboardLink}{leaderboardSwitch}<Leaderboard onUnauthorized={expiredSignIn} /></>;
+    if (callAnalyticsView) return <>{dashboardLink}{leaderboardSwitch}{leaderboardHud ? <TvHudLinks service="leaderboard" /> : <LeadData onUnauthorized={expiredSignIn} />}</>;
+    if (leaderboardView) return <>{dashboardLink}{leaderboardSwitch}{leaderboardHud ? <TvHudLinks service="leaderboard" /> : <Leaderboard onUnauthorized={expiredSignIn} />}</>;
     if (hubspotTool && (!route.id || hubspotTool.id === "inbox")) return <>{dashboardLink}<HubSpotWorkspace key={`${hubspotTool.id}:${route.id ?? ""}`} tool={hubspotTool.id} initialThreadId={hubspotTool.id === "inbox" ? route.id : undefined} label={hubspotTool.label} description={hubspotTool.id === "help-desk" ? "Live support tickets from HubSpot’s Support Pipeline." : undefined} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (route.view === "add-recruits" && demoMode) return <>{dashboardLink}{heading("Add Recruits", "Switch to live data to add real recruits to HubSpot.", null)}<p className="helper">Demo records are separate from HubSpot.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, "add-recruits")}>Use live data</button></>;
     if (route.view === "add-recruits") return <>{dashboardLink}<AddRecruits canCreate={data?.capabilities?.canCreateRecruit === true && !error}
@@ -543,12 +545,13 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       const followUpChoices = activityRecruits(all, { now: timestamp, followUpFirst: true });
       return <>
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
-      {/* Tasks and Follow up lead the summaries, each with a gold plus to add one; Meetings and Calendar sit beneath. */}
-      <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} actions={<div className="dashboard-actions"><a className="btn btn-primary add-recruits-button" href="#add-recruits"><Icon name="add-person" />Add Recruits</a><a className="btn btn-secondary" href="#recruits"><Icon name="people" />Recruits</a><a className="btn btn-secondary" href="#contract-agents"><Icon name="people" />Agents</a></div>} aside={<div className="today-summaries">
+      {/* Tasks, Follow up, Meetings and Calendar share one row above the pipeline. */}
+      <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} actions={<div className="dashboard-actions"><a className="btn btn-primary add-recruits-button" href="#add-recruits"><Icon name="add-person" />Add Recruits</a><a className="btn btn-secondary" href="#recruits"><Icon name="people" />Recruits</a><a className="btn btn-secondary" href="#contract-agents"><Icon name="people" />Agents</a></div>} />
+      <div className="today-summaries">
         <RecruitTaskChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} lead={canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="plus" /> : undefined} />
         <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} />
         <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} />
-      </div>} />
+      </div>
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
       <div className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading"><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section />}</div>

@@ -807,3 +807,11 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .summary-chips-heading h2 > a { min-width: 0; overflow-wrap: normal; }
 @media(max-width:640px) { .today-summaries { grid-template-columns: minmax(0, 1fr); } }
 
+
+/* Activity summaries occupy one row immediately above the recruiting pipeline. */
+.today-summaries { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-bottom: 24px; }
+@media(max-width:1100px) { .today-summaries { grid-template-columns: repeat(4, minmax(220px, 1fr)); overflow-x: auto; padding-bottom: 12px; } }
+.page-switch button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 22px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.page-switch button:hover { color: var(--text); }.page-switch button[aria-pressed="true"] { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); color: #0a0905; }.page-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media(max-width:520px) { .page-switch { flex-wrap: wrap; border-radius: 16px; }.page-switch a, .page-switch button { padding: 8px 12px; } }
+@media(max-width:1100px) { .today-summaries { contain: layout paint; } }

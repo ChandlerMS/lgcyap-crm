@@ -1,5 +1,6 @@
 "use client";
 
+import TvHudLinks from "../tv-hud-links";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import tabs from "../leaderboard.module.css";
@@ -7,7 +8,7 @@ import QueueBoard from "./queue-board";
 import RingCxDashboard from "../ringcx/ringcx-dashboard";
 import styles from "./unified-queue.module.css";
 
-type QueueView = "all" | "shopper" | "standard";
+type QueueView = "all" | "shopper" | "standard" | "hud";
 export default function UnifiedQueue({ embedded = false, initialView = "all", tv = false }: { embedded?: boolean; initialView?: QueueView; tv?: boolean }) {
   const [view, setView] = useState<QueueView>(initialView);
   // Shopper already manages its wall-screen wake lock and reload. Standard TV needs the same lifecycle.
@@ -31,10 +32,10 @@ export default function UnifiedQueue({ embedded = false, initialView = "all", tv
         <button type="button" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}>Full screen</button>
       </div>
     </header>
-    {!tv && <div className={tabs.boardTabs} role="group" aria-label="Queue view">{([['all', 'All'], ['shopper', 'Shopper'], ['standard', 'Standard vs. Preferred']] as const).map(([id, label]) => <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>)}</div>}
-    <div className={`${styles.groups}${view !== "all" ? ` ${styles.singleGroup}` : ""}`}>
+    {!tv && <div className={tabs.boardTabs} role="group" aria-label="Queue view">{([['all', 'All'], ['shopper', 'Shopper'], ['standard', 'Standard vs. Preferred'], ['hud', 'TV HUD']] as const).map(([id, label]) => <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>)}</div>}
+    {view === "hud" ? <TvHudLinks service="queue" /> : <div className={`${styles.groups}${view !== "all" ? ` ${styles.singleGroup}` : ""}`}>
       {view !== "standard" && <section aria-label="Shopper" className={styles.group}><QueueBoard embedded={embedded} grouped tv={tv} /></section>}
       {view !== "shopper" && <section aria-label="Standard vs Preferred" className={styles.group}><RingCxDashboard grouped tv={tv} /></section>}
-    </div>
+    </div>}
   </main>;
 }

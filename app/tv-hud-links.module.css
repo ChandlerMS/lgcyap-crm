@@ -1,0 +1,5 @@
+.panel { padding: 28px; border: 1px solid #6d5b31; border-radius: 8px; background: #14130f; color: #eee8da; }
+.panel h2 { margin: 0 0 20px; font-size: 26px; color: #e3bf5e; }
+.links { display: flex; flex-wrap: wrap; gap: 16px; }
+.links a { display: inline-flex; align-items: center; min-height: 52px; padding: 12px 22px; border: 1px solid #a58a42; border-radius: 6px; color: #f1d27a; text-decoration: none; font-size: 18px; background: #292211; }
+.links a:hover { background: #3c3017; }.links a:focus-visible { outline: 3px solid #e3bf5e; outline-offset: 3px; }

@@ -25,3 +25,11 @@
 }
 @media (max-width: 1000px) { .stats { margin-left: 0; gap: 18px 30px; } }
 @media (max-width: 620px) { .section { margin-bottom: 26px; } .stats { width: 100%; gap: 18px; } .stats div { min-width: 0; flex: 1; } .stats dd { font-size: 30px; } }
+
+/* Period selector and recruit actions lead; the three totals sit to their right. */
+@container (min-width: 900px) {
+  .heading { grid-template-columns: minmax(0, 1.7fr) minmax(330px, 1fr); align-items: center; }
+  .heading > .stats { grid-column: 2; grid-row: 1; gap: 20px; }
+  .heading > .dates { grid-column: 1 / -1; }
+}
+.title select { width: auto; min-width: 180px; field-sizing: content; }
