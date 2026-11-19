@@ -32,8 +32,14 @@ test('Email composes through the existing provider and compact Inbox retains ref
     await act(async () => button('New Email').click()); assert.equal(document.querySelector('dialog').open, true);
     assert.ok(button('Collapse Email'));
     assert.equal(document.querySelector('#today-email-title a').getAttribute('href'), '#email');
-    const compose = button('New Email'); assert.ok(compose.classList.contains('btn-primary'));
-    assert.equal([...document.querySelectorAll('button')].filter(item => item.textContent === 'New Email').length, 1);
+    const compose = button('New Email'); assert.ok(compose.classList.contains('summary-add'));
+    assert.equal(compose.querySelector('[aria-hidden="true"]').textContent, '+');
+    assert.equal(compose.nextElementSibling.getAttribute('aria-label'), 'Collapse Email');
+    const emailNative = [...document.querySelectorAll('[data-section-heading] a')].find(link => link.textContent.startsWith('Open in HubSpot'));
+    assert.ok(emailNative);
+    assert.equal(emailNative.target, '_blank');
+    assert.ok(emailNative.querySelector('svg'));
+    assert.equal([...document.querySelectorAll('button')].filter(item => item.getAttribute('aria-label') === 'New Email').length, 1);
     assert.equal(document.querySelectorAll('[aria-label="Collapse Email"]').length, 1);
     await act(async () => button('Close email').click());
     const address = [...document.querySelectorAll('td button')].find(item => item.textContent === 'alex@example.test');
@@ -50,6 +56,11 @@ test('Email composes through the existing provider and compact Inbox retains ref
     assert.ok(button('Collapse Inbox'));
     const newConversation = document.querySelector('a[aria-label="New message in HubSpot"]');
     assert.ok(newConversation.classList.contains('summary-add'));
+    assert.equal(newConversation.querySelector('[aria-hidden="true"]').textContent, '+');
+    assert.equal(document.querySelectorAll('[data-section-heading] .btn-primary').length, 0, 'there is no duplicate text compose button');
+    const inboxNative = [...document.querySelectorAll('[data-section-heading] a')].find(link => link.textContent.startsWith('Open in HubSpot'));
+    assert.ok(inboxNative.querySelector('svg'));
+    assert.equal(inboxNative.className, emailNative.className);
     assert.equal(newConversation.href, 'https://app.hubspot.com/live-messages/50894788');
     assert.equal(newConversation.target, '_blank');
     const before = requests.length;
