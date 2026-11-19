@@ -109,8 +109,12 @@
 .compact .detailGrid { grid-template-columns: 1fr; }
 .compact .monthHeading h3 { margin: 0; font-size: 19px; font-weight: 500; letter-spacing: -.02em; }
 .compact .calendar { margin-bottom: 0; }
-.compact .weekdays, .compact .days { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 476px; }
-.compact .day, .compact .paddingDay { min-height: 84px; padding: 8px 6px; }
+/* The dashboard Calendar spans the page, so every day shows its meetings without pointing at it. */
+.compact .weekdays, .compact .days { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 640px; }
+.compact .day, .compact .paddingDay { min-height: 128px; padding: 10px 9px; }
+.compact .day > time { font-size: 13px; }
+.compact .day .event > span { font-size: 11px; }
+.compact .day .calendarRecord { font-size: 13px; }
 
 /* Dashboard Calendar: each week is a collapsed row of day numbers and meeting counts that opens its meetings under the pointer. */
 .weekRow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 476px; transition: background-color .15s; }

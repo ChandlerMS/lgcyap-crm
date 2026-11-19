@@ -898,3 +898,30 @@ a.summary-card-more:hover { text-decoration: underline; }
 @media (max-width: 1250px) { .today-summaries { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .today-summaries { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .today-summaries { grid-template-columns: 1fr; } .email-dialog { padding: 16px; } }
+
+/* Dashboard sections and cards collapse from the gold chevron at the right of their title row (dashboard-section.tsx).
+   Collapsed, a panel shows only the part holding the chevron; it stays mounted, so its data keeps loading. */
+.section-toggle { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--gold); cursor: pointer; }
+.section-toggle:hover { background: #ffffff12; }
+.section-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.section-toggle .icon { width: 20px; height: 20px; transition: transform .15s ease; }
+.section-toggle[aria-expanded="true"] .icon { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .section-toggle .icon { transition: none; } }
+.dashboard-section.is-collapsed > * > :not(:has(.section-toggle)) { display: none; }
+.dashboard-section > section { margin-bottom: 0; }
+.follow-up-heading > .panel-heading-actions { align-self: center; }
+.summary-card.is-collapsed { align-self: start; }
+.summary-card.is-collapsed > :not(.summary-card-head) { display: none; }
+.summary-card-head > .section-toggle { width: 26px; height: 26px; }
+/* Tasks, Follow up, Meetings, Calendar, Recruits and Calls stack, one full-width panel per row. */
+.today-overview { grid-template-columns: minmax(0, 1fr); gap: 44px; }
+.today-overview > .dashboard-section { min-width: 0; }
+
+/* A recruit hover card's small quick links: Note, Task, Meeting, Calendar, Call, Text and Email. */
+.mini-actions { display: flex; flex-wrap: wrap; gap: 4px 3px; }
+.mini-communications { display: contents; }
+.mini-action-button { display: inline-flex; align-items: center; gap: 3px; min-height: 26px; padding: 0 7px; border: 1px solid #4a4028; border-radius: 999px; background: #14130f; color: #f4f1e8; font: inherit; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; }
+.mini-action-button .icon { width: 13px; height: 13px; color: var(--gold); }
+.mini-action-button:hover:not(:disabled) { border-color: var(--gold); background: #211d10; }
+.mini-action-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mini-action-button:disabled { opacity: .45; cursor: not-allowed; }

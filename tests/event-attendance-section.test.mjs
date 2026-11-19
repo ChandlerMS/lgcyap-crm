@@ -98,3 +98,38 @@ test('the Approved and Denied review renders the same controls wherever it is us
     assert.match(render({ canReview: true }, { ticketId: null, name: 'Sam' }), /No recruiting ticket/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+test('Event Attendance emails open New Email with the templates, names take a hover card, and Applications start collapsed', async () => {
+  await mkdir('work', { recursive: true });
+  const directory = await mkdtemp('work/attendance-email-');
+  try {
+    // One bundle, so the table and the email provider share the same context.
+    const { writeFile } = await import('node:fs/promises');
+    const entry = `${directory}/entry.tsx`;
+    await writeFile(entry, `export { PeopleTable, attendeeColumns } from '../../app/event-attendance/people-lists';\nexport { RecruitEmailProvider } from '../../app/recruit-email';\n`);
+    const { PeopleTable, attendeeColumns, RecruitEmailProvider } = await load(directory, `./${entry}`, 'email');
+    const row = { ticketId: '101', name: 'Pat Example QA', email: 'pat@example.com', phone: '', office: 'miami', stageId: '1', stage: 'Hiring Event', hubspotUrl: 'https://app.hubspot.com/contacts/50894788/record/0-5/101', signIns: 1, firstDay: '2026-11-18', lastDay: '2026-11-18', appliedAt: null };
+    const noTicket = { ...row, ticketId: null, email: 'sam@example.com', name: 'Sam Example QA' };
+    const table = props => createElement(PeopleTable, { title: 'Everyone who signed in', rows: [row, noTicket], columns: attendeeColumns, empty: 'None', ...props });
+
+    // In the workspace, a recruit's email is a button that opens New Email; someone without a ticket keeps a mail link.
+    const inWorkspace = renderToStaticMarkup(createElement(RecruitEmailProvider, { recruits: [], disabled: false }, table()));
+    assert.match(inWorkspace, /<button type="button" class="[^"]*" title="Write an email to Pat Example QA with your templates">pat@example\.com<span class="sr-only"> \(opens New Email\)<\/span><\/button>/);
+    assert.match(inWorkspace, /<a href="mailto:sam@example\.com">sam@example\.com<\/a>/);
+    assert.match(inWorkspace, /<dialog class="email-dialog"/);
+    // Without the workspace's email (demo data), every address stays a mail link.
+    assert.match(renderToStaticMarkup(table()), /<a href="mailto:pat@example\.com">pat@example\.com<\/a>/);
+
+    // A hover handler wraps each name, and the date filter sits under the title.
+    const hovered = renderToStaticMarkup(table({ hover: person => ({ 'data-hover': person.name }), filter: createElement('div', { id: 'date-filter' }) }));
+    assert.match(hovered, /<h3>Everyone who signed in <span>2<\/span><\/h3><div id="date-filter"><\/div>/);
+    assert.match(hovered, /<th scope="row"><span class="[^"]*" data-hover="Pat Example QA"><a href="\/#recruit\/101" target="_top"/);
+
+    // On the dashboard, Applications loads but shows only its title until opened.
+    const Board = (await load(directory, './app/event-attendance/event-attendance-board.tsx', 'board')).default;
+    const section = renderToStaticMarkup(createElement(Board, { section: true }));
+    assert.match(section, /<button type="button" class="[^"]*" aria-expanded="false" aria-controls="applications-list">Show applications<span aria-hidden="true"> ▼<\/span><\/button>/);
+    assert.doesNotMatch(section, /id="applications-list"/);
+    assert.match(section, /Loading applications from HubSpot/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});

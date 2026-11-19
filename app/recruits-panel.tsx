@@ -5,6 +5,7 @@ import { pageWindow } from "./panel-pager.mjs";
 import RecruitCommunications from "./recruit-communications";
 import RecruitQuickActions from "./recruit-quick-actions";
 import { useRecruitHoverCard } from "./recruit-hover";
+import { SectionToggle } from "./dashboard-section";
 import { sortRecruitRows } from "./recruit-list-view.mjs";
 import type { PipelineRecruit } from "./recruit-pipeline";
 
@@ -23,7 +24,7 @@ export default function RecruitsPanel({ records, partial, canAddActivity = false
   const rows = sortRecruitRows(records, sort) as PipelineRecruit[];
   const view = pageWindow(rows.length, page, PAGE);
   return <section className="today-panel recruits-panel" aria-labelledby="today-recruits-title">
-    <div className="follow-up-heading"><h2 id="today-recruits-title"><a className="panel-title-link" href="#recruits">Recruits</a> <span>{rows.length}{partial ? "+" : ""}</span></h2></div>
+    <div className="follow-up-heading"><h2 id="today-recruits-title"><a className="panel-title-link" href="#recruits">Recruits</a> <span>{rows.length}{partial ? "+" : ""}</span></h2><div className="panel-heading-actions"><SectionToggle /></div></div>
     <p className="helper">All loaded recruits, regardless of the Today date selection or pipeline search.</p>
     {!rows.length ? <p className="helper">No recruits are loaded.</p> : <>
       <div className="table-wrap"><table className="data-table"><thead><tr>{COLUMNS.map(([field, label]) => <th key={field} aria-sort={sort.field === field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="column-sort" onClick={() => { setSort({ field, direction: sort.field === field && sort.direction === "asc" ? "desc" : "asc" }); setPage(1); }}>{label}{sort.field === field ? sort.direction === "asc" ? " ↑" : " ↓" : ""}</button></th>)}<th><span className="sr-only">Contact tools, notes and tasks</span></th></tr></thead>

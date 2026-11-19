@@ -32,6 +32,7 @@ import HubSpotWorkspace from "./hubspot-workspace";
 import Leaderboard from "./leaderboard";
 import LeadData from "./lead-data";
 import EventAttendanceBoard from "./event-attendance/event-attendance-board";
+import { CollapsibleCards, DashboardSection, SectionToggle } from "./dashboard-section";
 import RecruitingPeriodControls from "./recruiting-period-controls";
 import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting-period.mjs";
 import { saveRecruitStageWithRefresh, StageSaveError } from "./recruit-stage-save.mjs";
@@ -508,10 +509,11 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     const tool = id === "tasks" ? { id: "tasks", label: "Tasks" } : RECRUITS_PAGE_TOOLS.find(item => item.id === id);
     if (!tool) return null;
     const pageHref = id === "calls" ? "#calls/standard" : HUBSPOT_TOOLS.some(item => item.id === id) || DASHBOARD_PAGES.includes(id) ? `#${id}` : undefined;
-    if (demoMode) return <section className="today-panel" aria-labelledby={`today-${id}-title`}><div className="follow-up-heading"><h2 id={`today-${id}-title`}>{pageHref ? <a className="panel-title-link" href={pageHref}>{tool.label}</a> : tool.label}</h2></div><p className="helper">This panel shows live HubSpot records. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section>;
+    if (demoMode) return <section className="today-panel" aria-labelledby={`today-${id}-title`}><div className="follow-up-heading"><h2 id={`today-${id}-title`}>{pageHref ? <a className="panel-title-link" href={pageHref}>{tool.label}</a> : tool.label}</h2><div className="panel-heading-actions"><SectionToggle /></div></div><p className="helper">This panel shows live HubSpot records. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section>;
     // Meetings shows five rows a page (up to 25 by choice); Calls shows ten; Tasks shows five with numbered pages and Add Task.
-    // Tasks and Meetings rows, and Calendar weeks, stay collapsed until the pointer is over them.
-    const paging = id === "meetings" ? { pageSize: 5, pageSizes: [5, 10, 15, 20, 25], hoverRows: true, headerAction: meetingAction(id, "button") } : id === "calls" ? { pageSize: 10 } : id === "calendar" ? { hoverRows: true, headerAction: meetingAction(id, "button") }
+    // Tasks and Meetings rows stay collapsed until the pointer is over them; the full-width Calendar shows every
+    // meeting in its day.
+    const paging = id === "meetings" ? { pageSize: 5, pageSizes: [5, 10, 15, 20, 25], hoverRows: true, headerAction: meetingAction(id, "button") } : id === "calls" ? { pageSize: 10 } : id === "calendar" ? { headerAction: meetingAction(id, "button") }
       : id === "tasks" ? { pageSize: 5, pageNumbers: true, hoverRows: true, headerAction: canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : undefined } : {};
     return <HubSpotWorkspace compact tool={tool.id} label={tool.label} pageHref={pageHref} onUnauthorized={expiredSignIn} {...paging} {...panelReports[tool.id]} />;
   }
@@ -551,25 +553,27 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       const previewActions = canAddActivity ? <AddActivityButtons recruits={activityRecruits(all)} /> : undefined;
       return <>
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
-      {/* Tasks, Follow up, Meetings and Calendar share one row above the pipeline. */}
+      {/* Top to bottom: the Today header with Add Recruits, Recruits and Agents; the recruiting pipeline; the Tasks,
+          Follow up, Meetings, Calendar and Email cards; Event Attendance; then the full panels, one per row. Every section
+          and card collapses from the chevron at the right of its title, remembered in this browser. */}
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} actions={<div className="dashboard-actions"><a className="btn btn-primary add-recruits-button" href="#add-recruits"><Icon name="add-person" />Add Recruits</a><a className="btn btn-secondary" href="#recruits"><Icon name="people" />Recruits</a><a className="btn btn-secondary" href="#contract-agents"><Icon name="people" />Agents</a></div>} />
-      <div className="today-summaries">
+      <details className="dashboard-pipeline"><summary>Recruiting pipeline</summary><RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></details>
+      <CollapsibleCards><div className="today-summaries">
         <RecruitTaskChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} lead={canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="plus" /> : undefined} previewActions={previewActions} />
         <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} previewActions={previewActions} />
         <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} previewActions={previewActions} />
         <RecruitEmailSummary recruits={all} />
-      </div>
-      <details className="dashboard-pipeline"><summary>Recruiting pipeline</summary><RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></details>
+      </div></CollapsibleCards>
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
-      <div className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading"><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section />}</div>
-      {/* Tasks and Follow up lead, directly above Recruits and Calls; Meetings and Calendar follow. */}
+      <DashboardSection id="event-attendance" label="Event Attendance" className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading"><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2><div className="panel-heading-actions"><SectionToggle /></div></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section recruits={all} canAddActivity={canAddActivity} now={timestamp} />}</DashboardSection>
+      {/* Stacked, one per row: Tasks, Follow up, Meetings, Calendar, Recruits, then Calls. */}
       <div className="today-overview">
-        {recruitsPagePanel("tasks")}
-        <FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} />
-        {recruitsPagePanel("meetings")}
-        {recruitsPagePanel("calendar")}
-        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} />
-        {recruitsPagePanel("calls")}
+        <DashboardSection id="tasks" label="Tasks">{recruitsPagePanel("tasks")}</DashboardSection>
+        <DashboardSection id="follow-up" label="Follow up"><FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} /></DashboardSection>
+        <DashboardSection id="meetings" label="Meetings">{recruitsPagePanel("meetings")}</DashboardSection>
+        <DashboardSection id="calendar" label="Calendar">{recruitsPagePanel("calendar")}</DashboardSection>
+        <DashboardSection id="recruits" label="Recruits"><RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} /></DashboardSection>
+        <DashboardSection id="calls" label="Calls">{recruitsPagePanel("calls")}</DashboardSection>
       </div>
     </>;
     }

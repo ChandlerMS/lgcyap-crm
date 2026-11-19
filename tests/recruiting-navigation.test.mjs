@@ -69,12 +69,24 @@ test('Queues opens the unified site while saved source routes remain available',
   assert.match(queue, /return <UnifiedQueue embedded=\{embedded\} \/>;/);
 });
 
-test('Event Attendance is a dashboard section between the pipeline and Meetings, and its saved page link still works', () => {
+test('the dashboard runs header, pipeline, cards, Event Attendance, then stacked collapsible panels, and the Event Attendance page link still works', () => {
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
   const today = workspace.slice(workspace.indexOf('if (route.view === "today")'));
-  const pipeline = today.indexOf('<RecruitPipeline'), attendance = today.indexOf('<EventAttendanceBoard section />'), meetings = today.indexOf('recruitsPagePanel("meetings")');
-  assert.ok(pipeline >= 0 && pipeline < attendance && attendance < meetings);
+  const order = ['<RecruitingPeriodControls', '<RecruitPipeline', '<RecruitTaskChips', '<RecruitEmailSummary', '<EventAttendanceBoard section',
+    '<DashboardSection id="tasks"', '<DashboardSection id="follow-up"', '<DashboardSection id="meetings"', '<DashboardSection id="calendar"', '<DashboardSection id="recruits"', '<DashboardSection id="calls"'];
+  const at = order.map(marker => today.indexOf(marker));
+  assert.ok(at.every(index => index >= 0), `every dashboard part is present: ${order.filter((_, index) => at[index] < 0).join(', ')}`);
+  assert.deepEqual([...at].sort((a, b) => a - b), at, 'the dashboard parts run in the requested order');
+  assert.match(today, /<DashboardSection id="event-attendance" label="Event Attendance"/);
+  assert.match(today, /<CollapsibleCards><div className="today-summaries">/);
   assert.deepEqual(resolveWorkspaceRoute('#event-attendance'), { view: 'event-attendance' });
+});
+
+test('the dashboard Calendar shows every meeting in its day, without pointing at a week', () => {
+  const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
+  assert.match(workspace, /id === "calendar" \? \{ headerAction: meetingAction\(id, "button"\) \}/);
+  const styles = readFileSync('app/globals.css', 'utf8');
+  assert.match(styles, /\.today-overview \{ grid-template-columns: minmax\(0, 1fr\); gap: 44px; \}\s*\.today-overview > \.dashboard-section/);
 });
 
 test('Leaderboard and Call Analytics switch with a toggle at the top of both pages', () => {

@@ -12,8 +12,8 @@ type Props = {
   // Without a recruitId the dialog first asks which recruit, from this list (Add Task and Add Follow-Up on the dashboard).
   recruits?: readonly ActivityRecruit[];
   // icons: a recruit row's icon buttons; plus: a gold plus beside a dashboard summary title; button: a labeled panel button;
-  // labeled: compact icon-and-name buttons, as in the hover pop-ups.
-  trigger?: "icons" | "plus" | "button" | "labeled";
+  // labeled: compact icon-and-name buttons, as in the hover pop-ups; mini: the smaller quick links of a recruit hover card.
+  trigger?: "icons" | "plus" | "button" | "labeled" | "mini";
   // Told when a pop-up opens and closes, so a hover pop-up holding these buttons can stay open meanwhile.
   onOpenChange?: (open: boolean) => void;
 };
@@ -27,11 +27,14 @@ const dayLabel = (day: string) => { const time = Date.parse(`${day}T12:00:00Z`);
 const PRESETS = [{ id: "1", label: "Tomorrow", days: 1 }, { id: "3", label: "In 3 days", days: 3 }, { id: "7", label: "Next week", days: 7 }, { id: "date", label: "Pick a date", days: 0 }] as const;
 const TITLES: Record<Kind, string> = { note: "Quick note", task: "Add task", "follow-up": "Follow up", meeting: "Add Meeting" };
 const LABELS: Record<Kind, string> = { note: "Add Note", task: "Add Task", "follow-up": "Add Follow-Up", meeting: "Add Meeting" };
+const SHORT: Record<Kind, string> = { note: "Note", task: "Task", "follow-up": "Follow-Up", meeting: "Meeting" };
 const ALL_KINDS: readonly Kind[] = ["note", "task", "follow-up", "meeting"];
 const PICKER_LIMIT = 100;
 const newId = () => crypto.randomUUID();
 
-function Glyph({ kind }: { kind: Kind }) {
+// calendar draws Add to Calendar's plain calendar instead of the meeting's calendar with a plus.
+function Glyph({ kind, calendar = false }: { kind: Kind; calendar?: boolean }) {
+  if (calendar) return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2" /></svg>;
   return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{kind === "note"
     ? <><path d="M4 4h12l4 4v12H4z" /><path d="M8 10h8M8 14h8M8 18h5" /></>
     : kind === "task" ? <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="m8 12 3 3 5-6" /></>
@@ -119,6 +122,8 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
       ? <button key={item} type="button" className="summary-add panel-add-button" title={(item === "meeting" ? meetingLabel : LABELS[item])} onClick={() => open(item)}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
       : trigger === "labeled"
         ? <button key={item} type="button" className="add-activity-button" onClick={() => open(item)}><Glyph kind={item} /><span>{item === "meeting" ? meetingLabel : LABELS[item]}</span>{recruitName && <span className="sr-only"> for {recruitName}</span>}</button>
+      : trigger === "mini"
+        ? <button key={item} type="button" className="mini-action-button" onClick={() => open(item)} title={`${item === "meeting" ? meetingLabel : LABELS[item]}${recruitName ? ` for ${recruitName}` : ""}`}><Glyph kind={item} calendar={item === "meeting" && meetingLabel === "Add to Calendar"} /><span aria-hidden="true">{item === "meeting" && meetingLabel === "Add to Calendar" ? "Calendar" : SHORT[item]}</span><span className="sr-only">{item === "meeting" ? meetingLabel : LABELS[item]}{recruitName && ` for ${recruitName}`}</span></button>
       : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
   return <>
     {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}

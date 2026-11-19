@@ -8,7 +8,8 @@ type Recipient = { email: string; name: string; route: string; firstName: string
 type Template = { id: string; name: string; route: string; subject: string; fields: string[] };
 type Status = { sender: string; connected: boolean; templates: Template[]; recent: { recruitId: string; status: string; at: number }[] };
 type Preview = { recipient: Recipient; subject: string; html: string; previewHash: string };
-const EmailContext = createContext<{ open: (id?: string) => void; disabled: boolean; status: Status | null; error: string }>({ open: () => {}, disabled: true, status: null, error: '' });
+// open(id, name): name labels a recruit the provider was not given, such as an Event Attendance sign-in.
+const EmailContext = createContext<{ open: (id?: string, name?: string) => void; disabled: boolean; status: Status | null; error: string }>({ open: () => {}, disabled: true, status: null, error: '' });
 export const useRecruitEmail = () => useContext(EmailContext);
 async function mailApi(input: object) {
   const response = await fetch('/api/recruit-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), cache: 'no-store', signal: AbortSignal.timeout(60000) });
@@ -23,6 +24,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const [status, setStatus] = useState<Status | null>(null);
   const [statusError, setStatusError] = useState('');
   const [target, setTarget] = useState('');
+  const [targetName, setTargetName] = useState('');
   const [openCount, setOpenCount] = useState(0);
   const [search, setSearch] = useState('');
   const [recipient, setRecipient] = useState<Recipient | null>(null);
@@ -55,9 +57,9 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
     const leave = (event: BeforeUnloadEvent) => { if (dialog.current?.open && (subject || body || busy)) event.preventDefault(); };
     window.addEventListener('beforeunload', leave); return () => window.removeEventListener('beforeunload', leave);
   }, [subject, body, busy]);
-  const open = useCallback((id = '') => {
+  const open = useCallback((id = '', name = '') => {
     if (disabled || dialog.current?.open) return;
-    setTarget(id); setSearch(''); setRecipient(null); setTemplateId(''); setSubject(''); setBody(''); setFields({}); setPreview(null); setError(''); setNotice(''); setAttempted(false); requestId.current = crypto.randomUUID();
+    setTarget(id); setTargetName(name); setSearch(''); setRecipient(null); setTemplateId(''); setSubject(''); setBody(''); setFields({}); setPreview(null); setError(''); setNotice(''); setAttempted(false); requestId.current = crypto.randomUUID();
     setOpenCount(n => n + 1);
     dialog.current?.showModal(); void loadStatus();
   }, [disabled, loadStatus]);
@@ -65,6 +67,8 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const template = status?.templates.find(t => t.id === templateId);
   const close = () => { if (!busy && (!subject && !body || notice || window.confirm('Discard this email draft?'))) dialog.current?.close(); };
   const connect = async () => {
+    // Google's sign-in page won't open inside the workspace's Event Attendance frame.
+    if (window.self !== window.top) { setError('Connect Google email from New Email on the dashboard, then come back here to send.'); return; }
     setBusy(true); setError('');
     try {
       const result = await authClient.signIn.social({ provider: 'google', scopes: ['https://www.googleapis.com/auth/gmail.send'], loginHint: status?.sender, callbackURL: window.location.href, additionalParams: { access_type: 'offline', prompt: 'consent select_account', include_granted_scopes: 'true' } });
@@ -96,7 +100,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
       {(error || statusError) && <p role="alert" className="connection-alert">{error || statusError}</p>}
       {notice ? <><p role="status" className="save-notice">{notice}</p><button className="btn btn-primary" onClick={() => dialog.current?.close()}>Done</button></> : <fieldset disabled={busy || attempted} className="email-fields">
         <label>Find recruit<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recruit names" /></label>
-        <label>Recruit<select value={target} onChange={e => { setTarget(e.target.value); setRecipient(null); setTemplateId(''); setSubject(''); setBody(''); setFields({}); change(); }}><option value="">Choose a recruit</option>{target && !choices.some(r => r.id === target) && <option value={target}>{recruits.find(r => r.id === target)?.name || 'Selected recruit'}</option>}{choices.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+        <label>Recruit<select value={target} onChange={e => { setTarget(e.target.value); setRecipient(null); setTemplateId(''); setSubject(''); setBody(''); setFields({}); change(); }}><option value="">Choose a recruit</option>{target && !choices.some(r => r.id === target) && <option value={target}>{recruits.find(r => r.id === target)?.name || targetName || 'Selected recruit'}</option>}{choices.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
         {recipient && <p>To: <strong>{recipient.name} &lt;{recipient.email}&gt;</strong></p>}
         <label>Template<select value={templateId} disabled={!recipient} onChange={e => { setTemplateId(e.target.value); const selected = status?.templates.find(t => t.id === e.target.value); setSubject(selected?.subject || ''); setFields({}); change(); }}><option value="">Compose a new message</option>{status?.templates.map(t => <option key={t.id} value={t.id} disabled={t.route !== recipient?.route}>{t.name}{t.route !== recipient?.route ? ' — licensing status does not match' : ''}</option>)}</select></label>
         {status && status.templates.length !== 2 && <p className="helper">Offer templates are unavailable. You can still compose a new message.</p>}

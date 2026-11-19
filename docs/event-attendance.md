@@ -1,6 +1,6 @@
 # Event Attendance
 
-The board is a section of the Recruiting Dashboard, between the pipeline and Meetings and Calendar (Demo data leaves it unloaded, like the HubSpot panels). It has no sidebar link. Saved `#event-attendance` links still open the full page, `/event-attendance?embedded=1` in the workspace frame, with Recruiting Dashboard selected in the sidebar. The page reads `POST /api/event-attendance` with an empty JSON body. It uses the recruiting workspace's sign-in, editor list and origin checks, and its own HubSpot connection.
+The board is a section of the Recruiting Dashboard, below the Tasks, Follow up, Meetings, Calendar and Email cards and above the stacked Tasks, Follow up, Meetings, Calendar, Recruits and Calls panels (Demo data leaves it unloaded, like the HubSpot panels). Like every dashboard section it collapses from the chevron after its Refresh button, remembered in that browser. It has no sidebar link. Saved `#event-attendance` links still open the full page, `/event-attendance?embedded=1` in the workspace frame, with Recruiting Dashboard selected in the sidebar. The page reads `POST /api/event-attendance` with an empty JSON body. It uses the recruiting workspace's sign-in, editor list and origin checks, and its own HubSpot connection.
 
 ## What it counts
 
@@ -26,6 +26,8 @@ Notes are classified by their fixed opening heading. The page refreshes every mi
 
 Select a tile (Signed in, Applied, Hired, Today), an event day, or an office count on an event day to open the people behind that number. One list is open at a time. Each name opens the recruit in the CRM. The lists leave out stage, location and a HubSpot link; the recruit and the Applications section have them.
 
+Pointing at a name (or focusing it with the keyboard) opens a card beside it: the recruit's CRM details from the dashboard's loaded records (or, on the page itself, what the sign-in recorded) and their hiring event sign-ins. In lists of people who applied (Applied, Hired, Today, the event-day lists and every applicant list), the card adds everything they entered on the application, matched from the Applications section's loaded list by recruiting ticket, then email. The card's small quick links add a note, task, meeting or calendar event on the recruiting ticket, or call, text or email; someone with no recruiting ticket gets the details only. Selecting an email opens New Email with the offer templates for anyone with a recruiting ticket, and stays a mail link otherwise. Signed in, Applied and Hired have a sign-in date filter: one event day, or a range of dates.
+
 - **Signed in:** one row per person, with sign-in count and first online application.
 - **Applied** and **Hired:** the same people, filtered.
 - **Today**, an **event day** or an **office on a day:** one row per sign-in, with the answers from that sign-in. Today and a whole day also list that day's online applications.
@@ -34,7 +36,7 @@ Details come from the note itself: name, email, phone, office, how they heard ab
 
 ## Applications
 
-The Applications section is the Applications page's list (`app/applications-page.tsx`, read from `POST /api/applications`): the same counts (Applications, Did not meet a required item, Need a private conversation, Still at Hiring Event), Hiring Event reminder, search, office and status filters, and one card per application with its answers, photo ID and links. It shows ten cards a page. Its title opens the full page. It reads again when the board's Refresh is used, and when the board's minute refresh finds a different number of applications. Its reads always start after the board's own read has finished, on the first load and on Refresh, so the two never reach HubSpot at the same moment: the dashboard already sends HubSpot about ten reads at once. If its read fails, for example on a HubSpot rate limit, it tries again right after the board's next read, within a minute, and says so.
+The Applications section is the Applications page's list (`app/applications-page.tsx`, read from `POST /api/applications`): the same counts (Applications, Did not meet a required item, Need a private conversation, Still at Hiring Event), Hiring Event reminder, search, office and status filters, and one card per application with its answers, photo ID and links. It starts collapsed under its title and count, with Show applications to open it, and shows ten cards a page. Its title opens the full page. It reads again when the board's Refresh is used, and when the board's minute refresh finds a different number of applications. Its reads always start after the board's own read has finished, on the first load and on Refresh, so the two never reach HubSpot at the same moment: the dashboard already sends HubSpot about ten reads at once. If its read fails, for example on a HubSpot rate limit, it tries again right after the board's next read, within a minute, and says so.
 
 ## Approve and Deny
 
