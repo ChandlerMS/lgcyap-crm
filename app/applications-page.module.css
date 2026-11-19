@@ -75,3 +75,5 @@ dialog.photoDialog { width: min(980px, calc(100vw - 40px)); }
 .photoNote a { color: var(--gold); }
 .linkButton { padding: 0; border: 0; background: none; color: var(--gold); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .linkButton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.photoFrame { display: grid; gap: 8px; justify-items: center; width: 100%; margin: 0; }
+.photoFrame figcaption { justify-self: start; color: var(--muted); font-size: 13px; }

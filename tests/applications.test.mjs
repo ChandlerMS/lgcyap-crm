@@ -40,22 +40,30 @@ test('missed items, private-conversation flags, outcomes and older photo labels 
 
 test('applications are listed newest first with their ticket as it is now, and counted', () => {
   const notes = [
-    { id: '11', properties: { hs_note_body: note({ name: 'Older QA' }), hs_timestamp: '2026-11-17T15:00:00Z' } },
-    { id: '12', properties: { hs_note_body: note({ name: 'Newer QA', review: 'One question', outcome: 'Added to this open recruiting ticket, which is at Hiring Event.' }), hs_timestamp: '2026-11-18T15:00:00Z' } },
+    { id: '11', properties: { hs_note_body: note({ name: 'Older QA' }), hs_timestamp: '2026-11-17T15:00:00Z', hs_attachment_ids: '801' } },
+    { id: '12', properties: { hs_note_body: note({ name: 'Newer QA', review: 'One question', outcome: 'Added to this open recruiting ticket, which is at Hiring Event.' }), hs_timestamp: '2026-11-18T15:00:00Z', hs_attachment_ids: '802' } },
     { id: '13', properties: { hs_note_body: note({ name: 'Not a fit QA', required: 'Did not meet: X', outcome: 'No recruiting ticket', photo: '' }), hs_timestamp: '2026-11-18T16:00:00Z' } },
     { id: '14', properties: { hs_note_body: '<p><strong>Hiring event sign-in</strong></p>', hs_timestamp: '2026-11-18T16:00:00Z' } },
   ];
+  // Sign-in photo notes: 31 is the same person as application 13 by contact, 32 the same as application 11 by ticket,
+  // 33 is someone else, and 34 is not a sign-in note.
+  const signIn = (id, attachments, at = '2026-11-17T22:00:00Z', body = '<p><strong>Hiring event sign-in</strong></p>') => ({ id, properties: { hs_note_body: body, hs_timestamp: at, hs_attachment_ids: attachments } });
+  const photoNotes = [signIn('31', '901;902'), signIn('32', '903', '2026-11-16T22:00:00Z'), signIn('33', '904'), signIn('34', '905', undefined, '<p>Call notes</p>')];
   const report = summarizeApplications({
-    notes, fetchedAt: '2026-11-19T00:00:00Z',
-    noteTickets: new Map([['11', ['900']], ['12', ['901', '999']], ['13', []]]),
-    noteContacts: new Map([['11', ['500']], ['12', ['501']], ['13', ['502']]]),
+    notes, fetchedAt: '2026-11-19T00:00:00Z', photoNotes,
+    noteTickets: new Map([['11', ['900']], ['12', ['901', '999']], ['13', []], ['31', []], ['32', ['900']], ['33', ['950']], ['34', []]]),
+    noteContacts: new Map([['11', ['500']], ['12', ['501']], ['13', ['502']], ['31', ['502']], ['32', ['599']], ['33', ['598']], ['34', ['502']]]),
     tickets: new Map([['900', { pipeline: '924992938', stageId: '1473318769' }], ['901', { pipeline: '924992938', stageId: '1473318768' }], ['999', { pipeline: 'other', stageId: '1' }]]),
   });
   assert.deepEqual(report.applications.map(item => item.name), ['Not a fit QA', 'Newer QA', 'Older QA']);
   assert.deepEqual(report.applications.map(item => item.ticket?.stage ?? null), [null, 'Hiring Event', 'Application']);
   assert.equal(report.applications[1].waitingAtHiringEvent, true);
   assert.equal(report.applications[0].contact.url, 'https://app.hubspot.com/contacts/50894788/record/0-1/502');
-  assert.deepEqual(report.summary, { total: 3, met: 2, notMet: 1, flagged: 1, waitingAtHiringEvent: 1, photoId: 2 });
+  assert.deepEqual(report.summary, { total: 3, met: 2, notMet: 1, flagged: 1, waitingAtHiringEvent: 1, photoId: 3 });
+  // Each applicant's own photo first, then any from signing in at an event; front and back count as two files.
+  assert.deepEqual(report.applications.map(item => item.photos.map(photo => [photo.noteId, photo.source, photo.files])), [
+    [['31', 'sign-in', 2]], [['12', 'application', 1]], [['11', 'application', 1], ['32', 'sign-in', 1]],
+  ]);
 });
 
 test('the read searches only form notes, then links tickets and contacts', async () => {
@@ -65,17 +73,28 @@ test('the read searches only form notes, then links tickets and contacts', async
     calls.push(path);
     const json = value => ({ ok: true, status: 200, headers: new Headers(), body: new Response(JSON.stringify(value)).body });
     if (path === '/crm/v3/objects/notes/search') {
-      assert.deepEqual(body.filterGroups[0].filters.map(filter => filter.propertyName), ['hs_object_source_label', 'hs_createdate', 'hs_note_body']);
-      return json({ total: 1, results: [{ id: '21', properties: { hs_note_body: note(), hs_timestamp: '2026-11-18T15:00:00Z' } }] });
+      const filters = body.filterGroups[0].filters.map(filter => filter.propertyName);
+      assert.ok(body.properties.includes('hs_attachment_ids'));
+      if (filters.includes('hs_attachment_ids')) {
+        assert.deepEqual(filters, ['hs_object_source_label', 'hs_createdate', 'hs_attachment_ids', 'hs_note_body']);
+        return json({ total: 1, results: [{ id: '31', properties: { hs_note_body: '<p><strong>Hiring event sign-in</strong></p>', hs_timestamp: '2026-11-17T22:00:00Z', hs_attachment_ids: '901' } }] });
+      }
+      assert.deepEqual(filters, ['hs_object_source_label', 'hs_createdate', 'hs_note_body']);
+      return json({ total: 1, results: [{ id: '21', properties: { hs_note_body: note(), hs_timestamp: '2026-11-18T15:00:00Z', hs_attachment_ids: '900' } }] });
     }
-    if (path === '/crm/v4/associations/notes/tickets/batch/read') return json({ results: [{ from: { id: '21' }, to: [{ toObjectId: 77 }] }] });
-    if (path === '/crm/v4/associations/notes/contacts/batch/read') return json({ results: [{ from: { id: '21' }, to: [{ toObjectId: 55 }] }] });
+    if (path === '/crm/v4/associations/notes/tickets/batch/read') {
+      assert.deepEqual(body.inputs.map(input => input.id), ['21', '31']);
+      return json({ results: [{ from: { id: '21' }, to: [{ toObjectId: 77 }] }, { from: { id: '31' }, to: [{ toObjectId: 77 }] }] });
+    }
+    if (path === '/crm/v4/associations/notes/contacts/batch/read') return json({ results: [{ from: { id: '21' }, to: [{ toObjectId: 55 }] }, { from: { id: '31' }, to: [{ toObjectId: 55 }] }] });
+    if (path === '/crm/v3/objects/tickets/batch/read') assert.deepEqual(body.inputs.map(input => input.id), ['77']);
     if (path === '/crm/v3/objects/tickets/batch/read') return json({ results: [{ id: '77', properties: { hs_pipeline: '924992938', hs_pipeline_stage: '1473318769' } }] });
     throw new Error(`unexpected ${path}`);
   };
   const report = await readApplications({ accessToken: 'synthetic-token', fetchImpl, now: () => Date.parse('2026-11-19T00:00:00Z') });
   assert.equal(report.applications[0].ticket.id, '77');
   assert.equal(report.applications[0].contact.id, '55');
-  assert.deepEqual(calls, ['/crm/v3/objects/notes/search', '/crm/v4/associations/notes/tickets/batch/read', '/crm/v4/associations/notes/contacts/batch/read', '/crm/v3/objects/tickets/batch/read']);
+  assert.deepEqual(report.applications[0].photos.map(photo => [photo.noteId, photo.source]), [['21', 'application'], ['31', 'sign-in']]);
+  assert.deepEqual(calls, ['/crm/v3/objects/notes/search', '/crm/v3/objects/notes/search', '/crm/v4/associations/notes/tickets/batch/read', '/crm/v4/associations/notes/contacts/batch/read', '/crm/v3/objects/tickets/batch/read']);
   await assert.rejects(readApplications({ accessToken: '' }), /not been configured/);
 });

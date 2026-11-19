@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_PHOTO_BYTES, photoResponse, photoType, readApplicationPhoto } from '../lib/application-photo.mjs';
+import { MAX_PHOTO_BYTES, photoResponse, photoType, readNotePhoto } from '../lib/photo-id.mjs';
 import { handleRecruitRequest } from '../lib/hubspot.mjs';
 
 // A fake HubSpot. Synthetic notes and bytes only: no real applicant data or files.
@@ -18,12 +18,12 @@ function hubspot({ note = applicationNote(), signedStatus = 200, signedUrl = SIG
     calls.push({ url: String(url), auth: init?.headers?.Authorization ?? null, redirect: init?.redirect });
     const { pathname, hostname } = new URL(url);
     if (hostname === 'api.hubapi.com' && pathname === '/crm/v3/objects/notes/555') return note ? json(note) : json({}, 404);
-    if (hostname === 'api.hubapi.com' && pathname === '/files/v3/files/777/signed-url') return signedStatus === 200 ? json({ url: signedUrl, type: 'IMG', extension: 'jpg' }) : json({ status: 'error' }, signedStatus);
+    if (hostname === 'api.hubapi.com' && /^\/files\/v3\/files\/77\d\/signed-url$/.test(pathname)) return signedStatus === 200 ? json({ url: signedUrl, type: 'IMG', extension: 'jpg' }) : json({ status: 'error' }, signedStatus);
     return file(url);
   };
   return { fetchImpl, calls };
 }
-const read = (fake, noteId = '555') => readApplicationPhoto(noteId, { accessToken: 'test-token', fetchImpl: fake.fetchImpl });
+const read = (fake, noteId = '555', file = 0) => readNotePhoto(noteId, file, { accessToken: 'test-token', fetchImpl: fake.fetchImpl });
 
 test('an application photo ID is read from the note attachment, and the file host never gets the HubSpot token', async () => {
   const fake = hubspot();
@@ -44,12 +44,17 @@ test('the photo comes back private, uncached and unable to run as a page', async
   assert.deepEqual(new Uint8Array(await response.arrayBuffer()), JPEG);
 });
 
-test('only application notes with an attachment are read', async () => {
-  const signIn = { id: '555', properties: { hs_note_body: '<p><strong>Hiring event sign-in</strong></p>', hs_attachment_ids: '777' } };
-  await assert.rejects(read(hubspot({ note: signIn })), { code: 'PHOTO_ID_NOT_FOUND' });
-  await assert.rejects(read(hubspot({ note: applicationNote('') })), { code: 'PHOTO_ID_NOT_FOUND', message: /no photo ID/ });
+test('only application and sign-in notes with that attachment are read, including the back of a license', async () => {
+  const signIn = hubspot({ note: { id: '555', properties: { hs_note_body: '<p><strong>Hiring event sign-in</strong></p>', hs_attachment_ids: '777;778' } } });
+  assert.equal((await read(signIn, '555', 1)).type, 'image/jpeg');
+  assert.ok(signIn.calls.some(call => call.url.endsWith('/files/v3/files/778/signed-url?expirationSeconds=60')));
+  await assert.rejects(read(hubspot(), '555', 1), { code: 'PHOTO_ID_NOT_FOUND', message: /No photo ID/ });
+  const callNote = { id: '555', properties: { hs_note_body: '<p>Call notes</p>', hs_attachment_ids: '777' } };
+  await assert.rejects(read(hubspot({ note: callNote })), { code: 'PHOTO_ID_NOT_FOUND' });
+  await assert.rejects(read(hubspot({ note: applicationNote('') })), { code: 'PHOTO_ID_NOT_FOUND', message: /No photo ID/ });
   await assert.rejects(read(hubspot(), '../files'), { code: 'PHOTO_ID_NOT_FOUND' });
-  await assert.rejects(readApplicationPhoto('555', { accessToken: '', fetchImpl: hubspot().fetchImpl }), { code: 'CONNECTION_NOT_CONFIGURED' });
+  await assert.rejects(read(hubspot(), '555', -1), { code: 'PHOTO_ID_NOT_FOUND' });
+  await assert.rejects(readNotePhoto('555', 0, { accessToken: '', fetchImpl: hubspot().fetchImpl }), { code: 'CONNECTION_NOT_CONFIGURED' });
 });
 
 test('a connection without the files permission says what the owner must add', async () => {
@@ -83,7 +88,7 @@ test('only the image and PDF types the apply site accepts are returned, and neve
 
 test('the request checks still apply before a photo is sent', async () => {
   const origin = 'https://crm.example.test';
-  const request = (headers = {}) => new Request(`${origin}/api/applications/555/photo-id`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...headers }, body: '{}' });
+  const request = (headers = {}) => new Request(`${origin}/api/photo-ids/555?file=0`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...headers }, body: '{}' });
   let reads = 0;
   const base = { allowedOrigin: origin, getUser: async () => ({ email: 'editor@example.test' }), authorizeUser: user => user.email === 'editor@example.test', readData: async () => { reads += 1; return photoResponse(await read(hubspot())); } };
   assert.equal((await handleRecruitRequest(request(), { ...base, getUser: async () => null })).status, 401);
