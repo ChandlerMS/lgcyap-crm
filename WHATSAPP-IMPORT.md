@@ -67,7 +67,9 @@ replaces every day from the export's first message through its last. Days outsid
 from a phone with shorter history cannot erase earlier days. If the export starts after the imported posts begin, its
 first day may start mid-day, so the stored rows for that day are kept and replacement starts the next day; such an
 export is refused if it starts on or after the last imported day, because neither copy of that day would be whole. An
-export that ends before the posts already imported is refused too. A refused export changes nothing. Re-run with each
+export that ends before the posts already imported is refused too. WhatsApp writes messages in time order, so a message
+line dated before the one above it, or in the future, is treated as a chat header typed into a post: the export is
+refused and the line number shown, so text inside a post can never move the replaced dates. A refused export changes nothing. Re-run with each
 newer export; its last day replaces the partial day the previous export ended on.
 
 `lib/whatsapp-chat-sales.mjs` reads sale posts with the rules that rebuilt the LAP Daily Agent Reports from the main

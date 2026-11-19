@@ -31,7 +31,7 @@ const CHAT = [
   '[7/7/26, 2:17:34 PM] Agent Foxtrot: Nice work today',
 ].join('\r\n');
 const SHA = 'b'.repeat(64);
-const NOW = Date.parse('2026-07-08T16:00:00Z');
+const NOW = Date.parse('2026-07-10T16:00:00Z');
 const schema = await readFile(new URL('../migrations/0020_whatsapp_svp_sales.sql', import.meta.url), 'utf8');
 async function database() { const db = new PGlite(); await db.exec(schema); await db.exec(schema); return db; }
 const custom = (from, to) => ({ board: 'whatsapp-sp', period: 'custom', from, to });
@@ -68,6 +68,25 @@ test('a repost is the whole post again; a new post sharing one line still counts
   ].join('\n'));
   // 9:10 repeats 9:00 in full and counts once; 9:20 and 9:25 are different posts even though they share a line.
   assert.deepEqual(parsed.days.map(({ sales, cents }) => [sales, cents]), [[5, 250000]]);
+});
+
+test('a chat header typed into a post cannot move the date range: out-of-order or future lines stop the import', async () => {
+  const pasted = [
+    '[7/6/26, 9:00:00 AM] Agent Alpha: $500 PT',
+    '[7/6/26, 9:30:00 AM] Agent Bravo: look at this',
+    '[1/2/26, 9:00:00 AM] Private Person: $900 PT',
+    '[7/6/26, 10:00:00 AM] Agent Alpha: $600 PT',
+  ].join('\n');
+  assert.throws(() => whatsappChatSales(pasted), error => error instanceof WhatsappChatError && /^Line 3: .*dated before/.test(error.message) && !/Private|900/.test(error.message));
+  const future = ['[7/6/26, 9:00:00 AM] Agent Alpha: $500 PT', '[12/31/26, 9:00:00 AM] Private Person: $900 PT'].join('\n');
+  assert.throws(() => whatsappChatSales(future, { now: Date.parse('2026-07-06T20:00:00Z') }), error => error instanceof WhatsappChatError && /^Line 2: .*future/.test(error.message));
+  assert.equal(whatsappChatSales(future, { now: Date.parse('2027-01-02T00:00:00Z') }).lastPostAt, '2026-12-31T09:00:00');
+  const db = await database();
+  try {
+    const later = { ...whatsappChatSales(future, { now: Date.parse('2027-01-02T00:00:00Z') }), sha256: SHA };
+    await assert.rejects(importWhatsappSvpChat(db, later, Date.parse('2026-07-06T20:00:00Z')), error => error instanceof WhatsappImportError && /future/.test(error.message));
+    assert.equal((await db.query('SELECT count(*)::integer AS n FROM whatsapp_svp_import')).rows[0].n, 0);
+  } finally { await db.close(); }
 });
 
 test('chat errors name lines only, never chat text', () => {
