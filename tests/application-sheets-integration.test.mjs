@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { sharingSchema } from '../db/application-sheets.mjs';
+import { workbookTabs } from './xlsx-tabs.mjs';
+const isWrite = call => call.method === 'PATCH' && call.url.startsWith('https://www.googleapis.com/upload/drive/v3/files/');
+const texts = call => workbookTabs(call.body).flatMap(tab => tab.rows.flat());
 const env = { GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', BETTER_AUTH_SECRET: 'synthetic-encryption-secret-more-than-32-characters', BETTER_AUTH_URL: 'https://crm.example.invalid', VERCEL_ENV: 'production', HUBSPOT_ACCESS_TOKEN: 'synthetic-hubspot' };
 const user = { userId: 'owner-1', email: 'chandler@lgcyap.com' };
 const now = () => new Date('2026-11-19T14:00:00Z');
@@ -23,8 +26,7 @@ function provider({ email = user.email, failWrite = false, refuseShare = [] } = 
     else if (url.includes('/permissions?')) { const share = JSON.parse(init.body); if (refuseShare.includes(share.emailAddress)) return Response.json({ error: { message: 'sensitive provider text' } }, { status: 403 }); shares.push({ url, ...share }); body = { id: `permission-${shares.length}` }; }
     else if (url.includes('/drive/v3/files?')) body = { files };
     else if (url === 'https://www.googleapis.com/drive/v3/files' && init.method === 'POST') { const file = { id: 'synthetic-file', ...JSON.parse(init.body) }; files.push(file); body = file; }
-    else if (url.endsWith(':batchUpdate')) { if (failWrite) return Response.json({ error: { message: 'sensitive provider text' } }, { status: 403 }); body = {}; }
-    else if (url.includes('/v4/spreadsheets/')) body = { sheets: [{ properties: { sheetId: 0, title: 'Sheet1', gridProperties: { rowCount: 1000, columnCount: 26 } } }] };
+    else if (url.startsWith('https://www.googleapis.com/upload/drive/v3/files/') && init.method === 'PATCH') { if (failWrite) return Response.json({ error: { message: 'sensitive provider text' } }, { status: 403 }); body = { id: new URL(url).pathname.split('/').pop(), mimeType: 'application/vnd.google-apps.spreadsheet' }; }
     else throw new Error('Unexpected synthetic URL: ' + url);
     return Response.json(body);
   };
@@ -78,10 +80,10 @@ test('sync creates one monthly file, writes literal cells, and the next morning 
     const first = await syncApplicationSheets({ ...options, now: now() });
     assert.equal(first.status, 'synced');
     assert.equal(google.files.length, 1);
-    const writes = () => google.calls.filter(call => call.url.endsWith(':batchUpdate'));
+    const writes = () => google.calls.filter(isWrite);
     assert.equal(writes().length, 1);
-    const body = JSON.parse(writes()[0].body);
-    assert.ok(body.requests.some(request => request.updateCells?.rows?.some(row => row.values.some(cell => cell.userEnteredValue?.stringValue === '=Synthetic'))));
+    assert.ok(texts(writes()[0]).includes('=Synthetic'), 'applicant text is written literally');
+    assert.ok(google.calls.every(call => !call.url.includes('sheets.googleapis.com')), 'only the Drive API is used');
     await syncApplicationSheets({ ...options, now: new Date('2026-11-19T14:01:00Z') });
     assert.equal(writes().length, 1);
     await syncApplicationSheets({ ...options, now: new Date('2026-11-20T14:00:00Z') });
@@ -106,7 +108,7 @@ test('partial data makes no external writes and failures preserve last success f
     await assert.rejects(syncApplicationSheets({ ...options, fetchImpl: failed.fetchImpl, readReport: async () => report }), /Google/i);
     const connection = (await db.query('SELECT * FROM application_sheets_connection')).rows[0];
     assert.equal(connection.last_success_at, null);
-    assert.equal(connection.last_error, 'GOOGLE_SHEETS:GOOGLE_PERMISSION_REQUIRED');
+    assert.equal(connection.last_error, 'GOOGLE_WRITE:GOOGLE_PERMISSION_REQUIRED');
     assert.equal((await db.query('SELECT fingerprint FROM application_sheets_months')).rows[0].fingerprint, null);
     // Retry after a write failure reuses the persisted file ID rather than creating another file.
     const recovered = await syncApplicationSheets({ ...options, readReport: async () => report });
@@ -157,7 +159,7 @@ test('failed forced repair retries unchanged files and unpublished workbooks hav
     await syncApplicationSheets(options);
     await assert.rejects(syncApplicationSheets({ ...options, force: true, fetchImpl: provider({ failWrite: true }).fetchImpl }));
     await syncApplicationSheets(options);
-    assert.equal(google.calls.filter(call => call.url.endsWith(':batchUpdate')).length, 2);
+    assert.equal(google.calls.filter(isWrite).length, 2);
   } finally { await db.close(); }
 });
 test('verified removal of the last application clears its previously managed month', async () => {
@@ -170,10 +172,9 @@ test('verified removal of the last application clears its previously managed mon
     // Seed a different current month destination; Google fake intentionally uses one ID per fixture.
     await db.query("INSERT INTO application_sheets_months(month,spreadsheet_id,fingerprint) VALUES ('2026-12','synthetic-december',NULL)");
     await syncApplicationSheets({ ...options, now: new Date('2026-12-01T15:00:00Z'), readReport: async () => ({ partial: false, applications: [] }) });
-    const writes = google.calls.filter(call => call.url.endsWith(':batchUpdate') && call.url.includes('synthetic-file'));
+    const writes = google.calls.filter(call => isWrite(call) && call.url.includes('/synthetic-file?'));
     assert.equal(writes.length, 2);
-    const rows = JSON.parse(writes.at(-1).body).requests.flatMap(request => request.updateCells?.rows ?? []);
-    assert.equal(rows.some(row => row.values.some(cell => cell.userEnteredValue?.stringValue === '=Synthetic')), false);
+    assert.equal(texts(writes.at(-1)).includes('=Synthetic'), false);
   } finally { await db.close(); }
 });
 test('initiating report is encrypted into OAuth state and returned only after verified account consent', async () => {
@@ -248,8 +249,8 @@ test('a review decision or a recruit field edit rewrites the month on the next c
     const base = { partial: false, applications: [{ ...report.applications[0], ticket: { id: '77', stage: 'Application', url: 'https://app.hubspot.com/synthetic' } }], reviews: {}, records: { 77: { properties: { orientation_office: 'orlando' } } } };
     let current = base;
     const options = { db, env, fetchImpl: google.fetchImpl, readReport: async () => current };
-    const writes = () => google.calls.filter(call => call.url.endsWith(':batchUpdate'));
-    const cells = () => JSON.parse(writes().at(-1).body).requests.flatMap(request => request.updateCells?.rows ?? []).flatMap(row => row.values.map(cell => cell.userEnteredValue?.stringValue));
+    const writes = () => google.calls.filter(isWrite);
+    const cells = () => texts(writes().at(-1));
     await syncApplicationSheets({ ...options, now: now() });
     assert.ok(cells().includes('Not reviewed') && cells().includes('Orlando'));
     current = { ...base, reviews: { 77: { status: 'approved', reviewedAt: '2026-11-19T14:00:30.000Z' } } };

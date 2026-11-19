@@ -30,7 +30,7 @@ Each month's Sheet is shared as an editor with sarah@lgcyap.com and carlos@fam1l
 
 The external sign-in site can POST `/api/event-attendance/sheets/notify` after writing its HubSpot note, authorized with a separate 32+ character `SIGN_IN_SHEETS_NOTIFY_SECRET` configured in both servers. No attendee body is needed. It follows the same once-a-morning rule as the cron and is not installed in the sign-in site.
 
-Google setup, offline permission, Drive/Sheets API enablement and token rotation follow [Applications Sheets setup](application-sheets.md). Do not edit the managed table columns directly, because the sync replaces them. Put your own notes in columns to the right of the table or on a separate tab. The current-month link appears only after a successful write. Missing Google authorization and provider failures stay visible in the panel.
+Google setup, offline permission, Drive API enablement and token rotation follow [Applications Sheets setup](application-sheets.md). The Sheets API is not used. Each update replaces the whole month's file, every tab and column, so keep your own notes in a separate file. The current-month link appears only after a successful write. Missing Google authorization and provider failures stay visible in the panel.
 
 ## One-off export
 
