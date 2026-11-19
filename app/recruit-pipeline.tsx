@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { createPortal } from "react-dom";
 import { LICENSE_ROUTES, RECRUITING_PATHS } from "../lib/recruiting-flow.mjs";
 import RecruitCommunications from "./recruit-communications";
+import { AddActivityButtons } from "./recruit-quick-actions";
 import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
 import { stageSnapshotAvailable } from "./recruit-stage-save.mjs";
 import { besideAnchorPosition, PIPELINE_FACE_ANGLE, PIPELINE_FACES, pipelineAge, pipelineDegreesPerPixel, pipelineDropChoice, pipelineRotationLimit, pipelineSettleFace, pipelineVisibleFaces, popoutPosition, sortPipelineRecruits } from "./recruit-pipeline-actions.mjs";
@@ -70,7 +71,7 @@ const ROUTE_NAMES: Record<string, string> = LICENSE_ROUTES;
 type HoverAnchor = { id: string; top: number; right: number; bottom: number; left: number };
 
 /** Details and quick contact actions for one recruit, shown beside its name on hover or keyboard focus. */
-function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, onPointerEnter, onPointerLeave }: { recruit: PipelineRecruit; anchor: HoverAnchor; id: string; now: number; stageLabel: string; hint: string; onPointerEnter: () => void; onPointerLeave: () => void }) {
+function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, actions, onPointerEnter, onPointerLeave }: { recruit: PipelineRecruit; anchor: HoverAnchor; id: string; now: number; stageLabel: string; hint: string; actions?: ReactNode; onPointerEnter: () => void; onPointerLeave: () => void }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   useLayoutEffect(() => {
@@ -99,6 +100,7 @@ function RecruitHoverCard({ recruit, anchor, id, now, stageLabel, hint, onPointe
     <p className={styles.hoverName}>{name}</p>
     <p className={styles.hoverStage}><span>{recruit.stage || stageLabel}</span>{recruit.recruitingPath ? <span>{path}</span> : <span className={styles.hoverWarning}>Path not recorded</span>}</p>
     <div className={styles.hoverActions}><RecruitCommunications labeled recruitName={name} recruitId={recruit.id} phone={recruit.phone} hubspotUrl={recruit.hubspotUrl ?? ""} isDemo={recruit.isDemo} /></div>
+    {actions}
     <dl className={styles.hoverDetails}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     {hint && <p className={styles.hoverHint}>{hint}</p>}
   </div>, document.body);
@@ -256,6 +258,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   const [announcement, setAnnouncement] = useState("");
   const [hovered, setHovered] = useState<HoverAnchor | null>(null);
   const hoverTimerRef = useRef(0);
+  const pinnedRef = useRef(false);
   const hoverCardId = `${pipelineId}-recruit-details`;
   const [popout, setPopout] = useState<{ key: string; anchor: HTMLElement; toggle: HTMLElement | null } | null>(null);
   const popoutId = `${pipelineId}-stage-popout`;
@@ -288,7 +291,8 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
   useEffect(() => {
     if (!hovered) return;
-    const hide = () => setHovered(null);
+    // A card whose Add pop-up is open stays put until that pop-up closes.
+    const hide = () => { if (!pinnedRef.current) setHovered(null); };
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
     window.addEventListener("scroll", hide, true); window.addEventListener("resize", hide); window.addEventListener("blur", hide); document.addEventListener("keydown", escape);
     return () => { window.removeEventListener("scroll", hide, true); window.removeEventListener("resize", hide); window.removeEventListener("blur", hide); document.removeEventListener("keydown", escape); };
@@ -367,9 +371,14 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
   const unrecordedPath = (recruit: PipelineRecruit) => !recruit.recruitingPath && PRE_OFFER.has(canonicalKey(recruit.stageKey));
   const destinationLabel = (choice: { label?: string; flowChanges?: { recruiting_path?: string } }) => choice.flowChanges?.recruiting_path
     ? `${PATH_NAMES[choice.flowChanges.recruiting_path] ?? "the chosen path"} · ${choice.label ?? "the chosen stage"}` : choice.label ?? "the chosen stage";
-  const hideDetails = () => { window.clearTimeout(hoverTimerRef.current); setHovered(null); };
+  const hideDetails = () => { if (pinnedRef.current) return; window.clearTimeout(hoverTimerRef.current); setHovered(null); };
+  // While one of the card's Add pop-ups is open the card stays; when it closes, the card goes unless the pointer is on it.
+  const pinDetails = (open: boolean) => {
+    pinnedRef.current = open; window.clearTimeout(hoverTimerRef.current);
+    if (!open && !document.getElementById(hoverCardId)?.matches(":hover")) setHovered(null);
+  };
   // A short grace period lets the pointer travel from the name into the card to use its quick actions.
-  const scheduleHideDetails = () => { window.clearTimeout(hoverTimerRef.current); hoverTimerRef.current = window.setTimeout(() => setHovered(null), 300); };
+  const scheduleHideDetails = () => { window.clearTimeout(hoverTimerRef.current); hoverTimerRef.current = window.setTimeout(() => { if (!pinnedRef.current) setHovered(null); }, 300); };
   const keepDetails = () => window.clearTimeout(hoverTimerRef.current);
   const anchorFor = (element: HTMLElement, id: string): HoverAnchor => {
     const row = (element.closest<HTMLElement>("[data-recruit-card]") ?? element).getBoundingClientRect(), name = element.getBoundingClientRect();
@@ -642,6 +651,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
       </div>
     </>}
     {hovered && hoveredItem && !draggedId && <RecruitHoverCard recruit={hoveredItem.recruit} anchor={hovered} id={hoverCardId} now={now} stageLabel={KNOWN.has(hoveredItem.key) ? label(hoveredItem.key as Key) : "Stage not recognized"} onPointerEnter={keepDetails} onPointerLeave={scheduleHideDetails}
+      actions={canEdit && !hoveredItem.recruit.isDemo ? <AddActivityButtons className={styles.hoverAdd} recruitId={hoveredItem.recruit.id} recruitName={recruitName(hoveredItem.recruit)} onOpenChange={pinDetails} /> : undefined}
       hint={!editable(hoveredItem.recruit) ? "" : unrecordedPath(hoveredItem.recruit)
         ? `Drag onto a Referrals or Recruiters stage to record this path.${hoveredItem.recruit.isDemo ? " Demo changes stay in this app." : " Saves to HubSpot."}`
         : `Drag to another stage to move this recruit.${hoveredItem.recruit.isDemo ? " Demo changes stay in this app." : " Each move saves to HubSpot."}`} />}

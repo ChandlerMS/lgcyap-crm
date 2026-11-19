@@ -156,6 +156,7 @@
 @keyframes hoverCardIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .hoverCard { animation: none; } }
 .hoverActions { margin: 0 0 12px; }
+.hoverAdd { margin: 0 0 12px; }
 
 /* Stage pop-out: a floating panel with the stage's recruits in a large grid. Rendered in document.body. */
 .popout { position: fixed; z-index: 8500; display: flex; flex-direction: column; max-height: calc(100vh - 32px); border: 1px solid #685a34; border-radius: 12px; background: #17150f; color: #ede5cf; box-shadow: 0 24px 60px #000c; outline: none; animation: hoverCardIn .14s ease-out; }

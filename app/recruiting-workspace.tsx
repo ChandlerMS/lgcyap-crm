@@ -11,7 +11,7 @@ import AddRecruits from "./add-recruits";
 import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
 import RecruitPathPage from "./recruit-path-page";
-import RecruitQuickActions from "./recruit-quick-actions";
+import RecruitQuickActions, { AddActivityButtons } from "./recruit-quick-actions";
 import RingCentralPanel from "./ringcentral-panel";
 import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
@@ -536,24 +536,26 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     }
     if (route.view === "today") {
       const followUpChoices = activityRecruits(all, { now: timestamp, followUpFirst: true });
+      // Each summary's hover pop-up also offers Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar.
+      const previewActions = canAddActivity ? <AddActivityButtons recruits={activityRecruits(all)} /> : undefined;
       return <>
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
       {/* Tasks, Follow up, Meetings and Calendar share one row above the pipeline. */}
       <RecruitingPeriodControls records={periodSource} stages={STAGE_PAGES} selection={periodSelection} onSelectionChange={setPeriodSelection} now={now ? new Date(now).toISOString() : undefined} partial={data.partial} actions={<div className="dashboard-actions"><a className="btn btn-primary add-recruits-button" href="#add-recruits"><Icon name="add-person" />Add Recruits</a><a className="btn btn-secondary" href="#recruits"><Icon name="people" />Recruits</a><a className="btn btn-secondary" href="#contract-agents"><Icon name="people" />Agents</a></div>} />
       <div className="today-summaries">
-        <RecruitTaskChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} lead={canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="plus" /> : undefined} />
-        <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} />
-        <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} />
+        <RecruitTaskChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} lead={canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="plus" /> : undefined} previewActions={previewActions} />
+        <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} previewActions={previewActions} />
+        <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} previewActions={previewActions} />
       </div>
       <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
       <div className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading"><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section />}</div>
-      {/* Recruits and Calls lead, then Tasks and Follow up; Meetings and Calendar follow. */}
+      {/* Tasks and Follow up lead, directly above Recruits and Calls; Meetings and Calendar follow. */}
       <div className="today-overview">
-        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} />
-        {recruitsPagePanel("calls")}
         {recruitsPagePanel("tasks")}
         <FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} />
+        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} />
+        {recruitsPagePanel("calls")}
         {recruitsPagePanel("meetings")}
         {recruitsPagePanel("calendar")}
       </div>
