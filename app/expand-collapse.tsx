@@ -15,7 +15,7 @@ export function ExpandCollapseProvider({ children }: { children: ReactNode }) {
   }, []);
   const setExpanded = useCallback((expanded: boolean) => {
     handlers.current.forEach(handler => handler(expanded));
-    root.current?.querySelectorAll('main details').forEach(detail => { detail.open = expanded; });
+    root.current?.querySelectorAll<HTMLDetailsElement>('main details').forEach(detail => { detail.open = expanded; });
   }, []);
   return <Context.Provider value={{ register, setExpanded }}><div ref={root} className="expansion-scope">{children}</div></Context.Provider>;
 }
