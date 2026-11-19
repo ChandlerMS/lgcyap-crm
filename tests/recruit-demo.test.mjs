@@ -55,6 +55,20 @@ test('demo stage changes use the real graph and preserve the input snapshot', ()
   assert.throws(() => applyDemoStage(source, stageIdForKey('phone-interview'), { recruiting_path: 'mass_recruiting' }, NOW + 1000), /different connected/);
 });
 
+test('a demo recruit without a path can record one on its stage or with a move, but a recorded path stays fixed', () => {
+  const pathed = createDemoRecruits(NOW).find(record => record.stageKey === 'application');
+  const source = { ...pathed, recruitingPath: '', editValues: { ...pathed.editValues, recruiting_path: '' } };
+  const recorded = applyDemoStage(source, source.stageId, { recruiting_path: 'mass_recruiting' }, NOW + 1000);
+  assert.equal(recorded.recruitingPath, 'mass_recruiting'); assert.equal(recorded.editValues.recruiting_path, 'mass_recruiting');
+  assert.equal(recorded.stageKey, 'application'); assert.equal(recorded.enteredStageAt, source.enteredStageAt);
+  assert.equal(stageSnapshotAvailable(recorded), true);
+  const moved = applyDemoStage(source, stageIdForKey('hiring-event'), { recruiting_path: 'genpop' }, NOW + 1000);
+  assert.equal(moved.stageKey, 'hiring-event'); assert.equal(moved.recruitingPath, 'genpop');
+  assert.throws(() => applyDemoStage(source, source.stageId, {}, NOW + 1000), /different connected/);
+  assert.throws(() => applyDemoStage(source, stageIdForKey('offer'), {}, NOW + 1000), /path/);
+  assert.throws(() => applyDemoStage(recorded, recorded.stageId, { recruiting_path: 'genpop' }, NOW + 1000), /different connected/);
+});
+
 test('demo Offer requires an explicit licensing branch and terminal stages support direct reversals', () => {
   const records = createDemoRecruits(NOW), offer = records.find(record => record.stageKey === 'offer');
   assert.throws(() => applyDemoStage(offer, stageIdForKey('contracting'), {}, NOW + 1000), /license route/);

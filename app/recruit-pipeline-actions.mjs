@@ -2,16 +2,57 @@ import { stageSnapshotAvailable } from './recruit-stage-save.mjs';
 import { stageKeyForStageId } from '../lib/recruiting-config.mjs';
 import { FLOW_STAGES, validateFlowTransition } from '../lib/recruiting-flow.mjs';
 
-/** A drop explicitly selects a destination, preserving the source and recorded branch. */
+/**
+ * A drop explicitly selects a destination. A recorded path or branch is preserved; a missing one is
+ * recorded from the destination, which also lets an unrecorded recruit be dropped onto its own stage on a path.
+ */
 export function pipelineDropChoice(recruit, target) {
-  if (!stageSnapshotAvailable(recruit) || !target || target.allowDrop === false || typeof target.stageId !== 'string' || target.stageId === recruit?.stageId
-    || target.recruitingPath && target.recruitingPath !== recruit?.recruitingPath) return null;
+  if (!stageSnapshotAvailable(recruit) || !target || target.allowDrop === false || typeof target.stageId !== 'string') return null;
   const stageKey = stageKeyForStageId(target.stageId);
-  const licenseRoute = target.licenseRoute ?? recruit.licenseRoute;
+  if (!stageKey) return null;
+  const recruitingPath = target.recruitingPath || recruit.recruitingPath;
+  const licenseRoute = target.licenseRoute || recruit.licenseRoute;
+  if (recruit.recruitingPath && recruitingPath !== recruit.recruitingPath) return null;
   if (recruit.licenseRoute && licenseRoute !== recruit.licenseRoute) return null;
-  if (!validateFlowTransition(recruit, { ...recruit, stageKey, licenseRoute }, { allowDirect: true }).ok) return null;
+  const flowChanges = {
+    ...(recruitingPath !== recruit.recruitingPath ? { recruiting_path: recruitingPath } : {}),
+    ...(licenseRoute !== recruit.licenseRoute ? { licensing_branch: licenseRoute } : {}),
+  };
+  const recordsRouting = Object.keys(flowChanges).length > 0;
+  if (target.stageId === recruit.stageId && !recordsRouting) return null;
+  if (!validateFlowTransition(recruit, { ...recruit, stageKey, recruitingPath, licenseRoute }, { allowDirect: true }).ok) return null;
   return { stageKey, stageId: target.stageId, label: FLOW_STAGES.find(stage => stage.key === stageKey)?.label,
-    ...(licenseRoute !== recruit.licenseRoute ? { flowChanges: { licensing_branch: licenseRoute } } : {}) };
+    ...(recordsRouting ? { flowChanges } : {}) };
+}
+
+const clamp = (value, low, high) => Math.max(low, Math.min(value, high));
+
+/**
+ * Places a floating recruit card beside its row, preferring the right side, then the left,
+ * then below (or above) the name on narrow screens. Always stays inside the viewport.
+ * @param {{top:number,bottom:number,left:number,right:number}} anchor
+ * @param {{width:number,height:number}} size
+ * @param {{width:number,height:number}} viewport
+ */
+export function besideAnchorPosition(anchor, size, viewport, { gap = 10, edge = 12 } = {}) {
+  const maxLeft = viewport.width - edge - size.width, maxTop = viewport.height - edge - size.height;
+  let left, top;
+  if (anchor.right + gap <= maxLeft) { left = anchor.right + gap; top = anchor.top - 10; }
+  else if (anchor.left - gap - size.width >= edge) { left = anchor.left - gap - size.width; top = anchor.top - 10; }
+  else { left = clamp(anchor.left, edge, Math.max(edge, maxLeft)); top = anchor.bottom + 6 <= maxTop ? anchor.bottom + 6 : anchor.top - 6 - size.height; }
+  return { top: clamp(top, edge, Math.max(edge, maxTop)), left };
+}
+
+/**
+ * Places a stage pop-out below its stage, or above it when only that side has room,
+ * otherwise as close to the stage as the viewport allows.
+ */
+export function popoutPosition(anchor, size, viewport, { gap = 8, edge = 16 } = {}) {
+  const left = clamp(anchor.left, edge, Math.max(edge, viewport.width - edge - size.width));
+  const below = viewport.height - edge - (anchor.bottom + gap), above = anchor.top - gap - edge;
+  const top = size.height <= below ? anchor.bottom + gap : size.height <= above ? anchor.top - gap - size.height
+    : clamp(anchor.bottom + gap, edge, Math.max(edge, viewport.height - edge - size.height));
+  return { top, left };
 }
 
 export function pipelineAge(enteredStageAt, now) {

@@ -1,5 +1,5 @@
 import { stageIdForKey, stageKeyForStageId } from '../lib/recruiting-config.mjs';
-import { RECRUITING_PATHS, LICENSE_ROUTES, forwardStageChoices, backwardStageChoices, validateFlowTransition } from '../lib/recruiting-flow.mjs';
+import { FLOW_STAGES, RECRUITING_PATHS, LICENSE_ROUTES, forwardStageChoices, backwardStageChoices, validateFlowTransition } from '../lib/recruiting-flow.mjs';
 
 const RECORD_ID = /^[1-9]\d{0,19}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -34,7 +34,22 @@ export function stageSnapshotAvailable(recruit) {
     && recruit.editValues?.licensing_branch === recruit.licenseRoute;
 }
 
-/** @typedef {{licensing_branch?: 'licensed'|'not_licensed'}} StageFlowChanges */
+/** @typedef {{licensing_branch?: 'licensed'|'not_licensed', recruiting_path?: 'genpop'|'mass_recruiting'}} StageFlowChanges */
+const FLOW_FIELDS = Object.freeze({ licensing_branch: LICENSE_ROUTES, recruiting_path: RECRUITING_PATHS });
+const PRE_OFFER = new Set(['hiring-event', 'application', 'phone-interview']);
+
+/**
+ * Same-stage choices that record a missing recruiting path. Existing paths are never offered for change.
+ * @returns {{stageKey:string,stageId:string,label:string,recruitingPath:string,flowChanges:StageFlowChanges}[]}
+ */
+export function pathAssignmentChoices(recruit) {
+  if (!stageSnapshotAvailable(recruit) || recruit.recruitingPath || !PRE_OFFER.has(recruit.stageKey)) return [];
+  const stage = FLOW_STAGES.find(item => item.key === recruit.stageKey);
+  return Object.keys(RECRUITING_PATHS).map(recruitingPath => ({
+    stageKey: recruit.stageKey, stageId: recruit.stageId, label: stage?.label ?? recruit.stageKey, recruitingPath,
+    flowChanges: { recruiting_path: /** @type {'genpop'|'mass_recruiting'} */ (recruitingPath) },
+  }));
+}
 /**
  * @returns {{stageKey:string,stageId:string,label:string,licenseRoute?:string,flowChanges?:StageFlowChanges}[]}
  */
@@ -73,18 +88,20 @@ function responseError(response, result) {
  * @param {StageFlowChanges} flowChanges
  */
 function validateStageIntent(recruit, targetStageId, flowChanges) {
+  const invalidChange = () => new StageSaveError('INVALID_STAGE_CHANGE', 'Refresh the recruit and choose a different valid stage.');
   if (!stageSnapshotAvailable(recruit) || !stageKeyForStageId(targetStageId)
-    || targetStageId === recruit.stageId
     || !flowChanges || typeof flowChanges !== 'object' || Array.isArray(flowChanges)
-    || Object.keys(flowChanges).some(key => key !== 'licensing_branch')
-    || (Object.hasOwn(flowChanges, 'licensing_branch') && (typeof flowChanges.licensing_branch !== 'string'
-      || !Object.hasOwn(LICENSE_ROUTES, flowChanges.licensing_branch)))) {
-    throw new StageSaveError('INVALID_STAGE_CHANGE', 'Refresh the recruit and choose a different valid stage.');
+    || Object.entries(flowChanges).some(([key, value]) => !Object.hasOwn(FLOW_FIELDS, key)
+      || typeof value !== 'string' || !Object.hasOwn(FLOW_FIELDS[key], value))) {
+    throw invalidChange();
   }
   const nextRoute = flowChanges.licensing_branch ?? recruit.licenseRoute;
-  const transition = validateFlowTransition(recruit, { ...recruit, stageKey: stageKeyForStageId(targetStageId), licenseRoute: nextRoute }, { allowDirect: true });
+  const nextPath = flowChanges.recruiting_path ?? recruit.recruitingPath;
+  // A same-stage drop is only a move when it records a missing path or branch.
+  if (targetStageId === recruit.stageId && nextRoute === recruit.licenseRoute && nextPath === recruit.recruitingPath) throw invalidChange();
+  const transition = validateFlowTransition(recruit, { ...recruit, stageKey: stageKeyForStageId(targetStageId), recruitingPath: nextPath, licenseRoute: nextRoute }, { allowDirect: true });
   if (!transition.ok) throw new StageSaveError('INVALID_STAGE_CHANGE', transition.message);
-  return nextRoute;
+  return { nextRoute, nextPath };
 }
 
 /**
@@ -94,11 +111,14 @@ function validateStageIntent(recruit, targetStageId, flowChanges) {
  * @param {{fetchImpl?: typeof fetch, requestId?: string, signal?: AbortSignal,flowChanges?:StageFlowChanges}} [options]
  */
 export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fetch, requestId = crypto.randomUUID(), signal, flowChanges = {} } = {}) {
-  const nextRoute = validateStageIntent(recruit, targetStageId, flowChanges);
+  const { nextRoute, nextPath } = validateStageIntent(recruit, targetStageId, flowChanges);
   if (typeof requestId !== 'string' || !UUID.test(requestId)) throw new StageSaveError('INVALID_STAGE_CHANGE', 'Choose a valid stage change.');
   if (signal?.aborted) throw new StageSaveError('SAVE_CANCELLED', 'The stage change was cancelled before saving.');
   const id = requestId.toLowerCase();
-  const changes = { hs_pipeline_stage: targetStageId, ...(nextRoute !== recruit.licenseRoute ? { licensing_branch: nextRoute } : {}) };
+  // The stage is always sent with its expected value so a concurrent move is caught, even when only the path changes.
+  const changes = { hs_pipeline_stage: targetStageId,
+    ...(nextPath !== recruit.recruitingPath ? { recruiting_path: nextPath } : {}),
+    ...(nextRoute !== recruit.licenseRoute ? { licensing_branch: nextRoute } : {}) };
   const expectedValues = Object.fromEntries(Object.keys(changes).map(property => [property, recruit.editValues[property]]));
   let response;
   try {
@@ -121,7 +141,7 @@ export async function saveRecruitStage(recruit, targetStageId, { fetchImpl = fet
   if (!result || result.status !== 'saved' || result.requestId !== id
     || result.recruit?.id !== recruit.id || result.recruit.stageId !== targetStageId
     || !stageSnapshotAvailable(result.recruit) || result.recruit.stageKey !== stageKeyForStageId(targetStageId)
-    || result.recruit.recruitingPath !== recruit.recruitingPath || result.recruit.licenseRoute !== nextRoute) {
+    || result.recruit.recruitingPath !== nextPath || result.recruit.licenseRoute !== nextRoute) {
     throw uncertainError();
   }
   return { recruit: result.recruit, replayed: result.replayed === true };

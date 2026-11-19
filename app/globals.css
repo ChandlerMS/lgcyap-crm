@@ -629,3 +629,10 @@ a.summary-chip:hover { border-color: var(--gold); }
 .legacy-bot-launcher:disabled { opacity: .6; cursor: wait; }
 .legacy-bot-control[data-open="true"] .legacy-bot-launcher { visibility: hidden; }
 body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-messages-iframe-container { visibility: hidden; pointer-events: none; }
+
+/* Labeled quick actions (recruit hover card and stage pop-out). */
+.recruit-communications-labeled { display: flex; gap: 8px; width: 100%; }
+.recruit-communications-labeled .communication-item { flex: 1 1 0; min-width: 0; }
+.communication-button.communication-button-labeled { width: 100%; gap: 6px; padding: 0 8px; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.communication-button-labeled:not(:disabled):hover { background: #211d10; border-color: var(--gold); }
+.communication-button-labeled:disabled { cursor: not-allowed; }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { stageIdForKey } from '../lib/recruiting-config.mjs';
-import { stageTransitionChoices, saveRecruitStage, stageSnapshotAvailable, StageSaveError } from '../app/recruit-stage-save.mjs';
+import { pathAssignmentChoices, stageTransitionChoices, saveRecruitStage, stageSnapshotAvailable, StageSaveError } from '../app/recruit-stage-save.mjs';
 
 const requestId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 function recruitAt(stageKey, recruitingPath = 'genpop', licenseRoute = '') {
@@ -175,4 +175,33 @@ test('network or unconfirmed stage, source or branch results stay uncertain and 
   const controller = new AbortController(); controller.abort(); let calls = 0;
   await assert.rejects(saveRecruitStage(recruit, saved.stageId, { requestId, signal: controller.signal, flowChanges: { licensing_branch: 'licensed' }, fetchImpl: async () => { calls++; return json({}); } }), { code: 'SAVE_CANCELLED' });
   assert.equal(calls, 0);
+});
+
+test('a missing path is offered and saved with the stage guard, and an unconfirmed path stays uncertain', async () => {
+  const unrecorded = recruitAt('application', '');
+  assert.deepEqual(pathAssignmentChoices(unrecorded).map(choice => [choice.stageId, choice.flowChanges]), [
+    [unrecorded.stageId, { recruiting_path: 'genpop' }], [unrecorded.stageId, { recruiting_path: 'mass_recruiting' }],
+  ]);
+  for (const recorded of [recruitAt('application', 'genpop'), recruitAt('offer', ''), { ...unrecorded, updatedAt: null }]) assert.deepEqual(pathAssignmentChoices(recorded), []);
+  for (const [targetKey, path, changes] of [
+    ['application', 'genpop', { hs_pipeline_stage: unrecorded.stageId, recruiting_path: 'genpop' }],
+    ['hiring-event', 'mass_recruiting', { hs_pipeline_stage: stageIdForKey('hiring-event'), recruiting_path: 'mass_recruiting' }],
+  ]) {
+    const target = stageIdForKey(targetKey), flowChanges = { recruiting_path: path };
+    const saved = { ...recruitAt(targetKey, path), updatedAt: '2026-10-29T12:01:00.000Z' };
+    const calls = [];
+    const result = await saveRecruitStage(unrecorded, target, { requestId, flowChanges, fetchImpl: async (_url, options) => {
+      calls.push(JSON.parse(options.body)); return json({ status: 'saved', requestId, recruit: saved });
+    } });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].changes, changes);
+    assert.deepEqual(calls[0].expectedValues, { hs_pipeline_stage: unrecorded.stageId, recruiting_path: '' });
+    assert.equal(result.recruit.recruitingPath, path);
+    const unconfirmed = { ...saved, recruitingPath: '', editValues: { ...saved.editValues, recruiting_path: '' } };
+    await assert.rejects(saveRecruitStage(unrecorded, target, { requestId, flowChanges, fetchImpl: async () => json({ status: 'saved', requestId, recruit: unconfirmed }) }), { code: 'SAVE_UNCERTAIN' });
+  }
+  for (const flowChanges of [{ recruiting_path: 'constructor' }, { recruiting_path: '' }, { recruiting_path: 1 }]) {
+    await assert.rejects(saveRecruitStage(unrecorded, stageIdForKey('phone-interview'), { requestId, flowChanges, fetchImpl: async () => assert.fail('Invalid path reached the server.') }), { code: 'INVALID_STAGE_CHANGE' });
+  }
+  await assert.rejects(saveRecruitStage(unrecorded, stageIdForKey('offer'), { requestId, fetchImpl: async () => assert.fail('A path-required move reached the server.') }), { code: 'INVALID_STAGE_CHANGE' });
 });

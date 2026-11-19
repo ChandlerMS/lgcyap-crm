@@ -7,7 +7,7 @@ import AddRecruits from "./add-recruits";
 import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
 import RingCentralPanel from "./ringcentral-panel";
-import RecruitStageControls from "./recruit-stage-controls";
+import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
 import RecruitFollowUpChips from "./recruit-follow-up-chips";
 import RecruitTaskChips from "./recruit-task-chips";
@@ -383,14 +383,16 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     setError({ message: "Sign in again before opening recruiting records.", signInPath: "/sign-in" });
   }
 
-  const changeStage = useCallback(async (recruit: Recruit, targetStageId: string, flowChanges?: { licensing_branch?: "licensed" | "not_licensed" }) => {
+  const changeStage = useCallback(async (recruit: Recruit, targetStageId: string, flowChanges?: StageFlowChanges) => {
+    const stageLabel = STAGE_PAGES.find(page => page.stageId === targetStageId)?.label ?? "the selected stage";
+    const destination = flowChanges?.recruiting_path ? `${PATH_LABELS[flowChanges.recruiting_path]} · ${stageLabel}` : stageLabel;
     if (demoMode) {
       if (editingIdRef.current) return;
       try {
         const instant = Date.now();
         const updated = applyDemoStage(recruit, targetStageId, flowChanges ?? {}, instant) as Recruit;
         setDemoRecords(rows => rows.map(item => item.id === recruit.id ? updated : item)); setNow(instant);
-        setSaveNotice("Demo stage updated. HubSpot was not changed.");
+        setSaveNotice(`Demo: ${recruit.name} moved to ${destination}. HubSpot was not changed.`);
       } catch { setStageSaveError({message:"That demo move is unavailable. Choose a connected stage."}); }
       return;
     }
@@ -406,7 +408,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       });
       setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? preserveRecruiter(item, result.recruit as Recruit) : item) } : null);
       setNow(Date.now());
-      setSaveNotice(`${recruit.name} moved to ${STAGE_PAGES.find(page => page.stageId === targetStageId)?.label ?? "the selected stage"}. Saved to HubSpot.${result.recruit.lifecycleSync ? ` Contact stage: ${lifecycleStatusLabel(result.recruit.lifecycleSync.status)}.` : ""}`);
+      setSaveNotice(`${recruit.name} moved to ${destination}. Saved to HubSpot.${result.recruit.lifecycleSync ? ` Contact stage: ${lifecycleStatusLabel(result.recruit.lifecycleSync.status)}.` : ""}`);
     } catch (caught) {
       if (caught instanceof StageSaveError && caught.status === 401) { expiredSignIn(); return; }
       const failure = caught instanceof StageSaveError ? caught : null;

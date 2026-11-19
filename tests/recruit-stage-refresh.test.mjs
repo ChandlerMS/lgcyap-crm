@@ -168,3 +168,33 @@ test('snapshot uses the existing private, authenticated, same-origin empty-JSON 
   const limited = await handleRecruitRequest(request(), { ...deps, readData: async () => { throw new RecruitingError('LIMITED', 'Wait', 429, 15); } });
   assert.equal(limited.status, 429); assert.equal(limited.headers.get('Retry-After'), '15');
 });
+
+test('dropping a recruit without a path onto a path sends HubSpot only the fields that change', async () => {
+  for (const [targetKey, path, expected] of [
+    ['application', 'genpop', { recruiting_path: 'genpop' }],
+    ['phone-interview', 'mass_recruiting', { hs_pipeline_stage: stageIdForKey('phone-interview'), recruiting_path: 'mass_recruiting' }],
+  ]) {
+    let current = raw({ hs_pipeline_stage: stageIdForKey('application'), recruiting_path: '' });
+    const patches = [];
+    const provider = async (_url, options) => {
+      if (options.method === 'PATCH') {
+        patches.push(JSON.parse(options.body).properties);
+        current = raw({ ...current.properties, ...JSON.parse(options.body).properties, hs_lastmodifieddate: freshTime });
+        return json({ id: '123' });
+      }
+      return json(current);
+    };
+    const appFetch = async (url, options) => {
+      if (url.endsWith('/snapshot')) return json({ recruit: await readRecruitStageSnapshot('123', { accessToken: 'synthetic', fetchImpl: provider }) });
+      try {
+        return json(await saveRecruit(validateWriteInput('123', JSON.parse(options.body)), {
+          userId: 'test', accessToken: 'synthetic', fetchImpl: provider, ledger: { claim: async () => ({ acquired: true }), finish: async () => true },
+        }));
+      } catch (error) { return json({ error: { code: error.code } }, error.status); }
+    };
+    const result = await saveRecruitStageWithRefresh(normalizeRecruit(current), stageIdForKey(targetKey), { requestId, flowChanges: { recruiting_path: path }, fetchImpl: appFetch });
+    assert.deepEqual(patches, [expected]);
+    assert.equal(result.recruit.recruitingPath, path);
+    assert.equal(result.recruit.stageKey, targetKey);
+  }
+});
