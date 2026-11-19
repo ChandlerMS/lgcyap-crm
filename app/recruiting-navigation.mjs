@@ -88,7 +88,7 @@ export const DASHBOARD_PAGES = Object.freeze(['tasks', 'follow-up', 'meetings', 
 // Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {
   const external = externalWorkspacePage(view);
-  if (external) return external.group === 'admin' ? 'admin' : 'contract-agents';
+  if (external) return external.group === 'agents' ? 'contract-agents' : external.group;
   if (['add-recruits', ...DASHBOARD_PAGES].includes(view)) return 'today';
   if (RECRUITS_CHILD_PAGES.some(page => page.id === view)) return 'recruits';
   if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
