@@ -1,7 +1,7 @@
 "use client";
 
 import { FLOW_STAGES, LICENSE_ROUTES, RECRUITING_PATHS } from "../lib/recruiting-flow.mjs";
-import { pathAssignmentChoices, stageTransitionChoices, stageSnapshotAvailable } from "./recruit-stage-save.mjs";
+import { pathAssignmentChoices, stageOutcomeChoices, stageReopenChoices, stageTransitionChoices, stageSnapshotAvailable } from "./recruit-stage-save.mjs";
 
 export type StageFlowChanges = { licensing_branch?: "licensed" | "not_licensed"; recruiting_path?: "genpop" | "mass_recruiting" };
 type StageRecruit = { id: string; name: string; stageId: string; stageKey?: string; recruitingPath?: string; licenseRoute?: string; updatedAt: string | null; editValues?: Record<string, string>; isDemo?: boolean };
@@ -25,18 +25,22 @@ export default function RecruitStageControls({ recruit, canEdit, disabled, onCha
   const snapshot = stageSnapshotAvailable(recruit);
   const available = canEdit && !disabled && snapshot;
   const back: Choice[] = stageTransitionChoices(recruit, "back"), forward: Choice[] = stageTransitionChoices(recruit, "forward");
+  const outcomes: Choice[] = stageOutcomeChoices(recruit).filter(choice => ![...back, ...forward].some(item => item.stageId === choice.stageId));
+  const reopen: Choice[] = stageReopenChoices(recruit);
   const paths: Choice[] = pathAssignmentChoices(recruit);
   const unavailable = !canEdit ? "Stage changes are unavailable in this workspace." : !snapshot ? "Refresh this recruit before changing its stage." : "A save is in progress. Wait before choosing another step.";
   const choose = (choices: Choice[], value: string) => {
     const choice = choices.find(item => optionValue(item) === value);
     if (available && choice) onChange(choice.stageId, choice.flowChanges);
   };
-  if (mode === "select") return <select className="select stage-select" aria-label={`Lifecycle stage for ${recruit.name}`} value="current" disabled={!available || !back.length && !forward.length && !paths.length}
-    title={!available ? unavailable : recruit.isDemo ? "Choose a connected step. Demo changes stay in this app." : "Choose a connected step to save it to HubSpot."}
-    onChange={event => choose([...paths, ...back, ...forward], event.target.value)}>
+  if (mode === "select") return <select className="select stage-select" aria-label={`Lifecycle stage for ${recruit.name}`} value="current" disabled={!available || !back.length && !forward.length && !paths.length && !outcomes.length && !reopen.length}
+    title={!available ? unavailable : recruit.isDemo ? "Choose a stage. Demo changes stay in this app." : "Choose a stage to save it to HubSpot."}
+    onChange={event => choose([...paths, ...back, ...forward, ...outcomes, ...reopen], event.target.value)}>
     <option value="current">{current?.label ?? "Unrecognized stage"}</option>
     {paths.length > 0 && <optgroup label="Record path">{paths.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
     {back.length > 0 && <optgroup label="Back">{back.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
+    {reopen.length > 0 && <optgroup label="Reopen application">{reopen.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
+    {outcomes.length > 0 && <optgroup label="Application outcome">{outcomes.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
     {forward.length > 0 && <optgroup label="Next">{forward.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
   </select>;
   return <div className="stage-arrows" role="group" aria-label={`Move ${recruit.name} between stages`}>

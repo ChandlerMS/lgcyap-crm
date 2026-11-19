@@ -16,8 +16,10 @@ messaging or association creation is included.
 | contracting | 1416243216 | Contracting |
 | training | 1416243217 | Training |
 | completed | 1416243218 | Completed |
+| rejected | 1493400173 | Rejected |
+| withdrawn | 1473318773 | Withdrawn |
 
-Withdrawn remains in HubSpot but is excluded from this nine-stage sync. Referrals,
+Rejected and Withdrawn are closed application outcomes included in this sync. Referrals,
 Recruiters and Licensed are branch choices, not additional stages.
 
 ## Contract
@@ -64,7 +66,7 @@ nonblank disagreement is held for review. Thereafter compare both values against
 the last acknowledged pair. One changed side propagates; equal values acknowledge
 without writing; divergent edits pause. Clearing a configured Contact stage also
 pauses, rather than clearing a ticket stage. Contact changes can select any of the
-nine valid stages, except licensing steps on an explicitly licensed branch. Path
+eleven valid stages, except licensing steps on an explicitly licensed branch. Path
 and license branch values are preserved, never inferred. App movement controls
 allow direct forward and backward drops, including skipped stages, while preserving
 the assigned recruiting path and license branch. Collapsed names and visible grips
@@ -94,3 +96,5 @@ writes. Feature flag omission disables all sync; preview remains read-only.
 Contract sources: HubSpot CRM v3 object PATCH and v4 associations; Vercel Cron
 authorization. Orbit discovery returned batch-update contracts only (partial fit);
 the existing app's single-object update and association contracts remain in use.
+
+Rejected and Withdrawn can be selected from any active stage. Reopening uses an explicit destination; the app does not infer that a closed applicant previously reached Training. No existing records are reclassified by the schema setup.

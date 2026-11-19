@@ -17,10 +17,10 @@ function harness(pair = initial(), baseline = { ...initial(), status: 'synced' }
   return { provider, store, set: next => { current = next; }, state: () => state, writes: () => writes };
 }
 
-test('the nine visible stages are bijective; branches and Withdrawn are excluded', () => {
-  assert.equal(LIFECYCLE_STAGES.length, 9);
+test('all eleven recruiting stages are bijective, including Rejected and Withdrawn', () => {
+  assert.equal(LIFECYCLE_STAGES.length, 11);
   for (const entry of LIFECYCLE_STAGES) assert.equal(contactStageForTicket(stage(entry.value)), entry.value);
-  for (const value of ['withdrawn', 'licensed', 'genpop', 'mass_recruiting']) assert.equal(stage(value), null);
+  for (const value of ['licensed', 'genpop', 'mass_recruiting']) assert.equal(stage(value), null);
 });
 test('blank new Contact initializes from ticket without altering its stage', async () => {
   const h = harness({ ...initial(), contactStage: '' }, null);

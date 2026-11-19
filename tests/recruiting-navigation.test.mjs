@@ -11,11 +11,11 @@ test('canonical stages are shared while each entry path has its own sidebar orde
   assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Dashboard', 'Add Recruits']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'genpop').items.map(page => page.label), ['Hiring Event', 'Application', 'Phone Interview']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'mass-recruiting').items.map(page => page.label), ['Application', 'Phone Interview', 'Hiring Event']);
-  assert.equal(new Set(STAGE_PAGES.map(page => page.id)).size, 10);
-  assert.equal(new Set(STAGE_PAGES.map(page => page.stageId)).size, 10);
+  assert.equal(new Set(STAGE_PAGES.map(page => page.id)).size, 11);
+  assert.equal(new Set(STAGE_PAGES.map(page => page.stageId)).size, 11);
   assert.equal(new Set(WORKSPACE_NAV.map(page => page.id)).size, WORKSPACE_NAV.length);
   for (const page of STAGE_PAGES) assert.equal(STAGES[page.stageId], page.label);
-  assert.deepEqual(TERMINAL_STAGE_IDS, ['1416243218', '1473318773']);
+  assert.deepEqual(TERMINAL_STAGE_IDS, ['1416243218', '1493400173', '1473318773']);
   assert.equal(STAGE_PAGES.find(page => page.id === 'completed').stageId, '1416243218');
 });
 

@@ -27,9 +27,9 @@ test('controls follow path-specific choices and retain explicit branching rather
   assert.deepEqual(stageTransitionChoices(recruitAt('contracting', ''), 'back').map(choice => [choice.stageKey, choice.flowChanges]), [
     ['offer', { licensing_branch: 'licensed' }], ['licensed-npn', { licensing_branch: 'not_licensed' }],
   ]);
-  assert.deepEqual(stageTransitionChoices(recruitAt('training', ''), 'forward').map(choice => choice.stageKey), ['completed', 'withdrawn']);
-  for (const key of ['completed', 'withdrawn']) {
-    assert.deepEqual(stageTransitionChoices(recruitAt(key, ''), 'back').map(choice => choice.stageKey), ['training']);
+  assert.deepEqual(stageTransitionChoices(recruitAt('training', ''), 'forward').map(choice => choice.stageKey), ['completed', 'rejected', 'withdrawn']);
+  for (const key of ['completed', 'rejected', 'withdrawn']) {
+    assert.deepEqual(stageTransitionChoices(recruitAt(key, ''), 'back').map(choice => choice.stageKey), key === 'completed' ? ['training'] : []);
     assert.deepEqual(stageTransitionChoices(recruitAt(key, ''), 'forward'), []);
   }
   assert.deepEqual(stageTransitionChoices(recruitAt('training'), 'other'), []);
@@ -205,3 +205,21 @@ test('a missing path is offered and saved with the stage guard, and an unconfirm
   }
   await assert.rejects(saveRecruitStage(unrecorded, stageIdForKey('offer'), { requestId, fetchImpl: async () => assert.fail('A path-required move reached the server.') }), { code: 'INVALID_STAGE_CHANGE' });
 });
+
+test('application outcomes are selectable from active stages without inventing a path or license branch', async()=>{
+ const {stageOutcomeChoices}=await import('../app/recruit-stage-save.mjs');
+ for(const key of ['hiring-event','application','phone-interview','offer','contracting','training']) {
+  const before=recruitAt(key,'');
+  assert.deepEqual(stageOutcomeChoices(before).map(choice=>choice.stageKey),['rejected','withdrawn']);
+  for(const outcome of ['rejected','withdrawn']) {
+   const saved=savedAt(before,outcome);
+   const result=await saveRecruitStage(before,stageIdForKey(outcome),{requestId,fetchImpl:async()=>json({status:'saved',requestId,recruit:saved})});
+   assert.equal(result.recruit.stageKey,outcome);
+   assert.equal(result.recruit.recruitingPath,'');
+   assert.equal(result.recruit.licenseRoute,'');
+  }
+ }
+ for(const key of ['completed','rejected','withdrawn'])assert.deepEqual(stageOutcomeChoices(recruitAt(key,'')),[]);
+});
+
+test('closed applications have no inferred Back action and require an explicit valid reopening destination',async()=>{const {stageReopenChoices}=await import('../app/recruit-stage-save.mjs');for(const key of ['rejected','withdrawn']){const recruit=recruitAt(key,'genpop','licensed');assert.deepEqual(stageTransitionChoices(recruit,'back'),[]);const choices=stageReopenChoices(recruit).map(choice=>choice.stageKey);assert.ok(choices.includes('application'));assert.ok(choices.includes('training'));assert.ok(!choices.includes('licensing-reminders'));assert.ok(!choices.includes('completed'));}});

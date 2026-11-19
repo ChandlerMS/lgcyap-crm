@@ -3,8 +3,9 @@ import { EDIT_FIELDS } from '../lib/recruit-edit-config.mjs';
 import { LICENSE_ROUTES, RECRUITING_PATHS, validateFlowTransition } from '../lib/recruiting-flow.mjs';
 import { normalizeContactPhone } from '../lib/contact-input.mjs';
 
+export const DEMO_RECRUIT_COUNT = STAGE_PAGES.length * 6;
 const FIRST_ID = 900000000000001;
-const NAMES = ['Avery', 'Jordan', 'Morgan', 'Riley', 'Cameron', 'Taylor', 'Casey', 'Jamie', 'Quinn', 'Parker', 'Drew', 'Reese', 'Skyler', 'Rowan', 'Emerson', 'Finley', 'Blake', 'Dana', 'Alex', 'Hayden', 'Logan', 'Harper', 'Sage', 'Marley', 'Dakota', 'Kendall', 'Micah', 'Remy', 'Charlie', 'Robin', 'Adrian', 'Bailey', 'Jesse', 'Sam', 'Elliot', 'Noel', 'Shiloh', 'Devon', 'Kieran', 'Frankie', 'Lennox', 'Aspen', 'River', 'Arden', 'Shawn', 'Ellis', 'Tatum', 'Oakley', 'Phoenix', 'Dallas', 'Milan', 'Justice', 'Winter', 'Shay', 'Kerry', 'Lane', 'Sutton', 'Bellamy', 'Wren', 'Ari'];
+const NAMES = ['Avery', 'Jordan', 'Morgan', 'Riley', 'Cameron', 'Taylor', 'Casey', 'Jamie', 'Quinn', 'Parker', 'Drew', 'Reese', 'Skyler', 'Rowan', 'Emerson', 'Finley', 'Blake', 'Dana', 'Alex', 'Hayden', 'Logan', 'Harper', 'Sage', 'Marley', 'Dakota', 'Kendall', 'Micah', 'Remy', 'Charlie', 'Robin', 'Adrian', 'Bailey', 'Jesse', 'Sam', 'Elliot', 'Noel', 'Shiloh', 'Devon', 'Kieran', 'Frankie', 'Lennox', 'Aspen', 'River', 'Arden', 'Shawn', 'Ellis', 'Tatum', 'Oakley', 'Phoenix', 'Dallas', 'Milan', 'Justice', 'Winter', 'Shay', 'Kerry', 'Lane', 'Sutton', 'Bellamy', 'Wren', 'Ari', 'Corey', 'Lee', 'Jules', 'Stevie', 'Tracy', 'Pat'];
 const DATE_PARTS = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
 function localDay(value) { const parts = Object.fromEntries(DATE_PARTS.formatToParts(value).map(part => [part.type, part.value])); return `${parts.year}-${parts.month}-${parts.day}`; }
@@ -24,7 +25,7 @@ export class DemoRecruitError extends Error {
 export function isDemoRecruit(recruit) {
   if (!recruit || recruit.isDemo !== true || recruit.hubspotUrl !== '' || typeof recruit.id !== 'string' || !/^\d{15}$/.test(recruit.id)) return false;
   const id = Number(recruit.id);
-  return Number.isSafeInteger(id) && id >= FIRST_ID && id < FIRST_ID + 60;
+  return Number.isSafeInteger(id) && id >= FIRST_ID && id < FIRST_ID + DEMO_RECRUIT_COUNT;
 }
 function demoClock(recruit, now) {
   const time = timestamp(now);
@@ -39,7 +40,7 @@ function demoClock(recruit, now) {
   return time;
 }
 
-/** Sixty fictional in-memory records, never passed to a HubSpot request or contact action. */
+/** Fictional in-memory records, never passed to a HubSpot request or contact action. */
 export function createDemoRecruits(now) {
   const time = timestamp(now), start = dayStart(time), elapsed = time - start;
   const offices = Object.keys(OFFICES);
@@ -47,7 +48,7 @@ export function createDemoRecruits(now) {
     const index = stageIndex * 6 + offset;
     const firstName = NAMES[index * 17 % NAMES.length], lastName = 'Test', name = `${firstName} ${lastName}`;
     const recruitingPath = offset % 2 ? 'mass_recruiting' : 'genpop';
-    const licenseRoute = ['licensing-reminders', 'licensed-npn'].includes(stage.id) ? 'not_licensed' : ['contracting', 'training', 'completed', 'withdrawn'].includes(stage.id) ? offset % 2 ? 'not_licensed' : 'licensed' : '';
+    const licenseRoute = ['licensing-reminders', 'licensed-npn'].includes(stage.id) ? 'not_licensed' : ['contracting', 'training', 'completed', 'rejected', 'withdrawn'].includes(stage.id) ? offset % 2 ? 'not_licensed' : 'licensed' : '';
     const created = start + Math.floor(elapsed * (index + 1) / 240);
     const entered = created + Math.floor((time - created) * (.2 + offset * .06));
     const contacted = entered + Math.floor((time - entered) * .5);

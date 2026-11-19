@@ -64,6 +64,24 @@ export function stageTransitionChoices(recruit, direction) {
   });
 }
 
+/** Deliberate application outcomes are available from every active stage. */
+export function stageOutcomeChoices(recruit) {
+  if (!stageSnapshotAvailable(recruit) || FLOW_STAGES.find(stage => stage.key === recruit.stageKey)?.terminal) return [];
+  return ['rejected', 'withdrawn'].flatMap(stageKey => {
+    const stageId = stageIdForKey(stageKey);
+    return stageId ? [{ stageKey, stageId, label: FLOW_STAGES.find(stage => stage.key === stageKey)?.label ?? stageKey }] : [];
+  });
+}
+
+/** Reopening requires an explicit destination, respecting the recorded path and branch. */
+export function stageReopenChoices(recruit) {
+  if (!stageSnapshotAvailable(recruit) || !['rejected', 'withdrawn'].includes(recruit.stageKey)) return [];
+  return FLOW_STAGES.filter(stage => !stage.terminal && validateFlowTransition(recruit, { ...recruit, stageKey: stage.key }, { allowDirect: true }).ok).flatMap(stage => {
+    const stageId = stageIdForKey(stage.key);
+    return stageId ? [{ stageKey: stage.key, stageId, label: stage.label }] : [];
+  });
+}
+
 function uncertainError() {
   return new StageSaveError('SAVE_UNCERTAIN', uncertainMessage, { uncertain: true });
 }

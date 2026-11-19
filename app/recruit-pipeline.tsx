@@ -26,7 +26,7 @@ type Props = {
   onNavigate?: (view: string) => void;
   onStageChange?: (recruit: PipelineRecruit, stageId: string, flowChanges?: StageFlowChanges) => void;
 };
-type Key = "hiring-event" | "application" | "phone-interview" | "offer" | "licensing-reminders" | "licensed-npn" | "contracting" | "training" | "completed" | "withdrawn";
+type Key = "hiring-event" | "application" | "phone-interview" | "offer" | "licensing-reminders" | "licensed-npn" | "contracting" | "training" | "completed" | "rejected" | "withdrawn";
 type Target = { stageId: string; recruitingPath?: string; licenseRoute?: string; allowDrop?: boolean };
 type Item = { recruit: PipelineRecruit; key: string };
 type CardOptions = { titleLabel?: string; nodeKey?: string; path?: string; route?: string; records?: PipelineRecruit[]; view?: string; subtitle?: string; allowDrop?: boolean; scope?: string };
@@ -43,7 +43,7 @@ function storedView(): PipelineView {
 }
 const LABELS: Record<Key, string> = {
   "hiring-event": "Hiring Event", application: "Application", "phone-interview": "Phone Interview", offer: "Offer",
-  "licensing-reminders": "Licensing Reminders", "licensed-npn": "Licensed w/ NPN", contracting: "Contracting", training: "Training", completed: "Completed", withdrawn: "Withdrawn",
+  "licensing-reminders": "Licensing Reminders", "licensed-npn": "Licensed w/ NPN", contracting: "Contracting", training: "Training", completed: "Completed", rejected: "Rejected", withdrawn: "Withdrawn",
 };
 const PRE_OFFER = new Set<string>(["hiring-event", "application", "phone-interview"]);
 const KNOWN = new Set<string>(Object.keys(LABELS));
@@ -602,7 +602,7 @@ export default function RecruitPipeline({ records, stages, partial = false, now 
     {unassignedContracting.length > 0 && card("contracting", { records: unassignedContracting, subtitle: "Branch not recorded", allowDrop: false, scope })}
   </div>;
   const trainingStage = (scope?: string) => <div className={styles.singleStage} key="training">{card("training", { scope })}</div>;
-  const outcomes = (scope?: string) => <div className={styles.outcomes} key="outcomes">{card("completed", { scope })}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <RecruitStack>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</RecruitStack>}</div></section>}</div>;
+  const outcomes = (scope?: string) => <div className={styles.outcomes} key="outcomes">{card("completed", { scope })}{card("rejected", { scope })}{card("withdrawn", { scope })}{unrecognized.length > 0 && <section className={styles.stage} aria-label="Stage not recognized"><header className={styles.stageHeading}><h4><button type="button" className={styles.stageToggle} aria-expanded={expanded.unrecognized === true} aria-controls={`${pipelineId}-unrecognized`} onClick={() => setExpanded(value => ({ ...value, unrecognized: !value.unrecognized }))}><span>Stage not recognized</span><span className={styles.count}>{unrecognized.length}</span><span className={styles.chevron} aria-hidden="true">{expanded.unrecognized ? "⌃" : "⌄"}</span></button></h4></header><div id={`${pipelineId}-unrecognized`} hidden={!expanded.unrecognized}>{expanded.unrecognized && <RecruitStack>{unrecognized.map(item => recruitCard(item.recruit, "Not recorded"))}</RecruitStack>}</div></section>}</div>;
   const faceBodies = [
     <div className={`${styles.faceFlow} ${styles.faceStart}`} key="start"><PipelineConnectors layout />{entryPaths(FACES[0].scope)}{offerStage(FACES[0].scope)}</div>,
     <div className={`${styles.faceFlow} ${styles.faceLicensing}`} key="licensing"><PipelineConnectors layout />{offerStage(FACES[1].scope)}{licensePaths(FACES[1].scope)}</div>,
