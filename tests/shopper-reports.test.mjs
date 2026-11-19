@@ -53,6 +53,12 @@ test('combining merges middle-initial spellings, counts agreeing overlaps once a
   // An older export whose rows changed since must not add them twice.
   const stale = callsFile('calls-report_11-03-2026_0529.xlsx', [call('synthetic r alpha', '11/02/2026 09:05:00 am', '(555) 010-0009'), call('synthetic r alpha', '11/02/2026 09:00:00 am')], 'f');
   assert.throws(() => combineShopperReports([first, stale]), /calls-report_11-19-2026_1044\.xlsx and calls-report_11-03-2026_0529\.xlsx both cover 2026-11-02 to 2026-11-02 but differ there/);
+  // A row repeated a different number of times in two overlapping exports is a disagreement too, whatever the file order.
+  const row = call('synthetic r alpha', '11/02/2026 09:00:00 am');
+  const twice = callsFile('calls-report_11-19-2026_1044.xlsx', [row, row], '7'), once = callsFile('calls-report_11-19-2026_1045.xlsx', [row], '8');
+  for (const order of [[twice, once], [once, twice]]) assert.throws(() => combineShopperReports(order), /both cover 2026-11-02 to 2026-11-02 but differ there/);
+  const twiceAgain = callsFile('calls-report_11-19-2026_1046.xlsx', [row, row], '9');
+  for (const order of [[twice, twiceAgain], [twiceAgain, twice]]) assert.deepEqual(combineShopperReports(order).kinds.calls.rows.map(({ count }) => count), [2]);
   assert.deepEqual(combined.kinds.calls.rows.map(({ date, key, name, count }) => [date, key, name, count]), [['2026-11-02', 'synthetic alpha', 'Synthetic Alpha', 2], ['2026-11-05', 'synthetic beta', 'Synthetic Beta', 1]]);
   // Identical rows within one file are the report's own and both count.
   assert.deepEqual(combined.kinds.applications.rows.map(({ key, name, count, cents }) => [key, name, count, cents]), [['synthetic alpha', 'Synthetic Alpha', 2, 20000], ['synthetic mcgamma', 'Synthetic McGamma', 1, 5050]]);
@@ -84,23 +90,21 @@ test('imported days serve the Shopper board only when both reports cover the who
     ]);
     await importShopperReports(db, combined, now);
     // Calls start Nov 2 and applications Nov 1; Nov 4–5 have no rows but are covered days.
-    let result = await read('2026-11-01', '2026-11-06');
+    let result = await read('2026-11-02', '2026-11-06');
     assert.equal(result.status, 'available'); assert.equal(result.basis, 'reports'); assert.equal(result.partial, false); assert.equal(result.dataThrough, '2026-11-06');
     const byName = Object.fromEntries(result.rows.map(row => [row.name, row]));
-    assert.deepEqual(byName['Synthetic Alpha'], { name: 'Synthetic Alpha', attributed: true, leads: 3, submitted: 2, premium: 200.25 });
+    assert.deepEqual(byName['Synthetic Alpha'], { name: 'Synthetic Alpha', attributed: true, leads: 3, submitted: 1, premium: 80 });
     assert.deepEqual(byName['Synthetic Beta'], { name: 'Synthetic Beta', attributed: true, leads: 1, submitted: 0, premium: 0 });
     assert.deepEqual(byName['Synthetic Delta'], { name: 'Synthetic Delta', attributed: true, leads: 0, submitted: 1, premium: 10 });
-    assert.deepEqual(result.reportTotals, { leads: 5, submitted: 3, premium: 210.25 });
+    assert.deepEqual(result.reportTotals, { leads: 5, submitted: 2, premium: 90 });
     assert.match(result.notice, /Close rate is submitted ÷ calls/);
     assert.match(result.notice, /2 agents with calls but no applications count in the totals only/);
-    assert.match(result.notice, /Calls report starts Nov 2, 2026, so earlier days have no calls/);
-    assert.doesNotMatch(result.notice, /Applications report starts/);
     // Ranked rows keep only agents with applications, as the Shopper board always has.
     assert.deepEqual(rankLeaderboardRows(result.rows, 'shopper', 'ap').map(row => row.name), ['Synthetic Alpha', 'Synthetic Delta']);
     assert.equal(leaderboardTotals(result.rows, 'shopper').leads, 5);
-    result = await read('2026-10-25', '2026-11-03');
-    assert.match(result.notice, /Calls report starts Nov 2, 2026, so earlier days have no calls/);
-    assert.match(result.notice, /Applications report starts Nov 1, 2026/);
+    // Days before a report's first imported row are unknown, so those ranges keep the browser sync rather than understate it.
+    assert.equal(await read('2026-11-01', '2026-11-06'), null, 'calls start Nov 2');
+    assert.equal(await read('2026-10-25', '2026-11-03'), null, 'both reports start after Oct 25');
     assert.equal(await read('2026-11-05', '2026-11-07'), null, 'a range past the imported days keeps the browser sync');
     assert.equal(await read('2026-10-01', '2026-10-31'), null, 'a range wholly before the imports keeps the browser sync');
     assert.equal(await readShopperReportsLeaderboard({ board: 'shopper', period: 'day' }, { db, now }), null);
@@ -108,15 +112,15 @@ test('imported days serve the Shopper board only when both reports cover the who
 
     // A later import replaces only its own kind and days, and extends coverage.
     await importShopperReports(db, combineShopperReports([callsFile('calls-report_11-19-2026_1046.xlsx', [call('synthetic alpha', '11/03/2026 09:00:00 am'), call('synthetic alpha', '11/07/2026 09:00:00 am')], 'e')]), now + 1000);
-    assert.equal(await read('2026-11-01', '2026-11-07'), null, 'applications do not cover Nov 7 yet');
-    result = await read('2026-11-01', '2026-11-06');
+    assert.equal(await read('2026-11-02', '2026-11-07'), null, 'applications do not cover Nov 7 yet');
+    result = await read('2026-11-02', '2026-11-06');
     // Nov 3 and Nov 6 calls were replaced; Nov 2 was not part of the new import and stays.
-    assert.deepEqual(result.reportTotals, { leads: 3, submitted: 3, premium: 210.25 });
+    assert.deepEqual(result.reportTotals, { leads: 3, submitted: 2, premium: 90 });
     assert.equal(result.fetchedAt, new Date(now + 1000).toISOString());
     const { rows: [days] } = await db.query("SELECT count(*)::int AS days FROM shopper_report_days WHERE kind = 'calls'");
     assert.equal(days.days, 6);
     // A failed import changes nothing.
     await assert.rejects(importShopperReports(db, { kinds: { calls: { firstDate: '2026-11-02', lastDate: '2026-11-02', records: 1, files: [], rows: [{ date: '2026-11-02', key: 'Not Folded', name: 'x', count: 1, cents: 0 }] } } }, now));
-    assert.deepEqual((await read('2026-11-01', '2026-11-06')).reportTotals, { leads: 3, submitted: 3, premium: 210.25 });
+    assert.deepEqual((await read('2026-11-02', '2026-11-06')).reportTotals, { leads: 3, submitted: 2, premium: 90 });
   } finally { await db.close(); }
 });
