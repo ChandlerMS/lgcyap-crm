@@ -1,8 +1,9 @@
 'use client';
+import SignedInSheetExport from './signed-in-sheet-export';
 import { useState } from 'react';
 import styles from './event-attendance.module.css';
 
-export default function PeopleExport({ rows, title }: { rows: readonly object[]; title: string }) {
+export default function PeopleExport({ rows, title, googleExport }: { rows: readonly object[]; title: string; googleExport?: { startDate: string; endDate: string } }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const download = async (format: 'csv' | 'xlsx') => {
@@ -18,5 +19,5 @@ export default function PeopleExport({ rows, title }: { rows: readonly object[];
     } catch (error) { setError(error instanceof Error ? error.message : 'The export could not be created. Try again.'); }
     finally { setBusy(false); }
   };
-  return <div className={styles.peopleExport}><div><button type="button" disabled={busy || !rows.length} onClick={() => void download('csv')}>Export CSV</button><button type="button" disabled={busy || !rows.length} onClick={() => void download('xlsx')} title="Download an Excel workbook (.xlsx)">Export XLS</button></div>{error && <p role="alert">{error}</p>}</div>;
+  return <div className={styles.peopleExport}><div><button type="button" disabled={busy || !rows.length} onClick={() => void download('csv')}>Export CSV</button>{googleExport && <SignedInSheetExport count={rows.length} filters={googleExport} disabled={busy} />}<button type="button" disabled={busy || !rows.length} onClick={() => void download('xlsx')} title="Download an Excel workbook (.xlsx)">Export XLS</button></div>{error && <p role="alert">{error}</p>}</div>;
 }

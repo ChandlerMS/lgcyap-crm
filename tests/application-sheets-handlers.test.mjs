@@ -41,7 +41,7 @@ test('connection status is owner-only and non-owner reads do not initialize the 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { visible: false });
 });
-test('Google consent started from Sign-Ins returns to Event Attendance and starts its own first sync', async () => {
+test('retired Sign-Ins consent returns to Event Attendance without scheduling an updater', async () => {
   const { handleApplicationSheetsCallback } = await import('../lib/application-sheets-handlers.mjs');
   let applications = 0, signIns = 0; const pending = [];
   const response = await handleApplicationSheetsCallback(new Request(`${env.BETTER_AUTH_URL}/api/auth/callback/google?state=application-sheets.synthetic&code=synthetic`), {
@@ -51,5 +51,6 @@ test('Google consent started from Sign-Ins returns to Event Attendance and start
   await Promise.all(pending);
   assert.equal(new URL(response.headers.get('location')).hash, '#event-attendance');
   assert.equal(applications, 0);
-  assert.equal(signIns, 1);
+  assert.equal(signIns, 0);
+  assert.equal(new URL(response.headers.get('location')).searchParams.get('application_sheets'), 'error');
 });

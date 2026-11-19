@@ -27,10 +27,6 @@
     {
       "path": "/api/cron/custom-recruits",
       "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/sign-in-sheets",
-      "schedule": "* * * * *"
     }
   ]
 }

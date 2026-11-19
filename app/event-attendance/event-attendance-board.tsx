@@ -1,5 +1,4 @@
 'use client';
-import ApplicationSheetsPanel from '../application-sheets-panel';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useEventReviews, type Review } from '../event-review';
@@ -208,7 +207,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   useExpandCollapse(expanded => { if (!expanded) { setOpenTile(null); setOpenDay(null); } });
   const tileList = () => {
     const dated = dateActive ? 'No one in this list signed in on the chosen dates.' : '';
-    if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={byDate(attendees)} columns={attendeeColumns} actions={reviewActions} hover={crmHover} filter={dateFilter} empty={dated || 'No one has signed in yet.'} />;
+    if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={byDate(attendees)} columns={attendeeColumns} googleExport={{ startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={dateFilter} empty={dated || 'No one has signed in yet.'} />;
     if (openTile === 'applied') return <PeopleTable title={`Signed in${dateNote} and applied online`} rows={byDate(attendees.filter(person => person.appliedAt))} columns={appliedColumns} actions={reviewActions} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has applied online yet.'} />;
     if (openTile === 'hired') return <PeopleTable title={`Signed in${dateNote} and reached Completed`} rows={byDate(attendees.filter(person => person.stageId === COMPLETED_STAGE_ID))} columns={hiredColumns} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has reached Completed yet.'} />;
     if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications yet today." /></>;
@@ -249,7 +248,6 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
 
     {(!section || !data) && <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>}
 
-    <ApplicationSheetsPanel report="sign-ins" />
     <section className={styles.tiles} aria-label="Totals. Select one to see the people in it.">
       {tiles.map(tile => <button type="button" key={tile.key} className={`${styles.tile} ${tile.key === 'today' ? styles.todayTile : ''} ${openTile === tile.key ? styles.tileOpen : ''}`} disabled={!data} aria-expanded={openTile === tile.key} aria-controls="tile-people" onClick={() => toggleTile(tile.key)}>
         <span className={styles.tileLabel}>{tile.label}</span>
