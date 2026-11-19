@@ -7,6 +7,8 @@
 .actions a, .actions button { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; color: var(--gold); background: var(--panel); text-decoration: none; cursor: pointer; }
 .actions a:hover, .actions button:hover { border-color: var(--gold); }
 .actions a:focus-visible, .actions button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+/* All, Shopper and Standard vs. Preferred sit centered above the queues. The extra class outranks .boardTabs whatever order the two files load in. */
+.page > .viewTabs { display: flex; width: fit-content; max-width: 100%; margin: 0 auto 16px; }
 .groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
 .group { min-width: 0; border: 1px solid #6d633e; border-radius: 8px; overflow: hidden; }
 @media (min-width: 1200px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

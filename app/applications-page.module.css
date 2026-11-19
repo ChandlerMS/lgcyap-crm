@@ -5,14 +5,13 @@
 .headActions { display: flex; align-items: center; gap: 14px; }
 .updated { color: var(--muted); font-size: 12px; }
 
-.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
 .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding: 12px 14px; border: 1px solid #2c2818; border-radius: 10px; background: #13120e; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .tile strong { color: var(--gold); font-size: 26px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .tile span { color: var(--muted); font-size: 12px; line-height: 1.35; }
 .tile:hover { border-color: #6d633e; }
 .tile[aria-pressed="true"] { border-color: var(--gold); background: #1e1b11; }
 .tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.tile.good strong { color: #8fd18f; }
 .tile.bad strong { color: #f08f84; }
 .tile.warn strong { color: #f0c36a; }
 
@@ -35,7 +34,6 @@
 .when { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .badge { padding: 3px 10px; border: 1px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.badge.good { color: #8fd18f; background: #12200f; }
 .badge.bad { color: #f08f84; background: #2a1210; }
 .badge.warn { color: #f0c36a; background: #261d0b; }
 
@@ -48,7 +46,8 @@
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 .answers { margin-top: 14px; padding-top: 14px; border-top: 1px solid #ffffff14; }
-.review { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; margin-bottom: 14px; padding: 12px 14px; border-radius: 8px; background: #1a1811; }
+/* Required items not met shows only when one was missed, so the review has two or three equal columns. */
+.review { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px 18px; margin-bottom: 14px; padding: 12px 14px; border-radius: 8px; background: #1a1811; }
 .review h3, .section h3 { margin: 0 0 6px; color: #d7bd73; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
 .review p, .review ul { margin: 0; color: var(--text); font-size: 13px; line-height: 1.5; }
 .review ul { padding-left: 18px; }
@@ -60,7 +59,7 @@
 .section dd { margin: 3px 0 0; color: var(--text); font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .unanswered dd { color: #7d786b; }
 
-@media (max-width: 1100px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .review { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1100px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .review { grid-auto-flow: row; } }
 @media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .facts, .section dl { grid-template-columns: minmax(0, 1fr); } }
 @media print {
   .tiles, .filters, .actions, .headActions, .callout { display: none; }

@@ -78,7 +78,8 @@ function Icon({ name }: { name: string }) {
   const shapes: Record<string, ReactNode> = {
     home: <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" />,
     funnel: <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z" />,
-    headset: <><path d="M4 14v-2a8 8 0 0 1 16 0v2" /><path d="M4 14h3v6H6a2 2 0 0 1-2-2zM20 14h-3v6h1a2 2 0 0 0 2-2z" /></>,
+    // A numbered list, for Queues.
+    "list-numbered": <><path d="M10 6h11M10 12h11M10 18h11" /><path d="M3.5 5 5 4v5.5M3.5 9.5h3" /><path d="M3.5 14.6a1.5 1.5 0 0 1 3 .1c0 1.6-3 2.4-3 4.3h3" /></>,
     chevron: <path d="m6 9 6 6 6-6" />,
     people: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
     "add-person": <><circle cx="9" cy="7" r="4" /><path d="M2 21v-2a4 4 0 0 1 4-4h6m6-5v10m-5-5h10" /></>,
@@ -426,7 +427,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
     <a className="nav-link" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="chart" /><span>Leaderboard</span></a>
-    <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="headset" /><span>Queues</span></a>
+    <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="list-numbered" /><span>Queues</span></a>
     <a className="nav-link" href="#sales" aria-current={route.view === "sales" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "sales"); navigateFromMenu(); }}><Icon name="money" /><span>Sales</span></a>
     <a className="nav-link" href="#calls" aria-current={route.view === "calls" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "calls"); navigateFromMenu(); }}><Icon name="phone" /><span>Calls</span></a>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
