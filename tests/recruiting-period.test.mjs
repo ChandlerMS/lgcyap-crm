@@ -19,7 +19,7 @@ test('contacted KPIs use unique created-cohort recruits with recorded contact da
 test('Today follows Eastern agency time even when UTC is on the next day', () => {
   assert.equal(recruitingCalendarDate('2026-10-31T03:59:59.999Z'), '2026-10-30');
   assert.equal(recruitingCalendarDate('2026-10-31T04:00:00.000Z'), '2026-10-31');
-  assert.deepEqual(defaultPeriodSelection('2026-10-31T03:00:00Z'), { preset: 'today', startDate: '2026-10-30', endDate: '2026-10-30' });
+  assert.deepEqual(defaultPeriodSelection('2026-10-31T03:00:00Z'), { preset: 'weekly', startDate: '2026-10-30', endDate: '2026-10-30' });
 });
 
 test('weekly reporting is Monday through Sunday across a year boundary', () => {

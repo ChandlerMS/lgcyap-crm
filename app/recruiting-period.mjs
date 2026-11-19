@@ -51,7 +51,7 @@ export function recruitingCalendarDate(value) {
 /** @param {Date | string | number} now */
 export function defaultPeriodSelection(now = new Date()) {
   const today = recruitingCalendarDate(now);
-  return { preset: 'today', startDate: today ?? '', endDate: today ?? '' };
+  return { preset: 'weekly', startDate: today ?? '', endDate: today ?? '' };
 }
 
 /**

@@ -248,7 +248,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // Queues opens by itself on a queue page until someone opens or closes it.
-  const [periodSelection, setPeriodSelection] = useState<{preset:string;startDate?:string;endDate?:string}>({preset:"today"});
+  const [periodSelection, setPeriodSelection] = useState<{preset:string;startDate?:string;endDate?:string}>({preset:"weekly"});
   const [now, setNow] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
@@ -442,7 +442,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (editingIdRef.current || intakeDraftRef.current || intakeBusyRef.current || stageWriteBusyRef.current || toolDirtyRef.current || toolBusyRef.current) return;
     const instant = Date.now();
     if (nextDemo && !demoRecords.length) setDemoRecords(createDemoRecruits(instant) as Recruit[]);
-    setDemoMode(nextDemo); setNow(instant); setQuery(""); setOffice("All offices"); setIntake("All license statuses"); setPage(1); setPeriodSelection({preset:"today"}); setSaveNotice(null); setStageSaveError(null); setStageBlockedIds([]);
+    setDemoMode(nextDemo); setNow(instant); setQuery(""); setOffice("All offices"); setIntake("All license statuses"); setPage(1); setPeriodSelection({preset:"weekly"}); setSaveNotice(null); setStageSaveError(null); setStageBlockedIds([]);
     const url = new URL(window.location.href);
     if (nextDemo) url.searchParams.set("demo", "1"); else url.searchParams.delete("demo");
     url.hash = view;
@@ -588,7 +588,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       const previewActions = canAddActivity ? <AddActivityButtons recruits={activityRecruits(all)} /> : undefined;
       return <>
       {query.trim() && <p className="pipeline-search-note" role="status">Showing matches for “{query.trim()}”. <button className="text-link" onClick={() => setQuery("")}>Clear search</button></p>}
-      {/* Top to bottom: the recruiting pipeline, collapsed, holding the reporting period (Today), its totals and Add Recruits,
+      {/* Top to bottom: the recruiting pipeline, collapsed, holding the reporting period (Weekly), its totals and Add Recruits,
           Recruits and Agents; the Tasks, Follow up, Meetings, Calendar and Email cards; Event Attendance; then the full panels,
           one per row. Every section and card collapses from the chevron at the right of its title, remembered in this browser. */}
       <h1 id="page-title" className="sr-only" tabIndex={-1}>Recruiting Dashboard</h1>
