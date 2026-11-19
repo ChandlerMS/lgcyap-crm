@@ -64,16 +64,18 @@ npm run whatsapp-svp:import -- "C:/Users/Chand/Downloads/Standard vs Preferred/c
 Without `--apply` the export is only parsed and summarized (message, sale, day and poster counts, never names or
 amounts). With `--apply` it asks for the connection string if `DATABASE_URL` is not set, then, in one transaction,
 replaces every day from the export's first message through its last. Days outside the export are kept, so an export
-from a phone with shorter history cannot erase earlier days. An export that ends before the posts already imported,
-or starts after they end, is refused and changes nothing. Re-run with each newer export; its last day replaces the
-partial day the previous export ended on.
+from a phone with shorter history cannot erase earlier days. If the export starts after the imported posts begin, its
+first day may start mid-day, so the stored rows for that day are kept and replacement starts the next day; such an
+export is refused if it starts on or after the last imported day, because neither copy of that day would be whole. An
+export that ends before the posts already imported is refused too. A refused export changes nothing. Re-run with each
+newer export; its last day replaces the partial day the previous export ended on.
 
 `lib/whatsapp-chat-sales.mjs` reads sale posts with the rules that rebuilt the LAP Daily Agent Reports from the main
 sales chat: one sale per amount line (His and Hers count separately); Total, Both and `=` lines are dropped when the
 message has other amounts; day, week and `$40k`-style figures, amounts in prose, dates and phone numbers are ignored;
 amounts without `$` count with cents or next to His/Hers, a carrier or an emoji; obvious typos such as `$1.884.72`,
-`$2.015.4`, `$3002,76` and `525$` are read as amounts; the poster is credited; and identical text from the same poster
-within 30 minutes counts once. Days follow the chat's own clock (the exporting phone's time zone). Posters are grouped
+`$2.015.4`, `$3002,76` and `525$` are read as amounts; the poster is credited; and the same post again (all of its
+sale lines) from the same poster within 30 minutes counts once, while a new post that shares only some lines counts in full. Days follow the chat's own clock (the exporting phone's time zone). Posters are grouped
 by their WhatsApp name, case-insensitively, so a poster saved only as a phone number appears as that number.
 
 Storage: `migrations/0020_whatsapp_svp_sales.sql` (`whatsapp_svp_sales_daily` and the one-row `whatsapp_svp_import`

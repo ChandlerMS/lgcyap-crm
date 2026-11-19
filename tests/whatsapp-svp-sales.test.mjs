@@ -56,6 +56,20 @@ test('chat parsing applies the sale-post rules: His/Hers, totals, reposts, typos
   assert.equal(whatsappChatMessages(CHAT).find(message => message.lines[0].includes('added')).sender, null);
 });
 
+test('a repost is the whole post again; a new post sharing one line still counts in full', () => {
+  const parsed = whatsappChatSales([
+    '[7/6/26, 9:00:00 AM] Agent Alpha: $500 His Ethos',
+    '$300 Hers Ethos',
+    '[7/6/26, 9:10:00 AM] Agent Alpha: $500 His Ethos',
+    '$300 Hers Ethos',
+    '[7/6/26, 9:20:00 AM] Agent Alpha: $500 His Ethos',
+    '$700 Hers Ethos',
+    '[7/6/26, 9:25:00 AM] Agent Alpha: $500 His Ethos',
+  ].join('\n'));
+  // 9:10 repeats 9:00 in full and counts once; 9:20 and 9:25 are different posts even though they share a line.
+  assert.deepEqual(parsed.days.map(({ sales, cents }) => [sales, cents]), [[5, 250000]]);
+});
+
 test('chat errors name lines only, never chat text', () => {
   assert.throws(() => whatsappChatSales('Private Person: $500'), WhatsappChatError);
   assert.throws(() => whatsappChatSales('[2/30/26, 9:00:00 AM] Private Person: $500'), error => error instanceof WhatsappChatError && /Line 1/.test(error.message) && !/Private|500/.test(error.message));
@@ -90,14 +104,21 @@ test('a newer export replaces only the days it covers; older or gapped exports a
     await assert.rejects(importWhatsappSvpChat(db, older, NOW), error => error instanceof WhatsappImportError && /before the posts already imported/.test(error.message));
     const gap = chatFrom(['[7/9/26, 9:00:00 AM] Agent Alpha: $100 PT']);
     await assert.rejects(importWhatsappSvpChat(db, gap, NOW), error => error instanceof WhatsappImportError && /gap/.test(error.message));
+    // Starting mid-day on the last imported day: neither copy of 7/7 is whole, so it is refused rather than shrinking 7/7.
+    const lastDay = chatFrom(['[7/7/26, 3:00:00 PM] Agent Golf: $100 PT', '[7/8/26, 6:00:00 PM] Agent Golf: $2,000 PT']);
+    await assert.rejects(importWhatsappSvpChat(db, lastDay, NOW), error => error instanceof WhatsappImportError && /may be incomplete/.test(error.message));
     assert.deepEqual(await rows(), before);
-    // A phone that joined later exports from 7/7: 7/6 is kept, 7/7 and 7/8 come from the new export.
-    const later = chatFrom(['[7/7/26, 9:00:00 AM] Agent Golf: $1,000 PT', '[7/8/26, 6:00:00 PM] Agent Golf: $2,000 PT'], 'c'.repeat(64));
-    const result = await importWhatsappSvpChat(db, later, NOW + 1000);
-    assert.deepEqual([result.replacedFrom, result.replacedThrough, result.coveredFrom, result.totalRows], ['2026-07-07', '2026-07-08', '2026-07-06', 6]);
-    assert.deepEqual(await rows(), [...before.filter(row => row[0] === '2026-07-06'), ['2026-07-07', 'agent golf', 1, 100000], ['2026-07-08', 'agent golf', 1, 200000]]);
-    const view = await readWhatsappSvpLeaderboard(custom('2026-07-06', '2026-07-08'), { db, now: NOW });
-    assert.match(view.notice, /ends Jul 8, 2026 at 6:00 PM/);
+    // A full export through 7/8 replaces everything it covers.
+    const full = await importWhatsappSvpChat(db, chatFrom([CHAT, '[7/8/26, 6:00:00 PM] Agent Golf: $2,000 PT'], 'c'.repeat(64)), NOW + 1000);
+    assert.deepEqual([full.replacedFrom, full.replacedThrough, full.totalRows], ['2026-07-06', '2026-07-08', 7]);
+    // A phone that joined mid-day on 7/7 exports from there: its 7/7 lacks the morning posts, so the stored 7/7 is kept
+    // and only 7/8 onward is replaced.
+    const later = chatFrom(['[7/7/26, 10:00:00 AM] Agent Golf: $1,000 PT', '[7/8/26, 6:00:00 PM] Agent Golf: $2,000 PT', '[7/9/26, 5:00:00 PM] Agent Golf: $3,000 PT'], 'd'.repeat(64));
+    const result = await importWhatsappSvpChat(db, later, NOW + 2000);
+    assert.deepEqual([result.replacedFrom, result.replacedThrough, result.coveredFrom, result.salesRows, result.totalRows], ['2026-07-08', '2026-07-09', '2026-07-06', 2, 8]);
+    assert.deepEqual(await rows(), [...before, ['2026-07-08', 'agent golf', 1, 200000], ['2026-07-09', 'agent golf', 1, 300000]]);
+    const view = await readWhatsappSvpLeaderboard(custom('2026-07-06', '2026-07-09'), { db, now: NOW });
+    assert.match(view.notice, /ends Jul 9, 2026 at 5:00 PM/);
     await assert.rejects(importWhatsappSvpChat(db, { ...later, sha256: 'nope' }, NOW), WhatsappImportError);
   } finally { await db.close(); }
 });
