@@ -163,6 +163,8 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const [liveLoading, setLoading] = useState(true);
   const [liveError, setError] = useState<ReadError | null>(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
+  const [queuesExpanded, setQueuesExpanded] = useState(false);
   const [demoRecords, setDemoRecords] = useState<Recruit[]>([]);
   const [toolDirty, setToolDirty] = useState(false);
   const [toolBusy, setToolBusy] = useState(false);
@@ -380,8 +382,20 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   // Dashboard heads the sidebar; Call Analytics opens from the Leaderboard toggle.
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
-    {navigationLink(WORKSPACE_EXTRA_PAGES[0])}
-    <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={navigateFromMenu}><Icon name="headset" /><span>Queues</span></a>
+    <div className="nav-group">
+      <a className="nav-link nav-group-toggle" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} aria-expanded={leaderboardExpanded} aria-controls="leaderboard-tv-links" onClick={() => setLeaderboardExpanded(value => !value)}><Icon name="chart" /><span>Leaderboard</span><Icon name="chevron" /></a>
+      <div id="leaderboard-tv-links" className="nav-group-pages" hidden={!leaderboardExpanded}>
+        <a className="nav-link" href="https://leaderboard.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper TV</a>
+        <a className="nav-link" href="https://leaderboard.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred TV</a>
+      </div>
+    </div>
+    <div className="nav-group">
+      <a className="nav-link nav-group-toggle" href="#queue" aria-current={queuePage ? "page" : undefined} aria-expanded={queuesExpanded} aria-controls="queue-tv-links" onClick={() => setQueuesExpanded(value => !value)}><Icon name="headset" /><span>Queues</span><Icon name="chevron" /></a>
+      <div id="queue-tv-links" className="nav-group-pages" hidden={!queuesExpanded}>
+        <a className="nav-link" href="https://queue.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper Queue TV</a>
+        <a className="nav-link" href="https://queue.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred Queue TV</a>
+      </div>
+    </div>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {SIDEBAR_HUBSPOT_TOOLS.map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
@@ -460,7 +474,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   function content() {
     // Calls and Recruits open from their panel titles on the Recruits page, so their pages lead back there.
     // Add Recruits opens from its button on the dashboard, so it leads back there too.
-    const dashboardLink = route.view === "calls" || route.view === "recruits" || route.view === "add-recruits" ? <a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a> : null;
+    const dashboardLink = route.view === "calls" || route.view === "recruits" || route.view === "contract-agents" || route.view === "add-recruits" ? <a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a> : null;
     if (queuePage) return <iframe key={queuePage.id} className="queue-workspace-frame" src="https://queue.lgcyap.com/embed" title="Shopper and Standard vs Preferred live queues" allow="fullscreen; screen-wake-lock" />;
     if (eventAttendanceView) return <iframe className="queue-workspace-frame" src="/event-attendance?embedded=1" title="Hiring event attendance" />;
     if (demoMode && hubspotTool) return <>{dashboardLink}{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;

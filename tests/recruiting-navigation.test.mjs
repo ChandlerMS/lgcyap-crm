@@ -34,7 +34,7 @@ test('Dashboard heads the sidebar alone and Add Recruits opens from a dashboard 
   assert.doesNotMatch(workspace, /nav-recruits|recruit-pages/);
   // Sidebar order: Dashboard, Leaderboard, Queues, then the HubSpot tools.
   const nav = workspace.slice(workspace.indexOf('const navigation = <>'), workspace.indexOf('const leaderboardSwitch'));
-  const order = ['SIDEBAR_RECRUITING_PAGES.map(navigationLink)', 'navigationLink(WORKSPACE_EXTRA_PAGES[0])', '<span>Queues</span>', 'SIDEBAR_HUBSPOT_TOOLS.map'].map(token => nav.indexOf(token));
+  const order = ['SIDEBAR_RECRUITING_PAGES.map(navigationLink)', '<span>Leaderboard</span>', '<span>Queues</span>', 'SIDEBAR_HUBSPOT_TOOLS.map'].map(token => nav.indexOf(token));
   assert.ok(order.every(index => index >= 0), 'every sidebar entry is present');
   assert.deepEqual([...order].sort((a, b) => a - b), order);
   // Add Recruits, Call Analytics and Event Attendance open from their pages, not the sidebar.

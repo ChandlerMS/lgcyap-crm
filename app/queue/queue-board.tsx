@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import styles from "../ringcx/ringcx.module.css";
+import { useTvPage } from "./use-tv-page";
+import { queueTvPage } from "./tv-model.mjs";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Call = { id: string; name: string; direction: "inbound" | "outbound" | null; source: string | null; since: number };
@@ -46,7 +48,8 @@ function Row({ kind, name, meta, timer, dim }: { kind: "call" | "ready"; name: s
   return <li className={`queue-row is-${kind}${dim ? " is-dim" : ""}`}><span className="queue-avatar" aria-hidden="true">{initials(name)}</span><span className="queue-who"><span className="queue-name">{name}</span><span className="queue-meta">{meta}</span></span><span className="queue-timer">{timer}</span></li>;
 }
 
-export default function QueueBoard({ embedded = false, grouped = false }: { embedded?: boolean; grouped?: boolean }) {
+export default function QueueBoard({ embedded = false, grouped = false, tv = false }: { embedded?: boolean; grouped?: boolean; tv?: boolean }) {
+  const turn = useTvPage(tv);
   const Heading = grouped ? "h2" : "h1";
   const Content = grouped ? "div" : "main";
   const Subheading = grouped ? "h3" : "h2";
@@ -68,7 +71,7 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
         const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) });
         const body = await response.json().catch(() => ({}));
         if (stopped) return;
-        if (response.status === 401) { if (embedded) { setBoard(null); setProblem("sign_in"); return; } window.location.assign(typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
+        if (response.status === 401) { if (embedded) { setBoard(null); setProblem("sign_in"); return; } window.location.assign(tv ? "/sign-in?return_to=%2Fshopper" : typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
         if (typeof body.served === "number") setOffset(body.served - Date.now());
         if (response.status === 403) setProblem("denied");
         else if (body.ok === true) { setBoard(body); setProblem(null); }
@@ -86,7 +89,7 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
     const clock = setInterval(() => setTick(Date.now()), 1000);
     const reload = setTimeout(() => window.location.reload(), RELOAD_MS);
     return () => { stopped = true; controller?.abort(); clearTimeout(next); clearInterval(clock); clearTimeout(reload); };
-  }, [embedded, refreshKey]);
+  }, [embedded, refreshKey, tv]);
 
   // Keep a wall screen from sleeping while the queue is showing.
   useEffect(() => {
@@ -118,6 +121,8 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
     };
     const value = (count: number | null | undefined) => count == null ? "—" : count.toLocaleString("en-US");
     const unavailable = Boolean(problem) || state === "stale";
+    const availablePage = queueTvPage(board?.available ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, board?.available.length ?? 1));
+    const callsPage = queueTvPage(board?.calls ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, board?.calls.length ?? 1));
     return <div className={`${styles.board} ${styles.grouped}`}>
       <header className={styles.header}>
         <div className={styles.identity}><div><h2>Shopper</h2><p className={styles.subtitle}>PolicyTek · Live call queue</p></div></div>
@@ -126,7 +131,7 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
           <button type="button" disabled={busy} onClick={() => { setBusy(true); setRefreshKey(key => key + 1); }}>{busy ? "Refreshing…" : "Refresh"}</button>
         </div>
       </header>
-      {notice && <p className={styles.alert} role="alert">{notice}{problem === "sign_in" && <> <a href="/sign-in?return_to=%2Fqueue" target="_top">Sign in</a></>}</p>}
+      {notice && <p className={styles.alert} role="alert">{notice}{problem === "sign_in" && <> <a href={tv ? "/sign-in?return_to=%2Fshopper" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</p>}
       <section className={styles.live} aria-label="Live agent availability">
         <article><h3>Agents Available</h3><p className={styles.available}>{value(board?.available.length)}</p><span>Ready to take a call</span></article>
         <article><h3>On calls</h3><p className={styles.onCalls}>{value(board?.calls.length)}</p><span>Live calls in the Shopper queue</span></article>
@@ -135,8 +140,8 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
       </section>
       <div className={styles.rosterGrid}>
         <section className={styles.roster} aria-labelledby="shopper-available-title">
-          <div className={styles.rosterHead}><div><h3 id="shopper-available-title">Agents Available</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Ready to take a call · Shopper"}</p></div><span className={styles.rosterCount}>{value(board?.available.length)}</span></div>
-          <ol className={styles.agentList}>{board?.available.map(agent => <li className={`${styles.agentRow} ${styles.timedRow}${agent.dim ? ` ${styles.dimmed}` : ""}`} key={agent.id}>
+          <div className={styles.rosterHead}><div><h3 id="shopper-available-title">Agents Available</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Ready to take a call · Shopper"}{tv && availablePage.pages > 1 && ` · Page ${availablePage.page} of ${availablePage.pages}`}</p></div><span className={styles.rosterCount}>{value(board?.available.length)}</span></div>
+          <ol className={styles.agentList}>{(availablePage.rows as Agent[]).map(agent => <li className={`${styles.agentRow} ${styles.timedRow}${agent.dim ? ` ${styles.dimmed}` : ""}`} key={agent.id}>
             <span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span>
             <span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>Waiting {now === null || agent.since === null ? "—" : waited(now - agent.since)}</span></span>
             <span className={styles.callStatus}>{agent.idle ? "Available · idle" : "Available"}</span>
@@ -145,8 +150,8 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
           {empty(board?.available, "No agents are currently available.") && <p className={styles.empty}>{empty(board?.available, "No agents are currently available.")}</p>}
         </section>
         <section className={styles.roster} aria-labelledby="shopper-on-call-title">
-          <div className={styles.rosterHead}><div><h3 id="shopper-on-call-title">On Live Calls</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Agents on calls · Shopper"}</p></div><span className={styles.rosterCount}>{value(board?.calls.length)}</span></div>
-          <ol className={styles.agentList}>{board?.calls.map(call => <li className={styles.agentRow} key={call.id}>
+          <div className={styles.rosterHead}><div><h3 id="shopper-on-call-title">On Live Calls</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Agents on calls · Shopper"}{tv && callsPage.pages > 1 && ` · Page ${callsPage.page} of ${callsPage.pages}`}</p></div><span className={styles.rosterCount}>{value(board?.calls.length)}</span></div>
+          <ol className={styles.agentList}>{(callsPage.rows as Call[]).map(call => <li className={styles.agentRow} key={call.id}>
             <span className={styles.avatar} aria-hidden="true">{initials(call.name)}</span>
             <span className={styles.agentName}>{call.name}<span className={styles.agentMetrics}>{[call.source, `${duration(now === null ? null : now - call.since)} on call`].filter(Boolean).join(" · ")}</span></span>
             <span className={styles.callStatus}>{call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "On call"}</span>

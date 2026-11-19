@@ -11,3 +11,7 @@
 .group { min-width: 0; border: 1px solid #6d633e; border-radius: 8px; overflow: hidden; }
 @media (min-width: 1200px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .header { gap: 12px; }.logo { width: 72px; }.actions { margin-left: 0; width: 100%; } }
+
+.singleGroup { grid-template-columns: minmax(0, 1fr); }
+.tv { padding: clamp(16px, 1.5vw, 32px); }.tv .header { margin-bottom: 16px; padding-bottom: 12px; }.tv .header h1 { font-size: clamp(30px, 2.5vw, 48px); }.tv .logo { width: 100px; }.tv .group { border-color: #6d633e; }
+.tv { padding: 16px; }.tv .header h1 { line-height: 1.15; }.tv .logo { width: 80px; }

@@ -1,13 +1,16 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useTvPage } from '../queue/use-tv-page';
+import { queueTvPage } from '../queue/tv-model.mjs';
 import styles from './ringcx.module.css';
 
 type Agent = {id: string; name: string; status: string; todayCalls: number | null; todaySales: number | null; stateSeconds: number | null};
 const duration = (seconds: number | null | undefined) => { if (seconds == null) return "—"; const total = Math.max(0, Math.floor(seconds)); return `${Math.floor(total / 3600).toString().padStart(2,"0")}:${Math.floor(total / 60 % 60).toString().padStart(2,"0")}:${(total % 60).toString().padStart(2,"0")}`; };
 type Snapshot = { observedAt: string; agents: { available: number; onCalls: number; loggedIn: number; other: number }; availableAgents: Agent[]; onCallAgents: Agent[]; busyAgents: Agent[]; dailyPerformance: {sales: number | null; closeRate: number | null}; averageWaitSeconds: number | null; queues: number; calls: { connected: number | null; answered: number | null; activeConnected: number; status: string } };
 const initials = (name: string) => { const parts = name.split(/\s+/).filter(Boolean); return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase(); };
-export default function RingCxDashboard({ grouped = false }: { grouped?: boolean }) {
+export default function RingCxDashboard({ grouped = false, tv = false }: { grouped?: boolean; tv?: boolean }) {
+  const turn = useTvPage(tv);
   const Container = grouped ? "div" : "main";
   const Heading = grouped ? "h2" : "h1";
   const Subheading = grouped ? "h3" : "h2";
@@ -39,9 +42,11 @@ export default function RingCxDashboard({ grouped = false }: { grouped?: boolean
   }, [refresh]);
   const stale = !!data && (now - Date.parse(data.observedAt) > 45000 || !!error);
   const value = (number: number | null | undefined) => number == null ? '—' : number.toLocaleString('en-US');
+  const availablePage = queueTvPage(data?.availableAgents ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, data?.availableAgents.length ?? 1));
+  const busyPage = queueTvPage(data?.busyAgents ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, data?.busyAgents.length ?? 1));
   return <Container className={`${styles.board}${grouped ? ` ${styles.grouped}` : ""}`}>
     <header className={styles.header}><div className={styles.identity}>{!grouped && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo}/>}<div>{!grouped && <p className={styles.brand}>Legacy Agency Partners</p>}<Heading>Standard vs Preferred</Heading><p className={styles.subtitle}>RingCX · Live agent dashboard</p></div></div><div className={styles.controls}><span className={`${styles.status} ${stale || error ? styles.warning : ''}`} role="status">{error || stale ? 'Update unavailable' : data ? 'Live' : 'Connecting'}</span><button type="button" disabled={busy} onClick={() => void refresh()}>{busy ? 'Refreshing…' : 'Refresh'}</button></div></header>
-    {error && <p role="alert" className={styles.alert}>{error}{signInRequired && <> <a href="/sign-in?return_to=%2Fqueue" target="_top">Sign in</a></>}</p>}
+    {error && <p role="alert" className={styles.alert}>{error}{signInRequired && <> <a href={tv ? "/sign-in?return_to=%2Fstandard" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</p>}
     <section aria-label="Live agent availability" className={styles.live}>
       <article><Subheading>Agents Available</Subheading><p className={styles.available}>{value(data?.agents.available)}</p><span>Ready to take a call</span></article>
       <article><Subheading>On calls</Subheading><p className={styles.onCalls}>{value(data?.agents.onCalls)}</p><span>Agents in an active call state</span></article>
@@ -49,14 +54,14 @@ export default function RingCxDashboard({ grouped = false }: { grouped?: boolean
       <article><Subheading>Total Calls</Subheading><p className={styles.onCalls}>{value(data?.calls.answered)}</p><span>Answered today · Eastern</span></article>
     </section>
     <div className={styles.rosterGrid}>
-    <section className={styles.roster} aria-labelledby="available-title"><div className={styles.rosterHead}><div><Subheading id="available-title">Agents Available</Subheading><p>{stale ? 'Last received roster · updates unavailable' : 'Ready to take a call · Standard vs Preferred'}</p></div><span className={styles.rosterCount}>{value(data?.availableAgents.length)}</span></div>
+    <section className={styles.roster} aria-labelledby="available-title"><div className={styles.rosterHead}><div><Subheading id="available-title">Agents Available</Subheading><p>{stale ? 'Last received roster · updates unavailable' : 'Ready to take a call · Standard vs Preferred'}{tv && availablePage.pages > 1 && ` · Page ${availablePage.page} of ${availablePage.pages}`}</p></div><span className={styles.rosterCount}>{value(data?.availableAgents.length)}</span></div>
       {/* The time in state sits on the right in gold, like the Shopper board's timers. */}
-      <ol className={styles.agentList}>{data?.availableAgents.map(agent => <li className={`${styles.agentRow} ${styles.timedRow}`} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.todayCalls)} calls today · {value(agent.todaySales)} Sold today</span></span><span className={styles.callStatus}>{agent.status}</span><span className={styles.stateTime}>{duration(agent.stateSeconds)}<span className="sr-only"> in {agent.status.toLowerCase()} state</span></span></li>)}</ol>
+      <ol className={styles.agentList}>{(availablePage.rows as Agent[]).map(agent => <li className={`${styles.agentRow} ${styles.timedRow}`} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.todayCalls)} calls today · {value(agent.todaySales)} Sold today</span></span><span className={styles.callStatus}>{agent.status}</span><span className={styles.stateTime}>{duration(agent.stateSeconds)}<span className="sr-only"> in {agent.status.toLowerCase()} state</span></span></li>)}</ol>
       {!data && <p className={styles.empty}>{error ? 'Agent list unavailable.' : 'Connecting to RingCX…'}</p>}
       {data && !data.availableAgents.length && <p className={styles.empty}>{stale ? 'No agents were available at the last update.' : 'No agents are currently available.'}</p>}
     </section>
-    <section className={styles.roster} aria-labelledby="on-call-title"><div className={styles.rosterHead}><div><Subheading id="on-call-title">On Live Calls or Busy</Subheading><p>{stale ? 'Last received roster · updates unavailable' : 'All logged-in agents not in Available'}</p></div><span className={styles.rosterCount}>{value(data?.busyAgents.length)}</span></div>
-      <ol className={styles.agentList}>{data?.busyAgents.map(agent => <li className={styles.agentRow} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.todayCalls)} calls today · {value(agent.todaySales)} Sold today · {duration(agent.stateSeconds)} in {agent.status === "On call" || agent.status === "On hold" ? "active" : agent.status.toLowerCase()} state</span></span><span className={styles.callStatus}>{agent.status}</span></li>)}</ol>
+    <section className={styles.roster} aria-labelledby="on-call-title"><div className={styles.rosterHead}><div><Subheading id="on-call-title">On Live Calls or Busy</Subheading><p>{stale ? 'Last received roster · updates unavailable' : 'All logged-in agents not in Available'}{tv && busyPage.pages > 1 && ` · Page ${busyPage.page} of ${busyPage.pages}`}</p></div><span className={styles.rosterCount}>{value(data?.busyAgents.length)}</span></div>
+      <ol className={styles.agentList}>{(busyPage.rows as Agent[]).map(agent => <li className={styles.agentRow} key={agent.id}><span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span><span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>{value(agent.todayCalls)} calls today · {value(agent.todaySales)} Sold today · {duration(agent.stateSeconds)} in {agent.status === "On call" || agent.status === "On hold" ? "active" : agent.status.toLowerCase()} state</span></span><span className={styles.callStatus}>{agent.status}</span></li>)}</ol>
       {!data && <p className={styles.empty}>{error ? 'Agent list unavailable.' : 'Connecting to RingCX…'}</p>}
       {data && !data.busyAgents.length && <p className={styles.empty}>{stale ? 'No busy agents at the last update.' : 'No agents are currently busy.'}</p>}
     </section>

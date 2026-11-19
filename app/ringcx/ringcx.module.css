@@ -35,3 +35,27 @@
 .grouped .rosterHead h3 { margin: 0; font-size: 20px; font-weight: 600; }
 
 .dimmed { opacity: .45; }
+
+/* A single live queue fills an office TV; six roster entries rotate every fifteen seconds. */
+:global([data-queue-tv]) .grouped .live { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 18px 0; }
+:global([data-queue-tv]) .grouped .live article:nth-child(3) { border-left: 1px solid var(--line); padding-left: 30px; }
+:global([data-queue-tv]) .grouped .live article > p { font-size: clamp(48px, 4vw, 76px); }
+:global([data-queue-tv]) .grouped .live article > p.waitValue { font-size: clamp(34px, 3vw, 56px); }
+:global([data-queue-tv]) .grouped .rosterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+:global([data-queue-tv]) .grouped .agentName { font-size: clamp(22px, 1.6vw, 32px); }
+:global([data-queue-tv]) .grouped .agentMetrics, :global([data-queue-tv]) .grouped .rosterHead p, :global([data-queue-tv]) .grouped .live article > span { font-size: clamp(16px, 1vw, 20px); }
+:global([data-queue-tv]) .grouped .stateTime { font-size: clamp(24px, 1.7vw, 34px); }
+:global([data-queue-tv]) .grouped .rosterHead h3 { font-size: 26px; }
+@media(max-width:1000px) { :global([data-queue-tv]) .grouped .live { grid-template-columns: repeat(2, minmax(0, 1fr)); }:global([data-queue-tv]) .grouped .live article:nth-child(3) { border-left: 0; padding-left: 0; }:global([data-queue-tv]) .grouped .rosterGrid { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+:global([data-queue-tv]) .grouped .live article > p { margin: 10px 0; }
+:global([data-queue-tv]) .grouped .rosterHead { padding: 12px 18px; }
+:global([data-queue-tv]) .grouped .agentRow { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; padding: 8px 12px; }
+:global([data-queue-tv]) .grouped .avatar { grid-row: 1; }
+:global([data-queue-tv]) .grouped .agentName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:global([data-queue-tv]) .grouped .agentMetrics { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+:global([data-queue-tv]) .grouped .callStatus { display: none; }
+:global([data-queue-tv]) .grouped .stateTime { grid-row: 1; }
+:global([data-queue-tv]) .grouped .agentName { line-height: 1.15; }
+:global([data-queue-tv]) .grouped .agentMetrics { line-height: 1.2; }
+:global([data-queue-tv]) .grouped .subtitle { display: none; }
+:global([data-queue-tv]) .grouped .live article > p { line-height: 1.1; }
