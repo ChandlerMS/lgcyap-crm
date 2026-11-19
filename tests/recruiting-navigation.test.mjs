@@ -73,12 +73,12 @@ test('Event Attendance is a dashboard section between the pipeline and Meetings,
 
 test('Leaderboard and Call Analytics switch with a toggle at the top of both pages', () => {
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
-  assert.match(workspace, /if \(callAnalyticsView\) return <>\{leaderboardSwitch\}<LeadData /);
-  assert.match(workspace, /if \(leaderboardView\) return <>\{leaderboardSwitch\}<Leaderboard /);
+  assert.match(workspace, /if \(callAnalyticsView\) return <>\{dashboardLink\}\{leaderboardSwitch\}<LeadData /);
+  assert.match(workspace, /if \(leaderboardView\) return <>\{dashboardLink\}\{leaderboardSwitch\}<Leaderboard /);
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
-  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Recruits', 'Contract Agents', 'Help Desk', 'Tickets']);
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Recruits', 'Contract Agents', 'Carrier Appointments', 'Carriers', 'Help Desk', 'Tickets']);
   for (const tool of HUBSPOT_TOOLS) {
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
     assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');
@@ -94,7 +94,7 @@ test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls k
   }
   assert.deepEqual(resolveWorkspaceRoute('#calls'), { view: 'calls' });
   // Calls and Recruits open from their panel titles; their pages stay but leave the sidebar.
-  assert.deepEqual(SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.label), ['Contract Agents']);
+  assert.deepEqual(SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.label), ['Recruits', 'Contract Agents']);
   assert.deepEqual(resolveWorkspaceRoute('#recruits'), { view: 'recruits' });
   // Tasks and Follow up open their own pages from the dashboard; the sidebar keeps Dashboard selected.
   for (const view of ['tasks', 'follow-up']) {

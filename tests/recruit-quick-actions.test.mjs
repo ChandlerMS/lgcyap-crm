@@ -59,7 +59,7 @@ function hubspot({ pipeline = '924992938', contacts = [{ id: '501' }], owners = 
     if (pathname === '/oauth/v2/private-apps/get/access-token-info') return json(access);
     if (method === 'GET' && pathname === '/crm/v3/objects/tickets/456') return json({ id: '456', properties: { hs_pipeline: pipeline, subject: 'Recruiting: Synthetic Recruit', recruit_name: 'Synthetic Recruit' }, associations: { contacts: { results: contacts } } });
     if (method === 'GET' && pathname === '/crm/v3/owners/') return json({ results: new URL(url).searchParams.get('archived') === 'true' ? [] : owners });
-    if (method === 'POST' && ['/crm/v3/objects/notes', '/crm/v3/objects/tasks'].includes(pathname)) return create();
+    if (method === 'POST' && ['/crm/v3/objects/notes', '/crm/v3/objects/tasks', '/crm/v3/objects/meetings'].includes(pathname)) return create();
     throw new Error(`Unexpected HubSpot call ${method} ${pathname}`);
   };
   return { calls, fetchImpl };
@@ -135,4 +135,31 @@ test('the endpoint keeps the CRM write checks: sign-in, editor list, write switc
   assert.equal(ok.status, 201);
   assert.match(ok.headers.get('Cache-Control'), /private, no-store/);
   assert.equal(saves, 1);
+});
+
+
+test('a meeting saves its exact UTC time, owner and recruit associations once', async () => {
+  const provider = hubspot();
+  const settings = await options(provider.fetchImpl);
+  const input = { requestId: id, kind: 'meeting', subject: 'Licensing meeting', startsAt: '2026-11-20T15:00:00.000Z', endsAt: '2026-11-20T15:30:00.000Z', location: 'Office', body: '<Notes>' };
+  const result = await createQuickAction('456', input, settings);
+  assert.equal(result.status, 'saved');
+  const [created] = posts(provider.calls);
+  assert.equal(created.pathname, '/crm/v3/objects/meetings');
+  assert.equal(created.body.properties.hs_meeting_start_time, input.startsAt);
+  assert.equal(created.body.properties.hs_meeting_end_time, input.endsAt);
+  assert.equal(created.body.properties.hs_meeting_title, input.subject);
+  assert.equal(created.body.properties.hs_meeting_location, 'Office');
+  assert.equal(created.body.properties.hubspot_owner_id, '77');
+  assert.match(created.body.properties.hs_meeting_body, /&lt;Notes&gt;/);
+  assert.deepEqual(created.body.associations.map(item => [item.to.id, item.types[0].associationTypeId]), [['456',216],['501',200]]);
+  assert.equal((await createQuickAction('456', input, settings)).replayed, true);
+  assert.equal(posts(provider.calls).length,1);
+  await assert.rejects(createQuickAction('456', {...input, location:'Changed'}, settings), {code:'REQUEST_ID_REUSED'});
+});
+
+test('meeting validation rejects missing titles, invalid times and reversed times before a write', () => {
+  const input = { requestId:id, kind:'meeting', subject:'Meeting', startsAt:'2026-11-20T15:00:00.000Z', endsAt:'2026-11-20T15:30:00.000Z' };
+  for(const changed of [{subject:''},{startsAt:'2026-02-30T15:00:00.000Z'},{endsAt:input.startsAt},{endsAt:'bad'},{dueDate:TODAY},{startsAt:'2030-11-20T15:00:00.000Z',endsAt:'2030-11-20T16:00:00.000Z'}]) assert.throws(()=>validateQuickAction({...input,...changed},{today:TODAY}),{code:'INVALID_QUICK_ACTION'});
+  assert.throws(()=>validateQuickAction({requestId:id,kind:'note',body:'Note',startsAt:input.startsAt},{today:TODAY}),{code:'INVALID_QUICK_ACTION'});
 });

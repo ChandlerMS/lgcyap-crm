@@ -43,11 +43,13 @@ export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'calls', label: 'Calls', icon: 'phone', path: '/contacts/50894788/objects/0-48' },
   { id: 'recruits', label: 'Recruits', icon: 'people', path: '/contacts/50894788/objects/0-5' },
   { id: 'contract-agents', label: 'Contract Agents', icon: 'people', path: '/contacts/50894788/objects/2-64481801' },
+  { id: 'carrier-appointments', label: 'Carrier Appointments', icon: 'file', path: '/contacts/50894788/objects/2-64481803' },
+  { id: 'carriers', label: 'Carriers', icon: 'file', path: '/contacts/50894788/objects/2-64481805' },
   { id: 'help-desk', label: 'Help Desk', icon: 'inbox', path: '/contacts/50894788/objects/0-5' },
   { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
 // Calls and Recruits keep their pages but open from their panel titles on the Recruits page, not the sidebar.
-export const SIDEBAR_HUBSPOT_TOOLS = Object.freeze(HUBSPOT_TOOLS.filter(tool => !['calls', 'recruits', 'inbox', 'help-desk', 'tickets'].includes(tool.id)));
+export const SIDEBAR_HUBSPOT_TOOLS = Object.freeze(HUBSPOT_TOOLS.filter(tool => ['recruits', 'contract-agents'].includes(tool.id)));
 // HubSpot views shown as panels on the Recruits page. Those without a page of their own (Meetings, Calendar) send their old links to Recruits.
 export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'meetings', label: 'Meetings' },
@@ -65,6 +67,7 @@ export const QUEUE_PAGES = Object.freeze([
 // Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {
   if (['add-recruits', 'event-attendance', 'tasks', 'follow-up'].includes(view)) return 'today';
+  if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
   if (view === 'call-analytics') return 'leaderboard';
   return view;
 }

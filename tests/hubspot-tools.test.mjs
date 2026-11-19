@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { HUBSPOT_TOOL_CONFIG, handleHubSpotToolRequest, readHubSpotTool, validateToolInput } from '../lib/hubspot-tools.mjs';
+import { HUBSPOT_TOOL_CONFIG, handleHubSpotToolRequest, readHubSpotTool, validateToolInput, normalizeToolRecord } from '../lib/hubspot-tools.mjs';
 
 const now = () => Date.parse('2026-10-30T12:00:00Z');
 const token = 'synthetic-owner-only-token';
@@ -14,8 +14,8 @@ const VIEWER_OWNED = ['calls', 'tasks', 'meetings', 'calendar'];
 // Answers HubSpot's owner list so Tasks, Calls and Meetings can resolve the signed-in user; everything else goes to fetchImpl.
 const withOwners = (fetchImpl, active = [{ id: '777', email: viewerEmail }], archived = []) => async (url, options) => url.startsWith('https://api.hubapi.com/crm/v3/owners/') ? new Response(JSON.stringify({ results: url.includes('archived=true') ? archived : active })) : fetchImpl(url, options);
 
-test('tool selection accepts only ten fixed tools and inbox thread selection, without caller authority', () => {
-  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 10);
+test('tool selection accepts only twelve fixed tools and inbox thread selection, without caller authority', () => {
+  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 12);
   for (const tool of Object.keys(HUBSPOT_TOOL_CONFIG)) assert.deepEqual(validateToolInput(tool, {}), {});
   assert.deepEqual(validateToolInput('inbox', { threadId: '123' }), { threadId: '123' });
   for (const tool of ['constructor', '../contacts', 'companies', 'https://attacker.invalid']) assert.throws(() => validateToolInput(tool, {}));
@@ -374,4 +374,15 @@ test('opening one Task or Meeting is refused unless it is assigned to the signed
 
 test('the read routes pass the signed-in email, so the owner filter applies to the real session', () => {
   assert.match(readFileSync('app/api/hubspot-tools/[tool]/route.ts', 'utf8'), /viewerEmail: user\?\.email/);
+});
+
+
+test('carrier views use verified custom object IDs and display properties', () => {
+  assert.equal(HUBSPOT_TOOL_CONFIG['carrier-appointments'].object, '2-64481803');
+  assert.equal(HUBSPOT_TOOL_CONFIG.carriers.object, '2-64481805');
+  const appointment = normalizeToolRecord('carrier-appointments', row('101',{appointment_name:'Synthetic appointment',writing_number:'W-123'}));
+  assert.equal(appointment.title,'Synthetic appointment');assert.equal(appointment.subtitle,'W-123');
+  assert.match(appointment.hubspotUrl,/record\/2-64481803\/101/);
+  const carrier = normalizeToolRecord('carriers',row('102',{carrier_name:'Synthetic carrier'}));
+  assert.equal(carrier.title,'Synthetic carrier');assert.match(carrier.hubspotUrl,/record\/2-64481805\/102/);
 });

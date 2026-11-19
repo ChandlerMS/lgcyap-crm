@@ -1,4 +1,5 @@
 "use client";
+import { MEETINGS_CHANGED_EVENT } from "./recruit-quick-actions";
 
 import { startTransition, useCallback, useEffect, useId, useRef, useState } from "react";
 import HubSpotRecordEditor, { type HubspotEditField } from "./hubspot-record-editor";
@@ -36,6 +37,8 @@ const DEFINITIONS: Record<string, Definition> = {
   tickets: { label: "Tickets", description: "Tickets from your HubSpot account.", singular: "ticket", columns: [{ field: "title", label: "Ticket" }, { field: "status", label: "Stage" }, { field: "owner", label: "Owner" }, { field: "createdAt", label: "Created", date: true }, { field: "updatedAt", label: "Updated", date: true }] },
   calls: { label: "Calls", description: "Call activities assigned to you in HubSpot.", singular: "call", columns: [{ field: "title", label: "Call" }, { field: "phone", label: "Phone" }, { field: "status", label: "Status" }, { field: "owner", label: "Owner", fullPageOnly: true }, { field: "scheduledAt", label: "Call date", date: true }] },
   "contract-agents": { label: "Contract Agents", description: "Contract agents connected to HubSpot.", singular: "contract agent", columns: [{ field: "title", label: "Agent" }, { field: "email", label: "Email" }, { field: "phone", label: "Phone" }, { field: "status", label: "Agent status" }, { field: "owner", label: "Owner" }] },
+  "carrier-appointments": { label: "Carrier Appointments", description: "Carrier appointments from HubSpot.", singular: "carrier appointment", columns: [{ field: "title", label: "Appointment" }, { field: "subtitle", label: "Writing number" }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true }] },
+  carriers: { label: "Carriers", description: "Carriers from HubSpot.", singular: "carrier", columns: [{ field: "title", label: "Carrier" }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true }] },
   contacts: { label: "Contacts", description: "Contacts from your HubSpot account.", singular: "contact", columns: [{ field: "title", label: "Contact" }, { field: "email", label: "Email" }, { field: "phone", label: "Phone" }, { field: "company", label: "Company" }, { field: "status", label: "Lifecycle stage" }, { field: "owner", label: "Owner" }] },
   tasks: { label: "Tasks", description: "Tasks and due dates assigned to you in HubSpot.", singular: "task", columns: [{ field: "title", label: "Task" }, { field: "status", label: "Status" }, { field: "scheduledAt", label: "Due", date: true }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true, fullPageOnly: true }] },
   calendar: { label: "Calendar", description: "Scheduled meetings assigned to you in HubSpot. All times are Eastern.", singular: "meeting", columns: [{ field: "title", label: "Meeting" }, { field: "scheduledAt", label: "Starts", date: true }, { field: "endedAt", label: "Ends", date: true }, { field: "status", label: "Outcome" }, { field: "owner", label: "Owner" }] },
@@ -189,6 +192,12 @@ function CrmWorkspace({ tool, label, description, compact = false, pageHref, pag
     startTransition(() => { setData(null); setQuery(""); setSort(null); setDetailRecord(null); setSearchDraft(""); setActiveSearch(null); activeSearchRef.current = null; setSearchError(null); setPage(1); setSelectedThread(null); setMessages(null); setThreadError(null); setThreadNotice(null); setMonth(currentHubspotMonth()); void load(null); });
     return () => { requestRef.current?.abort(); requestRef.current = null; threadRequestRef.current?.abort(); threadRequestRef.current = null; detailRequestRef.current?.abort(); detailRequestRef.current = null; detailRecordIdRef.current = null; };
   }, [load]);
+  useEffect(() => {
+    if (!["meetings", "calendar"].includes(tool)) return;
+    const reload = () => { if (!editorOpen) void load(null); };
+    window.addEventListener(MEETINGS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(MEETINGS_CHANGED_EVENT, reload);
+  }, [tool, load, editorOpen]);
   useEffect(() => {
     if (!failure?.retryAt) return;
     const timer = window.setTimeout(() => setFailure(value => value ? { ...value, retryAt: undefined } : null), Math.max(0, failure.retryAt - Date.now()));

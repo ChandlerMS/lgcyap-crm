@@ -29,3 +29,6 @@
 
 /* A viewport anchor keeps tablet results clear of the support links beside the input. */
 @media(max-width:1100px) { .resultsPanel { position: fixed; top: calc(var(--crm-titlebar-height, 56px) + 4px); left: 12px; right: 12px; width: auto; } }
+
+.support { gap: 8px; }.support a { padding: 9px 12px; font-size: 16px; font-weight: 650; color: #f1d27a; border: 1px solid #806a35; background: #2a2312; }.support a:hover, .support a[aria-current="page"] { background: #423419; border-color: #e3bf5e; }
+@media(max-width:720px) { .support { flex-wrap: wrap; }.support a { font-size: 15px; padding: 8px 10px; } }
