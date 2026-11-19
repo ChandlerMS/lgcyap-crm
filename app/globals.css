@@ -509,9 +509,9 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .panel-title-link { color: inherit; text-decoration: none; }
 .panel-title-link:hover, .panel-title-link:focus-visible { color: var(--gold); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
 /* Tasks and Follow Up chips beside the Today totals: fixed 44px rows, density from tight gaps. Tasks is the smaller box, on the left. */
-.today-summaries { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-4) var(--space-6); }
-.today-summaries > .task-chips { flex: 1 1 200px; }
-.today-summaries > :not(.task-chips) { flex: 2 1 300px; }
+/* Tasks and Follow up on the first row, Meetings and Calendar beneath them. */
+.today-summaries { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: start; gap: var(--space-4) var(--space-6); }
+@media (max-width: 640px) { .today-summaries { grid-template-columns: minmax(0, 1fr); } }
 .summary-chips { --chip-rows: 2; min-width: 0; }
 .summary-chips-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--space-3); margin-bottom: var(--space-1); font-size: 14px; }
 .summary-chips-heading h2 { margin: 0; font-size: clamp(22px, 2vw, 28px); font-weight: 600; line-height: 1.5; }
@@ -571,7 +571,8 @@ a.summary-chip:hover { border-color: var(--gold); }
 /* Add Recruits, Recruits and Agents sit together beside the reporting period. */
 .dashboard-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 /* Four columns fit a half-width panel; the full Recruits list keeps the wide table. */
-.recruits-panel .data-table { min-width: 0; }
+.recruits-panel .data-table, .follow-up-panel .data-table { min-width: 0; }
+.follow-up-panel .data-table th:last-child, .follow-up-panel .data-table td:last-child { text-align: right; }
 @media (max-width: 1200px) { .today-overview { grid-template-columns: minmax(0, 1fr); gap: 44px; } }
 /* One persistent provider frame; minimizing never interrupts an active call. */
 .rc-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 55; box-shadow: 0 8px 30px #0008; }
@@ -695,6 +696,51 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .panel-pager-size { display: inline-flex; align-items: center; gap: 8px; }
 .panel-pager-size select { min-height: 44px; padding: 8px 10px; border: 1px solid var(--control-line); border-radius: 5px; background: #111110; color: var(--text); font: inherit; }
 .panel-pager-size select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+/* Numbered page buttons (Tasks and Follow up). */
+.panel-pager-pages { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.panel-pager-page { min-width: 40px; min-height: 40px; padding: 0 8px; border: 1px solid var(--control-line); border-radius: 5px; background: #111110; color: var(--text); font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.panel-pager-page:hover { border-color: var(--gold); color: var(--gold); }
+.panel-pager-page.is-current { border-color: var(--gold); background: #2b2718; color: var(--gold); font-weight: 600; }
+.panel-pager-page:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.panel-pager-gap { padding: 0 2px; color: var(--muted); }
+
+/* Collapsed rows (Tasks, Follow up, Meetings and Calendar weeks): a row opens its details while the pointer is over it,
+   or while keyboard focus is inside it, and closes again when the pointer moves on. */
+.hover-row-reveal { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease; }
+/* Positioned so the screen-reader labels inside a collapsed row are clipped with it rather than stretching the table. */
+.hover-row-reveal > div { position: relative; min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear .2s; }
+.hover-row:hover .hover-row-reveal, .hover-row:has(:focus-visible) .hover-row-reveal,
+.hover-week:hover .hover-row-reveal, .hover-week:focus-visible .hover-row-reveal, .hover-week:has(:focus-visible) .hover-row-reveal { grid-template-rows: 1fr; }
+.hover-row:hover .hover-row-reveal > div, .hover-row:has(:focus-visible) .hover-row-reveal > div,
+.hover-week:hover .hover-row-reveal > div, .hover-week:focus-visible .hover-row-reveal > div, .hover-week:has(:focus-visible) .hover-row-reveal > div { visibility: visible; transition-delay: 0s; }
+.hover-rows .hover-row > tr:first-child > td { border-bottom: 0; }
+.hover-rows .hover-row-details > td:only-child { padding: 0; text-align: left; white-space: normal; }
+.hover-rows .hover-row:hover > tr > td, .hover-rows .hover-row:has(:focus-visible) > tr > td { background: #14130e; }
+.hover-rows .hover-row-reveal > div > * { margin-inline: 0; }
+.hover-rows .hover-row-reveal > div { display: grid; gap: 10px; }
+.hover-row:hover .hover-row-reveal > div, .hover-row:has(:focus-visible) .hover-row-reveal > div { padding: 2px 0 16px; }
+.hover-row-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 18px; margin: 0; }
+.hover-row-facts > div { min-width: 0; }
+.hover-row-facts dt { color: var(--muted); font-size: 12px; }
+.hover-row-facts dd { margin: 2px 0 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.hover-row-preview { margin: 0; color: #cfc9b8; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.hover-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.hover-row-details .recruit-row-tools { justify-content: flex-start; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { .hover-row-reveal, .hover-row-reveal > div { transition: none; } }
+
+/* Add Task and Add Follow-Up: a labeled button in a panel heading, and a gold plus left of a dashboard summary title. */
+.panel-heading-actions { display: flex; align-items: center; gap: 10px; }
+.panel-add-button { display: inline-flex; align-items: center; gap: 8px; }
+.panel-add-plus { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: #17150f; font-size: 17px; font-weight: 700; line-height: 1; }
+.summary-chips-top { display: flex; align-items: flex-start; gap: 10px; }
+.summary-chips-top > .summary-chips-heading { flex: 1; min-width: 0; }
+.summary-add { display: inline-grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; margin-top: clamp(4px, .5vw, 8px); border: 0; border-radius: 50%; background: var(--gold); color: #17150f; font: inherit; font-size: 24px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 0 0 1px #00000040, 0 4px 12px #0006; }
+.summary-add:hover { background: #ecc95a; }
+.summary-add:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.quick-action-recruit { display: grid; gap: 6px; }
+.quick-action-recruit select { width: 100%; min-height: 150px; padding: 4px; border: 1px solid var(--control-line); border-radius: 5px; background: #111110; color: var(--text); font: inherit; font-size: 14px; }
+.quick-action-recruit select option { padding: 6px 8px; border-radius: 3px; }
+.quick-action-recruit select option:checked { background: #2b2718; color: var(--gold); }
 
 /* Note, Task and Follow up beside each recruit's contact tools. */
 .recruit-row-tools { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: nowrap; gap: 7px; }

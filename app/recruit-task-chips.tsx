@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { hubspotHref, openTaskChips } from "./recruit-task-chips.mjs";
 import SummaryChips, { type SummaryChip } from "./summary-chips";
 import { TASKS_CHANGED_EVENT } from "./recruit-quick-actions";
@@ -8,7 +8,8 @@ type TasksResult = { status?: string; records?: { id: string; title: string; sta
 type State = { status: "loading" } | { status: "ready"; result: TasksResult } | { status: "failed"; message: string };
 const FAILED = "Tasks could not be loaded from HubSpot.";
 // Open HubSpot tasks assigned to the signed-in user beside Follow Up, soonest due first; a chip opens that task in HubSpot and "+N more" opens HubSpot's task list.
-export default function RecruitTaskChips({ live, now, onUnauthorized }: { live: boolean; now: number; onUnauthorized: () => void }) {
+// lead is the gold Add Task plus beside the title.
+export default function RecruitTaskChips({ live, now, onUnauthorized, lead }: { live: boolean; now: number; onUnauthorized: () => void; lead?: ReactNode }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const unauthorizedRef = useRef(onUnauthorized);
@@ -43,6 +44,6 @@ export default function RecruitTaskChips({ live, now, onUnauthorized }: { live: 
     : state.status === "loading" ? "Loading tasks from HubSpot…"
     : state.status === "failed" ? <>{state.message} <button className="text-link" onClick={() => { setState({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></>
     : "No open tasks assigned to you.";
-  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
+  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" lead={lead} count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
     empty={empty} more={{ href: hubspotHref(ready?.hubspotUrl), external: true, label: "open tasks in HubSpot" }} />;
 }

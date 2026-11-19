@@ -86,11 +86,13 @@ test('native HubSpot tools use the verified portal and exact requested order', (
   }
 });
 
-test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls keeps a page of its own', () => {
+test('Meetings, Calendar and Calls are panels on the dashboard, and each also has a page of its own', () => {
   assert.deepEqual(RECRUITS_PAGE_TOOLS.map(tool => tool.label), ['Meetings', 'Calendar', 'Calls']);
+  // Meetings and Calendar open from their dashboard summaries and panel titles, like Tasks; the sidebar keeps Dashboard selected.
   for (const tool of RECRUITS_PAGE_TOOLS.filter(item => item.id !== 'calls')) {
     assert.equal(HUBSPOT_TOOLS.some(item => item.id === tool.id), false);
-    assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: 'today' });
+    assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
+    assert.equal(sidebarViewFor(tool.id), 'today');
   }
   assert.deepEqual(resolveWorkspaceRoute('#calls'), { view: 'calls' });
   // Calls and Recruits open from their panel titles; their pages stay but leave the sidebar.

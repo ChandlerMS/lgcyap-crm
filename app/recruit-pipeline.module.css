@@ -230,5 +230,36 @@
   .faceStart, .faceLicensing, .faceFinish { grid-template-columns: minmax(0, 1fr); }
   .faceFlow .connectors { display: none; }
 }
+/* 3D faces use larger type than the one-page board, and each stage has its own grey-to-gold tone that warms
+   along the pipeline, from cool silver at the first stages to rich gold at Completed. */
+.face .faceHeading span { font-size: 13px; }
+.face .faceHeading h3 { font-size: 25px; }
+.face .entryPath h3, .face .licensingRoute h3 { margin-bottom: 10px; font-size: 18px; letter-spacing: -.01em; }
+.face .stage { --tone-from: #2c2e33; --tone-to: #3a3c40; --tone-accent: #a4a8af; min-height: 120px; border-radius: 11px; background: linear-gradient(180deg, color-mix(in srgb, var(--tone-to) 30%, transparent) 0%, transparent 75%); }
+.face .stage .stageHeading { padding: 14px 12px 12px 18px; border-radius: 11px; background: linear-gradient(135deg, var(--tone-from) 0%, var(--tone-to) 100%); box-shadow: inset 5px 0 0 var(--tone-accent); }
+.face .stageToggle { grid-template-columns: minmax(0, 1fr) 38px; gap: 6px; min-height: 100px; font-size: 19px; }
+.face .stageTitle { color: #f6f1e4; line-height: 1.3; }
+.face .stageToggle small { margin-top: 3px; color: #d9d2bf; font-size: 14px; }
+.face .count { color: #f3d27a; font-size: 26px; font-weight: 600; }
+.face .expandButton { width: 38px; height: 42px; color: #f0d48a; font-size: 24px; }
+.face .stage .stageContent { padding: 2px 8px 0; }
+.face .stage .recruit { padding: 12px 0; }
+.face .stage .recruit:has(.grip) { padding-top: 36px; }
+.face .stage .grip { width: 30px; height: 30px; font-size: 22px; }
+.face .stage .recruitSummary > a { color: #f6f2e8; font-size: 16px; font-weight: 500; line-height: 1.4; }
+.face .stage.dropAvailable .stageHeading { box-shadow: inset 5px 0 0 var(--tone-accent), inset 0 0 0 1px #cead50; }
+.face .stage.dropHover { background: #3a2f17; }
+.face .stage.dropHover .stageHeading, .face .stage.popoutOpen .stageHeading { box-shadow: inset 5px 0 0 var(--tone-accent), inset 0 0 0 2px #e1c66f; }
+.face .dropHint { top: -22px; font-size: 15px; }
+.face .stage[data-tone="hiring-event"] { --tone-from: #2b2d32; --tone-to: #3b3e44; --tone-accent: #a4a8b0; }
+.face .stage[data-tone="application"] { --tone-from: #2d2e31; --tone-to: #45443e; --tone-accent: #b3b1a6; }
+.face .stage[data-tone="phone-interview"] { --tone-from: #2f2f2f; --tone-to: #4d4736; --tone-accent: #bfb596; }
+.face .stage[data-tone="offer"] { --tone-from: #31302b; --tone-to: #574b2d; --tone-accent: #c9b682; }
+.face .stage[data-tone="licensed-branch"] { --tone-from: #2f312e; --tone-to: #514c38; --tone-accent: #c4b993; }
+.face .stage[data-tone="licensing-reminders"] { --tone-from: #33302a; --tone-to: #5e4e29; --tone-accent: #d1b670; }
+.face .stage[data-tone="licensed-npn"] { --tone-from: #352f27; --tone-to: #665224; --tone-accent: #d8b862; }
+.face .stage[data-tone="contracting"] { --tone-from: #372f23; --tone-to: #6f5520; --tone-accent: #dfb952; }
+.face .stage[data-tone="training"] { --tone-from: #3a2f1f; --tone-to: #7a591b; --tone-accent: #e6bb45; }
+.face .stage[data-tone="completed"] { --tone-from: #3d301c; --tone-to: #876117; --tone-accent: #f0c23a; }
 @media (max-width: 600px) { .view3d { grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 6px; } .turnRail span { font-size: 24px; } .face { padding: 12px 10px 16px; } }
 @media (prefers-reduced-motion: reduce) { .prism { transition: none; } }
