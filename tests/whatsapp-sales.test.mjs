@@ -116,13 +116,17 @@ test('the API accepts the whatsapp board and reports a clear unavailable state b
 });
 
 
-test('Standard vs Preferred WhatsApp dataset awaits its own reports, never substitutes HubSpot or All rows', async () => {
-  const { readPendingWhatsappStandardPreferred } = await import('../lib/whatsapp-sales.mjs');
-  for (const period of ['day', 'week', 'month', 'custom']) {
-    const input = { board: 'whatsapp-sp', period, ...(period === 'custom' ? { from: '2026-07-01', to: '2026-07-03' } : {}) };
-    const result = readPendingWhatsappStandardPreferred(input, NOW);
-    assert.equal(result.board, 'whatsapp-sp'); assert.equal(result.status, 'unavailable');
-    assert.deepEqual(result.rows, []); assert.match(result.notice, /separate Standard vs Preferred WhatsApp spreadsheets/);
-    assert.ok(result.startDate); assert.ok(result.endDate);
-  }
+test('Standard vs Preferred WhatsApp view stays unavailable until its own chat is imported, never substituting All rows', async () => {
+  const { readWhatsappSvpLeaderboard } = await import('../lib/whatsapp-sales.mjs');
+  const db = await database([june, july]);
+  try {
+    await db.exec(await readFile(new URL('../migrations/0020_whatsapp_svp_sales.sql', import.meta.url), 'utf8'));
+    for (const period of ['day', 'week', 'month', 'custom']) {
+      const input = { board: 'whatsapp-sp', period, ...(period === 'custom' ? { from: '2026-07-01', to: '2026-07-03' } : {}) };
+      const result = await readWhatsappSvpLeaderboard(input, { db, now: NOW });
+      assert.equal(result.board, 'whatsapp-sp'); assert.equal(result.status, 'unavailable'); assert.equal(result.error.code, 'WHATSAPP_SVP_NOT_IMPORTED');
+      assert.deepEqual(result.rows, []); assert.ok(result.startDate); assert.ok(result.endDate);
+    }
+    await assert.rejects(readWhatsappSvpLeaderboard({ board: 'whatsapp', period: 'day' }, { db, now: NOW }), TypeError);
+  } finally { await db.close(); }
 });
