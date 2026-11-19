@@ -5,6 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { ADMIN_EMAILS, CRM_AUTHORIZED, adminAllowed, effectivePolicy, normalizeAccessEmail } from '../lib/admin-policy.mjs';
 import { sessionUser } from '../lib/auth-policy.mjs';
 import { editorAllowed } from '../lib/hubspot-write.mjs';
+import { ADMIN_ACCESS_SCHEMA } from '../db/admin-schema.mjs';
 import { setCrmAccess } from '../db/admin-access.mjs';
 import { authOptions } from '../lib/auth-server.mjs';
 import { directoryClient, readGoogleDirectory, changeGoogleRole } from '../lib/google-admin.mjs';
@@ -38,7 +39,9 @@ test('CRM grants and revocations affect existing sessions, new sign-ins and edit
 test('CRM access changes and audit entries persist together in Postgres', async () => {
   const db = new PGlite();
   try {
-    await db.exec(await readFile(new URL('../migrations/0013_admin_access.sql', import.meta.url), 'utf8'));
+    assert.equal(ADMIN_ACCESS_SCHEMA, await readFile(new URL('../migrations/0013_admin_access.sql', import.meta.url), 'utf8'));
+    await db.exec(ADMIN_ACCESS_SCHEMA);
+    await db.exec(ADMIN_ACCESS_SCHEMA);
     const pool = { connect: async () => ({ query: (...args) => db.query(...args), release() {} }) };
     await assert.rejects(setCrmAccess(ADMIN_EMAILS[0], false, ADMIN_EMAILS[1], pool), error => error.status === 400);
     await assert.rejects(setCrmAccess('new@lgcyap.com', true, 'outsider@lgcyap.com', pool), error => error.status === 403);

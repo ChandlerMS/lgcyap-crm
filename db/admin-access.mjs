@@ -1,16 +1,15 @@
 import { ADMIN_EMAILS, normalizeAccessEmail } from '../lib/admin-policy.mjs';
-import { readFile } from 'node:fs/promises';
+import { ADMIN_ACCESS_SCHEMA } from './admin-schema.mjs';
 import { getPool } from './pool.mjs';
 let initialized;
 export async function adminDb() {
   const pool = getPool();
   initialized ??= (async () => {
-    const sql = await readFile(new URL('../migrations/0013_admin_access.sql', import.meta.url), 'utf8');
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SELECT pg_advisory_xact_lock(50894788, 1313)');
-      await client.query(sql);
+      await client.query(ADMIN_ACCESS_SCHEMA);
       await client.query('COMMIT');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
     finally { client.release(); }

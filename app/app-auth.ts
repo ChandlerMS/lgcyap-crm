@@ -22,12 +22,18 @@ export async function getAppUser(): Promise<AppUser | null> {
   if (!getSessionCookie(requestHeaders)) return null;
   const auth = getAuth();
   if (!auth) return null;
+  let stage = "session";
   try {
     const session = await auth.api.getSession({ headers: requestHeaders });
+    stage = "access-policy";
     const policy = await currentAccessPolicy();
     const user = sessionUser(session, policy.RECRUITING_EDITOR_EMAILS, Date.now(), policy.GOOGLE_PERSONAL_EMAILS, policy.GOOGLE_EXTERNAL_EMAILS, policy.GOOGLE_WORKSPACE_DOMAIN);
     return user ? Object.assign(user, { [CRM_AUTHORIZED]: true }) : null;
-  } catch { throw new AuthUnavailableError(); }
+  } catch (error) {
+    const code = (error as { code?: unknown })?.code;
+    console.error('crm-auth-unavailable', { stage, code: typeof code === 'string' && /^[A-Z0-9_]{1,40}$/.test(code) ? code : 'UNEXPECTED' });
+    throw new AuthUnavailableError();
+  }
 }
 
 export async function requireAppUser(returnTo = "/"): Promise<AppUser> {
