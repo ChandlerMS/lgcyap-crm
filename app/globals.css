@@ -783,3 +783,6 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .follow-up-days { color: var(--gold); font-variant-numeric: tabular-nums; }
 
 .recruit-quick-actions .quick-action-button { width: 36px; min-height: 36px; justify-content: center; padding: 0; flex-shrink: 0; }
+/* Recruits panel: Note, Add Task, Follow up and Add Meeting are plain white icons with no border or box. */
+.recruits-panel .quick-action-button { border-color: transparent; background: transparent; color: #fff; }
+.recruits-panel .quick-action-button:hover { border-color: transparent; background: #ffffff17; color: #fff; }
