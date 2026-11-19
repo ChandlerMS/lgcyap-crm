@@ -20,3 +20,7 @@ No website embedding or automatic Gmail launch. Own verified employee email and 
 - [ ] Update privacy and setup docs; independently review; run relevant/full tests, TypeScript, lint and build; integrate current main, push through Git deployment and verify production commit.
 
 Delivery hardening: at most one pending/uncertain operation per employee. Connection status restores its request ID after reload; only an explicit request-bound acknowledgement releases uncertainty, and active pending sends cannot be acknowledged for two minutes. Acknowledging a missing request writes a tombstone so a delayed original cannot deliver. Replies preserve empty subjects and support up to 1,000 characters with folded RFC 2047 MIME headers; larger subjects report reply unavailable. Saved #gmail links now open native Email.
+
+## Verification before release
+
+After integrating main through `2fc12e5`: all 925 tests passed, TypeScript and focused ESLint passed, and the production Next.js build passed with executable Gmail schema bundle checks. Independent review findings were fixed and rechecked. Tests used synthetic records and mocked Google services; no live drafts or messages were created. Live Gmail account access still requires the employee's Google consent for the expanded scopes.
