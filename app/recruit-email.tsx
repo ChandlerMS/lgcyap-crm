@@ -9,9 +9,9 @@ type Template = { id: string; name: string; route: string; subject: string; fiel
 type Recipient = { email: string; name: string; firstName?: string; route?: string };
 type Prepared = { recipient: Recipient; templates: Template[]; subject?: string };
 type MailStatus = { sender: string; available: boolean; templates: Template[] };
-type GmailStatus = { available: boolean; connected: boolean; canRead: boolean; email: string; error?: string };
+type GmailStatus = { available: boolean; connected: boolean; canRead: boolean; email: string; unresolvedSend?: boolean; unresolvedRequestId?: string | null; acknowledgeAfter?: string | null; error?: string };
 type Preview = { recipient: Recipient; subject: string; html: string; previewToken: string };
-type Receipt = { kind: 'sent' | 'uncertain'; notice: string };
+type Receipt = { kind: 'sent' | 'uncertain'; notice: string; requestId?: string };
 const EmailContext = createContext<{ open: (id?: string, name?: string) => void; openReply: (messageId: string) => void; showSent: () => void; sentView: number; mailboxRefresh: number; disabled: boolean }>({ open: () => {}, openReply: () => {}, showSent: () => {}, sentView: 0, mailboxRefresh: 0, disabled: true });
 export const useRecruitEmail = () => useContext(EmailContext);
 const fieldLabels: Record<string, string> = { acceptBy: 'Accept by', contractingDate: 'Contracting date', contractingTime: 'Contracting time (Eastern)', trainingDate: 'Training start date' };
@@ -30,6 +30,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const revision = useRef(0);
   const visibleRef = useRef(false);
   const sendingRef = useRef(false);
+  const acknowledgingRef = useRef(false);
   const owner = useRef('');
   const [visible, setVisible] = useState(false);
   const [openCount, setOpenCount] = useState(0);
@@ -52,11 +53,12 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [acknowledging, setAcknowledging] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState('');
   const invalidate = useCallback(() => { revision.current++; setPreview(null); setPreviewing(false); setError(''); }, []);
   const reset = useCallback((id = '', name = '', replyId = '') => {
-    generation.current++; sendingRef.current = false; setSending(false); invalidate(); setTarget(id); setReplyMessageId(replyId); setQuery(id ? recruitsRef.current.find(r => r.id === id)?.name || name : '');
+    generation.current++; sendingRef.current = false; acknowledgingRef.current = false; setAcknowledging(false); setSending(false); invalidate(); setTarget(id); setReplyMessageId(replyId); setQuery(id ? recruitsRef.current.find(r => r.id === id)?.name || name : '');
     setPrepared(null); setPreparing(false); setConnecting(false); setTemplateId(''); setFields({}); setSubject(''); setBody('');
   }, [invalidate]);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
@@ -91,6 +93,9 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
         const email = String(mail.data.sender || '').toLowerCase();
         if (owner.current && owner.current !== email) { setReceipt(null); reset(); }
         owner.current = email;
+        if (connection.data.unresolvedSend) {
+          setReceipt(previous => previous?.kind === 'sent' ? previous : previous ? { ...previous, requestId: previous.requestId || connection.data.unresolvedRequestId || undefined } : { kind: 'uncertain', requestId: connection.data.unresolvedRequestId || undefined, notice: 'A previous send could not be confirmed. Check Sent email before starting another email.' });
+        }
         setStatus(mail.data); setGmail(connection.data); setError('');
       } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Email status could not be checked.'); }
       finally { if (!controller.signal.aborted) setChecking(false); }
@@ -130,21 +135,38 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const sendEmail = async () => {
     if (!ready || !preview || receipt || sendingRef.current) return;
     const life = generation.current;
+    const requestId = crypto.randomUUID();
     sendingRef.current = true; setSending(true); setError('');
     try {
-      const { response, data } = await mailRequest('/api/recruit-email', { action: 'send', ...input, previewToken: preview.previewToken, requestId: crypto.randomUUID() }, AbortSignal.timeout(60000));
+      const { response, data } = await mailRequest('/api/recruit-email', { action: 'send', ...input, previewToken: preview.previewToken, requestId }, AbortSignal.timeout(60000));
       if (!alive.current || life !== generation.current) return;
       if (data.uncertain || data.code === 'SEND_UNCERTAIN') {
-        setReceipt({ kind: 'uncertain', notice: data.error || 'Sending could not be confirmed. Check Sent email before starting another email.' });
+        setReceipt({ kind: 'uncertain', requestId: data.unresolvedRequestId || requestId, notice: data.error || 'Sending could not be confirmed. Check Sent email before starting another email.' });
       } else if (!response.ok) { setPreview(null); setError(data.error || 'Email could not be sent. Preview the email again before trying.'); }
       else if (data.sent === true && data.messageId) {
         setReceipt({ kind: 'sent', notice: data.notice || 'Email sent.' });
         setMailboxRefresh(value => value + 1);
-      } else { setReceipt({ kind: 'uncertain', notice: 'Sending could not be confirmed. Check Sent email before starting another email.' }); }
+      } else { setReceipt({ kind: 'uncertain', requestId, notice: 'Sending could not be confirmed. Check Sent email before starting another email.' }); }
     } catch {
-      if (alive.current && life === generation.current) setReceipt({ kind: 'uncertain', notice: 'Sending could not be confirmed. Check Sent email before starting another email.' });
+      if (alive.current && life === generation.current) setReceipt({ kind: 'uncertain', requestId, notice: 'Sending could not be confirmed. Check Sent email before starting another email.' });
     } finally {
       if (alive.current && life === generation.current) { sendingRef.current = false; setSending(false); }
+    }
+  };
+  const acknowledgeSend = async () => {
+    if (receipt?.kind !== 'uncertain' || acknowledgingRef.current || sendingRef.current) return;
+    if (!receipt.requestId) { setError('Send recovery details could not be loaded. Close and reopen email before acknowledging.'); return; }
+    const life = generation.current;
+    acknowledgingRef.current = true; setAcknowledging(true); setError('');
+    try {
+      const { response, data } = await mailRequest('/api/gmail', { action: 'acknowledge-send', requestId: receipt.requestId }, AbortSignal.timeout(45000));
+      if (!alive.current || life !== generation.current) return;
+      if (!response.ok || data.acknowledged !== true) { setError(data.error || 'The send could not be acknowledged. Your email remains locked; check Sent and try again.'); return; }
+      setReceipt(null); reset();
+    } catch {
+      if (alive.current && life === generation.current) setError('The send could not be acknowledged. Your email remains locked; check Sent and try again.');
+    } finally {
+      if (alive.current && life === generation.current) { acknowledgingRef.current = false; setAcknowledging(false); }
     }
   };
   const connect = async () => {
@@ -178,7 +200,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
             <h3>{receipt.kind === 'sent' ? 'Email sent' : 'Check Sent email'}</h3><p>{receipt.notice}</p>
             <a className="btn btn-secondary" href="#email" onClick={() => { showSent(); close(); dialog.current?.close(); }}>View Sent email</a>
             {receipt.kind === 'uncertain' && <p className="helper">Sending will stay locked until you check Sent for this message. This app does not automatically retry.</p>}
-            <button type="button" className="btn btn-quiet" onClick={() => { setReceipt(null); reset(); }}>{receipt.kind === 'uncertain' ? 'I checked Sent — start another email' : 'Start another email'}</button>
+            <button type="button" className="btn btn-quiet" disabled={acknowledging || sending} onClick={() => { if (receipt.kind === 'uncertain') void acknowledgeSend(); else { setReceipt(null); reset(); } }}>{acknowledging ? 'Acknowledging…' : receipt.kind === 'uncertain' ? 'I checked Sent — start another email' : 'Start another email'}</button>
           </div> : status.available && <form onSubmit={event => { event.preventDefault(); void previewEmail(); }}>
             <fieldset className="email-fields" disabled={sending}>
               {!replyMessageId && <RecruitCombobox recruits={choices} query={query} selectedId={target}
@@ -190,7 +212,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
               {prepared && <>
                 {!replyMessageId && !prepared.templates.length && <p className="helper">No offer template is available for this recruit’s current licensing status. You can compose a custom message.</p>}
                 <div className="gmail-offer-fields">{template?.fields.map(key => <label key={key}>{fieldLabels[key] || key.replace(/([A-Z])/g, ' $1')}<input type={key === 'contractingTime' ? 'time' : 'date'} required value={fields[key] || ''} onChange={event => { setFields(current => ({ ...current, [key]: event.target.value })); invalidate(); }} /></label>)}</div>
-                <label>Subject<input type="text" required readOnly={Boolean(replyMessageId)} maxLength={200} value={subject} onChange={event => { setSubject(event.target.value); invalidate(); }} /></label>
+                <label>Subject<input type="text" required readOnly={Boolean(replyMessageId)} maxLength={replyMessageId ? 1000 : 200} value={subject} onChange={event => { setSubject(event.target.value); invalidate(); }} /></label>
                 {replyMessageId && <p className="helper">The reply subject stays with the original conversation.</p>}
                 <label>{template ? 'Additional note (optional)' : 'Message'}<textarea required={!template} rows={6} maxLength={60000} value={body} onChange={event => { setBody(event.target.value); invalidate(); }} /></label>
                 <div className="gmail-email-actions"><button type="submit" className="btn btn-secondary" disabled={previewing || sending}>{previewing ? 'Preparing preview…' : 'Preview email'}</button></div>
