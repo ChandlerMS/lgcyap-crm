@@ -55,6 +55,45 @@ export function popoutPosition(anchor, size, viewport, { gap = 8, edge = 16 } = 
   return { top, left };
 }
 
+/**
+ * The 3D pipeline is a three-sided prism. Face 0 runs from the first stages to Offer, face 1 from Offer
+ * to Contracting on both licensing branches, and face 2 from Contracting to Completed. Rotation is in
+ * degrees: 0 shows face 0 and each later face is another 120 degrees on.
+ */
+export const PIPELINE_FACES = 3;
+export const PIPELINE_FACE_ANGLE = 120;
+const LAST_ANGLE = (PIPELINE_FACES - 1) * PIPELINE_FACE_ANGLE;
+
+/** Dragging across half the pipeline's width turns it one face. */
+export function pipelineDegreesPerPixel(width) {
+  return (PIPELINE_FACE_ANGLE * 2) / Math.max(Number.isFinite(width) ? width : 0, 320);
+}
+
+/** The first and last faces are ends: past them the prism resists, then stops. */
+export function pipelineRotationLimit(rotation, { give = .3, reach = 30 } = {}) {
+  if (!Number.isFinite(rotation)) return 0;
+  if (rotation < 0) return Math.max(-reach, rotation * give);
+  if (rotation > LAST_ANGLE) return Math.min(LAST_ANGLE + reach, LAST_ANGLE + (rotation - LAST_ANGLE) * give);
+  return rotation;
+}
+
+/** Faces turned toward the viewer at a rotation, as bits (bit 0 is face 0). The others cannot be used. */
+export function pipelineVisibleFaces(rotation) {
+  let faces = 0;
+  for (let face = 0; face < PIPELINE_FACES; face++) if (Math.abs(face * PIPELINE_FACE_ANGLE - rotation) < 90) faces |= 1 << face;
+  return faces;
+}
+
+/**
+ * The face a released drag settles on: the nearest one, after a quick flick carries the turn on.
+ * One drag turns at most one face from where it began. Velocity is degrees per millisecond.
+ */
+export function pipelineSettleFace(rotation, startFace = 0, velocity = 0) {
+  const turned = (Number.isFinite(rotation) ? rotation : 0) + (Number.isFinite(velocity) ? velocity : 0) * 180;
+  const start = clamp(Math.round(Number.isFinite(startFace) ? startFace : 0), 0, PIPELINE_FACES - 1);
+  return clamp(Math.round(turned / PIPELINE_FACE_ANGLE), Math.max(0, start - 1), Math.min(PIPELINE_FACES - 1, start + 1));
+}
+
 export function pipelineAge(enteredStageAt, now) {
   const entered = enteredStageAt ? Date.parse(enteredStageAt) : NaN;
   if (!Number.isFinite(entered) || !Number.isFinite(now) || now <= 0 || entered > now) return 'Not recorded';

@@ -1,7 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { besideAnchorPosition, pipelineAge, pipelineDropChoice, popoutPosition, sortPipelineRecruits } from '../app/recruit-pipeline-actions.mjs';
+import { besideAnchorPosition, pipelineAge, pipelineDegreesPerPixel, pipelineDropChoice, pipelineRotationLimit, pipelineSettleFace, pipelineVisibleFaces, popoutPosition, sortPipelineRecruits } from '../app/recruit-pipeline-actions.mjs';
 import { stageIdForKey } from '../lib/recruiting-config.mjs';
+
+test('the 3D pipeline turns between three faces and stops at the first and last', () => {
+  assert.equal(pipelineDegreesPerPixel(1000), .24);
+  assert.equal(pipelineDegreesPerPixel(100), .75, 'A narrow pipeline still needs a real drag to turn.');
+  assert.equal(pipelineRotationLimit(120), 120);
+  assert.equal(pipelineRotationLimit(-50), -15);
+  assert.equal(pipelineRotationLimit(-500), -30);
+  assert.equal(pipelineRotationLimit(300), 258);
+  assert.equal(pipelineRotationLimit(900), 270);
+  assert.equal(pipelineRotationLimit(NaN), 0);
+  // Bits name the faces turned toward the viewer: one at rest, two while turning between them.
+  assert.equal(pipelineVisibleFaces(0), 0b001);
+  assert.equal(pipelineVisibleFaces(60), 0b011);
+  assert.equal(pipelineVisibleFaces(120), 0b010);
+  assert.equal(pipelineVisibleFaces(185), 0b110);
+  assert.equal(pipelineVisibleFaces(240), 0b100);
+  assert.equal(pipelineVisibleFaces(-30), 0b001);
+});
+
+test('a released drag settles on the nearest face, a flick carries it on, and one drag turns one face', () => {
+  assert.equal(pipelineSettleFace(50, 0), 0);
+  assert.equal(pipelineSettleFace(70, 0), 1);
+  assert.equal(pipelineSettleFace(30, 0, .3), 1, 'A quick flick turns to the next face.');
+  assert.equal(pipelineSettleFace(30, 0, -.3), 0);
+  assert.equal(pipelineSettleFace(230, 0, 1), 1, 'One drag never skips a face.');
+  assert.equal(pipelineSettleFace(130, 1, -.5), 0);
+  assert.equal(pipelineSettleFace(260, 2, 1), 2);
+  assert.equal(pipelineSettleFace(-30, 0, -1), 0);
+  assert.equal(pipelineSettleFace(NaN, 7, NaN), 1);
+});
 
 function recruit(stageKey, path = 'genpop', route = '') {
   return { id: '123', stageKey, stageId: stageIdForKey(stageKey), recruitingPath: path, licenseRoute: route,

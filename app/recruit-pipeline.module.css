@@ -192,3 +192,43 @@
 .popoutOpen .stageHeading { box-shadow: inset 0 0 0 2px #d4af37; }
 .popout :global(.communication-tooltip), .hoverCard :global(.communication-tooltip) { top: calc(100% + 8px); bottom: auto; z-index: 30; }
 @media (max-width: 600px) { .popoutHeader { padding: 14px 16px; } .popoutBody { padding: 14px 16px 18px; } .popoutDetails > div { grid-template-columns: 96px minmax(0, 1fr); } }
+
+/* View switch: the one-page board of every stage, or the 3D pipeline that turns through three steps. */
+.viewBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 18px; margin: 0 0 16px; }
+.faceSteps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.faceSteps button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 8px; border: 1px solid #3c3930; border-radius: 999px; background: transparent; color: #c7c0ae; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.faceSteps button span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #211d13; color: #d7bd73; font-size: 12px; font-variant-numeric: tabular-nums; }
+.faceSteps button:hover { border-color: #8d7535; color: #f0e6c9; }
+.faceSteps button[aria-current="step"] { border-color: #d4af37; background: #2b2718; color: var(--gold, #d4af37); }
+.faceSteps button[aria-current="step"] span { background: var(--gold, #d4af37); color: #17150f; }
+.faceSteps button:focus-visible, .turnRail:focus-visible, .scene:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 3px; }
+.turnHint { margin: -6px 0 14px; color: #aaa699; font-size: 13px; line-height: 1.5; }
+
+/* The 3D pipeline is a three-sided prism turned on its vertical axis. Faces share one grid cell, so the
+   prism is as tall as its tallest face, and each face is pushed out to the prism's edge: the apothem of a
+   triangle as wide as the face is width / (2 × tan 60°), about 28.87% of it. */
+.view3d { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 10px; align-items: stretch; overflow-x: clip; }
+/* A flex rail starts its arrow at the top (a plain button centers it), so the arrow can stick in view down a tall face. */
+.turnRail { position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; border: 1px solid #3a321d; border-radius: 10px; background: #14130f; color: #e1c66f; font: inherit; cursor: pointer; }
+.turnRail span { position: sticky; top: calc(50vh - 33px); display: block; padding: 18px 0; font-size: 30px; line-height: 1; text-align: center; }
+.turnRail:hover:not(:disabled) { border-color: #8d7535; background: #211d13; }
+.turnRail:disabled { opacity: .3; cursor: default; }
+.view3d:has(.dragging) .turnRail:not(:disabled) { border-color: #cead50; box-shadow: inset 0 0 0 1px #cead50; }
+.scene { container-type: inline-size; min-width: 0; perspective: max(1600px, 190cqw); perspective-origin: 50% 35%; cursor: grab; touch-action: pan-y; outline-offset: 5px; }
+.scene.dragging { cursor: grabbing; user-select: none; }
+.prism { display: grid; transform-style: preserve-3d; transform: translateZ(-28.8675cqw) rotateY(calc(-1 * var(--rotation, 0deg))); transition: transform .75s cubic-bezier(.2, .85, .25, 1); }
+.face { grid-area: 1 / 1; position: relative; min-width: 0; padding: 16px 18px 22px; border: 1px solid #3a321d; border-radius: 14px; background: linear-gradient(160deg, #1b1810 0%, #13120e 55%, #0f0e0b 100%); box-shadow: inset 0 1px 0 #ffffff0d; backface-visibility: hidden; transform: rotateY(calc(var(--face, 0) * 120deg)) translateZ(28.8675cqw); }
+.frontFace { border-color: #5a4a26; }
+.faceHeading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 18px; }
+.faceHeading span { color: #a79b76; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.faceHeading h3 { margin: 0; color: #f0e6c9; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.faceFlow { position: relative; isolation: isolate; display: grid; align-items: center; gap: 28px; min-width: 0; }
+.faceStart { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); }
+.faceLicensing { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+.faceFinish { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@container (max-width: 720px) {
+  .faceStart, .faceLicensing, .faceFinish { grid-template-columns: minmax(0, 1fr); }
+  .faceFlow .connectors { display: none; }
+}
+@media (max-width: 600px) { .view3d { grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 6px; } .turnRail span { font-size: 24px; } .face { padding: 12px 10px 16px; } }
+@media (prefers-reduced-motion: reduce) { .prism { transition: none; } }
