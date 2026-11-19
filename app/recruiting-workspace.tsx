@@ -50,7 +50,7 @@ import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 import { lifecycleStatusLabel } from "../lib/recruit-lifecycle.mjs";
 
 type View = string;
-type Route = { view: View; id?: string; source?: "shopper" | "standard" };
+type Route = { view: View; id?: string; source?: "shopper" | "shopper-dispositions" | "standard" | "standard-dispositions" };
 type Flag = boolean | null;
 type Recruit = {
   id: string; name: string; office: string; intake: string; stage: string; stageId: string;

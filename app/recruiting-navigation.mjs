@@ -100,7 +100,7 @@ export function sidebarViewFor(view) {
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (externalWorkspacePage(value)) return { view: value };
-  if (value === 'calls/shopper' || value === 'calls/standard') return { view: 'calls', source: value.slice('calls/'.length) };
+  if (value === 'calls/shopper' || value === 'calls/shopper-dispositions' || value === 'calls/standard' || value === 'calls/standard-dispositions') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
   if (RECRUIT_PATH_PAGES.some(page => page.id === value)) return { view: value };
   if (['queue', 'ringcx', 'event-attendance', 'applications', 'training-classes', 'loa', 'admin'].includes(value)) return { view: value };

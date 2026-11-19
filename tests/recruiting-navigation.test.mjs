@@ -203,6 +203,8 @@ test('Recruits path pages include every matching stage without mixing paths or i
 test('HubSpot Calls panels can open the matching Standard source without changing the sidebar default', () => {
   assert.deepEqual(resolveWorkspaceRoute('#calls/standard'),{view:'calls',source:'standard'});
   assert.deepEqual(resolveWorkspaceRoute('#calls/shopper'),{view:'calls',source:'shopper'});
+  assert.deepEqual(resolveWorkspaceRoute('#calls/shopper-dispositions'),{view:'calls',source:'shopper-dispositions'});
+  assert.deepEqual(resolveWorkspaceRoute('#calls/standard-dispositions'),{view:'calls',source:'standard-dispositions'});
   assert.deepEqual(resolveWorkspaceRoute('#calls'),{view:'calls'});
 });
 
