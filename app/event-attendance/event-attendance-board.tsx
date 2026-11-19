@@ -1,5 +1,4 @@
 'use client';
-import ApplicationSheetsPanel from '../application-sheets-panel';
 import DismissibleNotice from '../dismissible-notice';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
@@ -222,7 +221,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   useExpandCollapse(expanded => { if (!expanded) { setOpenTile(null); setOpenDay(null); } });
   const tileList = () => {
     const dated = dateActive ? 'No one in this list signed in on the chosen dates.' : '';
-    if (openTile === 'signedIn') return <><ApplicationSheetsPanel report="sign-ins" /><PeopleTable title={`Everyone who signed in${dateNote}`} rows={filterSignedIn(byDate(attendees), signedInFilters, review.reviews, Boolean(data?.reviewComplete))} columns={attendeeColumns} googleExport={{ ...signedInFilters, startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={signedInControls} empty={attendees.length ? 'No signed-in recruits match these filters.' : 'No one has signed in yet.'} /></>;
+    if (openTile === 'signedIn') return <><PeopleTable title={`Everyone who signed in${dateNote}`} rows={filterSignedIn(byDate(attendees), signedInFilters, review.reviews, Boolean(data?.reviewComplete))} columns={attendeeColumns} googleExport={{ ...signedInFilters, startDate: signedOn === 'range' ? from : signedOn, endDate: signedOn === 'range' ? to : signedOn }} actions={reviewActions} hover={crmHover} filter={signedInControls} empty={attendees.length ? 'No signed-in recruits match these filters.' : 'No one has signed in yet.'} /></>;
     if (openTile === 'applied') return <PeopleTable title={`Signed in${dateNote} and applied online`} rows={byDate(attendees.filter(person => person.appliedAt))} columns={appliedColumns} actions={reviewActions} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has applied online yet.'} />;
     if (openTile === 'hired') return <PeopleTable title={`Signed in${dateNote} and reached Completed`} rows={byDate(attendees.filter(person => person.stageId === COMPLETED_STAGE_ID))} columns={hiredColumns} hover={applicationHover} filter={dateFilter} empty={dated || 'No one who signed in has reached Completed yet.'} />;
     if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications yet today." /></>;
