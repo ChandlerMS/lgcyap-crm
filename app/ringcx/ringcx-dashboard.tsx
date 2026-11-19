@@ -46,7 +46,7 @@ export default function RingCxDashboard({ grouped = false }: { grouped?: boolean
       <article><Subheading>Agents Available</Subheading><p className={styles.available}>{value(data?.agents.available)}</p><span>Ready to take a call</span></article>
       <article><Subheading>On calls</Subheading><p className={styles.onCalls}>{value(data?.agents.onCalls)}</p><span>Agents in an active call state</span></article>
       <article><Subheading>Average wait</Subheading><p className={styles.waitValue}>{duration(data?.averageWaitSeconds)}</p><span>Before answer · today’s inbound calls</span></article>
-      <aside><strong>{value(data?.agents.loggedIn)}</strong><span>Logged in</span><p>{value(data?.agents.other)} in other states</p></aside>
+      <article><Subheading>Total Calls</Subheading><p className={styles.onCalls}>{value(data?.calls.answered)}</p><span>Answered today · Eastern</span></article>
     </section>
     <div className={styles.rosterGrid}>
     <section className={styles.roster} aria-labelledby="available-title"><div className={styles.rosterHead}><div><Subheading id="available-title">Agents Available</Subheading><p>{stale ? 'Last received roster · updates unavailable' : 'Ready to take a call · Standard vs Preferred'}</p></div><span className={styles.rosterCount}>{value(data?.availableAgents.length)}</span></div>
@@ -61,8 +61,5 @@ export default function RingCxDashboard({ grouped = false }: { grouped?: boolean
       {data && !data.busyAgents.length && <p className={styles.empty}>{stale ? 'No busy agents at the last update.' : 'No agents are currently busy.'}</p>}
     </section>
     </div>
-    <section className={styles.daily} aria-label="Today's inbound calls"><div className={styles.sectionHeading}><Subheading>Today’s inbound calls</Subheading><span>Resets at midnight Eastern</span></div><p className={styles.subtitle}>Standard vs Preferred queues only</p><div className={styles.totals}><article><h3>Answered today</h3><strong>{value(data?.calls.answered)}</strong></article></div><p className={styles.note}>Answered matches RingCX “Answered Inbound.”</p><p className={styles.note}>Connected right now: <strong>{value(data?.calls.activeConnected)}</strong> calls across these queues. This is a live count, not today’s total.</p></section>
-    <p className={styles.note}>Daily calls and Sold dispositions are pending verified daily reporting. Only Sold counts as a sale. Dashes mean unavailable, not zero. State durations refresh every 15 seconds; active state includes hold time.</p>
-    <footer><span>{data ? `${stale ? 'Last received' : 'Updated'} ${new Date(data.observedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York' })} Eastern` : 'Waiting for the first RingCX update'}</span><span>{data ? `${data.queues} queues · ` : ''}Refreshes every 15 seconds</span></footer>
   </Container>;
 }

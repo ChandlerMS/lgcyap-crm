@@ -131,7 +131,7 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
         <article><h3>Agents Available</h3><p className={styles.available}>{value(board?.available.length)}</p><span>Ready to take a call</span></article>
         <article><h3>On calls</h3><p className={styles.onCalls}>{value(board?.calls.length)}</p><span>Live calls in the Shopper queue</span></article>
         <article><h3>Average wait</h3><p className={styles.waitValue}>{duration(averageWait)}</p><span>Time available · current agents</span></article>
-        <aside><strong>{callsToday}</strong><span>Calls today</span><p>Sales agents · Eastern</p></aside>
+        <article><h3>Total Calls</h3><p className={styles.onCalls}>{callsToday}</p><span>Today · sales agents · Eastern</span></article>
       </section>
       <div className={styles.rosterGrid}>
         <section className={styles.roster} aria-labelledby="shopper-available-title">
@@ -154,14 +154,6 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
           {empty(board?.calls, "No agents are currently on a live call.") && <p className={styles.empty}>{empty(board?.calls, "No agents are currently on a live call.")}</p>}
         </section>
       </div>
-      <section className={styles.daily} aria-label="Today's calls">
-        <div className={styles.sectionHeading}><h3>Today’s calls</h3><span>Resets at midnight Eastern</span></div>
-        <p className={styles.subtitle}>Shopper · PolicyTek sales agents</p>
-        <div className={styles.totals}><article><h3>Total Calls Today</h3><strong>{callsToday}</strong></article></div>
-        <p className={styles.note}>Counts sales agents’ calls since midnight Eastern and updates every minute. Average wait measures time available across the agents shown above.</p>
-      </section>
-      <p className={styles.note}>Longest wait and longest call first. On DND and Offline are not shown. Dashes mean unavailable, not zero.</p>
-      <footer><span>{board ? `${unavailable ? "Last received" : "Updated"} ${new Date(board.now).toLocaleTimeString("en-US", { timeZone: "America/New_York" })} Eastern` : "Waiting for the first PolicyTek update"}</span><span>Refreshes every 5 seconds</span></footer>
     </div>;
   }
 

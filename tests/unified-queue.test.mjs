@@ -40,8 +40,9 @@ test('Queue renders both named live dashboards at once without nested main landm
     assert.match(html, /<h2[^>]*>Standard vs Preferred<\/h2>/);
     assert.match(html, /Connecting to PolicyTek/);
     assert.match(html, /Connecting to RingCX/);
-    assert.match(html, /Total Calls Today/);
+    assert.equal((html.match(/<h3>Total Calls<\/h3>/g) || []).length, 2);
     assert.match(html, /Answered today/);
+    assert.doesNotMatch(html, /Today’s calls|Today’s inbound calls|<footer/);
     assert.equal((html.match(/<main\b/g) || []).length, 1);
     assert.equal((html.match(/<h1\b/g) || []).length, 1);
   } finally { await rm(directory, { recursive: true, force: true }); }
