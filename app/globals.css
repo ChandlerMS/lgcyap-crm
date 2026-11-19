@@ -1014,3 +1014,13 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
   .policytek-panel { right: 8px; bottom: 120px; max-height: calc(100dvh - 136px); }
   .policytek-frame { height: min(640px, calc(100dvh - 220px)); }
 }
+
+/* New Email's Recruit field: typing narrows the list beneath it to matching recruits. */
+.recruit-combobox { display: grid; gap: 6px; font-size: 13px; }
+.recruit-combobox-list { max-height: 240px; margin: 0; padding: 4px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #51545d; border-radius: 7px; background: #111318; list-style: none; }
+.recruit-combobox-list li[role="option"] { display: grid; gap: 1px; padding: 8px 10px; border-radius: 5px; cursor: pointer; }
+.recruit-combobox-list li[role="option"] span { color: #eee; font-size: 14px; }
+.recruit-combobox-list li[role="option"] small { color: #9a9a92; font-size: 12px; }
+.recruit-combobox-list li.is-active { background: #232118; box-shadow: inset 2px 0 0 var(--gold); }
+.recruit-combobox-list li[aria-selected="true"] span { color: var(--gold); font-weight: 600; }
+.recruit-combobox-empty { padding: 10px; color: #9a9a92; }

@@ -50,3 +50,22 @@ test('the Email card has a clickable title, a gold plus like the other cards, an
   assert.match(chips, /<button type="button" className="summary-chips-link summary-title-button" onClick=\{onTitleClick\}>/);
   assert.match(readFileSync('app/recruit-meeting-chips.tsx', 'utf8'), /previewWidth=\{760\}\s*previewExtra=\{<CalendarPreview /);
 });
+
+test('New Email has one Recruit field: typing narrows the list to matching recruits', async () => {
+  await mkdir('work', { recursive: true });
+  const directory = await mkdtemp('work/recruit-combobox-');
+  try {
+    const { default: RecruitCombobox, matchRecruits } = await load(directory, './app/recruit-combobox.tsx', 'combobox');
+    const recruits = [{ id: '3', name: 'Casey Demo', email: 'casey@example.com' }, { id: '1', name: 'avery Test', email: 'a@example.com' }, { id: '2', name: 'Blake Sample', email: 'blake@sample.org' }];
+    assert.deepEqual(matchRecruits(recruits, '').map(item => item.id), ['1', '2', '3'], 'everyone, by name, when nothing is typed');
+    assert.deepEqual(matchRecruits(recruits, '  SAM ').map(item => item.id), ['2'], 'non-matches drop out, ignoring case and spaces');
+    assert.deepEqual(matchRecruits(recruits, 'example.com').map(item => item.id), ['1', '3'], 'an email address matches too');
+    assert.deepEqual(matchRecruits(recruits, 'zzz'), []);
+    const markup = renderToStaticMarkup(createElement(RecruitCombobox, { recruits, query: 'Blake Sample', selectedId: '2', onQuery() {}, onSelect() {} }));
+    assert.match(markup, /<label for="[^"]+-input">Recruit<\/label><input id="[^"]+-input" type="text" role="combobox" autoComplete="off" spellCheck="false" aria-autocomplete="list" aria-expanded="false"/);
+    assert.match(markup, /value="Blake Sample"/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+  const email = readFileSync('app/recruit-email.tsx', 'utf8');
+  assert.doesNotMatch(email, /Find recruit|Choose a recruit/, 'the separate search box and dropdown are gone');
+  assert.match(email, /<RecruitCombobox recruits=\{choices\} query=\{query\} selectedId=\{target\}/);
+});

@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import SummaryChips from './summary-chips';
+import RecruitCombobox from './recruit-combobox';
 
 type Recruit = { id: string; name: string; isDemo?: boolean; email?: string | null; stage?: string | null; office?: string | null; createdAt?: string | null };
 type Handoff = { recipient: { email: string; name: string }; contactUrl: string; templates: { id: string; name: string; url: string }[] };
@@ -11,9 +12,11 @@ export const useRecruitEmail = () => useContext(EmailContext);
 export function RecruitEmailProvider({ recruits, disabled, children }: { recruits: Recruit[]; disabled: boolean; children: ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [target, setTarget] = useState('');
-  const [targetName, setTargetName] = useState('');
   const [openCount, setOpenCount] = useState(0);
-  const [search, setSearch] = useState('');
+  // The Recruit box's text: a chosen recruit's name, or what is being typed to find one.
+  const [query, setQuery] = useState('');
+  const recruitsRef = useRef(recruits);
+  useEffect(() => { recruitsRef.current = recruits; }, [recruits]);
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const [templateId, setTemplateId] = useState('');
   const [error, setError] = useState('');
@@ -32,20 +35,22 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   }, [target, disabled, openCount]);
   const open = useCallback((id = '', name = '') => {
     if (disabled || dialog.current?.open) return;
-    setTarget(id); setTargetName(name); setSearch(''); setHandoff(null); setTemplateId(''); setError('');
+    setTarget(id); setQuery(id ? recruitsRef.current.find(r => r.id === id)?.name || name : ''); setHandoff(null); setTemplateId(''); setError('');
     setOpenCount(n => n + 1);
     dialog.current?.showModal();
   }, [disabled]);
   const template = handoff?.templates.find(t => t.id === templateId);
-  const choices = recruits.filter(r => !r.isDemo && (!search.trim() || r.name.toLowerCase().includes(search.trim().toLowerCase()))).slice(0, 30);
+  const choices = recruits.filter(r => !r.isDemo);
+  const reset = () => { setHandoff(null); setTemplateId(''); setError(''); };
   return <EmailContext.Provider value={{ open, disabled }}>{children}
     <dialog ref={dialog} className="email-dialog" aria-labelledby="email-compose-title">
       <div className="email-compose-head"><h2 id="email-compose-title">New Email</h2><button className="btn btn-quiet" type="button" aria-label="Close email" onClick={() => dialog.current?.close()}>×</button></div>
       <p className="helper">Compose and send in HubSpot using an offer template or a new message.</p>
       {error && <p role="alert" className="connection-alert">{error}</p>}
       <fieldset className="email-fields">
-        <label>Find recruit<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recruit names" /></label>
-        <label>Recruit<select value={target} onChange={e => { setTarget(e.target.value); setHandoff(null); setTemplateId(''); setError(''); }}><option value="">Choose a recruit</option>{target && !choices.some(r => r.id === target) && <option value={target}>{recruits.find(r => r.id === target)?.name || targetName || 'Selected recruit'}</option>}{choices.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+        <RecruitCombobox recruits={choices} query={query} selectedId={target}
+          onQuery={text => { setQuery(text); if (target) { setTarget(''); reset(); } }}
+          onSelect={recruit => { setQuery(recruit.name); if (recruit.id !== target) { setTarget(recruit.id); reset(); } }} />
         {target && !handoff && !error && <p role="status">Checking recruit details…</p>}
         {handoff && <p>To: <strong>{handoff.recipient.name} &lt;{handoff.recipient.email}&gt;</strong></p>}
         <label>Template<select value={templateId} disabled={!handoff} onChange={e => setTemplateId(e.target.value)}><option value="">Compose a new message</option>{handoff?.templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
