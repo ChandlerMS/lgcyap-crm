@@ -287,27 +287,32 @@ test('acknowledgement network errors keep the recovered send lock', async () => 
   });
 });
 
-test('server unresolved status does not overwrite an existing confirmed send receipt', async () => {
+test('authoritative unresolved status replaces a confirmed receipt and blocks composing', async () => {
   let unresolved = false;
   await composer(async ui => {
     await ui.click('Compose for Alex'); await ui.fill('Subject', 'Hello'); await ui.fill('Message', 'My message');
     await ui.click('Preview email'); await ui.click('Send email'); await ui.click('Close email');
     unresolved = true; await ui.click('Compose for Alex');
-    assert.match(document.body.textContent, /Email sent/);
-    assert.doesNotMatch(document.body.textContent, /Check Sent email/);
+    assert.match(document.body.textContent, /Check Sent email/);
+    assert.match(document.body.textContent, /different unresolved send/i);
+    assert.doesNotMatch(document.body.textContent, /Email sent/);
+    assert.equal(document.querySelector('[role="combobox"]'), null);
     assert.equal(ui.requests.some(item => item.body?.action === 'acknowledge-send'), false);
-  }, ({ url }) => url === '/api/gmail' ? Response.json({ available: true, connected: true, canRead: true, email: 'staff@example.test', unresolvedSend: unresolved, acknowledgeAfter: null }) : null);
+  }, ({ url }) => url === '/api/gmail' ? Response.json({ available: true, connected: true, canRead: true, email: 'staff@example.test', unresolvedSend: unresolved, unresolvedRequestId: unresolved ? '22222222-2222-4222-8222-222222222222' : null, acknowledgeAfter: null }) : null);
 });
 
 
-test('a stale acknowledgement retains the original uncertain receipt and cannot acknowledge a different send', async () => {
+test('authoritative status replaces an outdated receipt ID and a rejected acknowledgement keeps the new lock', async () => {
   let oldRequestId = '';
   await composer(async ui => {
     await ui.click('Compose for Alex'); await ui.fill('Subject', 'Hello'); await ui.fill('Message', 'My message');
     await ui.click('Preview email'); await ui.click('Send email');
     oldRequestId = ui.requests.find(item => item.body?.action === 'send').body.requestId;
-    await ui.click('Close email'); await ui.click('Compose for Alex'); await ui.click('I checked Sent — start another email');
-    assert.equal(ui.requests.find(item => item.body?.action === 'acknowledge-send').body.requestId, oldRequestId);
+    await ui.click('Close email'); await ui.click('Compose for Alex');
+    assert.match(document.body.textContent, /different unresolved send/i);
+    assert.equal(ui.requests.some(item => item.body?.action === 'acknowledge-send'), false);
+    await ui.click('I checked Sent — start another email');
+    assert.equal(ui.requests.find(item => item.body?.action === 'acknowledge-send').body.requestId, '22222222-2222-4222-8222-222222222222');
     assert.match(document.body.textContent, /The unresolved send has changed/);
     assert.match(document.body.textContent, /Check Sent email/);
     assert.equal(document.querySelector('[role="combobox"]'), null);
@@ -354,4 +359,57 @@ test('a send blocked by another unresolved request acknowledges only the server-
     assert.equal(acknowledgedId, '22222222-2222-4222-8222-222222222222');
     assert.doesNotMatch(document.body.textContent, /Check Sent email/);
   }, ({ body }) => body?.action === 'send' ? Response.json({ uncertain: true, code: 'SEND_UNCERTAIN', unresolvedRequestId: '22222222-2222-4222-8222-222222222222', error: 'Check the earlier send in Sent email.' }, { status: 409 }) : null);
+});
+
+
+test('a lost new send response recovers another tab’s authoritative unresolved UUID before explicit acknowledgement', async () => {
+  let lostResponse = false;
+  await composer(async ui => {
+    await ui.click('Compose for Alex'); await ui.fill('Subject', 'Hello'); await ui.fill('Message', 'My message');
+    await ui.click('Preview email'); await ui.click('Send email');
+    const localId = ui.requests.find(item => item.body?.action === 'send').body.requestId;
+    await ui.click('Close email'); await ui.click('Compose for Alex');
+    assert.match(document.body.textContent, /different unresolved send/i);
+    assert.equal(ui.requests.some(item => item.body?.action === 'acknowledge-send'), false);
+    await ui.click('I checked Sent — start another email');
+    const acknowledgedId = ui.requests.find(item => item.body?.action === 'acknowledge-send').body.requestId;
+    assert.equal(acknowledgedId, '11111111-1111-4111-8111-111111111111'); assert.notEqual(acknowledgedId, localId);
+    assert.doesNotMatch(document.body.textContent, /Check Sent email/);
+  }, ({ url, body }) => {
+    if (body?.action === 'send') { lostResponse = true; throw Error('Network response lost'); }
+    if (url !== '/api/gmail' || body?.action) return null;
+    return Response.json({ available: true, connected: true, canRead: true, email: 'staff@example.test', unresolvedSend: lostResponse, unresolvedRequestId: lostResponse ? '11111111-1111-4111-8111-111111111111' : null });
+  });
+});
+
+test('an explicit clear server status retains a local uncertain UUID until acknowledgement', async () => {
+  await composer(async ui => {
+    await ui.click('Compose for Alex'); await ui.fill('Subject', 'Hello'); await ui.fill('Message', 'My message');
+    await ui.click('Preview email'); await ui.click('Send email'); await ui.click('Close email'); await ui.click('Compose for Alex');
+    assert.match(document.body.textContent, /Check Sent email/);
+    await ui.click('I checked Sent — start another email');
+    assert.equal(ui.requests.find(item => item.body?.action === 'acknowledge-send').body.requestId, ui.requests.find(item => item.body?.action === 'send').body.requestId);
+  }, ({ url, body }) => body?.action === 'send' ? Response.json({ uncertain: true, code: 'SEND_UNCERTAIN', error: 'Original send could not be confirmed.' }, { status: 502 }) : url === '/api/gmail' && !body?.action ? Response.json({ available: true, connected: true, canRead: true, email: 'staff@example.test', unresolvedSend: false, unresolvedRequestId: null }) : null);
+});
+
+test('a delayed acknowledgement cannot clear a newer authoritative recovery warning', async () => {
+  let lookups = 0, acknowledgements = 0, finishFirstAcknowledgement;
+  await composer(async ui => {
+    await ui.click('Compose for Alex'); await ui.click('I checked Sent — start another email');
+    await ui.click('Close email'); await ui.click('Compose for Alex');
+    assert.match(document.body.textContent, /different unresolved send/i);
+    await act(async () => finishFirstAcknowledgement(Response.json({ acknowledged: true })));
+    assert.match(document.body.textContent, /Check Sent email/);
+    await ui.click('I checked Sent — start another email');
+    assert.equal(ui.requests.filter(item => item.body?.action === 'acknowledge-send')[1].body.requestId, '22222222-2222-4222-8222-222222222222');
+    assert.doesNotMatch(document.body.textContent, /Check Sent email/);
+  }, ({ url, body }) => {
+    if (url !== '/api/gmail') return null;
+    if (body?.action === 'acknowledge-send') {
+      acknowledgements++;
+      return acknowledgements === 1 ? new Promise(resolve => { finishFirstAcknowledgement = resolve; }) : Response.json({ acknowledged: true });
+    }
+    lookups++;
+    return Response.json({ available: true, connected: true, canRead: true, email: 'staff@example.test', unresolvedSend: true, unresolvedRequestId: lookups === 1 ? '11111111-1111-4111-8111-111111111111' : '22222222-2222-4222-8222-222222222222' });
+  });
 });

@@ -31,6 +31,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const visibleRef = useRef(false);
   const sendingRef = useRef(false);
   const acknowledgingRef = useRef(false);
+  const recoveryEpoch = useRef(0);
   const owner = useRef('');
   const [visible, setVisible] = useState(false);
   const [openCount, setOpenCount] = useState(0);
@@ -93,8 +94,14 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
         const email = String(mail.data.sender || '').toLowerCase();
         if (owner.current && owner.current !== email) { setReceipt(null); reset(); }
         owner.current = email;
+        // A fresh status supersedes any acknowledgement still returning from an earlier dialog opening.
+        recoveryEpoch.current++; acknowledgingRef.current = false; setAcknowledging(false);
         if (connection.data.unresolvedSend) {
-          setReceipt(previous => previous?.kind === 'sent' ? previous : previous ? { ...previous, requestId: previous.requestId || connection.data.unresolvedRequestId || undefined } : { kind: 'uncertain', requestId: connection.data.unresolvedRequestId || undefined, notice: 'A previous send could not be confirmed. Check Sent email before starting another email.' });
+          const requestId = typeof connection.data.unresolvedRequestId === 'string' ? connection.data.unresolvedRequestId.trim() : '';
+          setReceipt(previous => {
+            if (previous?.kind === 'uncertain' && (!requestId || previous.requestId === requestId)) return previous;
+            return { kind: 'uncertain', requestId: requestId || undefined, notice: previous ? 'Your account has a different unresolved send. Check Sent email again before acknowledging this send or starting another email.' : 'A previous send could not be confirmed. Check Sent email before starting another email.' };
+          });
         }
         setStatus(mail.data); setGmail(connection.data); setError('');
       } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Email status could not be checked.'); }
@@ -156,17 +163,17 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   const acknowledgeSend = async () => {
     if (receipt?.kind !== 'uncertain' || acknowledgingRef.current || sendingRef.current) return;
     if (!receipt.requestId) { setError('Send recovery details could not be loaded. Close and reopen email before acknowledging.'); return; }
-    const life = generation.current;
+    const life = generation.current, recovery = recoveryEpoch.current;
     acknowledgingRef.current = true; setAcknowledging(true); setError('');
     try {
       const { response, data } = await mailRequest('/api/gmail', { action: 'acknowledge-send', requestId: receipt.requestId }, AbortSignal.timeout(45000));
-      if (!alive.current || life !== generation.current) return;
+      if (!alive.current || life !== generation.current || recovery !== recoveryEpoch.current) return;
       if (!response.ok || data.acknowledged !== true) { setError(data.error || 'The send could not be acknowledged. Your email remains locked; check Sent and try again.'); return; }
       setReceipt(null); reset();
     } catch {
-      if (alive.current && life === generation.current) setError('The send could not be acknowledged. Your email remains locked; check Sent and try again.');
+      if (alive.current && life === generation.current && recovery === recoveryEpoch.current) setError('The send could not be acknowledged. Your email remains locked; check Sent and try again.');
     } finally {
-      if (alive.current && life === generation.current) { acknowledgingRef.current = false; setAcknowledging(false); }
+      if (alive.current && life === generation.current && recovery === recoveryEpoch.current) { acknowledgingRef.current = false; setAcknowledging(false); }
     }
   };
   const connect = async () => {
