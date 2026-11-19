@@ -1138,6 +1138,23 @@ main.content.sales-calls-content { padding-top: 16px; }
 .inbox-thread-controls { flex-shrink: 0; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
 .inbox-thread-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
+/* A CSS workspace view preserves mounted forms, embedded sessions, and sidebar preferences. */
+.workspace-view-control { position: fixed; z-index: 100; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid #806a35; border-radius: 6px; background: #14130f; color: var(--gold); box-shadow: 0 2px 8px #0005; cursor: pointer; }
+.workspace-view-control:hover { background: #302714; border-color: var(--gold); }
+.workspace-view-control:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+html[data-workspace-fullscreen="true"] { --crm-titlebar-height: 0px !important; }
+html[data-workspace-fullscreen="true"] [data-workspace-chrome="title"],
+html[data-workspace-fullscreen="true"] .app-shell .sidebar,
+html[data-workspace-fullscreen="true"] .app-shell .topbar,
+html[data-workspace-fullscreen="true"] .app-shell .sidebar-fab,
+html[data-workspace-fullscreen="true"] .app-shell .mobile-backdrop,
+html[data-workspace-fullscreen="true"] .workspace > .source-bar { display: none; }
+html[data-workspace-fullscreen="true"] .app-shell { min-height: 100dvh; }
+html[data-workspace-fullscreen="true"] .workspace { margin-left: 0; padding-top: 0; }
+html[data-workspace-fullscreen="true"] body:has(.app-shell) .floating-actions,
+html[data-workspace-fullscreen="true"] body:has(.app-shell) .support-panel { left: max(16px, env(safe-area-inset-left)); }
+html[data-workspace-fullscreen="true"] body:has(.app-shell) .support-panel { max-width: calc(100vw - 32px); }
+
 /* Email keeps mailbox status separate from recipient and compose actions. */
 .email-panel-heading, .email-panel-actions, .email-connection-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .email-panel-heading, .email-connection-heading { justify-content: space-between; }
