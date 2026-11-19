@@ -7,7 +7,7 @@
   },
   "scripts": {
     "predev": "node scripts/build-onboard.mjs",
-    "prebuild": "node scripts/build-onboard.mjs",
+    "prebuild": "node scripts/ensure-recruit-outcomes.mjs --apply && node scripts/build-onboard.mjs",
     "pretest": "node scripts/build-onboard.mjs",
     "precheck": "node scripts/build-onboard.mjs",
     "dev": "next dev",
