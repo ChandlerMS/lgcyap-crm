@@ -737,3 +737,16 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .follow-up-days { color: var(--gold); font-variant-numeric: tabular-nums; }
 
 .recruit-quick-actions .quick-action-button { width: 36px; min-height: 36px; justify-content: center; padding: 0; flex-shrink: 0; }
+
+/* Child navigation opens to the right without changing the sidebar's row positions. */
+.sidebar-flyout { position: fixed; z-index: 90; display: flex; flex-direction: column; margin: 0; padding: 6px; max-height: calc(100dvh - 16px); overflow-y: auto; border: 1px solid #6d5b31; border-radius: 0 8px 8px 0; background: #14130f; box-shadow: 8px 8px 24px #0009; }
+.sidebar-flyout .nav-link { padding: 12px; min-height: 48px; color: #e8dfc8; font-size: 15px; overflow-wrap: anywhere; }
+.sidebar-flyout .nav-link:hover, .sidebar-flyout .nav-link:focus-visible { background: #302714; color: var(--gold); }
+.nav-group-toggle > .icon:last-child, .nav-group-toggle[aria-expanded="false"] > .icon:last-child { transform: rotate(-90deg); }
+@media(max-width:800px) {
+  :root { --sidebar-width: min(200px, 56.25vw); }
+  .sidebar .brand { min-height: 140px; padding: 20px 16px; }.sidebar .brand img { max-width: 140px; }
+  .sidebar .nav-link { padding-left: 12px; padding-right: 12px; gap: 9px; font-size: 14px; }
+  .sidebar .nav-group-toggle > span { min-width: 0; }
+  .sidebar-flyout .nav-link { padding: 10px 8px; font-size: 14px; }
+}

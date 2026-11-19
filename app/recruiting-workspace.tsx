@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import SidebarFlyout from "./sidebar-flyout";
 import WorkspaceTitlebar from "./workspace-titlebar";
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -166,11 +167,13 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const [liveLoading, setLoading] = useState(true);
   const [liveError, setError] = useState<ReadError | null>(null);
   const [demoMode, setDemoMode] = useState(false);
-  const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
-  const [queuesExpanded, setQueuesExpanded] = useState(false);
-  const [recruitsExpanded, setRecruitsExpanded] = useState(false);
-  const [agentsExpanded, setAgentsExpanded] = useState(false);
+  const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enterNav = (group: string) => { if (hoverTimer.current) clearTimeout(hoverTimer.current); setHoveredNav(group); };
+  const leaveNav = () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); hoverTimer.current = setTimeout(() => setHoveredNav(null), 200); };
+  const dismissNav = useCallback(() => { if (hoverTimer.current) clearTimeout(hoverTimer.current); setExpandedNav(null); setHoveredNav(null); }, []);
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
   const [demoRecords, setDemoRecords] = useState<Recruit[]>([]);
   const [toolDirty, setToolDirty] = useState(false);
   const [toolBusy, setToolBusy] = useState(false);
@@ -268,7 +271,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         window.history.replaceState(null, "", "#add-recruits");
         setSaveNotice("Submit or clear your recruit entries before leaving Add Recruits."); return;
       }
-      setRoute(getRoute()); setMenuOpen(false); setPage(1);
+      setRoute(getRoute()); setPage(1);
     };
     window.addEventListener("hashchange", updateRoute);
     startTransition(() => { void refresh(); });
@@ -303,13 +306,18 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function keydown(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       if (event.key === "Escape") { event.preventDefault(); restoreMenuFocus.current = true; setMenuOpen(false); }
       if (event.key === "Tab") {
-        const controls = Array.from(sidebar?.querySelectorAll<HTMLElement>("a[href],button:not([disabled]),summary") ?? []).filter(control => control.getClientRects().length > 0);
-        if (!controls?.length) return;
-        const first = controls[0], last = controls[controls.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        const controls = Array.from(sidebar?.querySelectorAll<HTMLElement>("a[href],button:not([disabled]),summary") ?? []).filter(control => control.getClientRects().length > 0).flatMap(control => {
+          const id = control.getAttribute("aria-controls");
+          const panel = id ? document.getElementById(id) : null;
+          return panel?.classList.contains("sidebar-flyout") && getComputedStyle(panel).visibility === "visible" ? [control, ...Array.from(panel.querySelectorAll<HTMLElement>("a[href]"))] : [control];
+        });
+        if (!controls.length) return;
+        event.preventDefault();
+        const index = controls.indexOf(document.activeElement as HTMLElement);
+        controls[(index + (event.shiftKey ? controls.length - 1 : 1)) % controls.length].focus();
       }
     }
     function resize() { if (window.innerWidth > 800) setMenuOpen(false); }
@@ -387,30 +395,35 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (!nextDemo) void refresh();
   }, [demoRecords.length, refresh]);
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={sidebarView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
+  const focusFlyout = (event: React.KeyboardEvent<HTMLAnchorElement>, id: string, group: string) => {
+    if (event.key !== "ArrowRight") return;
+    event.preventDefault(); setHoveredNav(null); setExpandedNav(group);
+    requestAnimationFrame(() => document.getElementById(id)?.querySelector<HTMLAnchorElement>("a")?.focus());
+  };
   // Dashboard heads the sidebar; Call Analytics opens from the Leaderboard toggle.
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
-    <div className="nav-group" onMouseEnter={() => setHoveredNav("leaderboard")} onMouseLeave={() => setHoveredNav(null)}>
-      <a className="nav-link nav-group-toggle" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} aria-expanded={leaderboardExpanded || hoveredNav === "leaderboard"} aria-controls="leaderboard-tv-links" onClick={() => setLeaderboardExpanded(value => !value)}><Icon name="chart" /><span>Leaderboard</span><Icon name="chevron" /></a>
-      <div id="leaderboard-tv-links" className="nav-group-pages" hidden={!leaderboardExpanded && hoveredNav !== "leaderboard"}>
+    <div className="nav-group" onMouseEnter={() => enterNav("leaderboard")} onMouseLeave={leaveNav}>
+      <a className="nav-link nav-group-toggle" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "leaderboard"} aria-controls="leaderboard-tv-links" onKeyDown={event => focusFlyout(event, "leaderboard-tv-links", "leaderboard")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "leaderboard" ? null : "leaderboard"); }}><Icon name="chart" /><span>Leaderboard</span><Icon name="chevron" /></a>
+      <SidebarFlyout onEnter={() => enterNav("leaderboard")} onLeave={leaveNav} id="leaderboard-tv-links" hidden={(hoveredNav ?? expandedNav) !== "leaderboard"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>
         <a className="nav-link" href="https://leaderboard.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper TV Leaderboard</a>
         <a className="nav-link" href="https://leaderboard.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred TV Leaderboard</a>
-      </div>
+      </SidebarFlyout>
     </div>
-    <div className="nav-group" onMouseEnter={() => setHoveredNav("queue")} onMouseLeave={() => setHoveredNav(null)}>
-      <a className="nav-link nav-group-toggle" href="#queue" aria-current={queuePage ? "page" : undefined} aria-expanded={queuesExpanded || hoveredNav === "queue"} aria-controls="queue-tv-links" onClick={() => setQueuesExpanded(value => !value)}><Icon name="headset" /><span>Queues</span><Icon name="chevron" /></a>
-      <div id="queue-tv-links" className="nav-group-pages" hidden={!queuesExpanded && hoveredNav !== "queue"}>
+    <div className="nav-group" onMouseEnter={() => enterNav("queue")} onMouseLeave={leaveNav}>
+      <a className="nav-link nav-group-toggle" href="#queue" aria-current={queuePage ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "queue"} aria-controls="queue-tv-links" onKeyDown={event => focusFlyout(event, "queue-tv-links", "queue")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "queue" ? null : "queue"); }}><Icon name="headset" /><span>Queues</span><Icon name="chevron" /></a>
+      <SidebarFlyout onEnter={() => enterNav("queue")} onLeave={leaveNav} id="queue-tv-links" hidden={(hoveredNav ?? expandedNav) !== "queue"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>
         <a className="nav-link" href="https://queue.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper Queue TV</a>
         <a className="nav-link" href="https://queue.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred Queue TV</a>
-      </div>
+      </SidebarFlyout>
     </div>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
-    {SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.id === "contract-agents" ? <div className="nav-group" key={tool.id} onMouseEnter={() => setHoveredNav("agents")} onMouseLeave={() => setHoveredNav(null)}>
-      <a className="nav-link nav-group-toggle" href="#contract-agents" aria-current={sidebarView === tool.id ? "page" : undefined} aria-expanded={agentsExpanded || hoveredNav === "agents"} aria-controls="agent-object-links" onClick={() => { setAgentsExpanded(value => !value); if (demoMode) switchDataMode(false, tool.id); }}><Icon name="people" /><span>Agents</span><Icon name="chevron" /></a>
-      <div id="agent-object-links" className="nav-group-pages" hidden={!agentsExpanded && hoveredNav !== "agents"}>{HUBSPOT_TOOLS.filter(item => ["carrier-appointments", "carriers"].includes(item.id)).map(item => <a className="nav-link" key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, item.id); navigateFromMenu(); }}>{item.label}</a>)}</div>
-    </div> : tool.id === "recruits" ? <div className="nav-group" key={tool.id} onMouseEnter={() => setHoveredNav("recruits")} onMouseLeave={() => setHoveredNav(null)}>
-      <a className="nav-link nav-group-toggle" href="#recruits" aria-current={sidebarView === "recruits" ? "page" : undefined} aria-expanded={recruitsExpanded || hoveredNav === "recruits"} aria-controls="recruit-path-links" onClick={() => setRecruitsExpanded(value => !value)}><Icon name="people" /><span>Recruits</span><Icon name="chevron" /></a>
-      <div id="recruit-path-links" className="nav-group-pages" hidden={!recruitsExpanded && hoveredNav !== "recruits"}>{RECRUITS_CHILD_PAGES.map(item => <a className="nav-link" key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined} onClick={navigateFromMenu}>{item.label}</a>)}</div>
+    {SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.id === "contract-agents" ? <div className="nav-group" key={tool.id} onMouseEnter={() => enterNav("agents")} onMouseLeave={leaveNav}>
+      <a className="nav-link nav-group-toggle" href="#contract-agents" aria-current={sidebarView === tool.id ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "agents"} aria-controls="agent-object-links" onKeyDown={event => focusFlyout(event, "agent-object-links", "agents")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "agents" ? null : "agents"); if (demoMode) switchDataMode(false, tool.id); }}><Icon name="people" /><span>Agents</span><Icon name="chevron" /></a>
+      <SidebarFlyout onEnter={() => enterNav("agents")} onLeave={leaveNav} id="agent-object-links" hidden={(hoveredNav ?? expandedNav) !== "agents"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>{HUBSPOT_TOOLS.filter(item => ["carrier-appointments", "carriers"].includes(item.id)).map(item => <a className="nav-link" key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, item.id); navigateFromMenu(); }}>{item.label}</a>)}</SidebarFlyout>
+    </div> : tool.id === "recruits" ? <div className="nav-group" key={tool.id} onMouseEnter={() => enterNav("recruits")} onMouseLeave={leaveNav}>
+      <a className="nav-link nav-group-toggle" href="#recruits" aria-current={sidebarView === "recruits" ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "recruits"} aria-controls="recruit-path-links" onKeyDown={event => focusFlyout(event, "recruit-path-links", "recruits")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "recruits" ? null : "recruits"); }}><Icon name="people" /><span>Recruits</span><Icon name="chevron" /></a>
+      <SidebarFlyout onEnter={() => enterNav("recruits")} onLeave={leaveNav} id="recruit-path-links" hidden={(hoveredNav ?? expandedNav) !== "recruits"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>{RECRUITS_CHILD_PAGES.map(item => <a className="nav-link" key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined} onClick={navigateFromMenu}>{item.label}</a>)}</SidebarFlyout>
     </div> : <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode && tool.id !== "recruits") switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
   const leaderboardSwitch = <nav className="page-switch" aria-label="Leaderboard and Call Analytics">{WORKSPACE_EXTRA_PAGES.map(item => <a key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined}>{item.label}</a>)}</nav>;
