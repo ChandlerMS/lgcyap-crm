@@ -1,3 +1,7 @@
+import { waitUntil } from '@vercel/functions';
+import { customRecruitSyncEnabled, syncCustomRecruit } from '@/lib/custom-recruit-job.mjs';
+import { createCustomRecruitProvider } from '@/lib/custom-recruit-provider.mjs';
+import { initializeCustomRecruitStore } from '@/db/custom-recruit-sync.mjs';
 import { getAppUser } from '@/app/app-auth';
 import { getPool } from '@/db/pool.mjs';
 import { createPostgresLedger, handleRecruitWriteRequest, saveRecruit, WriteError } from '@/lib/hubspot-write.mjs';
@@ -24,7 +28,18 @@ async function handle(request: Request, context: { params: Promise<{ id: string 
     vercelEnv: process.env.VERCEL_ENV,
     allowedOrigin: process.env.BETTER_AUTH_URL,
     saveData: async (input: Parameters<typeof saveRecruit>[0], options: { userId: string; ledger: ReturnType<typeof createPostgresLedger> }) => {
-      const save = () => saveRecruit(input, { ...options, accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
+      const save = async () => {
+        const result = await saveRecruit(input, { ...options, accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
+        if (customRecruitSyncEnabled()) waitUntil((async () => {
+          try {
+            await initializeCustomRecruitStore(getPool());
+            const provider = createCustomRecruitProvider({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
+            await provider.verifyAndSetup();
+            await syncCustomRecruit(id, { pool: getPool(), provider, secret: process.env.BETTER_AUTH_SECRET });
+          } catch { /* A confirmed Ticket save remains successful; the scheduled pass will check the mirror. */ }
+        })());
+        return result;
+      };
       if (!lifecycleEnabled()) return save();
       // Serialize against the background job. A confirmed ticket save remains a
       // success even if the separately reported Contact sync needs attention.
