@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
 import PhotoIdViewer, { type PhotoNote } from "./photo-id-viewer";
 import { useEventReviews, type EventReviews, type Review } from "./event-review";
+import { useExpandCollapse } from "./expand-collapse";
 import PanelPager from "./panel-pager";
 import { pageWindow } from "./panel-pager.mjs";
 
@@ -95,6 +96,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
   // The page lists every match; the Event Attendance section shows them ten a page.
   const view = board ? pageWindow(shown.length, page, SECTION_PAGE_SIZE) : { start: 0, end: shown.length };
   const toggle = (id: string) => setOpen(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  useExpandCollapse(expanded => { setOpen(expanded ? new Set(shown.map(item => item.id)) : new Set()); if (board) setListOpen(expanded); });
   const allOpen = shown.length > 0 && shown.every(item => open.has(item.id));
   const filter = (next: Status) => { setStatus(next); setPage(1); };
   // In Event Attendance each count opens the list filtered to it; selecting the open one again collapses the list.
@@ -148,7 +150,8 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         <label className={styles.search}><span className="sr-only">Search applications</span><input type="search" placeholder="Search name, email, phone or city" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
         <label className={styles.select}><span>Office</span><select value={office} onChange={event => { setOffice(event.target.value); setPage(1); }}><option value="all">All offices</option><option value="orlando">Orlando</option><option value="miami">Miami</option><option value="tampa">Tampa</option><option value="other">Not recorded</option></select></label>
         <label className={styles.select}><span>Status</span><select value={status} onChange={event => filter(event.target.value as Status)}><option value="all">All</option><option value="not-met">Did not meet a required item</option><option value="flagged">Need a private conversation</option><option value="waiting">Still at Hiring Event</option></select></label>
-        <button type="button" className="btn btn-quiet" disabled={!shown.length} onClick={() => setOpen(allOpen ? new Set() : new Set(shown.map(item => item.id)))}>{allOpen ? "Collapse all" : "Expand all"}</button>
+        <button type="button" className="btn btn-quiet" disabled={!shown.length || allOpen} onClick={() => setOpen(value => new Set([...value, ...shown.map(item => item.id)]))}>Expand all</button>
+        <button type="button" className="btn btn-quiet" disabled={!shown.some(item => open.has(item.id))} onClick={() => setOpen(new Set())}>Collapse all</button>
       </div>
       <p className={styles.resultCount} role="status">{shown.length === all.length ? `${all.length} application${all.length === 1 ? "" : "s"}` : `${shown.length} of ${all.length} applications`}</p>
       {!shown.length ? <p className={styles.empty}>{all.length ? "No applications match these filters." : "No online applications yet."}</p> : <ol className={styles.list}>

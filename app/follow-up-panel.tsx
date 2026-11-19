@@ -21,7 +21,7 @@ export default function FollowUpPanel({ records, now, partial, canAddActivity = 
   const rows = followUpRecruits(records, now) as Row[];
   const view = pageWindow(rows.length, page, PAGE);
   return <section className="today-panel follow-up-panel" aria-labelledby="today-follow-up-title">
-    <div className="follow-up-heading"><h2 id="today-follow-up-title"><a className="panel-title-link" href="#follow-up">Follow up</a> <span>{rows.length}{partial ? "+" : ""}</span></h2>
+    <div className="follow-up-heading" data-section-heading><h2 id="today-follow-up-title"><a className="panel-title-link" href="#follow-up">Follow up</a> <span>{rows.length}{partial ? "+" : ""}</span></h2>
       <div className="panel-heading-actions">{canAddActivity && <RecruitQuickActions kinds={["follow-up"]} recruits={recruits} trigger="button" />}<SectionToggle /></div></div>
     <p className="helper">No contact for more than 15 days, longest waiting first. Point at a row for details.</p>
     {!rows.length ? <p className="helper">No one is waiting more than 15 days.</p> : <>

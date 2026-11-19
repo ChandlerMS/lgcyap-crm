@@ -5,6 +5,7 @@ import { useEventReviews, type Review } from '../event-review';
 import ApplicationsPage, { type Application } from '../applications-page';
 import PanelPager from '../panel-pager';
 import { pageWindow } from '../panel-pager.mjs';
+import { ExpandCollapseControls, useExpandCollapse } from '../expand-collapse';
 import { SectionToggle } from '../dashboard-section';
 import { useRecruitHoverCard } from '../recruit-hover';
 import type { PipelineRecruit } from '../recruit-pipeline';
@@ -203,6 +204,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     { key: 'hired', label: 'Hired', value: count(people?.hired), note: `${share(people?.hired, people?.signedIn)} reached Completed` },
     { key: 'today', label: 'Today', value: data ? count(today?.signIns ?? 0) : '—', note: `Sign-ins · ${data ? count(today?.applications ?? 0) : '—'} applications` },
   ];
+  useExpandCollapse(expanded => { if (!expanded) { setOpenTile(null); setOpenDay(null); } });
   const tileList = () => {
     const dated = dateActive ? 'No one in this list signed in on the chosen dates.' : '';
     if (openTile === 'signedIn') return <PeopleTable title={`Everyone who signed in${dateNote}`} rows={byDate(attendees)} columns={attendeeColumns} actions={reviewActions} hover={crmHover} filter={dateFilter} empty={dated || 'No one has signed in yet.'} />;
@@ -223,15 +225,15 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     {busy && !data ? <p>Loading recruits…</p> : data && <AttendanceDetails selection={selection} visits={visits} applicants={applicants} canAdd={canAddActivity ?? Boolean(data.canReview)} />}
   </main>;
   return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
+    {!section && <ExpandCollapseControls />}
     {!section && <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
-    <header className={styles.header}>
-      <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<Title id="event-attendance-title">{section ? <a className="panel-title-link" href="#event-attendance">Event Attendance</a> : "Event Attendance"}</Title><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists{section && <> · <span role="status" className={error ? styles.updatedWarning : styles.updated}>{statusText}</span></>}</p></div></div>
+    <header className={styles.header} data-section-heading>
+      <div className={styles.identity}>{!section && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} />}<div>{!section && <p className={styles.brand}>Legacy Agency Partners</p>}<div className="section-title-controls"><Title id="event-attendance-title">{section ? <a className="panel-title-link" href="#event-attendance">Event Attendance</a> : "Event Attendance"}</Title><SectionToggle /></div><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists{section && <> · <span role="status" className={error ? styles.updatedWarning : styles.updated}>{statusText}</span></>}</p></div></div>
       <div className={styles.controls}>
         <a className={styles.action} href={HUBSPOT_SOURCE_URL} target="_blank" rel="noopener noreferrer" title="Opens the Recruiting tickets from the sign-in page, the application page and imported lists. If HubSpot shows another pipeline, choose Recruiting.">Open in HubSpot <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>
         <button type="button" disabled={!data} onClick={() => data && download(attendanceCsvFilename(data.fetchedAt), attendanceCsv(data))}>Export CSV</button>
         {data?.canImport && <><input ref={fileRef} type="file" accept=".csv,.xlsx" className="sr-only" tabIndex={-1} aria-label="Choose a sign-in list to import (CSV or Excel)" onChange={event => void chooseFile(event.target.files?.[0])} /><button type="button" disabled={reading || Boolean(importFile)} onClick={() => fileRef.current?.click()}>{reading ? 'Reading file…' : 'Import attendees'}</button></>}
         <button type="button" disabled={busy} onClick={refreshAll}>{busy ? 'Refreshing…' : 'Refresh'}</button>
-        <SectionToggle />
       </div>
     </header>
     {!section && <p className={styles.hint}>{hint}</p>}

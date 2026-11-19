@@ -907,7 +907,7 @@ a.summary-card-more:hover { text-decoration: underline; }
 .section-toggle .icon { width: 20px; height: 20px; transition: transform .15s ease; }
 .section-toggle[aria-expanded="true"] .icon { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) { .section-toggle .icon { transition: none; } }
-.dashboard-section.is-collapsed > * > :not(:has(.section-toggle)) { display: none; }
+.dashboard-section.is-collapsed > * > :not([data-section-heading]) { display: none; }
 .dashboard-section > section { margin-bottom: 0; }
 .follow-up-heading > .panel-heading-actions { align-self: center; }
 .summary-card.is-collapsed { align-self: start; }
@@ -1027,3 +1027,12 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 
 .whatsapp-popup-notice { position: fixed; right: 16px; bottom: 150px; z-index: 65; max-width: min(360px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--gold); border-radius: 12px; background: #090909; color: var(--text); box-shadow: 0 4px 24px #0008; }
 .whatsapp-popup-notice a { color: var(--gold); text-decoration: underline; }
+
+/* Keep each title, count, add control and disclosure together, in reading order. */
+.expansion-scope { display: contents; }
+.expand-collapse-controls { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 18px; }
+.section-title-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.section-title-controls > :is(h1, h2, h3) { margin-bottom: 0; }
+.follow-up-heading, .summary-card-head { justify-content: flex-start; }
+.today-summaries .summary-card .summary-chips-heading { flex: 0 1 auto; }
+.panel-heading-actions { flex: none; }

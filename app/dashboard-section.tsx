@@ -1,6 +1,8 @@
 "use client";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
+import { useExpandCollapse } from "./expand-collapse";
+
 // Which dashboard sections each viewer has collapsed, kept in this browser only.
 const STORAGE_KEY = "crm:dashboard-collapsed";
 function readCollapsed(id: string, fallback: boolean) {
@@ -51,6 +53,7 @@ export function DashboardSection({ id, label, defaultCollapsed = false, classNam
 export function SectionToggle({ collapsed, onToggle, label, controls }: { collapsed?: boolean; onToggle?: () => void; label?: string; controls?: string }) {
   const section = useContext(SectionContext);
   const state = onToggle ? { collapsed: Boolean(collapsed), toggle: onToggle, label: label ?? "section", controls } : section;
+  useExpandCollapse(expanded => { if (state && state.collapsed === expanded) state.toggle(); });
   if (!state) return null;
   const action = `${state.collapsed ? "Expand" : "Collapse"} ${state.label}`;
   return <button type="button" className="section-toggle" aria-expanded={!state.collapsed} aria-controls={state.controls} aria-label={action} title={action} onClick={state.toggle}>

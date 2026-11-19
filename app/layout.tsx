@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { ExpandCollapseProvider } from "./expand-collapse";
 
 export const metadata: Metadata = {
   title: "Legacy Recruiting Live",
@@ -20,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <ExpandCollapseProvider>{children}</ExpandCollapseProvider>
         <SpeedInsights />
       </body>
     </html>
