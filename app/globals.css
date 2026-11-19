@@ -955,3 +955,54 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 .summary-preview-facts dd { margin: 1px 0 0; color: var(--text); font-size: 12px; overflow-wrap: anywhere; }
 .summary-preview-actions .recruit-row-tools { justify-content: flex-start; flex-wrap: wrap; }
 .summary-preview-new { margin: 0 0 8px; }
+
+/* The Email card's title opens New Email; its recruits are buttons that do the same. */
+.summary-title-button { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; }
+.summary-title-button:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 4px; }
+.summary-title-button:focus-visible, .summary-card-select:focus-visible, .summary-preview-select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+.summary-card-list .summary-card-select { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 34px; padding: 6px 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.summary-card-list .summary-card-select:hover .summary-card-name { color: var(--gold); text-decoration: underline; }
+.summary-preview .summary-preview-row > .summary-preview-select { min-width: 0; padding: 0; overflow: hidden; border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.summary-preview .summary-preview-row > .summary-preview-select:hover { color: var(--gold); text-decoration: underline; }
+.summary-preview-actions .summary-preview-recruit { margin-left: 12px; font-size: 12px; }
+
+/* The Calendar card's calendar in its hover pop-up: the loaded meetings by day, week or month, with Previous, Today,
+   Next and a date box to move through past and future dates. */
+.summary-preview .cal-preview { margin: 0 0 12px; padding-bottom: 12px; border-bottom: 1px solid #ffffff14; }
+.cal-preview-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.cal-preview-modes { display: inline-flex; padding: 3px; border: 1px solid #3a321d; border-radius: 999px; background: #100f0b; }
+.cal-preview-modes button { min-height: 28px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+.cal-preview-modes button:hover { color: var(--text); }
+.cal-preview-modes button[aria-pressed="true"] { background: var(--gold); color: #17150f; }
+.cal-preview-nav { display: inline-flex; align-items: center; gap: 6px; }
+.cal-preview-nav button { min-width: 30px; min-height: 30px; padding: 0 10px; border: 1px solid #4a4028; border-radius: 6px; background: #14130f; color: var(--gold); font-size: 13px; font-weight: 600; cursor: pointer; }
+.cal-preview-nav button:hover:not(:disabled) { border-color: var(--gold); background: #211d10; }
+.cal-preview-nav button:disabled { opacity: .45; cursor: default; }
+.cal-preview-date input { min-height: 30px; padding: 2px 8px; border: 1px solid #4a4028; border-radius: 6px; background: #100f0b; color: var(--text); font: inherit; font-size: 12px; color-scheme: dark; }
+.summary-preview .cal-preview-title { margin: 12px 0 8px; color: var(--text); font-size: 15px; font-weight: 600; }
+.summary-preview .cal-preview-status { margin: 0 0 8px; font-size: 12px; }
+.cal-preview-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid #ffffff14; border-left: 1px solid #ffffff14; }
+.cal-preview-weekday { padding: 6px; border-right: 1px solid #ffffff14; border-bottom: 1px solid #ffffff14; color: var(--muted); font-size: 11px; }
+.cal-preview-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 76px; padding: 5px; border-right: 1px solid #ffffff14; border-bottom: 1px solid #ffffff14; }
+.cal-preview-grid.is-week .cal-preview-weekday { display: none; }
+.cal-preview-grid.is-week .cal-preview-cell { min-height: 200px; }
+.cal-preview-cell.is-outside { background: #0a0a08; }
+.cal-preview-cell.is-outside .cal-preview-date-button { color: #6f6a5c; }
+.cal-preview-cell.is-today { box-shadow: inset 0 0 0 1px var(--gold); }
+.cal-preview-date-button { align-self: flex-start; padding: 0 2px; border: 0; background: none; color: #c8c2b2; font: inherit; font-size: 12px; cursor: pointer; }
+.cal-preview-date-button:hover { color: var(--gold); text-decoration: underline; }
+.cal-preview-cell.is-today .cal-preview-date-button { color: var(--gold); font-weight: 700; }
+.cal-preview-event { display: grid; gap: 1px; min-width: 0; padding-left: 5px; border-left: 2px solid #a68e45; font-size: 11px; line-height: 1.3; }
+.cal-preview-event > span:first-child { color: #a29a87; font-size: 10px; }
+.cal-preview-event > a, .cal-preview-event > span + span { overflow: hidden; color: #ddc46f; text-overflow: ellipsis; white-space: nowrap; }
+.cal-preview-grid.is-week .cal-preview-event > a { white-space: normal; }
+.cal-preview-event > a:hover { color: #f3de9d; text-decoration: underline; }
+.cal-preview-more { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--gold); font: inherit; font-size: 11px; cursor: pointer; }
+.summary-preview .cal-preview-day ul { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.summary-preview .cal-preview-day li { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid #ffffff12; }
+.summary-preview .cal-preview-day li > div { display: grid; gap: 2px; min-width: 0; }
+.cal-preview-day a { color: var(--text); font-weight: 600; }
+.cal-preview-day a:hover { color: var(--gold); }
+.summary-preview .cal-preview-day .cal-preview-time { color: var(--gold); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cal-preview button:focus-visible, .cal-preview a:focus-visible, .cal-preview input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (max-width: 600px) { .cal-preview-cell { min-height: 56px; padding: 3px; } .cal-preview-event > span:first-child { display: none; } .summary-preview .cal-preview-day li { grid-template-columns: 1fr; gap: 2px; } }

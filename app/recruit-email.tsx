@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import SummaryChips from './summary-chips';
 
-type Recruit = { id: string; name: string; isDemo?: boolean; email?: string | null; stage?: string | null; office?: string | null };
+type Recruit = { id: string; name: string; isDemo?: boolean; email?: string | null; stage?: string | null; office?: string | null; createdAt?: string | null };
 type Handoff = { recipient: { email: string; name: string }; contactUrl: string; templates: { id: string; name: string; url: string }[] };
 // Names also support attendees outside the provider's recruit list.
 const EmailContext = createContext<{ open: (id?: string, name?: string) => void; disabled: boolean }>({ open: () => {}, disabled: true });
@@ -60,13 +60,18 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   </EmailContext.Provider>;
 }
 
-// The Email card's hover list: every loaded recruit with an email address, by name, each with its address, stage and
-// office and an Email button that opens New Email for them (compose and send in HubSpot).
+// The Email card: its title and gold plus open New Email (compose and send in HubSpot). The card lists the newest loaded
+// recruits with an email address, and its hover list every one of them, by name, with address, stage and office; selecting
+// a recruit, or their Email button, opens New Email for them.
 export function RecruitEmailSummary({ recruits }: { recruits: Recruit[] }) {
   const { open, disabled } = useRecruitEmail();
-  const reachable = disabled ? [] : recruits.filter(r => !r.isDemo && r.email && /^[1-9]\d{0,29}$/.test(r.id)).sort((a, b) => a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' }));
-  const list = reachable.map(r => ({ id: r.id, href: `#recruit/${encodeURIComponent(r.id)}`, name: r.name, detail: r.email ?? '',
+  const reachable = disabled ? [] : recruits.filter(r => !r.isDemo && r.email && /^[1-9]\d{0,29}$/.test(r.id));
+  const added = (r: Recruit) => { const time = Date.parse(r.createdAt ?? ''); return Number.isFinite(time) ? time : 0; };
+  const chip = (r: Recruit) => ({ id: r.id, name: r.name, detail: `${r.email ?? ''}${r.stage ? `, ${r.stage}` : ''}`, badge: r.stage || undefined, onSelect: () => open(r.id, r.name),
     facts: [['Email', r.email ?? ''], ['Stage', r.stage || 'Not recorded'], ...(r.office ? [['Office', r.office] as const] : [])] as const,
-    actions: <button type="button" className="btn btn-quiet email-new-button" onClick={() => open(r.id, r.name)}>Email {r.name.split(' ')[0]}</button> }));
-  return <SummaryChips id="email-summary" title="Email" preview previewChips={list} count={disabled ? undefined : String(reachable.length)} note="Compose and send in HubSpot" chips={[]} empty={disabled ? 'Email is unavailable for demo recruits.' : 'Choose an offer template or compose a new message.'} more={{ label: 'emails' }} lead={<button className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button>} previewActions={<div className="summary-preview-new"><button type="button" className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button></div>} />;
+    actions: <><button type="button" className="btn btn-quiet email-new-button" onClick={() => open(r.id, r.name)}>Email {r.name.split(' ')[0]}</button><a className="text-link summary-preview-recruit" href={`#recruit/${encodeURIComponent(r.id)}`}>Open recruit</a></> });
+  const newest = [...reachable].sort((a, b) => added(b) - added(a) || a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' })).map(chip);
+  const byName = [...reachable].sort((a, b) => a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' })).map(chip);
+  const plus = <button type="button" className="summary-add" title="New Email" disabled={disabled} onClick={() => open()}><span aria-hidden="true">+</span><span className="sr-only">New Email</span></button>;
+  return <SummaryChips id="email-summary" title="Email" preview onTitleClick={disabled ? undefined : () => open()} previewChips={byName} count={disabled ? undefined : String(reachable.length)} note="Newest recruits · compose in HubSpot" chips={newest} empty={disabled ? 'Email is unavailable for demo recruits.' : 'No loaded recruit has an email address yet.'} more={{ label: 'recruits to email' }} lead={plus} previewActions={<div className="summary-preview-new"><button type="button" className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button></div>} />;
 }
