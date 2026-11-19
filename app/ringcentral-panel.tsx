@@ -11,6 +11,8 @@ export const useRingCentral = () => useContext(Context);
 export default function RingCentralPanel({ clientId, isDemo, children }: { clientId: string; isDemo: boolean; children: ReactNode }) {
   const src = ringCentralUrl(clientId);
   const frame = useRef<HTMLIFrameElement>(null);
+  const whatsAppWindow = useRef<Window | null>(null);
+  const [whatsAppBlocked, setWhatsAppBlocked] = useState(false);
   const policyTekLauncher = useRef<HTMLButtonElement>(null);
   const policyTekHeading = useRef<HTMLHeadingElement>(null);
   const [policyTekLoaded, setPolicyTekLoaded] = useState(false);
@@ -45,6 +47,20 @@ export default function RingCentralPanel({ clientId, isDemo, children }: { clien
     setLoaded(true); setExpanded(true); setIntent(next ?? null); setNotice("");
     // No queued action after sign-in: the user explicitly prepares the number below.
   }
+  function openWhatsApp() {
+    if (whatsAppWindow.current && !whatsAppWindow.current.closed) {
+      whatsAppWindow.current.focus();
+      setWhatsAppBlocked(false);
+      return;
+    }
+    const popup = window.open("about:blank", "legacy-whatsapp", "popup=yes,width=1100,height=800,resizable=yes,scrollbars=yes");
+    setWhatsAppBlocked(!popup);
+    if (!popup) return;
+    popup.opener = null;
+    popup.location.replace("https://web.whatsapp.com/");
+    whatsAppWindow.current = popup;
+    popup.focus();
+  }
   function openPolicyTek() {
     setExpanded(false);
     setPolicyTekLoaded(true);
@@ -64,7 +80,8 @@ export default function RingCentralPanel({ clientId, isDemo, children }: { clien
   }
   return <Context.Provider value={{ configured: Boolean(src) && !isDemo, open: reveal }}>
     {children}
-    <div className="floating-actions"><div id="legacy-bot-dock" /><button ref={policyTekLauncher} type="button" className="legacy-bot-launcher policytek-launcher" onClick={openPolicyTek} aria-label="Open PolicyTek dialer" aria-expanded={policyTekExpanded} aria-controls="policytek-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.09 4.2 2 2 0 0 1 4.08 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L8.06 9.89a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92z" /></svg><span>PolicyTek</span></button>{/* Same pill as the Legacy Bot button beside it: gold outline, black fill, icon and name. */}{src && <button type="button" className="legacy-bot-launcher rc-launcher" hidden={isDemo || expanded} onClick={() => reveal()} aria-expanded={expanded} aria-controls="ringcentral-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.09 4.2 2 2 0 0 1 4.08 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L8.06 9.89a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92z" /></svg><span>RingCentral{loggedIn ? " · Signed in" : ""}</span></button>}</div>
+    <div className="floating-actions"><div id="legacy-bot-dock" /><button type="button" className="legacy-bot-launcher whatsapp-launcher" onClick={openWhatsApp} aria-label="Open WhatsApp in a separate window"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.45L3 21l1.85-5.55A8.5 8.5 0 1 1 21 11.5Z" /><path d="M8.5 7.5c-.8 0-1.5.8-1.5 1.8 0 2.8 3.9 6.7 6.7 6.7 1 0 1.8-.7 1.8-1.5l-2.2-1.1-1 1c-1.4-.6-2.6-1.8-3.2-3.2l1-1-1.1-2.7Z" /></svg><span>WhatsApp</span></button><button ref={policyTekLauncher} type="button" className="legacy-bot-launcher policytek-launcher" onClick={openPolicyTek} aria-label="Open PolicyTek dialer" aria-expanded={policyTekExpanded} aria-controls="policytek-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.09 4.2 2 2 0 0 1 4.08 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L8.06 9.89a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92z" /></svg><span>PolicyTek</span></button>{/* Same pill as the Legacy Bot button beside it: gold outline, black fill, icon and name. */}{src && <button type="button" className="legacy-bot-launcher rc-launcher" hidden={isDemo || expanded} onClick={() => reveal()} aria-expanded={expanded} aria-controls="ringcentral-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.09 4.2 2 2 0 0 1 4.08 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L8.06 9.89a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92z" /></svg><span>RingCentral{loggedIn ? " · Signed in" : ""}</span></button>}</div>
+      {whatsAppBlocked && <div className="whatsapp-popup-notice" role="alert">Allow popups to open WhatsApp in a separate window, or <a href="https://web.whatsapp.com/" target="_blank" rel="noopener noreferrer">open WhatsApp in a new tab</a>.<button type="button" className="btn btn-quiet" aria-label="Dismiss WhatsApp notice" onClick={() => setWhatsAppBlocked(false)}>×</button></div>}
       {policyTekLoaded && <section id="policytek-panel" className="rc-panel policytek-panel" hidden={!policyTekExpanded} aria-labelledby="policytek-title" onKeyDown={event => { if (event.key === "Escape") minimizePolicyTek(); }}>
         <header className="rc-panel-header"><div><h2 id="policytek-title" ref={policyTekHeading} tabIndex={-1}>PolicyTek</h2><p>Sign in with your PolicyTek account below</p></div><button type="button" className="btn btn-quiet" onClick={minimizePolicyTek} aria-label="Minimize PolicyTek">−</button></header>
         <iframe title="PolicyTek dialer" src="https://dialer.policytek.com" allow="autoplay; microphone https://dialer.policytek.com" className="rc-frame policytek-frame" />
