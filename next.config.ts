@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
       // leaderboard.lgcyap.com (office TVs) signs in through the CRM, like the Queue site.
       { source: "/sign-in", has: [{ type: "host" as const, value: "leaderboard.lgcyap.com" }], destination: "https://crm.lgcyap.com/leaderboard-access", permanent: false },
       { source: "/sign-out", has: [{ type: "host" as const, value: "leaderboard.lgcyap.com" }], destination: "https://crm.lgcyap.com/sign-out", permanent: false },
-      { source: "/apply/:path*", destination: "/v2/apply/:path*", permanent: false },
+      { source: "/apply/:path*", missing: [{ type: "host" as const, value: "(?:www\\.)?lgcyap\\.com" }], destination: "/v2/apply/:path*", permanent: false },
     ];
   },
   async rewrites() {
@@ -37,8 +37,8 @@ const nextConfig: NextConfig = {
     ];
     const privatePage = [{ key: "Cache-Control", value: "private, no-store, max-age=0" }];
     return [
-      { source: "/:path*", headers: security },
-      { source: "/:path*", missing: [{ type: "host" as const, value: "queue.lgcyap.com" }], headers: [{ key: "X-Frame-Options", value: "DENY" }] },
+      { source: "/:path*", missing: [{ type: "host" as const, value: "(?:www\\.)?lgcyap\\.com" }], headers: security },
+      { source: "/:path*", missing: [{ type: "host" as const, value: "queue.lgcyap.com" }, { type: "host" as const, value: "(?:www\\.)?lgcyap\\.com" }], headers: [{ key: "X-Frame-Options", value: "DENY" }] },
       ...["/queue", "/queue-access", "/v2/app", "/ringcx", "/event-attendance"].map(source => ({ source, missing: [{ type: "host" as const, value: "queue.lgcyap.com" }], headers: [
         { key: "X-Frame-Options", value: "SAMEORIGIN" },
         { key: "Content-Security-Policy", value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" },
@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
       ...["/", "/queue"].map(source => ({ source, has: [{ type: "host" as const, value: "queue.lgcyap.com" }], headers: [
         { key: "Content-Security-Policy", value: "frame-ancestors 'self' https://crm.lgcyap.com; object-src 'none'; base-uri 'self'; form-action 'self'" },
       ] })),
-      ...["/", "/queue", "/ringcx", "/event-attendance", "/v2/:path*", "/sign-in", "/sign-out", "/queue-access", "/leaderboard-access", "/leaderboard-tv", "/leaderboard-tv/:board", "/queue-tv/:board", "/standard", "/shopper", "/api/:path*"].map(source => ({ source, headers: privatePage })),
+      ...["/", "/queue", "/ringcx", "/event-attendance", "/v2/:path*", "/sign-in", "/sign-out", "/queue-access", "/leaderboard-access", "/leaderboard-tv", "/leaderboard-tv/:board", "/queue-tv/:board", "/standard", "/shopper", "/api/:path*"].map(source => ({ source, missing: [{ type: "host" as const, value: "(?:www\\.)?lgcyap\\.com" }], headers: privatePage })),
     ];
   },
 };
