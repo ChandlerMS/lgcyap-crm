@@ -92,10 +92,11 @@ test('WhatsApp repeats open, close and reopen for its separate popup', () => fix
   assert.equal(opened, 2);
 }));
 
-test('AI buttons occupy the left group and communications occupy the right group', () => fixture(async () => {
+test('Legacy Bot is rightmost with the uploaded icon and Gemini is absent', () => fixture(async () => {
   await act(async () => { await new Promise(resolve => window.requestAnimationFrame(resolve)); });
-  const left = document.querySelector('.floating-actions-ai');
+  assert.equal(document.querySelector('.floating-actions-ai'), null);
   const right = document.querySelector('.floating-actions-communications');
-  assert.deepEqual([...left.querySelectorAll('button')].map(button => button.textContent), ['Legacy Bot', 'Gemini']);
-  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral']);
+  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral', 'Legacy Bot']);
+  assert.match(right.querySelector('.legacy-bot-control .launcher-brand-icon').style.backgroundImage, /hubspot\.ico/);
+  assert.doesNotMatch(document.body.textContent, /Gemini/);
 }));

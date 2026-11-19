@@ -14,3 +14,7 @@ test('keeps a large chat within a narrow or short viewport', () => {
   const moved = legacyBotPosition({ left: 900, right: 1050, top: 350, bottom: 404 }, { width: 400, height: 600 }, { width: 800, height: 500 });
   assert.deepEqual(moved, { left: 388, top: 12 });
 });
+
+test('keeps the chat above every launcher when the bottom-right dock wraps', () => {
+  assert.deepEqual(legacyBotPosition({ left: 700, right: 850, top: 700, bottom: 754 }, { width: 400, height: 400 }, { width: 1200, height: 800 }, { top: 600 }), { left: 450, top: 188 });
+});

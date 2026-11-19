@@ -31,7 +31,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Bottom window launchers
 
 Use `FloatingLauncher` from `app/floating-launcher.tsx` for every bottom window button,
-inside `FloatingActions`. Keep Legacy Bot and Gemini in `floating-actions-ai` on the bottom left; keep WhatsApp, PolicyTek and RingCentral in `floating-actions-communications` on the bottom right. Gemini uses an iframe, not a popup. Supply its current `expanded` state and `onExpand`/`onCollapse`
+inside `FloatingActions`. Keep WhatsApp, PolicyTek, RingCentral and Legacy Bot in `floating-actions-communications` on the bottom right, with Legacy Bot last/rightmost. Gemini has been removed. Supply its current `expanded` state and `onExpand`/`onCollapse`
 callbacks. Keep the launcher visible while open. Embedded windows must remain mounted
 when collapsed so sign-in and ongoing work survive. WhatsApp is a separate popup and
 its second click closes that popup. The dock measures its wrapped height so panels

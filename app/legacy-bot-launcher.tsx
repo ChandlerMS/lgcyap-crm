@@ -2,7 +2,6 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import AiProviderLaunchers from "./ai-provider-launchers";
 import { legacyBotPosition } from "./legacy-bot-position.mjs";
 
 import FloatingLauncher from "./floating-launcher";
@@ -65,7 +64,7 @@ export default function LegacyBotLauncher() {
       const launcher = button.current;
       if (!container || !launcher) return;
       const viewport = { width: document.documentElement.clientWidth, height: window.innerHeight };
-      const position = legacyBotPosition(launcher.getBoundingClientRect(), { width: container.offsetWidth, height: container.offsetHeight }, viewport);
+      const position = legacyBotPosition(launcher.getBoundingClientRect(), { width: container.offsetWidth, height: container.offsetHeight }, viewport, launcher.closest(".floating-actions")?.getBoundingClientRect());
       container.style.setProperty("--legacy-bot-left", `${position.left}px`);
       container.style.setProperty("--legacy-bot-top", `${position.top}px`);
     };
@@ -103,9 +102,9 @@ export default function LegacyBotLauncher() {
       const api = (window as ChatWindow).HubSpotConversations;
       if (api) { openedByUser.current = true; setOpen(true); api.widget.open(); }
     }}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z" /><path d="M7 9h10M7 13h6" /></svg>
+      <span className="launcher-brand-icon" aria-hidden="true" style={{ backgroundImage: "url(/launcher-icons/hubspot.ico)" }} />
       <span>Legacy Bot</span>
     </FloatingLauncher>
-  </div><AiProviderLaunchers /></>;
+  </div></>;
   return dock ? createPortal(control, dock) : control;
 }
