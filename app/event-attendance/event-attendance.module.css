@@ -6,7 +6,9 @@
 .header h1{font-size:clamp(22px,2.4vw,34px);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0 0 8px;font-weight:600}
 .subtitle{color:var(--muted);font-size:14px;margin:0}
 .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.status{font-size:13px;color:var(--gold);border:1px solid #6d633e;border-radius:999px;padding:6px 12px}.status:before{content:'●';margin-right:7px}.warning{color:#f1c678}
+/* The update time sits alone in the page's top-right corner, above the logo row and its buttons. */
+.topRow{display:flex;justify-content:flex-end;margin:-6px 0 10px}
+.status{white-space:nowrap;font-size:13px;color:var(--gold);border:1px solid #6d633e;border-radius:999px;padding:6px 12px}.status:before{content:'●';margin-right:7px}.warning{color:#f1c678}
 .controls button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}
 .controls button:hover{background:#282311}.controls button:focus-visible,.alert a:focus-visible,.card summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.controls button:disabled{opacity:.6;cursor:wait}
 .alert{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:20px 0 0;padding:15px;background:#1a180f;border:1px solid #6d633e;color:#f1d29c;border-radius:6px;font-size:14px}.alert p{margin:0}

@@ -128,10 +128,10 @@ export default function EventAttendanceBoard() {
   ] : [];
 
   return <main className={styles.board}>
+    <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span></div>
     <header className={styles.header}>
       <div className={styles.identity}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} /><div><p className={styles.brand}>Legacy Agency Partners</p><h1>Event Attendance</h1><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists</p></div></div>
       <div className={styles.controls}>
-        <span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span>
         <a className={styles.action} href={HUBSPOT_SOURCE_URL} target="_blank" rel="noopener noreferrer" title="Opens the Recruiting tickets from the sign-in page, the application page and imported lists. If HubSpot shows another pipeline, choose Recruiting.">Open in HubSpot <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>
         <button type="button" disabled={!data} onClick={() => data && download(attendanceCsvFilename(data.fetchedAt), attendanceCsv(data))}>Export CSV</button>
         {data?.canImport && <><input ref={fileRef} type="file" accept=".csv,.xlsx" className="sr-only" tabIndex={-1} aria-label="Choose a sign-in list to import (CSV or Excel)" onChange={event => void chooseFile(event.target.files?.[0])} /><button type="button" disabled={reading || Boolean(importFile)} onClick={() => fileRef.current?.click()}>{reading ? 'Reading file…' : 'Import attendees'}</button></>}
