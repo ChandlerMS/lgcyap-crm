@@ -92,12 +92,13 @@ test('WhatsApp repeats open, close and reopen for its separate popup', () => fix
   assert.equal(opened, 2);
 }));
 
-test('Support follows Legacy Bot in the right dock and Gemini is absent', () => fixture(async () => {
+test('Legacy Bot and Support occupy the left dock while communications stay on the right', () => fixture(async () => {
   await act(async () => { await new Promise(resolve => window.requestAnimationFrame(resolve)); });
   assert.equal(document.querySelector('.floating-actions-ai'), null);
   const right = document.querySelector('.floating-actions-communications');
-  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral', 'Legacy Bot', 'Support']);
-  assert.match(right.querySelector('.legacy-bot-control .launcher-brand-icon').style.backgroundImage, /hubspot\.ico/);
+  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral']);
+  assert.deepEqual([...document.querySelector('#legacy-bot-dock').querySelectorAll('button')].map(button => button.textContent), ['Legacy Bot', 'Support']);
+  assert.match(document.querySelector('#legacy-bot-dock .legacy-bot-control .launcher-brand-icon').style.backgroundImage, /hubspot\.ico/);
   assert.doesNotMatch(document.body.textContent, /Gemini/);
 }));
 
