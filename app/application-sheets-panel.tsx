@@ -2,11 +2,21 @@
 import { useEffect, useState } from "react";
 import styles from "./applications-page.module.css";
 
-type Connection = { owner: string; canConnect: boolean; connected: boolean; available: boolean; lastSuccessAt: string | null; error: string | null; current: { title: string; url: string; syncedAt: string | null } | null };
+type Connection = { owner: string; canConnect: boolean; connected: boolean; available: boolean; lastSuccessAt: string | null; error: string | null; current: { title: string; url: string; syncedAt: string | null; sharedWith?: string[]; sharePending?: string[]; shareFailed?: boolean } | null };
+// Plain words for the failed step the sync records (for example HUBSPOT:HUBSPOT_RATE_LIMITED).
+function failureReason(code: string) {
+  const [stage, detail = ""] = code.split(":");
+  if (detail === "TIMEOUT") return "the check ran out of time";
+  if (stage === "HUBSPOT") return detail === "HUBSPOT_RATE_LIMITED" ? "HubSpot was limiting requests" : "HubSpot could not be read completely";
+  if (stage === "GOOGLE_AUTH") return "Google did not accept the saved connection; reconnect Google Sheets";
+  if (stage === "GOOGLE_DRIVE") return detail === "GOOGLE_PERMISSION_REQUIRED" ? "Google Drive refused to create the Sheet" : "Google Drive could not be reached";
+  if (stage === "GOOGLE_SHEETS") return detail === "GOOGLE_PERMISSION_REQUIRED" ? "Google Sheets refused the update" : "Google Sheets could not be reached";
+  return "";
+}
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
 export default function ApplicationSheetsPanel({ report = "applications" }: { report?: "applications" | "sign-ins" }) {
   const endpoint = report === "sign-ins" ? "/api/event-attendance/sheets" : "/api/applications/sheets";
-  const title = report === "sign-ins" ? "Monthly sign-in Sheets" : "Monthly application Sheets";
+  const title = report === "sign-ins" ? "Monthly Recruits Sheets" : "Monthly Applications Sheets";
   const [hidden, setHidden] = useState(false);
   const [connection, setConnection] = useState<Connection | null>(null);
   const [error, setError] = useState("");
@@ -63,10 +73,12 @@ export default function ApplicationSheetsPanel({ report = "applications" }: { re
   return <aside className={styles.sheetsPanel} aria-label={title}>
     <div>
       <h2>{title}</h2>
-      <p>One Sheet each month, with Monday–Sunday weekly tabs. New {report === "sign-ins" ? "sign-ins" : "submissions"} are checked every minute after they appear in HubSpot. A full refresh runs daily at 9 am Eastern.</p>
+      <p>One Sheet each month, with Monday–Sunday weekly tabs. New {report === "sign-ins" ? "sign-ins" : "submissions"}, stage and review changes, and edits to recruit fields are checked every minute after they reach HubSpot. A full refresh runs every morning at 9 am Eastern.</p>
       {connection && <p>{connection.connected ? `Connected to ${connection.owner}.` : `Connect ${connection.owner} to enable automatic updates.`}{connection.lastSuccessAt && ` Last checked ${WHEN.format(new Date(connection.lastSuccessAt))}.`}</p>}
       {connection?.current && <a className="text-link" href={connection.current.url} target="_blank" rel="noopener noreferrer">Open {connection.current.title} ↗</a>}
-      {connection?.error && <p role="alert">The last sync failed. Automatic retries continue; reconnect Google Sheets if access was revoked.</p>}
+      {!!connection?.current?.sharedWith?.length && <p>Shared with {connection.current.sharedWith.join(" and ")}.</p>}
+      {connection?.current?.shareFailed && !!connection.current.sharePending?.length && <p role="alert">Google did not share it with {connection.current.sharePending.join(" and ")}. It tries again each morning after 9 am, or with Sync now.</p>}
+      {connection?.error && <p role="alert">The last sync failed{failureReason(connection.error) ? ` (${failureReason(connection.error)})` : ""}. Automatic retries continue; reconnect Google Sheets if access was revoked.</p>}
       {connection && !connection.available && <p>Automatic Sheets are available in the production CRM.</p>}
       {!connection && !error && !loadError && <p role="status">Checking Google Sheets connection…</p>}
       {notice && <p role="status">{notice}</p>}
