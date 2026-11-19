@@ -140,3 +140,55 @@
 @container (max-width: 899px) {
   .flow { width: 900px; zoom: calc(100cqw / 900px); }
 }
+
+/* Recruit details shown beside a name on hover or keyboard focus. Rendered in document.body so stage scrolling never clips it. */
+.hoverCard { position: fixed; z-index: 9000; width: 330px; max-width: calc(100vw - 24px); padding: 14px 16px 12px; border: 1px solid #685a34; border-radius: 9px; background: #19170f; color: #ede5cf; box-shadow: 0 14px 34px #000b; animation: hoverCardIn .12s ease-out; }
+.hoverName { margin: 0; color: #f4f1e8; font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.hoverStage { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.hoverStage span { padding: 2px 8px; border-radius: 999px; background: #2a2416; color: #e1c66f; font-size: 12px; line-height: 1.6; }
+.hoverStage .hoverWarning { background: #3a2a14; color: #f0b866; }
+.hoverDetails { display: grid; gap: 6px; margin: 0; padding-top: 10px; border-top: 1px solid #ffffff14; }
+.hoverDetails > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.hoverDetails dt { color: #aaa699; font-size: 12px; line-height: 1.5; }
+.hoverDetails dd { margin: 0; color: #e8e2d3; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.hoverHint { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid #ffffff14; color: #d7bd73; font-size: 12px; line-height: 1.5; }
+.pathHint { margin: -6px 0 12px; color: #c9b77a; font-size: 12px; line-height: 1.45; }
+@keyframes hoverCardIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hoverCard { animation: none; } }
+.hoverActions { margin: 0 0 12px; }
+
+/* Stage pop-out: a floating panel with the stage's recruits in a large grid. Rendered in document.body. */
+.popout { position: fixed; z-index: 8500; display: flex; flex-direction: column; max-height: calc(100vh - 32px); border: 1px solid #685a34; border-radius: 12px; background: #17150f; color: #ede5cf; box-shadow: 0 24px 60px #000c; outline: none; animation: hoverCardIn .14s ease-out; }
+.popout:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 2px; }
+.popoutHeader { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 18px 22px; border-bottom: 1px solid #ffffff14; }
+.popoutHeading { flex: 1 1 200px; min-width: 0; }
+.popoutHeading h2 { margin: 0; color: #f4f1e8; font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
+.popoutHeading p { margin: 3px 0 0; color: #d7bd73; font-size: 15px; }
+.popoutCount { color: var(--gold, #d4af37); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.popoutTools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.popoutSort { display: flex; align-items: center; gap: 8px; color: #b6b2a8; font-size: 14px; }
+.popoutSort select { min-height: 40px; padding: 6px 10px; border: 1px solid #4a4028; border-radius: 6px; background: #11110e; color: #ede5cf; font: inherit; font-size: 15px; }
+.popoutButton { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid #4a4028; border-radius: 6px; background: transparent; color: #e1c66f; font: inherit; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.popoutButton:hover { border-color: #d4af37; background: #211d10; }
+.popoutClose { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 6px; background: #211d13; color: #f0e6c9; font-size: 26px; line-height: 1; cursor: pointer; }
+.popoutClose:hover { background: #2e2716; }
+.popoutSort select:focus-visible, .popoutButton:focus-visible, .popoutClose:focus-visible, .popoutName:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 2px; }
+.popoutBody { overflow-x: hidden; overflow-y: auto; padding: 20px 22px 24px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #887237 #11110f; }
+.popoutGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 16px; }
+.popoutRecruit { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 16px; border: 1px solid #ffffff14; border-radius: 10px; background: #1f1c13; }
+.popoutSaving { opacity: .6; }
+.popoutRecruitHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.popoutName { color: #f4f1e8; font-size: 19px; font-weight: 600; line-height: 1.3; text-decoration: none; overflow-wrap: anywhere; }
+.popoutName:hover { color: #e9cf7a; text-decoration: underline; }
+.popoutChip { padding: 2px 9px; border-radius: 999px; background: #2a2416; color: #e1c66f; font-size: 13px; line-height: 1.6; }
+.popoutWarning { background: #3a2a14; color: #f0b866; }
+.popoutDetails { display: grid; gap: 10px; margin: 0; }
+.popoutDetails > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.popoutDetails dt { color: #aaa699; font-size: 14px; line-height: 1.45; }
+.popoutDetails dd { margin: 0; color: #ece6d6; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
+.popoutDetails > .popoutStage { grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 2px; }
+.popoutStage :global(.stage-select) { width: 100%; min-width: 0; max-width: 100%; min-height: 40px; font-size: 15px; }
+.popoutEmpty { margin: 8px 0; color: #aaa699; font-size: 16px; }
+.popoutOpen .stageHeading { box-shadow: inset 0 0 0 2px #d4af37; }
+.popout :global(.communication-tooltip), .hoverCard :global(.communication-tooltip) { top: calc(100% + 8px); bottom: auto; z-index: 30; }
+@media (max-width: 600px) { .popoutHeader { padding: 14px 16px; } .popoutBody { padding: 14px 16px 18px; } .popoutDetails > div { grid-template-columns: 96px minmax(0, 1fr); } }

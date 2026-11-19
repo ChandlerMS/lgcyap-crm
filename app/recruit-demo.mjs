@@ -68,14 +68,22 @@ export function createDemoRecruits(now) {
 /** Mirrors the workflow checks locally. This function has no transport or persistence. */
 export function applyDemoStage(recruit, targetStageId, flowChanges = {}, now) {
   const time = demoClock(recruit, now), stageKey = stageKeyForStageId(targetStageId);
-  if (!stageKey || targetStageId === recruit.stageId || !flowChanges || typeof flowChanges !== 'object' || Array.isArray(flowChanges)
-    || Object.keys(flowChanges).some(key => key !== 'licensing_branch') || Object.hasOwn(flowChanges, 'licensing_branch') && !['licensed', 'not_licensed'].includes(flowChanges.licensing_branch)) throw new DemoRecruitError('INVALID_DEMO_STAGE', 'Choose a different connected demo stage.');
+  const invalid = () => new DemoRecruitError('INVALID_DEMO_STAGE', 'Choose a different connected demo stage.');
+  if (!stageKey || !flowChanges || typeof flowChanges !== 'object' || Array.isArray(flowChanges)
+    || Object.keys(flowChanges).some(key => !['licensing_branch', 'recruiting_path'].includes(key))
+    || Object.hasOwn(flowChanges, 'licensing_branch') && !Object.hasOwn(LICENSE_ROUTES, flowChanges.licensing_branch)
+    // Demo paths follow the live rule: only a missing path can be recorded.
+    || Object.hasOwn(flowChanges, 'recruiting_path') && (recruit.recruitingPath || !Object.hasOwn(RECRUITING_PATHS, flowChanges.recruiting_path))) throw invalid();
   const licenseRoute = flowChanges.licensing_branch ?? recruit.licenseRoute;
-  const after = { ...recruit, stageKey, licenseRoute };
+  const recruitingPath = flowChanges.recruiting_path ?? recruit.recruitingPath;
+  const sameStage = targetStageId === recruit.stageId;
+  if (sameStage && licenseRoute === recruit.licenseRoute && recruitingPath === recruit.recruitingPath) throw invalid();
+  const after = { ...recruit, stageKey, recruitingPath, licenseRoute };
   const result = validateFlowTransition(recruit, after, { allowDirect: true });
   if (!result.ok) throw new DemoRecruitError(result.code, result.message);
   const stage = STAGE_PAGES.find(item => item.stageId === targetStageId);
-  return { ...after, stage: stage.label, stageId: targetStageId, enteredStageAt: new Date(time).toISOString(), updatedAt: new Date(time).toISOString(), editValues: { ...recruit.editValues, hs_pipeline_stage: targetStageId, licensing_branch: licenseRoute } };
+  const stamp = new Date(time).toISOString();
+  return { ...after, stage: stage.label, stageId: targetStageId, enteredStageAt: sameStage ? recruit.enteredStageAt : stamp, updatedAt: stamp, editValues: { ...recruit.editValues, hs_pipeline_stage: targetStageId, recruiting_path: recruitingPath, licensing_branch: licenseRoute } };
 }
 
 export function validateDemoDetails(input) {

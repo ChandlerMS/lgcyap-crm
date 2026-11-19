@@ -1,14 +1,15 @@
 "use client";
 
-import { FLOW_STAGES, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
-import { stageTransitionChoices, stageSnapshotAvailable } from "./recruit-stage-save.mjs";
+import { FLOW_STAGES, LICENSE_ROUTES, RECRUITING_PATHS } from "../lib/recruiting-flow.mjs";
+import { pathAssignmentChoices, stageTransitionChoices, stageSnapshotAvailable } from "./recruit-stage-save.mjs";
 
-export type StageFlowChanges = { licensing_branch?: "licensed" | "not_licensed" };
+export type StageFlowChanges = { licensing_branch?: "licensed" | "not_licensed"; recruiting_path?: "genpop" | "mass_recruiting" };
 type StageRecruit = { id: string; name: string; stageId: string; stageKey?: string; recruitingPath?: string; licenseRoute?: string; updatedAt: string | null; editValues?: Record<string, string>; isDemo?: boolean };
 type Props = { recruit: StageRecruit; canEdit: boolean; disabled: boolean; onChange: (stageId: string, flowChanges?: StageFlowChanges) => void; mode: "select" | "arrows" };
-type Choice = ReturnType<typeof stageTransitionChoices>[number];
-const optionValue = (choice: Choice) => JSON.stringify([choice.stageId, choice.licenseRoute ?? ""]);
+type Choice = { stageId: string; label: string; licenseRoute?: string; recruitingPath?: string; flowChanges?: StageFlowChanges };
+const optionValue = (choice: Choice) => JSON.stringify([choice.stageId, choice.licenseRoute ?? "", choice.recruitingPath ?? ""]);
 function choiceLabel(choice: Choice) {
+  if (choice.recruitingPath && Object.hasOwn(RECRUITING_PATHS, choice.recruitingPath)) return `${RECRUITING_PATHS[choice.recruitingPath as keyof typeof RECRUITING_PATHS]} · ${choice.label}`;
   return choice.licenseRoute && Object.hasOwn(LICENSE_ROUTES, choice.licenseRoute)
     ? `${choice.label} · ${LICENSE_ROUTES[choice.licenseRoute as keyof typeof LICENSE_ROUTES]}` : choice.label;
 }
@@ -23,16 +24,18 @@ export default function RecruitStageControls({ recruit, canEdit, disabled, onCha
   const current = FLOW_STAGES.find(stage => stage.key === recruit.stageKey);
   const snapshot = stageSnapshotAvailable(recruit);
   const available = canEdit && !disabled && snapshot;
-  const back = stageTransitionChoices(recruit, "back"), forward = stageTransitionChoices(recruit, "forward");
+  const back: Choice[] = stageTransitionChoices(recruit, "back"), forward: Choice[] = stageTransitionChoices(recruit, "forward");
+  const paths: Choice[] = pathAssignmentChoices(recruit);
   const unavailable = !canEdit ? "Stage changes are unavailable in this workspace." : !snapshot ? "Refresh this recruit before changing its stage." : "A save is in progress. Wait before choosing another step.";
   const choose = (choices: Choice[], value: string) => {
     const choice = choices.find(item => optionValue(item) === value);
     if (available && choice) onChange(choice.stageId, choice.flowChanges);
   };
-  if (mode === "select") return <select className="select stage-select" aria-label={`Lifecycle stage for ${recruit.name}`} value="current" disabled={!available || !back.length && !forward.length}
+  if (mode === "select") return <select className="select stage-select" aria-label={`Lifecycle stage for ${recruit.name}`} value="current" disabled={!available || !back.length && !forward.length && !paths.length}
     title={!available ? unavailable : recruit.isDemo ? "Choose a connected step. Demo changes stay in this app." : "Choose a connected step to save it to HubSpot."}
-    onChange={event => choose([...back, ...forward], event.target.value)}>
+    onChange={event => choose([...paths, ...back, ...forward], event.target.value)}>
     <option value="current">{current?.label ?? "Unrecognized stage"}</option>
+    {paths.length > 0 && <optgroup label="Record path">{paths.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
     {back.length > 0 && <optgroup label="Back">{back.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
     {forward.length > 0 && <optgroup label="Next">{forward.map(choice => <option value={optionValue(choice)} key={optionValue(choice)}>{choiceLabel(choice)}</option>)}</optgroup>}
   </select>;

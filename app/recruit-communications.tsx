@@ -12,12 +12,17 @@ function CommunicationIcon({ action }: { action: "call" | "text" | "email" }) {
     : <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>}</svg>;
 }
 
-export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, phone, isDemo = false }: { recruitName: string; recruitId: string; hubspotUrl: string; phone?: string | null; isDemo?: boolean }) {
+const ACTION_LABELS = { call: "Call", text: "Text", email: "Email" } as const;
+
+/** `labeled` shows the action name beside each icon for larger quick-action buttons. */
+export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, phone, isDemo = false, labeled = false }: { recruitName: string; recruitId: string; hubspotUrl: string; phone?: string | null; isDemo?: boolean; labeled?: boolean }) {
   const id = useId();
   const ringCentral = useRingCentral();
   const number = communicationPhone(phone);
-  return <div className="recruit-communications" role="group" aria-label={`Contact tools for ${recruitName}`}>
+  const buttonClass = labeled ? "communication-button communication-button-labeled" : "communication-button";
+  return <div className={labeled ? "recruit-communications recruit-communications-labeled" : "recruit-communications"} role="group" aria-label={`Contact tools for ${recruitName}`}>
     {(["call", "text", "email"] as const).map(action => {
+      const content = <><CommunicationIcon action={action} />{labeled && <span className="communication-label" aria-hidden="true">{ACTION_LABELS[action]}</span>}</>;
       const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
       const ringAction = action !== "email";
       const available = action === "call" && !isDemo && ringCentral.configured && Boolean(number);
@@ -25,9 +30,9 @@ export default function RecruitCommunications({ recruitName, recruitId, hubspotU
       const label = action === "email" ? `Email ${recruitName} in HubSpot` : `${action === "call" ? "Call" : "Text"} ${recruitName} with RingCentral`;
       const descriptionId = `${id}-${action}`;
       return <span className="communication-item" key={action}>
-        {ringAction ? <button className="communication-button" type="button" disabled={!available} aria-label={label} aria-describedby={descriptionId} title={reason} onClick={() => { if (available && number) ringCentral.open({ action, phone: number, name: recruitName }); }}><CommunicationIcon action={action} /></button>
-          : result.href ? <a className="communication-button" href={result.href} target="_blank" rel="noopener noreferrer" aria-label={label} aria-describedby={descriptionId} title={reason}><CommunicationIcon action={action} /></a>
-          : <button className="communication-button" type="button" disabled aria-label={label} aria-describedby={descriptionId} title={reason}><CommunicationIcon action={action} /></button>}
+        {ringAction ? <button className={buttonClass} type="button" disabled={!available} aria-label={label} aria-describedby={descriptionId} title={reason} onClick={() => { if (available && number) ringCentral.open({ action, phone: number, name: recruitName }); }}>{content}</button>
+          : result.href ? <a className={buttonClass} href={result.href} target="_blank" rel="noopener noreferrer" aria-label={label} aria-describedby={descriptionId} title={reason}>{content}</a>
+          : <button className={buttonClass} type="button" disabled aria-label={label} aria-describedby={descriptionId} title={reason}>{content}</button>}
         <span className="communication-tooltip" role="tooltip" id={descriptionId}>{reason}</span>
       </span>;
     })}
