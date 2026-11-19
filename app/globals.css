@@ -1054,3 +1054,5 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 .admin-menu-trigger > a { flex: 1; min-width: 0; }
 .admin-menu-toggle { flex: none; padding: 8px; color: var(--gold); }
 .admin-menu-toggle .icon { width: 16px; height: 16px; transform: rotate(-90deg); }
+
+.sidebar-bottom-link { margin-inline: -24px; }
