@@ -48,7 +48,8 @@ test('Inbox hover Open shows the correct conversation, preserves drafts across c
     await act(async () => { openButton.click(); await wait(); });
     await act(wait);
     assert.match(panel.textContent, /Synthetic customer question/);
-    assert.equal(panel.querySelector('a[href="#inbox/thread/101"]').textContent, 'Open full Inbox');
+    assert.equal(panel.querySelector('.summary-preview-open'), null, 'the redundant far-right Open Inbox link is removed');
+    assert.equal(panel.querySelector('a[href="#inbox/thread/101"]'), null, 'the conversation stays inside the hover window');
     let textarea = panel.querySelector('textarea');
     const type = async text => { await act(async () => { Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(textarea, text); textarea.dispatchEvent(new dom.window.Event('input', { bubbles: true })); }); };
     await type('Thanks for the question.');

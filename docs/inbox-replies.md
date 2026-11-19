@@ -1,6 +1,6 @@
 # Inbox dashboard conversation replies
 
-The Inbox card below the recruiting pipeline previews active HubSpot conversations on hover or keyboard focus. Each row's Open button reads that conversation and shows a plain-text reply composer inside the floating preview. Card links and Full Inbox links use the canonical `#inbox/thread/<id>` route. The previous `#inbox/<id>` route was not recognized and fell back to Dashboard.
+The Inbox card below the recruiting pipeline previews active HubSpot conversations on hover or keyboard focus. Each row's Open button reads that conversation and shows a plain-text reply composer inside the floating preview. Card links use the canonical `#inbox/thread/<id>` route. The preview uses the available viewport height, with a separately scrolling message history and the reply composer kept in view. The previous `#inbox/<id>` route was not recognized and fell back to Dashboard.
 
 Selecting a conversation keeps the preview open until Close preview, Escape or navigation. The preview stays mounted when hidden, so drafts and pending sends survive closing it. Drafts and uncertain-send blocks are retained per conversation when returning to the list. Sending requires an explicit Send reply click. Message history remains available independently of reply permission.
 

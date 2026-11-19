@@ -803,7 +803,9 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 
 /* Inbox's interactive preview separates conversation details from its row actions. */
 #inbox-summary-preview { box-sizing: border-box; padding: 20px 24px; line-height: 1.6; }
-#inbox-summary-preview > .summary-preview-close { display: flex; margin: 0 0 12px auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; }
+#inbox-summary-preview > .summary-preview-close { display: flex; flex-shrink: 0; width: fit-content; align-self: flex-end; margin: 0 0 12px auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; }
+#inbox-summary-preview .summary-preview-head { flex-shrink: 0; }
+#inbox-summary-preview .summary-preview-list { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 #inbox-summary-preview .summary-preview-head { align-items: center; flex-wrap: wrap; gap: 12px 20px; padding-bottom: 16px; margin-bottom: 0; border-bottom: 1px solid var(--line); }
 #inbox-summary-preview .summary-preview-list > li { gap: 12px; padding: 18px 0; }
 #inbox-summary-preview .summary-preview-list > li:first-child { border-top: 0; }

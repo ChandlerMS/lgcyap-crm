@@ -59,7 +59,7 @@ export default function InboxConversation({ threadId, draft, onDraftChange, onBa
     } finally { setSending(false); sendLock.current = false; }
   };
   return <section className={styles.conversation} aria-label={`Conversation ${threadId}`}>
-    <div className={styles.heading}><button type="button" className="text-link" disabled={sending || draft.pending} onClick={onBack}>← Conversations</button><a className="text-link" href={`#inbox/thread/${threadId}`}>Open full Inbox</a></div>
+    <div className={styles.heading}><button type="button" className="text-link" disabled={sending || draft.pending} onClick={onBack}>← Conversations</button></div>
     <h3>Conversation {threadId}</h3>
     <div className={styles.messages} role="region" aria-label="Message history" tabIndex={0}>
       {messages.busy && <p role="status">Loading messages…</p>}
@@ -69,9 +69,8 @@ export default function InboxConversation({ threadId, draft, onDraftChange, onBa
     </div>
     <div className={styles.actions}>{messages.busy ? <button type="button" className="text-link" onClick={messages.pause}>Pause loading</button> : !messages.state.complete && <button type="button" className="text-link" disabled={Boolean(messages.retryAt)} onClick={() => void messages.load(false)}>Continue loading messages</button>}<button type="button" className="text-link" disabled={messages.busy} onClick={() => void messages.load(true)}>Refresh messages</button></div>
     <form onSubmit={event => { event.preventDefault(); void send(); }}>
-      <h4>Reply</h4>
+      <div className={styles.replyHeading}><h4>Reply</h4><button type="button" className="text-link" disabled={sending} onClick={() => setAttempt(value => value + 1)}>Refresh reply details</button></div>
       {context ? <p className={styles.recipient}>From: {context.senderLabel}<br />To: {context.recipientLabel} · {context.channelLabel}</p> : <p role="status">{contextError || "Loading reply details…"}</p>}
-      <button type="button" className="text-link" disabled={sending} onClick={() => setAttempt(value => value + 1)}>Refresh reply details</button>
       <label htmlFor={`inbox-reply-${threadId}`}>Your reply</label><textarea id={`inbox-reply-${threadId}`} value={draft.text} onChange={event => onDraftChange({ text: event.target.value })} maxLength={10000} rows={4} disabled={sending || draft.pending || Boolean(draft.blocked)} placeholder="Write a reply to this conversation…" />
       {(error || draft.blocked) && <p className={styles.error} role="alert">{draft.blocked || error}</p>}
       {notice && <p role="status">{notice}</p>}

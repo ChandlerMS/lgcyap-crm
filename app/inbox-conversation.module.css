@@ -1,18 +1,20 @@
-.conversation { display: grid; gap: 20px; color: var(--text); padding-top: 8px; }
+.conversation { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow-y: auto; gap: 12px; color: var(--text); padding-top: 8px; }
 .heading, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-.heading { justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-.actions { justify-content: flex-start; }
+.heading { flex-shrink: 0; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.actions { flex-shrink: 0; justify-content: flex-start; }
+.conversation > h3 { flex-shrink: 0; }
+.replyHeading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
 .conversation :global(.text-link) { justify-content: center; min-height: 40px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; line-height: 1.5; text-align: center; }
 .conversation :global(.text-link):hover { border-color: var(--gold); }
 .conversation form > :global(.text-link) { justify-self: start; }
 .conversation h3, .conversation h4, .conversation p { margin: 0; }
-.messages { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 16px; overscroll-behavior: contain; }
+.messages { flex: 1 1 0; min-height: 64px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; overscroll-behavior: contain; }
 .conversation .messages ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
 .conversation .messages li { display: grid; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .conversation .messages li:last-child { border-bottom: 0; padding-bottom: 0; }
 .messages li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .conversation .messages li p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font-size: 13px; line-height: 1.7; }
-.conversation form { display: grid; gap: 16px; border-top: 1px solid var(--line); padding-top: 20px; }
+.conversation form { position: sticky; bottom: 0; z-index: 1; background: var(--panel); flex-shrink: 0; display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
 .conversation label, .conversation .recipient { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; line-height: 1.8; }
 .conversation .recipient { padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: #161616; }
 .conversation label { margin-bottom: -8px; }
@@ -20,3 +22,12 @@
 .conversation textarea:focus-visible, .messages:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .conversation .error { padding: 10px; background: #281d13; border-left: 3px solid #d4ac59; font-size: 13px; }
 @media (max-width: 480px) { .heading, .actions { align-items: stretch; gap: 12px; } .heading > *, .actions > * { flex: 1 1 160px; } }
+@media (max-height: 760px) {
+  .conversation { gap: 8px; }
+  .conversation > h3 { display: none; }
+  .heading { padding-bottom: 8px; }
+  .messages { min-height: 40px; padding: 8px 12px; }
+  .conversation form { gap: 10px; padding-top: 12px; }
+  .conversation .recipient { padding: 8px 10px; }
+  .conversation textarea { min-height: 80px; height: 80px; }
+}
