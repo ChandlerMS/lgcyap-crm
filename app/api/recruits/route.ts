@@ -4,10 +4,15 @@ import { handleRecruitRequest, readRecruitingData, recruitPathReadOptions } from
 import { createPostgresLedger, editorAllowed, writeCapability } from '@/lib/hubspot-write.mjs';
 import { checkContactCreationCapability, createContactPostgresLedger } from '@/lib/hubspot-contact-create.mjs';
 import { checkRecruitIntakeCapability, createRecruitIntakePostgresLedger } from '@/lib/recruit-intake.mjs';
+import { customRecruitSyncEnabled, customRecruitReadStatus } from '@/lib/custom-recruit-job.mjs';
 import { lifecycleEnabled, lifecycleReadStatus } from '@/lib/recruit-lifecycle-sync.mjs';
 
 async function readWithLifecycleStatus(request: Request) {
-  const data = await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN, includeContacts: true, ...recruitPathReadOptions(request.url) });
+  let data = await readRecruitingData({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN, includeContacts: true, ...recruitPathReadOptions(request.url) });
+  if (customRecruitSyncEnabled()) {
+    try { data = { ...data, ...await customRecruitReadStatus(getPool(), data.recruits) }; }
+    catch { /* The first scheduled pass initializes metadata. Recruit reads remain available. */ }
+  }
   if (!lifecycleEnabled()) return data;
   try { return { ...data, recruits: await lifecycleReadStatus(getPool(), data.recruits) }; }
   catch { return { ...data, recruits: data.recruits.map((recruit: (typeof data.recruits)[number]) => ({ ...recruit, lifecycleSync: { status: 'unavailable' } })) }; }
