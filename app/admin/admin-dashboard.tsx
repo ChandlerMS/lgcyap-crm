@@ -1,4 +1,5 @@
 'use client';
+import DismissibleNotice from '../dismissible-notice';
 import { useCallback, useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
 import { GOOGLE_ADMIN_SCOPES } from '@/lib/google-admin.mjs';
@@ -69,7 +70,7 @@ export default function AdminDashboard({ embedded = false }: { embedded?: boolea
   return <Root className={styles.page}>
     <header className="page-head"><div><h1 className="page-title" id="page-title" tabIndex={-1}>Admin dashboard</h1><p className="subheading">CRM access and Google Workspace permissions</p></div><button className="btn btn-secondary" disabled={busy || reading} onClick={() => void refresh()}>{reading ? 'Refreshing…' : 'Refresh'}</button></header>
     <p className="helper">Managed by Chandler and Sarah. Google Workspace changes use your Google administrator privileges.</p>
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
+    {notice && <DismissibleNotice className={styles.notice} role="status">{notice}</DismissibleNotice>}
     <div className={styles.stats}><div><strong>{access ? access.users.filter(user => user.allowed).length : '—'}</strong><span>Authorized CRM emails</span></div><div><strong>{access ? access.users.filter(user => user.user).length : '—'}</strong><span>Registered CRM users</span></div><div><strong>{directory ? directory.users.length : '—'}</strong><span>Google Workspace users</span></div></div>
     <label className={styles.search}>Find a user<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Name or email" /></label>
     <section className={styles.panel} aria-labelledby="crm-access-title"><h2 id="crm-access-title">CRM access</h2>

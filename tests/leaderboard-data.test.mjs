@@ -119,7 +119,7 @@ test('ranked rows re-sort by name, calls, close rate and production per board, k
   assert.deepEqual(whatsapp.map(row => row.name), ['B', 'A']);
   const shopper = sortLeaderboardRows([{ name: 'A', submitted: 1, premium: 10, leads: 10 }, { name: 'B', submitted: 3, premium: 5, leads: 6 }], 'shopper', { field: 'closeRate', direction: 'desc' });
   assert.deepEqual(shopper.map(row => row.name), ['B', 'A']);
-  assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Calls', 'Close rate', 'Total Calls Connected', 'Total Calls Abandoned', 'Alphabetical']);
+  assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Sales', 'Calls', 'Close rate', 'Total Calls Connected', 'Total Calls Abandoned', 'Alphabetical']);
   assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Submitted premium', 'Leads', 'Close rate', 'Alphabetical']);
   assert.deepEqual(leaderboardSortFields('whatsapp').map(option => option.field), ['production', 'calls', 'closeRate', 'name']);
   assert.equal(leaderboardSortFields('whatsapp')[0].label, 'Total production');
@@ -136,10 +136,10 @@ test('the export is the rows as shown, with raw numbers, blanks for missing valu
     { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 10 },
   ], 'sp', { field: 'production', direction: 'desc' });
   assert.equal(leaderboardCsv(rows, 'sp'), [
-    'Rank,Agent,Calls,Close rate,Total Calls Connected,Total Calls Abandoned,Policies sold,Annual premium',
-    '1,"Bravo, Jr. ""BJ""",12,25%,15,3,3,1234.57',
-    `2,"'=HYPERLINK(""x"")",,,,,1,50`,
-    ',Writing agent not recorded,,,,,1,10',
+    'Rank,Agent,Sales,Calls,Close rate,Total Calls Connected,Total Calls Abandoned,Annual premium',
+    '1,"Bravo, Jr. ""BJ""",3,12,25%,15,3,1234.57',
+    `2,"'=HYPERLINK(""x"")",1,,,,,50`,
+    ',Writing agent not recorded,1,,,,,10',
   ].join('\r\n') + '\r\n');
   const source = leaderboardCsv([{ name: 'Web', rank: 1, leads: 8, submitted: 2, premium: 900, spend: 300 }], 'source').split('\r\n');
   assert.equal(source[0], 'Rank,Source,Leads,Close rate,Submitted,Submitted premium,Spend,ROAS');
@@ -154,4 +154,13 @@ test('agent search ignores case, accents and word order', () => {
   assert.deepEqual(filterLeaderboardRows(rows, 'alvarez jos').map(row => row.name), ['José Álvarez']);
   assert.deepEqual(filterLeaderboardRows(rows, 'jos').length, 2);
   assert.equal(filterLeaderboardRows(rows, '').length, 3);
+});
+
+test('Sales sorting uses each agent board’s existing count and preserves missing values', () => {
+  const shopper = [{ name: 'A', submitted: 2 }, { name: 'B', submitted: 8 }, { name: 'C', submitted: null }];
+  assert.deepEqual(sortLeaderboardRows(shopper, 'shopper', { field: 'sales', direction: 'desc' }).map(row => row.name), ['B', 'A', 'C']);
+  assert.deepEqual(sortLeaderboardRows([{ name: 'A', sales: 3 }, { name: 'B', sales: 7 }], 'sp', { field: 'sales', direction: 'desc' }).map(row => row.name), ['B', 'A']);
+  const csv = leaderboardCsv([{ name: 'A', rank: 1, submitted: 2, leads: 10, premium: 500 }], 'shopper').split('\r\n');
+  assert.equal(csv[0], 'Rank,Agent,Sales,Calls,Close rate,Submitted premium');
+  assert.equal(csv[1], '1,A,2,10,20%,500');
 });

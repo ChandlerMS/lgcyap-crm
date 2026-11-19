@@ -1,4 +1,5 @@
 'use client';
+import DismissibleNotice from '../dismissible-notice';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useTvPage } from '../queue/use-tv-page';
@@ -46,7 +47,7 @@ export default function RingCxDashboard({ grouped = false, tv = false }: { group
   const busyPage = queueTvPage(data?.busyAgents ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, data?.busyAgents.length ?? 1));
   return <Container className={`${styles.board}${grouped ? ` ${styles.grouped}` : ""}`}>
     <header className={styles.header}><div className={styles.identity}>{!grouped && <Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo}/>}<div>{!grouped && <p className={styles.brand}>Legacy Agency Partners</p>}<Heading>Standard vs Preferred</Heading><p className={styles.subtitle}>RingCX · Live agent dashboard</p></div></div><div className={styles.controls}><span className={`${styles.status} ${stale || error ? styles.warning : ''}`} role="status">{error || stale ? 'Update unavailable' : data ? 'Live' : 'Connecting'}</span><button type="button" disabled={busy} onClick={() => void refresh()}>{busy ? 'Refreshing…' : 'Refresh'}</button>{grouped && !tv && <a className={styles.tvLink} href="https://queue.lgcyap.com/standard" target="_blank" rel="noopener noreferrer" aria-label="Standard vs Preferred Queue TV HUD (opens in a new tab)">TV HUD</a>}</div></header>
-    {error && <p role="alert" className={styles.alert}>{error}{signInRequired && <> <a href={tv ? "/sign-in?return_to=%2Fstandard" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</p>}
+    {error && <DismissibleNotice role="alert" className={styles.alert}>{error}{signInRequired && <> <a href={tv ? "/sign-in?return_to=%2Fstandard" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</DismissibleNotice>}
     <section aria-label="Live agent availability" className={styles.live}>
       <article><Subheading>Agents Available</Subheading><p className={styles.available}>{value(data?.agents.available)}</p><span>Ready to take a call</span></article>
       <article><Subheading>On calls</Subheading><p className={styles.onCalls}>{value(data?.agents.onCalls)}</p><span>Agents in an active call state</span></article>

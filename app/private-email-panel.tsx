@@ -1,45 +1,79 @@
 "use client";
-import { useEffect, useState } from "react";
-import InboxWorkspace from "./inbox-workspace";
+import { useEffect, useRef, useState } from "react";
 const noop = () => {};
-type Connection = { canRead: boolean; mailbox?: string; webAppEmail?: string; hubspotIdentity?: string; connection?: string };
-const SETTINGS = "https://app.hubspot.com/settings/50894788/inbox/inboxes";
-const connectionLabels: Record<string, string> = { connected: "Connected", "connection-required": "Mailbox not connected", "authorization-required": "Google authorization required", "private-inbox-required": "Private inbox setup required", ambiguous: "Multiple connections need review", unavailable: "Unable to verify connection" };
-const connectionLabel = (value?: string) => connectionLabels[value ?? "unavailable"] ?? "Checking connection";
-export default function PrivateEmailPanel({ onUnauthorized = noop, compact = true, disabled = false, refreshKey = 0 }: { onUnauthorized?: () => void; compact?: boolean; disabled?: boolean; refreshKey?: number }) {
+type Connection = { available: boolean; connected: boolean; email: string; inboxUrl: string; draftsUrl: string; error?: string };
+const gmailLink = (value: string) => {
+  try { const url = new URL(value); return url.protocol === "https:" && url.hostname === "mail.google.com" && !url.username && !url.password ? url.href : ""; } catch { return ""; }
+};
+export default function PrivateEmailPanel({ onUnauthorized = noop, compact = true, disabled = false, refreshKey = 0, active = true }: { onUnauthorized?: () => void; compact?: boolean; disabled?: boolean; refreshKey?: number; active?: boolean }) {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [error, setError] = useState("");
+  const [authorizationFailed, setAuthorizationFailed] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [working, setWorking] = useState<"connect" | "disconnect" | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const generation = useRef(0);
+  const mutation = useRef(false);
   useEffect(() => {
-    if (disabled) return;
+    const current = ++generation.current;
+    if (disabled || !active) return;
     const controller = new AbortController();
     void (async () => {
-      setChecking(true);
+      setConnection(null); setChecking(true); setWorking(null); setError("");
+      setAuthorizationFailed(new URL(window.location.href).searchParams.get("gmail") === "error");
       try {
-        const response = await fetch("/api/email?connection=1", { credentials: "same-origin", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]) });
+        const response = await fetch("/api/gmail", { credentials: "same-origin", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]) });
+        if (controller.signal.aborted || current !== generation.current) return;
         if (response.status === 401) { onUnauthorized(); return; }
         const result = await response.json();
-        if (!response.ok) throw Error();
-        if (!controller.signal.aborted) { setConnection(result); setError(""); }
-      } catch { if (!controller.signal.aborted) setError("Email connection could not be checked. Try again."); }
-      finally { if (!controller.signal.aborted) setChecking(false); }
+        if (!response.ok) throw Error(result.error || "Gmail connection could not be checked. Try again.");
+        if (!controller.signal.aborted && current === generation.current) setConnection(result);
+      } catch (e) { if (!controller.signal.aborted && current === generation.current) setError(e instanceof Error ? e.message : "Gmail connection could not be checked. Try again."); }
+      finally { if (!controller.signal.aborted && current === generation.current) setChecking(false); }
     })();
-    return () => controller.abort();
-  }, [disabled, onUnauthorized, refreshKey, attempt]);
-  if (disabled) return <p className="helper">Received email is unavailable in demo mode.</p>;
-  if (connection?.canRead === false) return <p className="helper">Received email is private to the connected mailbox owner. Recruit recipients are available in the other tab.</p>;
+    return () => { controller.abort(); generation.current = current + 1; };
+  }, [disabled, active, onUnauthorized, refreshKey, attempt]);
+  const changeConnection = async (action: "connect" | "disconnect") => {
+    if (mutation.current || !connection?.available || disabled) return;
+    const current = generation.current;
+    mutation.current = true; setWorking(action); setError("");
+    try {
+      const response = await fetch("/api/gmail", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }), signal: AbortSignal.timeout(45000) });
+      if (current !== generation.current) return;
+      if (response.status === 401) { onUnauthorized(); return; }
+      const result = await response.json();
+      if (!response.ok) throw Error(result.error || "Gmail connection could not be updated. Try again.");
+      if (current !== generation.current) return;
+      if (action === "disconnect") setConnection(previous => previous ? { ...previous, connected: false, error: undefined } : null);
+      else {
+        const url = new URL(result.url);
+        if (url.protocol !== "https:" || url.hostname !== "accounts.google.com") throw Error("Gmail authorization is unavailable.");
+        window.location.assign(url.href);
+      }
+    } catch (e) { if (current === generation.current) setError(e instanceof Error ? e.message : "Gmail connection could not be updated. Try again."); }
+    finally { mutation.current = false; if (current === generation.current) setWorking(null); }
+  };
+  if (disabled) return <p className="helper">Email is unavailable in demo mode.</p>;
   const Heading = compact ? "h3" : "h2";
-  return <div className="email-received">
-    <div className="email-connection-card" aria-label="Email connection">
-      <div className="email-connection-heading"><Heading>Email connection</Heading><button type="button" className="btn btn-secondary" disabled={checking} onClick={() => setAttempt(value => value + 1)}>{checking ? "Checking…" : "Check connection"}</button></div>
+  const inboxUrl = gmailLink(connection?.inboxUrl || "");
+  const draftsUrl = gmailLink(connection?.draftsUrl || "");
+  return <div className="email-received gmail-native-email">
+    <div className="email-connection-card" aria-label="Gmail connection">
+      <div className="email-connection-heading"><Heading>Gmail</Heading>{connection?.available !== false && <button type="button" className="btn btn-secondary" disabled={checking || Boolean(working)} onClick={() => setAttempt(value => value + 1)}>{checking ? "Checking…" : "Check connection"}</button>}</div>
       {error && <p role="alert">{error}</p>}
-      {connection?.canRead ? <>
-        <dl><div><dt>Signed into the app</dt><dd>{connection.webAppEmail ?? connection.mailbox}</dd></div><div><dt>HubSpot user</dt><dd>{connection.hubspotIdentity === "matched" ? "Email matches your HubSpot user" : connection.hubspotIdentity === "missing" ? "Matching HubSpot user not found" : connection.hubspotIdentity === "ambiguous" ? "Multiple matching users need review" : "Unable to verify user"}</dd></div><div><dt>Received mailbox</dt><dd role="status">{connectionLabel(connection.connection)}</dd></div></dl>
-        {connection.connection !== "connected" && <p>Google sign-in does not connect your mailbox. Connect your email to a dedicated HubSpot Conversations Inbox restricted to you, then complete Google authorization. Your CRM administrator can then finish connecting the private inbox to this app.</p>}
-        <a className="text-link" href={SETTINGS} target="_blank" rel="noopener noreferrer">{connection.connection === "connected" ? "Manage HubSpot mailbox" : "Set up HubSpot mailbox"} ↗</a>
-      </> : !error && <p role="status">Checking your email connection…</p>}
+      {authorizationFailed && <p role="alert">Gmail authorization was not completed. Try connecting again with the Google account shown below.</p>}
+      {connection ? <>
+        <p>Signed in as <strong>{connection.email}</strong>.</p>
+        {!connection.available ? <p role="status">Gmail drafts are not enabled for this account. Ask your administrator to finish Gmail setup.</p> : <>
+          <p>Open Gmail to read received email. New Email prepares a draft for your final review and Send in Gmail.</p>
+          <div className="gmail-email-actions">{inboxUrl && <a className="btn btn-primary" href={inboxUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Open Gmail inbox</a>}{draftsUrl && <a className="btn btn-secondary" href={draftsUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Open Gmail Drafts folder</a>}</div>
+          <p role="status">{connection.connected ? "Gmail is connected for drafts." : "Gmail is not connected for drafts."}</p>
+          <p className="helper">Google’s draft permission includes sending. This app only creates drafts; you send in Gmail. The app does not read your inbox.</p>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(working) || checking} onClick={() => void changeConnection(connection.connected ? "disconnect" : "connect")}>{working === "connect" ? "Connecting…" : working === "disconnect" ? "Disconnecting…" : connection.connected ? "Disconnect Gmail drafts" : "Connect Gmail drafts"}</button>
+          {connection.connected && <p className="helper">Disconnect removes only this app’s Gmail draft connection.</p>}
+          {connection.error && <p role="alert">{connection.error}</p>}
+        </>}
+      </> : !error && <p role="status">Checking your Gmail connection…</p>}
     </div>
-    {connection?.canRead && connection.connection === "connected" && <InboxWorkspace compact onUnauthorized={onUnauthorized} endpoint="/api/email" label="Received email" headingLevel={compact ? 3 : 2} showCompose={false} showSectionToggle={false} refreshKey={refreshKey + attempt} />}
   </div>;
 }

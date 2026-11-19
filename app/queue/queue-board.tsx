@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from '../dismissible-notice';
 
 import Image from "next/image";
 import Link from "next/link";
@@ -133,7 +134,7 @@ export default function QueueBoard({ embedded = false, grouped = false, tv = fal
           {!tv && <a className={styles.tvLink} href="https://queue.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer" aria-label="Shopper Queue TV HUD (opens in a new tab)">TV HUD</a>}
         </div>
       </header>
-      {notice && <p className={styles.alert} role="alert">{notice}{problem === "sign_in" && <> <a href={tv ? "/sign-in?return_to=%2Fshopper" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</p>}
+      {notice && <DismissibleNotice className={styles.alert} role="alert">{notice}{problem === "sign_in" && <> <a href={tv ? "/sign-in?return_to=%2Fshopper" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</DismissibleNotice>}
       <section className={styles.live} aria-label="Live agent availability">
         <article><h3>Agents Available</h3><p className={styles.available}>{value(board?.available.length)}</p><span>Ready to take a call</span></article>
         <article><h3>On calls</h3><p className={styles.onCalls}>{value(board?.calls.length)}</p><span>Live calls in the Shopper queue</span></article>

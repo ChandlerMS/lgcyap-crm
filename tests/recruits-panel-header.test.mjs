@@ -32,9 +32,9 @@ test('Recruits exposes a native-style HubSpot link and refreshes only when enabl
     assert.equal([...document.querySelectorAll('a')].some(item => item.textContent.startsWith('Open in HubSpot')), false);
     const records = [
       ...Array.from({ length: 11 }, (_, i) => ({ id: String(i + 1), name: `Earlier ${i}`, createdAt: '2026-11-18T20:00:00Z' })),
-      { id: '20', name: 'Midnight recruit', createdAt: '2026-11-19T05:00:00Z' },
+      { id: '20', name: 'Midnight recruit', office: 'Orlando', stage: 'Training', createdAt: '2026-11-19T05:00:00Z' },
       { id: '21', name: 'Previous Eastern day', createdAt: '2026-11-19T04:59:59Z' },
-      { id: '22', name: 'Last second recruit', createdAt: '2026-11-20T04:59:59Z' },
+      { id: '22', name: 'Last second recruit', office: 'Tampa', stage: 'Contracting', createdAt: '2026-11-20T04:59:59Z' },
       { id: '23', name: 'Next day recruit', createdAt: '2026-11-20T05:00:00Z' },
       { id: '24', name: 'Unknown date', createdAt: 'invalid' },
     ];
@@ -54,6 +54,25 @@ test('Recruits exposes a native-style HubSpot link and refreshes only when enabl
     await click('Clear date');
     assert.equal(field.value, ''); assert.equal(document.querySelectorAll('tbody tr').length, 10);
     assert.match(document.body.textContent, /16 loaded recruits/);
+    const form = field.form;
+    assert.ok(form.querySelector('[name="office"]')); assert.ok(form.querySelector('[name="stage"]')); assert.ok(form.querySelector('[name="name"]'));
+    field.value = '2026-11-19'; form.elements.namedItem('office').value = 'Orlando'; form.elements.namedItem('stage').value = 'Training'; form.elements.namedItem('name').value = 'MIDNIGHT';
+    await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })));
+    assert.equal(document.querySelectorAll('tbody tr').length, 1);
+    assert.match(document.querySelector('tbody').textContent, /Midnight recruit/);
+    await click('Clear date'); assert.equal(document.querySelectorAll('tbody tr').length, 1);
+    await click('Clear filters'); assert.equal(form.elements.namedItem('office').value, ''); assert.equal(form.elements.namedItem('stage').value, ''); assert.equal(form.elements.namedItem('name').value, '');
+    assert.equal(document.querySelectorAll('tbody tr').length, 10);
+    field.value = '2026-11-19';
+    await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })));
+    const sort = form.elements.namedItem('sort');
+    await act(async () => { sort.value = 'office:desc'; sort.dispatchEvent(new window.Event('change', { bubbles: true })); });
+    assert.match(document.querySelector('tbody tr td').textContent, /Last second recruit/);
+    await act(async () => { sort.value = 'name:desc'; sort.dispatchEvent(new window.Event('change', { bubbles: true })); });
+    assert.match(document.querySelector('tbody tr td').textContent, /Midnight recruit/);
+    form.elements.namedItem('name').value = 'No such recruit';
+    await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })));
+    assert.match(document.body.textContent, /No loaded recruits match these filters/);
   } finally {
     if (root) await act(async () => root.unmount()); Object.assign(globalThis, old); delete globalThis.IS_REACT_ACT_ENVIRONMENT;
     dom.window.close(); await rm(dir, { recursive: true, force: true });

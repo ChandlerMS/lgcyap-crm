@@ -23,6 +23,7 @@ export const GOOGLE_WORKSPACE_PAGES = Object.freeze([
   { id: 'gmail', label: 'Gmail', url: 'https://mail.google.com/mail/u/0/', detail: 'Email', group: 'google-workspace' },
   { id: 'google-keep', label: 'Google Keep', url: 'https://keep.google.com/', detail: 'Notes and lists', group: 'google-workspace' },
 ].map(page => Object.freeze(page)));
+export const KNOWLEDGE_CENTER_PAGE = Object.freeze({ id: 'knowledge-center', label: 'Knowledge Center', url: 'https://50894788.hs-sites.com/legacy-partners-knowledge', detail: 'Legacy Partners Knowledge', group: 'knowledge-center' });
 export function externalWorkspacePage(id) {
-  return [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES].find(page => page.id === id);
+  return [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE].find(page => page.id === id);
 }

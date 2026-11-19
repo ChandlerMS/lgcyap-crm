@@ -116,13 +116,16 @@ test('Event Attendance emails open New Email with the templates, names take a ho
     const inWorkspace = renderToStaticMarkup(createElement(RecruitEmailProvider, { recruits: [], disabled: false }, table()));
     assert.match(inWorkspace, /<button type="button" class="[^"]*" title="Write an email to Pat Example QA with your templates">pat@example\.com<span class="sr-only"> \(opens New Email\)<\/span><\/button>/);
     assert.match(inWorkspace, /<a href="mailto:sam@example\.com">sam@example\.com<\/a>/);
-    assert.match(inWorkspace, /<dialog class="email-dialog"/);
+    assert.match(inWorkspace, /<dialog class="email-dialog(?: [^"]*)?"/);
     // Without the workspace's email (demo data), every address stays a mail link.
     assert.match(renderToStaticMarkup(table()), /<a href="mailto:pat@example\.com">pat@example\.com<\/a>/);
 
     // A hover handler wraps each name, and the date filter sits under the title.
     const hovered = renderToStaticMarkup(table({ hover: person => ({ 'data-hover': person.name }), filter: createElement('div', { id: 'date-filter' }) }));
-    assert.match(hovered, /<h3>Everyone who signed in <span>2<\/span><\/h3><div id="date-filter"><\/div>/);
+    assert.match(hovered, /<h3>Everyone who signed in <span>2<\/span><\/h3>/);
+    assert.match(hovered, />Export CSV<\/button>/);
+    assert.match(hovered, />Export XLS<\/button>/);
+    assert.match(hovered, /<div id="date-filter"><\/div>/);
     assert.match(hovered, /<th scope="row"><span class="[^"]*" data-hover="Pat Example QA"><a href="\/#recruit\/101" target="_top"/);
 
     // On the dashboard, Applications loads but keeps its list collapsed under the counts until one is selected.

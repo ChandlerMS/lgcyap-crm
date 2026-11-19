@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
 import ApplicationSheetsPanel from "./application-sheets-panel";
@@ -150,11 +151,11 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
       <label className={styles.select}><span>Sort by date</span><select value={dateSort} onChange={event => { setDateSort(event.target.value); setPage(1); }}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
       <p className={styles.updated} role="status">{period?.description ?? 'All dates'} · Eastern time{datePreset === 'week' ? ' · Monday–Sunday' : ''}</p>
     </div>
-    {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}{board ? " This list tries again after the next automatic update, within a minute." : ""}</p></div>}
-    {report?.partial && <p className="partial-notice" role="status">HubSpot returned part of the applications. Refresh later for the rest.</p>}
+    {error && <DismissibleNotice className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}{board ? " This list tries again after the next automatic update, within a minute." : ""}</p></DismissibleNotice>}
+    {report?.partial && <DismissibleNotice className="partial-notice" role="status">HubSpot returned part of the applications. Refresh later for the rest.</DismissibleNotice>}
     {/* The board shows its own review notice and errors above its lists. */}
-    {!board && report?.reviewNotice && <p className="partial-notice" role="status">{report.reviewNotice}</p>}
-    {!board && reviewer.error && <div className="connection-alert" role="alert"><strong>Review not saved</strong><p>{reviewer.error}</p>{reviewer.retry ? <button type="button" className="btn btn-secondary" onClick={reviewer.retry}>Retry review</button> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>Refresh statuses</button>}</div>}
+    {!board && report?.reviewNotice && <DismissibleNotice className="partial-notice" role="status">{report.reviewNotice}</DismissibleNotice>}
+    {!board && reviewer.error && <DismissibleNotice className="connection-alert" role="alert"><strong>Review not saved</strong><p>{reviewer.error}</p>{reviewer.retry ? <button type="button" className="btn btn-secondary" onClick={reviewer.retry}>Retry review</button> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>Refresh statuses</button>}</DismissibleNotice>}
     {!report && loading && <p className={styles.empty} role="status">Loading applications from HubSpot…</p>}
     {/* The counts stay in view; in Event Attendance they also open and close the list below them. */}
     {report && <div className={styles.tiles} role="group" aria-label={board ? "Show applications by status" : "Filter by status"}>

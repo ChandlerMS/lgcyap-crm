@@ -1,4 +1,5 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
 import { useEffect, useId, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
 
@@ -35,7 +36,7 @@ function PhotoFrame({ noteId, file, label }: { noteId: string; file: number; lab
   return <figure className={styles.photoFrame}>
     <figcaption>{label}</figcaption>
     {view.status === "loading" && <p className={styles.empty} role="status">Loading the photo ID from HubSpot…</p>}
-    {view.status === "error" && <div className="connection-alert" role="alert"><strong>Photo ID unavailable</strong><p>{view.message}</p><button type="button" className="btn btn-secondary" onClick={() => { setView({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></div>}
+    {view.status === "error" && <DismissibleNotice className="connection-alert" role="alert"><strong>Photo ID unavailable</strong><p>{view.message}</p><button type="button" className="btn btn-secondary" onClick={() => { setView({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></DismissibleNotice>}
     {view.status === "ready" && (view.type === "application/pdf"
       ? <iframe className={styles.photoPdf} src={view.url} title={`${label} (PDF)`} />
       : view.type === "image/heic"
