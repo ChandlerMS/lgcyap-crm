@@ -21,6 +21,9 @@ test('comparison matches only case and whitespace variants, preserves separate a
   assert.equal(rows.find(row => row.name === 'José').right, null);
   assert.equal(rows.find(row => row.name === 'Jose').left, null);
   assert.equal(rows.filter(row => row.name === 'No name').length, 2);
+  assert.equal(new Set(rows.map(row => row.id)).size, rows.length, 'same display names retain distinct row identities');
+  const sorted = data.leaderboardComparisonRows(left, right, 'sales', '', { field: 'name', direction: 'asc' });
+  assert.deepEqual(new Set(sorted.map(row => row.id)), new Set(rows.map(row => row.id)), 'row identities survive sorting');
   assert.equal(data.leaderboardComparisonRows(left, right, 'ap', 'ANA lee').length, 1);
 });
 test('missing source data and financial values remain unavailable and money sums exactly to cents', () => {

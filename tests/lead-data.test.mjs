@@ -254,7 +254,7 @@ test('an export has both counts, ends with calls that have no agent, and opens n
 });
 
 test('Call Analytics (formerly Lead Data) pairs with Leaderboard and keeps its own address', () => {
-  assert.deepEqual(WORKSPACE_EXTRA_PAGES.map(page => page.id), ['leaderboard', 'call-analytics']);
+  assert.deepEqual(WORKSPACE_EXTRA_PAGES.map(page => page.id), ['leaderboard', 'call-analytics', 'whatsapp-sales']);
   assert.equal(WORKSPACE_EXTRA_PAGES[1].label, 'Call Analytics');
   assert.deepEqual(resolveWorkspaceRoute('#call-analytics'), { view: 'call-analytics' });
   // Saved Lead Data links still open the page.

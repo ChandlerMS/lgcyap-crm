@@ -168,7 +168,7 @@ export function leaderboardComparisonRows(left, right, metric = 'ap', query = ''
     result.rows.forEach((row, index) => {
       const name = typeof row.name === 'string' ? row.name.normalize('NFC').trim().replace(/\s+/g, ' ') : '';
       const key = row.attributed === false || !name ? `${side}:unattributed:${index}` : `named:${name.toLowerCase()}`;
-      const entry = agents.get(key) ?? { name: name || 'Name not recorded', left: null, right: null };
+      const entry = agents.get(key) ?? { id: key, name: name || 'Name not recorded', left: null, right: null };
       const counts = nonnegative(row[keys.first]), amount = signedNumber(row[keys.second]);
       const previous = entry[side];
       entry[side] = previous ? {

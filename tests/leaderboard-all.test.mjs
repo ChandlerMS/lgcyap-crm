@@ -4,7 +4,8 @@ import { build } from 'esbuild';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
-import { handleLeaderboardRequest, validateLeaderboardInput } from '../lib/leaderboard.mjs';
+import { aggregateLeaderboardDeals, handleLeaderboardRequest, validateLeaderboardInput } from '../lib/leaderboard.mjs';
+import { applySvpCalls } from '../lib/svp-calls.mjs';
 
 const NOW = Date.parse('2026-11-02T04:59:59.999Z'); // Just before Eastern midnight after the DST change.
 const selection = { board: 'all', period: 'day' };
@@ -78,6 +79,31 @@ test('names match only by NFC, surrounding/repeated whitespace and lowercase', a
   assert.notEqual(missing[0].name, missing[1].name);
   assert.equal(missing.find(row => /PolicyTek/.test(row.name)).sales, 1);
   assert.equal(missing.find(row => /HubSpot/.test(row.name)).sales, 1);
+});
+
+test('All counts each imported SP agent call total once across spelling variants', async () => {
+  const deals = ['Synthetic Agent', 'SYNTHETIC  AGENT'].map(name => ({ properties: {
+    writing_agent_name: name, annual_premium_amount: '10.25', deal_currency_code: 'USD',
+    pipeline: 'default', dealstage: 'closedwon', hs_is_closed_won: 'true', closedate: String(NOW),
+  } }));
+  const aggregate = aggregateLeaderboardDeals(deals, { startMs: NOW - 1, endMs: NOW + 1 });
+  const first = shopper({ rows: [], reportTotals: { submitted: 0, premium: 0, leads: 0 } });
+  for (const report of [undefined, { sold: 2, soldByAgent: new Map([['synthetic agent', 2]]), connected: 25, abandoned: 5,
+    connectedByAgent: new Map([['synthetic agent', 25]]), abandonedByAgent: new Map([['synthetic agent', 5]]) }]) {
+    const second = applySvpCalls(standardPreferred({ rows: aggregate.rows }), { status: 'available', total: 20,
+      partial: false, byAgent: new Map([['synthetic agent', 20]]), ...(report ? { report } : {}) });
+    const result = await read(selection, first, second);
+    assert.equal(result.status, 'available');
+    assert.equal(result.rows.length, 1);
+    assert.deepEqual(result.rows[0], { name: 'Synthetic Agent', attributed: true, sales: 2, annualPremium: 20.5, inboundCalls: 20, soldPerInboundLog: .1 });
+    assert.equal(result.combinedTotals.calls, 20);
+  }
+  const fallback = standardPreferred({ rows: aggregate.rows.map((row, index) => ({ ...row, inboundCalls: index ? 12 : 5 })),
+    calls: { status: 'available', total: 17, partial: false } });
+  const fallbackResult = await read(selection, first, fallback);
+  assert.equal(fallbackResult.rows[0].inboundCalls, 17, 'distinct owner-log counts remain additive');
+  const conflicting = standardPreferred({ ...fallback, calls: { ...fallback.calls, basis: 'ringcx' } });
+  assert.equal((await read(selection, first, conflicting)).status, 'unavailable', 'one report agent cannot supply inconsistent repeated call totals');
 });
 
 test('missing premiums and call attribution remain null, with negative premiums summed in cents', async () => {

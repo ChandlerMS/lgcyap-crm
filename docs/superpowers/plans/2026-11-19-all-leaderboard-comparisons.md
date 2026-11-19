@@ -10,3 +10,5 @@ Current main 33a1686 supplies a separate whatsapp-sp board with unavailable/awai
 - Coordinator: common All metrics/ranking/CSV support plus aligned comparison data/CSV helpers and focused reconciliation/null/identity tests.
 - Frontend isolated: All tab and five WhatsApp tabs; shared date/metric/search/sort controls; side-by-side source totals and agent comparisons with shared magnitude scales, loading/error/stale guards, responsive styles, source notes and interaction tests.
 - Integrate, independently review arithmetic/privacy/access/source fidelity, verify relevant/full tests, typecheck/lint/build; fetch latest main and publish via existing Git integration. Do not send messages, change source data, or deploy another app.
+
+Verification: independent review found and verified fixes for repeated imported SP call counts across agent capitalization variants and React row identity for distinct unattributed rows. Full suite: 954/954 passed; TypeScript, targeted ESLint, diff check, and production build passed. Live provider records were not queried for this change. WhatsApp SP remains explicitly unavailable until its separate imports exist.
