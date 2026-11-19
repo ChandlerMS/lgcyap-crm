@@ -67,7 +67,9 @@ the last acknowledged pair. One changed side propagates; equal values acknowledg
 without writing; divergent edits pause. Clearing a configured Contact stage also
 pauses, rather than clearing a ticket stage. Contact changes can select any of the
 eleven valid stages, except licensing steps on an explicitly licensed branch. Path
-and license branch values are preserved, never inferred. App movement controls
+and license branch values are preserved, never inferred. Contact-driven reopening
+from Rejected or Withdrawn uses the same destination guards as the app; invalid
+destinations pause as conflicts without writing. App movement controls
 allow direct forward and backward drops, including skipped stages, while preserving
 the assigned recruiting path and license branch. Collapsed names and visible grips
 both start a drag. Menus and arrows retain their connected-step shortcuts. These

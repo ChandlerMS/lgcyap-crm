@@ -162,3 +162,18 @@ test('provider only PATCHes the allowlisted stage field, never sales lifecycle o
   assert.deepEqual(JSON.parse(write.init.body), { properties: { recruiting_lifecycle_stage: 'application' } });
   await assert.rejects(provider.write(pair, { status: 'write', target: 'contact', value: 'customer' }));
 });
+
+test('Contact-driven outcome reopening holds invalid destinations without writing', async () => {
+  for (const outcome of ['rejected', 'withdrawn']) {
+    for (const target of ['application', 'contracting', 'licensing_reminders']) {
+      const baseline = { ...initial(), ticketStage: stage(outcome), contactStage: outcome, path: '', licenseRoute: '' };
+      const h = harness({ ...baseline, contactStage: target }, { ...baseline, status: 'synced' });
+      assert.equal((await reconcileLifecycle('101', h)).status, 'conflict');
+      assert.equal(h.writes(), 0);
+    }
+    const baseline = { ...initial(), ticketStage: stage(outcome), contactStage: outcome, licenseRoute: 'not_licensed' };
+    const h = harness({ ...baseline, contactStage: 'contracting' }, { ...baseline, status: 'synced' });
+    assert.equal((await reconcileLifecycle('101', h)).direction, 'contact_to_ticket');
+    assert.equal(h.writes(), 1);
+  }
+});
