@@ -26,6 +26,39 @@ test('comparison matches only case and whitespace variants, preserves separate a
   assert.deepEqual(new Set(sorted.map(row => row.id)), new Set(rows.map(row => row.id)), 'row identities survive sorting');
   assert.equal(data.leaderboardComparisonRows(left, right, 'ap', 'ANA lee').length, 1);
 });
+test('agent names drop start-month and city labels and use only listed pairs, never guesses', async () => {
+  const { agentNameKey, AGENT_NAME_ALIASES } = await import('../lib/agent-names.mjs');
+  assert.equal(agentNameKey('Sample Agent January 2026'), 'sample agent');
+  assert.equal(agentNameKey('  Sample  Agent March 26 '), 'sample agent');
+  assert.equal(agentNameKey('Sample Agent Feb'), 'sample agent');
+  assert.equal(agentNameKey('Sample Agent TPA'), 'sample agent');
+  assert.equal(agentNameKey('Sample Agent Miami'), 'sample agent');
+  assert.equal(agentNameKey('Sample May'), 'sample may', 'a label is kept when it would leave one word');
+  assert.equal(agentNameKey('Sample Agent Junior'), 'sample agent junior');
+  assert.notEqual(agentNameKey('José Sample'), agentNameKey('Jose Sample'), 'accents are not folded');
+  assert.notEqual(agentNameKey('Sam Sample'), agentNameKey('Samuel Sample'), 'nicknames need a listed pair');
+  for (const [alias, canonical] of AGENT_NAME_ALIASES) {
+    assert.equal(alias, alias.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase(), 'pairs are stored as normalized keys');
+    assert.equal(agentNameKey(alias), canonical);
+    assert.equal(AGENT_NAME_ALIASES.has(canonical), false, 'a canonical name is never itself an alias');
+  }
+});
+test('listed pairs and labels line WhatsApp names up with HubSpot and PolicyTek rows, showing both spellings', async () => {
+  const { AGENT_NAME_ALIASES } = await import('../lib/agent-names.mjs');
+  const [alias, canonical] = [...AGENT_NAME_ALIASES][0];
+  const title = value => value.replace(/\b\p{L}/gu, letter => letter.toUpperCase());
+  const left = available('sp', [{ name: title(canonical), sales: 2, annualPremium: 300 }, { name: 'Sample Agent', sales: 1, annualPremium: 100 }]);
+  const right = available('whatsapp-sp', [{ name: title(alias), sales: 3, production: 450.5 }, { name: 'Sample Agent January 2026', sales: 4, production: 500 }, { name: 'Sample Agent TPA', sales: 1, production: 50 }]);
+  const rows = data.leaderboardComparisonRows(left, right, 'ap');
+  assert.equal(rows.length, 2);
+  const paired = rows.find(row => row.id === `named:${canonical}`);
+  assert.equal(paired.name, `${title(canonical)} (${title(alias)})`);
+  assert.deepEqual([paired.left, paired.right], [{ sales: 2, premium: 300 }, { sales: 3, premium: 450.5 }]);
+  const labeled = rows.find(row => row.id === 'named:sample agent');
+  assert.equal(labeled.name, 'Sample Agent (Sample Agent January 2026, Sample Agent TPA)');
+  assert.deepEqual(labeled.right, { sales: 5, premium: 550 });
+  assert.equal(data.leaderboardComparisonRows(left, right, 'ap', title(alias)).length, 1, 'search finds the row by either spelling');
+});
 test('missing source data and financial values remain unavailable and money sums exactly to cents', () => {
   const left = available('sp', [{ name: 'A', sales: 1, annualPremium: .1 }, { name: 'a', sales: 2, annualPremium: .2 }, { name: 'B', sales: 1, annualPremium: null }, { name: 'C', sales: 1, annualPremium: -50 }]);
   const right = { board: 'whatsapp-sp', status: 'unavailable', rows: [{ name: 'A', sales: 500, production: 999 }] };

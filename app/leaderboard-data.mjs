@@ -1,3 +1,5 @@
+import { agentNameKey } from '../lib/agent-names.mjs';
+
 const collator = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true });
 export const LEADERBOARD_BOARDS = Object.freeze([
   { id: 'all', label: 'All' },
@@ -158,6 +160,8 @@ export function filterLeaderboardRows(rows, query) {
 }
 
 /** Align named agents across two source snapshots without inventing activity for an absent source/row.
+ * Names match through agentNameKey, so a WhatsApp nickname lines up with the agent's HubSpot or PolicyTek name;
+ * when the two sources spell an agent differently, the row shows the first name with the other in parentheses.
  * @param {{field:string,direction:'asc'|'desc'}|undefined} [sort]
  */
 export function leaderboardComparisonRows(left, right, metric = 'ap', query = '', sort = undefined) {
@@ -167,8 +171,9 @@ export function leaderboardComparisonRows(left, right, metric = 'ap', query = ''
     const keys = leaderboardMetrics(result.board);
     result.rows.forEach((row, index) => {
       const name = typeof row.name === 'string' ? row.name.normalize('NFC').trim().replace(/\s+/g, ' ') : '';
-      const key = row.attributed === false || !name ? `${side}:unattributed:${index}` : `named:${name.toLowerCase()}`;
-      const entry = agents.get(key) ?? { id: key, name: name || 'Name not recorded', left: null, right: null };
+      const key = row.attributed === false || !name ? `${side}:unattributed:${index}` : `named:${agentNameKey(name)}`;
+      const entry = agents.get(key) ?? { id: key, name: name || 'Name not recorded', names: [], left: null, right: null };
+      if (name && !entry.names.some(seen => seen.toLowerCase() === name.toLowerCase())) entry.names.push(name);
       const counts = nonnegative(row[keys.first]), amount = signedNumber(row[keys.second]);
       const previous = entry[side];
       entry[side] = previous ? {
@@ -184,7 +189,8 @@ export function leaderboardComparisonRows(left, right, metric = 'ap', query = ''
     const values = [row.left?.[field], row.right?.[field]].filter(value => typeof value === 'number' && Number.isFinite(value));
     return values.length ? Math.max(...values) : null;
   };
-  return filterLeaderboardRows([...agents.values()], query).sort((a, b) => {
+  const rows = [...agents.values()].map(({ names, ...row }) => names.length > 1 ? { ...row, name: `${names[0]} (${names.slice(1).join(', ')})` } : row);
+  return filterLeaderboardRows(rows, query).sort((a, b) => {
     if (field === 'name') return collator.compare(a.name, b.name) * direction;
     const first = value(a), second = value(b);
     if (first === null || second === null) return first === null && second === null ? collator.compare(a.name, b.name) : first === null ? 1 : -1;

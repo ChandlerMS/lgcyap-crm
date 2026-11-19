@@ -81,6 +81,14 @@ test('names match only by NFC, surrounding/repeated whitespace and lowercase', a
   assert.equal(missing.find(row => /HubSpot/.test(row.name)).sales, 1);
 });
 
+test('a listed spelling pair puts one agent in one row across PolicyTek and HubSpot', async () => {
+  const { AGENT_NAME_ALIASES } = await import('../lib/agent-names.mjs');
+  const [alias, canonical] = [...AGENT_NAME_ALIASES].at(-1);
+  const result = await read(selection, shopper({ rows: [{ name: canonical, leads: 10, submitted: 2, premium: 100 }] }),
+    standardPreferred({ rows: [{ name: alias, attributed: true, sales: 1, annualPremium: 50, inboundCalls: 5 }] }));
+  assert.deepEqual(result.rows, [{ name: canonical, attributed: true, sales: 3, annualPremium: 150, inboundCalls: 15, soldPerInboundLog: .2 }]);
+});
+
 test('All counts each imported SP agent call total once across spelling variants', async () => {
   const deals = ['Synthetic Agent', 'SYNTHETIC  AGENT'].map(name => ({ properties: {
     writing_agent_name: name, annual_premium_amount: '10.25', deal_currency_code: 'USD',
