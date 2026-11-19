@@ -48,14 +48,12 @@ export default function RingCentralPanel({ clientId, isDemo, children }: { clien
   }
   return <Context.Provider value={{ configured: Boolean(src) && !isDemo, open: reveal }}>
     {children}
-    {src && <>
-      <button className="rc-launcher btn btn-secondary" hidden={isDemo || expanded} onClick={() => reveal()} aria-expanded={expanded} aria-controls="ringcentral-panel">RingCentral{loggedIn ? " · Signed in" : ""}</button>
-      {loaded && <section id="ringcentral-panel" className="rc-panel" hidden={!expanded || isDemo} aria-labelledby="rc-title" onKeyDown={event => { if (event.key === "Escape") minimize(); }}>
+    <div className="floating-actions"><div id="legacy-bot-dock" />{src && <button className="rc-launcher btn btn-secondary" hidden={isDemo || expanded} onClick={() => reveal()} aria-expanded={expanded} aria-controls="ringcentral-panel">RingCentral{loggedIn ? " · Signed in" : ""}</button>}</div>
+      {src && loaded && <section id="ringcentral-panel" className="rc-panel" hidden={!expanded || isDemo} aria-labelledby="rc-title" onKeyDown={event => { if (event.key === "Escape") minimize(); }}>
         <header className="rc-panel-header"><div><h2 id="rc-title" ref={heading} tabIndex={-1}>RingCentral</h2><p role="status">{loggedIn ? "Signed in to RingCentral" : "Sign in with your RingCentral account below"}</p></div><button type="button" className="btn btn-quiet" onClick={minimize} aria-label="Minimize RingCentral">−</button></header>
         {intent && <div className="rc-recipient"><strong>{intent.name}</strong><span>{intent.phone}</span><button className="btn btn-primary" disabled={!loggedIn || (intent.action === "call" && !ready)} onClick={prepare}>{intent.action === "call" ? "Prepare call" : "Open text conversation"}</button>{loggedIn && intent.action === "call" && !ready && <p>Browser calling is not ready. Check your RingCentral line and microphone permissions.</p>}{notice && <p role="status">{notice}</p>}</div>}
         <iframe ref={frame} title="RingCentral phone" src={src} allow="autoplay; microphone https://apps.ringcentral.com" className="rc-frame" />
         <p className="rc-panel-footnote">Call history is logged by RingCentral’s HubSpot Activity Sync. Matching calls appear on the linked contact’s recruit profile after HubSpot updates. Recordings and transcripts appear when provided. Texting is paused.</p>
       </section>}
-    </>}
   </Context.Provider>;
 }

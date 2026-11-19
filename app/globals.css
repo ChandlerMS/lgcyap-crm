@@ -514,7 +514,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .today-summaries > :not(.task-chips) { flex: 2 1 300px; }
 .summary-chips { --chip-rows: 2; min-width: 0; }
 .summary-chips-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--space-3); margin-bottom: var(--space-1); font-size: 14px; }
-.summary-chips-heading h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.5; }
+.summary-chips-heading h2 { margin: 0; font-size: clamp(22px, 2vw, 28px); font-weight: 600; line-height: 1.5; }
 .summary-chips-heading h2 span { margin-left: var(--space-1); color: var(--gold); font-variant-numeric: tabular-nums; }
 .summary-chips-empty { margin: 0; font-size: 14px; }
 .summary-chip-list { position: relative; display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
@@ -679,3 +679,11 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
   .without-topbar { padding-top: 64px; }
   .without-topbar .queue-workspace-frame { height: calc(100dvh - 156px); }
 }
+
+/* The measured title-bar height includes wrapped mobile controls. */
+.sidebar-fab { top: calc(var(--crm-titlebar-height, 56px) + 16px); }
+.without-topbar .queue-workspace-frame { height: calc(100dvh - var(--crm-titlebar-height, 56px) - 48px); }
+.floating-actions { position: fixed; right: 24px; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 55; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); }
+.floating-actions .rc-launcher, .floating-actions .legacy-bot-launcher { position: static; flex-shrink: 0; margin: 0; }
+@media(max-width:800px) { .sidebar-fab-mobile { top: calc(var(--crm-titlebar-height, 56px) + 12px); }.without-topbar .queue-workspace-frame { height: calc(100dvh - var(--crm-titlebar-height, 56px) - 100px); } }
+@media(max-width:600px) { .floating-actions { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); gap: 8px; }.floating-actions .legacy-bot-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; }.floating-actions .rc-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; } }

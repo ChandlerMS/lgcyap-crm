@@ -47,7 +47,7 @@ export const HUBSPOT_TOOLS = Object.freeze([
   { id: 'tickets', label: 'Tickets', icon: 'file', path: '/contacts/50894788/objects/0-5' },
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
 // Calls and Recruits keep their pages but open from their panel titles on the Recruits page, not the sidebar.
-export const SIDEBAR_HUBSPOT_TOOLS = Object.freeze(HUBSPOT_TOOLS.filter(tool => tool.id !== 'calls' && tool.id !== 'recruits'));
+export const SIDEBAR_HUBSPOT_TOOLS = Object.freeze(HUBSPOT_TOOLS.filter(tool => !['calls', 'recruits', 'inbox', 'help-desk', 'tickets'].includes(tool.id)));
 // HubSpot views shown as panels on the Recruits page. Those without a page of their own (Meetings, Calendar) send their old links to Recruits.
 export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'meetings', label: 'Meetings' },
@@ -71,6 +71,7 @@ export function sidebarViewFor(view) {
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
+  if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
   if (value === 'queue' || value === 'ringcx' || value === 'event-attendance') return { view: value };
   // Call Analytics was named Lead Data; saved links still open it.
   if (value === 'lead-data') return { view: 'call-analytics' };

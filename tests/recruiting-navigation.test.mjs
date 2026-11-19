@@ -94,7 +94,7 @@ test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls k
   }
   assert.deepEqual(resolveWorkspaceRoute('#calls'), { view: 'calls' });
   // Calls and Recruits open from their panel titles; their pages stay but leave the sidebar.
-  assert.deepEqual(SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Contract Agents', 'Help Desk', 'Tickets']);
+  assert.deepEqual(SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.label), ['Contract Agents']);
   assert.deepEqual(resolveWorkspaceRoute('#recruits'), { view: 'recruits' });
   // Tasks and the full Follow Up list were removed; saved links still open Recruits.
   for (const hash of ['#tasks', '#follow-up']) assert.deepEqual(resolveWorkspaceRoute(hash), { view: 'today' });
@@ -149,3 +149,11 @@ test('stage routes and shared record links remain addressable after removing old
 });
 
 test('legacy Contacts route opens Contract Agents', () => { assert.deepEqual(resolveWorkspaceRoute('#contacts'), { view: 'contract-agents' }); assert.match(HUBSPOT_TOOLS.find(tool => tool.id === 'contract-agents').href, /objects\/2-64481801$/); });
+
+test('Inbox message search destinations resolve to their exact conversation without changing saved area links', () => {
+  assert.deepEqual(resolveWorkspaceRoute('#inbox/thread/12345'), { view: 'inbox', id: '12345' });
+  assert.deepEqual(resolveWorkspaceRoute('#inbox'), { view: 'inbox' });
+  assert.deepEqual(resolveWorkspaceRoute('#help-desk'), { view: 'help-desk' });
+  assert.deepEqual(resolveWorkspaceRoute('#tickets'), { view: 'tickets' });
+  assert.deepEqual(resolveWorkspaceRoute('#inbox/thread/../12345'), { view: 'today' });
+});

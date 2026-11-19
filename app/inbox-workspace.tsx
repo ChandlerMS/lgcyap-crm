@@ -68,12 +68,12 @@ function useInboxPages(input: Input | null, onUnauthorized: () => void) {
   return { state: loadedScope === currentScope ? state : emptyInboxPages() as Pages, busy: loadedScope === currentScope && busy, error: loadedScope === currentScope ? error : null, retryAt, load, pause };
 }
 
-export default function InboxWorkspace({ onUnauthorized }: { onUnauthorized: () => void }) {
+export default function InboxWorkspace({ onUnauthorized, initialThreadId }: { onUnauthorized: () => void; initialThreadId?: string }) {
   const [archive, setArchive] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<Item | null>(null);
+  const [selected, setSelected] = useState<Item | null>(() => initialThreadId && /^[1-9]\d{0,19}$/.test(initialThreadId) ? { id: initialThreadId, title: `Conversation ${initialThreadId}` } : null);
   const threads = useInboxPages({ archive }, onUnauthorized);
   const messages = useInboxPages(selected ? { archive: "all", threadId: selected.id } : null, onUnauthorized);
   const rows = threads.state.items.filter(row => `${row.title} ${row.subtitle} ${row.status}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sort === "name" ? (a.title ?? a.id).localeCompare(b.title ?? b.id, undefined, { numeric: true }) : (sort === "oldest" ? 1 : -1) * ((Date.parse(a.updatedAt ?? a.createdAt ?? "") || 0) - (Date.parse(b.updatedAt ?? b.createdAt ?? "") || 0)));

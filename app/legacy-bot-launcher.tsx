@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type ChatApi = {
   widget: { open(): void; close(): void; status(): { loaded: boolean } };
@@ -10,6 +11,8 @@ type ChatApi = {
 type ChatWindow = Window & { HubSpotConversations?: ChatApi; hsConversationsOnReady?: (() => void)[] };
 
 export default function LegacyBotLauncher() {
+  const [dock, setDock] = useState<HTMLElement | null>(null);
+  useEffect(() => { setDock(document.getElementById("legacy-bot-dock")); }, []);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -47,7 +50,7 @@ export default function LegacyBotLauncher() {
     };
   }, []);
 
-  return <div className="legacy-bot-control" data-ready={ready} data-open={open}>
+  const control = <div className="legacy-bot-control" data-ready={ready} data-open={open}>
     <button ref={button} className="legacy-bot-launcher" type="button" disabled={!ready} aria-label={ready ? "Open Legacy Bot" : "Legacy Bot is loading"} aria-expanded={open} aria-controls="hubspot-messages-iframe-container" onClick={() => {
       const api = (window as ChatWindow).HubSpotConversations;
       if (api) { openedByUser.current = true; setOpen(true); api.widget.open(); }
@@ -56,4 +59,5 @@ export default function LegacyBotLauncher() {
       <span>Legacy Bot</span>
     </button>
   </div>;
+  return dock ? createPortal(control, dock) : control;
 }

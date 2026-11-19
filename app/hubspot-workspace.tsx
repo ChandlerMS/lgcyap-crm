@@ -29,7 +29,7 @@ type ToolResult = {
 };
 type ReadFailure = { message: string; retryAt?: number };
 // compact renders a half-width panel on the Recruits page instead of a full page; pageHref links its title to the full page.
-type Props = { tool: string; label?: string; description?: string; compact?: boolean; pageHref?: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
+type Props = { tool: string; initialThreadId?: string; label?: string; description?: string; compact?: boolean; pageHref?: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
 type Column = { field: keyof ToolRecord; label: string; date?: boolean; dateOnly?: boolean; fullPageOnly?: boolean };
 type Definition = { label: string; description: string; singular: string; columns: Column[] };
 const DEFINITIONS: Record<string, Definition> = {
@@ -63,7 +63,7 @@ function NativeLink({ href, label = "Open in HubSpot" }: { href: unknown; label?
 }
 
 export default function HubSpotWorkspace(props: Props) {
-  return props.tool === "inbox" ? <InboxWorkspace onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
+  return props.tool === "inbox" ? <InboxWorkspace key={props.initialThreadId ?? "inbox"} initialThreadId={props.initialThreadId} onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
 }
 
 function CrmWorkspace({ tool, label, description, compact = false, pageHref, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
