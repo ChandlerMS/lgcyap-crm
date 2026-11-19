@@ -8,7 +8,7 @@ import { createElement, act } from 'react';
 import { createRoot } from 'react-dom/client';
 const require = createRequire(import.meta.url);
 
-test('assistant panels load on demand, preserve frames, switch and restore focus on close', async () => {
+test('provider buttons open separate windows securely and offer a fallback when blocked', async () => {
   await mkdir('work', { recursive: true });
   const dir = await mkdtemp('work/ai-providers-');
   const dom = new JSDOM('<div id="app"></div>');
@@ -24,29 +24,32 @@ test('assistant panels load on demand, preserve frames, switch and restore focus
     assert.equal(document.querySelectorAll('iframe').length, 0);
     const urls = ['https://gemini.google.com/app', 'https://claude.ai/', 'https://chatgpt.com/', 'https://grok.com/'];
     const buttons = [...document.querySelectorAll('.ai-provider-launcher')];
+    const opened = [];
+    window.open = (...args) => {
+      const popup = { opener: window, location: { replace(url) {
+        assert.equal(popup.opener, null);
+        popup.url = url;
+      } }, focus() { popup.focused = true; } };
+      opened.push({ args, popup });
+      return popup;
+    };
     for (const [index, button] of buttons.entries()) {
       await act(async () => button.click());
-      const panel = document.getElementById(button.getAttribute('aria-controls'));
-      assert.equal(panel.hidden, false);
-      assert.equal(panel.querySelector('iframe').src, urls[index]);
-      assert.equal(panel.querySelector('a').href, urls[index]);
-      assert.equal(document.activeElement, panel.querySelector('h2'));
-      assert.equal([...document.querySelectorAll('[role="dialog"]')].filter(item => !item.hidden).length, 1);
-      const frame = panel.querySelector('iframe');
-      await act(async () => button.click());
-      assert.equal(panel.hidden, true);
-      await act(async () => button.click());
-      assert.equal(panel.hidden, false);
-      assert.equal(panel.querySelector('iframe'), frame);
-      await act(async () => panel.querySelector('button').click());
-      assert.equal(panel.hidden, true);
-      assert.equal(document.activeElement, button);
+      assert.equal(opened[index].args[0], 'about:blank');
+      assert.equal(opened[index].args[1], '_blank');
+      assert.match(opened[index].args[2], /popup=yes/);
+      assert.equal(opened[index].popup.url, urls[index]);
+      assert.equal(opened[index].popup.focused, true);
     }
-    const frame = document.querySelector('iframe');
-    await act(async () => buttons[0].click());
-    assert.equal(document.querySelector('iframe'), frame);
-    await act(async () => document.querySelector('[role="dialog"]').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
-    assert.equal(buttons[0].getAttribute('aria-expanded'), 'false');
+    assert.equal(document.querySelectorAll('iframe').length, 0);
+    window.open = () => null;
+    await act(async () => buttons[1].click());
+    const fallback = document.querySelector('[role="status"] a');
+    assert.equal(fallback.href, urls[1]);
+    assert.equal(fallback.target, '_blank');
+    assert.equal(fallback.rel, 'noopener noreferrer');
+    await act(async () => document.querySelector('[aria-label="Dismiss popup notice"]').click());
+    assert.equal(document.querySelector('[role="status"]'), null);
   } finally {
     if (root) await act(async () => root.unmount());
     Object.assign(globalThis, previous); delete globalThis.IS_REACT_ACT_ENVIRONMENT;
