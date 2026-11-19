@@ -1088,3 +1088,8 @@ body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-contain
 
 .shopper-calls-embed { height: min(640px, calc(100dvh - 190px)); }
 @media (max-width: 600px) { .shopper-calls-embed { height: min(640px, calc(100dvh - 220px)); } }
+
+/* Keep sales and calls close to their navigation and view tabs. */
+main.content.sales-calls-content { padding-top: 16px; }
+.sales-calls-content .dashboard-back-row { margin-bottom: 12px; }
+.sales-calls-content .sales-heading { margin-top: 12px; }
