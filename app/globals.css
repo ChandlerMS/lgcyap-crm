@@ -566,8 +566,8 @@ a.summary-chip:hover { border-color: var(--gold); }
 .activity-body { white-space: pre-wrap; line-height: 1.65; max-height: 480px; overflow: auto; }
 .activity-entry summary { cursor: pointer; color: var(--gold); padding: 8px 0; }
 .today-overview > section { min-width: 0; margin-bottom: 0; }
-/* 350px holds until the rows are measured; then the panel fits exactly ten rows before it scrolls. */
-.recruits-panel .table-wrap { max-height: 350px; overflow: auto; }
+/* The panel pages its rows (ten at a time), so the table shows the whole page without its own scroll. */
+.recruits-panel .table-wrap { overflow-x: auto; }
 /* Add Recruits, Recruits and Agents sit together beside the reporting period. */
 .dashboard-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 /* Four columns fit a half-width panel; the full Recruits list keeps the wide table. */
@@ -687,3 +687,51 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .floating-actions .rc-launcher, .floating-actions .legacy-bot-launcher { position: static; flex-shrink: 0; margin: 0; }
 @media(max-width:800px) { .sidebar-fab-mobile { top: calc(var(--crm-titlebar-height, 56px) + 12px); }.without-topbar .queue-workspace-frame { height: calc(100dvh - var(--crm-titlebar-height, 56px) - 100px); } }
 @media(max-width:600px) { .floating-actions { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); gap: 8px; }.floating-actions .legacy-bot-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; }.floating-actions .rc-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; } }
+
+/* Dashboard panel pages: page number, rows shown, an optional rows-per-page menu, Previous and Next. */
+.panel-pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; padding-top: 18px; color: var(--muted); font-size: 13px; }
+.panel-pager-count strong { color: var(--text); font-weight: 600; }
+.panel-pager-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.panel-pager-size { display: inline-flex; align-items: center; gap: 8px; }
+.panel-pager-size select { min-height: 44px; padding: 8px 10px; border: 1px solid var(--control-line); border-radius: 5px; background: #111110; color: var(--text); font: inherit; }
+.panel-pager-size select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* Note, Task and Follow up beside each recruit's contact tools. */
+.recruit-row-tools { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
+.recruit-quick-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.quick-action-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border: 1px solid #6d633e; border-radius: 5px; background: #11110e; color: var(--gold); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.quick-action-button .icon { width: 17px; height: 17px; }
+.quick-action-button:hover { background: #211d10; border-color: var(--gold); }
+.quick-action-button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.quick-action-dialog .dialog-header h2 .muted { font-size: 16px; font-weight: 400; }
+.quick-action-dialog .form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; text-align: left; white-space: normal; }
+.quick-action-dialog .field:has(textarea), .quick-action-when, .quick-action-done, .quick-action-error { grid-column: 1 / -1; }
+.quick-action-when { margin: 0; padding: 0; border: 0; }
+.quick-action-when legend { margin-bottom: 8px; color: #e0dcd2; font-size: 13px; font-weight: 550; }
+.quick-action-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.quick-action-presets label { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--control-line); border-radius: 5px; cursor: pointer; }
+.quick-action-presets label:has(input:checked) { border-color: var(--gold); background: #1a180f; }
+.quick-action-presets label { justify-content: flex-start; text-align: left; font-size: 14px; }
+.quick-action-presets input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--gold); }
+.quick-action-done { margin: 0; color: #9fd6a2; font-size: 15px; line-height: 1.6; }
+.quick-action-error { margin: 0; color: #f1c678; }
+@media (max-width: 560px) { .quick-action-dialog .form-grid, .quick-action-presets { grid-template-columns: minmax(0, 1fr); } }
+
+/* Tasks and Follow up titles open their pages; hovering or focusing the title previews the first items. */
+.summary-chips-heading.has-preview { position: relative; }
+.summary-chips-link { color: inherit; text-decoration: underline; text-decoration-color: #6d633e; text-underline-offset: 4px; }
+.summary-chips-link:hover { color: var(--gold); text-decoration-color: var(--gold); }
+.summary-chips-link:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 2px; }
+.summary-preview { position: absolute; top: 100%; left: 0; z-index: 25; display: none; width: min(360px, 80vw); padding: 14px 16px; border: 1px solid var(--gold); border-radius: 6px; background: var(--panel); box-shadow: 0 14px 34px rgba(0, 0, 0, .6); font-size: 13px; }
+.summary-chips-heading.has-preview:hover .summary-preview, .summary-chips-heading.has-preview:focus-within .summary-preview { display: block; }
+.summary-preview-title { margin: 0 0 8px; color: var(--gold); font-weight: 600; }
+.summary-preview ul { display: grid; gap: 8px; margin: 0 0 10px; padding: 0; list-style: none; }
+.summary-preview li { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.summary-preview li > a, .summary-preview li > span:first-child { overflow: hidden; color: var(--text); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.summary-preview li > a:hover { color: var(--gold); }
+.summary-preview p { margin: 0 0 8px; }
+.summary-preview-open { font-weight: 600; }
+
+/* The Follow up page. */
+.title-count { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; font-size: .6em; }
+.follow-up-days { color: var(--gold); font-variant-numeric: tabular-nums; }

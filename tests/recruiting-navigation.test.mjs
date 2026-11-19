@@ -96,8 +96,11 @@ test('Meetings, Calendar and Calls are panels on the Recruits page; only Calls k
   // Calls and Recruits open from their panel titles; their pages stay but leave the sidebar.
   assert.deepEqual(SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.label), ['Contract Agents']);
   assert.deepEqual(resolveWorkspaceRoute('#recruits'), { view: 'recruits' });
-  // Tasks and the full Follow Up list were removed; saved links still open Recruits.
-  for (const hash of ['#tasks', '#follow-up']) assert.deepEqual(resolveWorkspaceRoute(hash), { view: 'today' });
+  // Tasks and Follow up open their own pages from the dashboard; the sidebar keeps Dashboard selected.
+  for (const view of ['tasks', 'follow-up']) {
+    assert.deepEqual(resolveWorkspaceRoute(`#${view}`), { view });
+    assert.equal(sidebarViewFor(view), 'today');
+  }
 });
 
 test('each stage page includes only its exact HubSpot stage ID', () => {
@@ -141,7 +144,7 @@ test('Contracting branch queues use the explicit route and never infer a missing
 
 test('stage routes and shared record links remain addressable after removing old pages', () => {
   for (const page of WORKSPACE_NAV) assert.deepEqual(resolveWorkspaceRoute(`#${page.id}`), { view: page.id });
-  assert.deepEqual(resolveWorkspaceRoute('#follow-up'), { view: 'today' });
+  assert.deepEqual(resolveWorkspaceRoute('#follow-up'), { view: 'follow-up' });
   assert.deepEqual(resolveWorkspaceRoute('#add-recruit'), { view: 'add-recruits' });
   assert.deepEqual(resolveWorkspaceRoute('#recruit/123'), { view: 'today', id: '123' });
   for (const retired of ['orientation', 'licensing', 'transfers']) assert.deepEqual(resolveWorkspaceRoute(`#${retired}`), { view: 'today' });

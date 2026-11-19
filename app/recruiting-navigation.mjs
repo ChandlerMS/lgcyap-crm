@@ -61,10 +61,10 @@ export const QUEUE_PAGES = Object.freeze([
   { id: 'queue', label: 'Shopper', icon: 'phone', source: 'shopper' },
   { id: 'ringcx', label: 'Standard vs Preferred', icon: 'phone', source: 'svp' },
 ].map(page => Object.freeze(page)));
-// The sidebar link that stands for a page reached from another page: Add Recruits and the full Event Attendance page
-// (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
+// The sidebar link that stands for a page reached from another page: Add Recruits, Tasks, Follow up and the full
+// Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {
-  if (view === 'add-recruits' || view === 'event-attendance') return 'today';
+  if (['add-recruits', 'event-attendance', 'tasks', 'follow-up'].includes(view)) return 'today';
   if (view === 'call-analytics') return 'leaderboard';
   return view;
 }
@@ -76,8 +76,8 @@ export function resolveWorkspaceRoute(hash) {
   // Call Analytics was named Lead Data; saved links still open it.
   if (value === 'lead-data') return { view: 'call-analytics' };
   if (value === 'contacts') return { view: 'contract-agents' };
-  // Tasks and the full Follow Up list left the Recruits page; saved links still open it.
-  if (value === 'follow-up' || value === 'tasks') return { view: 'today' };
+  // Tasks and Follow up open their own pages from the dashboard's summaries.
+  if (value === 'follow-up' || value === 'tasks') return { view: value };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
   if (RECRUITS_PAGE_TOOLS.some(tool => tool.id === value) && !HUBSPOT_TOOLS.some(tool => tool.id === value)) return { view: 'today' };

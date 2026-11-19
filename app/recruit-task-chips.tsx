@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { hubspotHref, openTaskChips } from "./recruit-task-chips.mjs";
 import SummaryChips, { type SummaryChip } from "./summary-chips";
+import { TASKS_CHANGED_EVENT } from "./recruit-quick-actions";
 
 type TasksResult = { status?: string; records?: { id: string; title: string; status?: string | null; scheduledAt?: string | null; hubspotUrl?: string }[]; partial?: boolean; hubspotUrl?: string; error?: { message?: string } };
 type State = { status: "loading" } | { status: "ready"; result: TasksResult } | { status: "failed"; message: string };
@@ -12,6 +13,12 @@ export default function RecruitTaskChips({ live, now, onUnauthorized }: { live: 
   const [attempt, setAttempt] = useState(0);
   const unauthorizedRef = useRef(onUnauthorized);
   useEffect(() => { unauthorizedRef.current = onUnauthorized; }, [onUnauthorized]);
+  // A task or follow-up added from a Recruits row reloads this list.
+  useEffect(() => {
+    const reload = () => setAttempt(value => value + 1);
+    window.addEventListener(TASKS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(TASKS_CHANGED_EVENT, reload);
+  }, []);
   useEffect(() => {
     if (!live) return;
     const controller = new AbortController();
@@ -36,6 +43,6 @@ export default function RecruitTaskChips({ live, now, onUnauthorized }: { live: 
     : state.status === "loading" ? "Loading tasks from HubSpot…"
     : state.status === "failed" ? <>{state.message} <button className="text-link" onClick={() => { setState({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></>
     : "No open tasks assigned to you.";
-  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
+  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
     empty={empty} more={{ href: hubspotHref(ready?.hubspotUrl), external: true, label: "open tasks in HubSpot" }} />;
 }

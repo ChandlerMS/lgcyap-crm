@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TV_BOARD_PAGES, TV_BOARDS, TV_DEFAULTS, tvBoardLabel, tvConfig, tvSearch, tvSlide } from '../app/leaderboard-tv/tv-model.mjs';
-import { rowLimitHeight } from '../app/row-limit.mjs';
 
 test('TV settings come from the link and fall back to safe defaults', () => {
   const defaults = tvConfig('');
@@ -66,18 +65,4 @@ test('a slide shows at most the configured rows and says how many more there are
 test('an unavailable board explains itself instead of showing zeros', () => {
   assert.deepEqual(tvSlide({ status: 'connection-required', rows: [], error: { message: 'Connect PolicyTek.' } }, 'shopper'), { available: false, message: 'Connect PolicyTek.' });
   assert.deepEqual(tvSlide(null, 'shopper'), { available: false, message: 'This leaderboard is not available right now.' });
-});
-
-test('dashboard panels size to exactly ten rows, measured from the real rows', () => {
-  const rect = (top, bottom) => ({ top, bottom });
-  const rows = heights => { let y = 155; return heights.map(height => { const top = y; y += height; return { getBoundingClientRect: () => rect(top, top + height) }; }); };
-  const wrap = body => ({ clientTop: 0, scrollTop: 0, getBoundingClientRect: () => rect(100, 450), querySelectorAll: () => body });
-  // A 55px header and varied rows: the panel ends right after the tenth row.
-  const tall = rows([94, 73, 50, 94, 73, 92, 50, 73, 94, 85, 73, 50]);
-  assert.equal(rowLimitHeight(wrap(tall), 10), 55 + 94 + 73 + 50 + 94 + 73 + 92 + 50 + 73 + 94 + 85 + 1);
-  // Ten rows or fewer never scroll.
-  assert.equal(rowLimitHeight(wrap(rows([50, 50, 50])), 10), null);
-  // Measuring while scrolled gives the same answer.
-  const scrolled = rows([50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]).map(row => ({ getBoundingClientRect: () => { const { top, bottom } = row.getBoundingClientRect(); return rect(top - 120, bottom - 120); } }));
-  assert.equal(rowLimitHeight({ ...wrap(scrolled), scrollTop: 120 }, 10), 55 + 500 + 1);
 });
