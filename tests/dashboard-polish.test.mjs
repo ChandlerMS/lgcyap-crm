@@ -28,7 +28,7 @@ test('summary card hover lists carry each item\'s details', () => {
   assert.doesNotMatch(chips, /PREVIEW\)/);
   assert.match(source('app/recruit-email.tsx'), /<SummaryChips id="email-summary" title="Email" preview /);
   const preview = source('app/summary-preview.tsx');
-  assert.match(preview, /if \(panel\.current\?\.matches\(":hover"\) \|\| anchor\.current\?\.matches\(":hover"\)\) return;\s*setOpen\(false\);/);
+  assert.match(preview, /if \(panel\.current\?\.matches\(":hover"\) \|\| anchor\.current\?\.matches\(":hover"\)\) return;\s*close\(\);/);
   assert.doesNotMatch(preview, /!panel\.current\?\.contains\(document\.activeElement\) && !anchor\.current\?\.contains\(document\.activeElement\)/, 'focus inside no longer holds the pop-up open after the pointer leaves');
 });
 

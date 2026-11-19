@@ -1,17 +1,20 @@
 "use client";
+import SvpDispositions from "./svp-dispositions";
 import HubSpotWorkspace from "./hubspot-workspace";
 import tabs from "./leaderboard.module.css";
 
-export default function CallsPage({ view, onSourceChange, onUnauthorized, onDirtyChange, onBusyChange }: { view: "shopper" | "standard"; onSourceChange: (source: "shopper" | "standard") => void; onUnauthorized: () => void; onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void }) {
+export default function CallsPage({ view, onSourceChange, onUnauthorized, onDirtyChange, onBusyChange }: { view: "shopper" | "shopper-dispositions" | "standard" | "standard-dispositions"; onSourceChange: (source: "shopper" | "shopper-dispositions" | "standard" | "standard-dispositions") => void; onUnauthorized: () => void; onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void }) {
   return <>
     <div className={`${tabs.boardTabs} ${tabs.centeredBoardTabs}`} role="group" aria-label="Calls view">
       <button type="button" aria-pressed={view === "shopper"} onClick={() => onSourceChange("shopper")}>Shopper</button>
+      <button type="button" aria-pressed={view === "shopper-dispositions"} onClick={() => onSourceChange("shopper-dispositions")}>Shopper Dispositions</button>
       <button type="button" aria-pressed={view === "standard"} onClick={() => onSourceChange("standard")}>Standard vs Preferred</button>
+      <button type="button" aria-pressed={view === "standard-dispositions"} onClick={() => onSourceChange("standard-dispositions")}>Standard vs Preferred Dispositions</button>
     </div>
-    {view === "shopper" ? <section aria-label="Shopper calls">
-      <div className="sales-heading"><h1 className="page-title" id="page-title" tabIndex={-1}>Shopper Calls</h1><a className="btn btn-secondary" href="https://app.policytek.com/calls" target="_blank" rel="noopener noreferrer">Open in PolicyTek<span className="sr-only"> (opens in a new tab)</span></a></div>
-      <p className="helper">Live calls from PolicyTek. If prompted, sign in to PolicyTek in this view or open PolicyTek in a new tab.</p>
-      <div className="shopper-embed shopper-calls-embed"><iframe className="shopper-embed-frame" src="https://app.policytek.com/calls" title="Shopper calls · PolicyTek" referrerPolicy="no-referrer" /></div>
+    {view === "standard-dispositions" ? <SvpDispositions onUnauthorized={onUnauthorized} /> : view !== "standard" ? <section aria-label={view === "shopper-dispositions" ? "Shopper dispositions" : "Shopper calls"}>
+      <div className="sales-heading"><h1 className="page-title" id="page-title" tabIndex={-1}>{view === "shopper-dispositions" ? "Shopper Dispositions" : "Shopper Calls"}</h1><a className="btn btn-secondary" href={view === "shopper-dispositions" ? "https://app.policytek.com/leads" : "https://app.policytek.com/calls"} target="_blank" rel="noopener noreferrer">Open in PolicyTek<span className="sr-only"> (opens in a new tab)</span></a></div>
+      <p className="helper">{view === "shopper-dispositions" ? "Shopper dispositions from PolicyTek." : "Live calls from PolicyTek."} If prompted, sign in to PolicyTek in this view or open PolicyTek in a new tab.</p>
+      <div className="shopper-embed shopper-calls-embed"><iframe key={view} className="shopper-embed-frame" src={view === "shopper-dispositions" ? "https://app.policytek.com/leads" : "https://app.policytek.com/calls"} title={view === "shopper-dispositions" ? "Shopper dispositions · PolicyTek leads" : "Shopper calls · PolicyTek"} referrerPolicy="no-referrer" /></div>
     </section> : <div className="sales-records"><HubSpotWorkspace tool="calls" label="Calls" description="Standard vs Preferred · HubSpot calls assigned to you." onUnauthorized={onUnauthorized} onDirtyChange={onDirtyChange} onBusyChange={onBusyChange} /></div>}
   </>;
 }

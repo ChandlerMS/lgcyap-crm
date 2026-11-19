@@ -120,7 +120,7 @@ global search and in-app detail views. Contacts, tickets, tasks, companies and
 meetings offer Edit → Review → Save for their fixed supported fields when the
 server verifies the required write grants. No generic creation, deletion or
 messaging is added. Calendar represents CRM meetings, not Google Calendar.
-Inbox reads plain-text messages without sending or attachments. See
+The full Inbox page reads plain-text messages. Its dashboard hover preview can reply to supported conversations using the existing production HubSpot connection; see [Inbox replies](docs/inbox-replies.md). Attachments remain in HubSpot. See
 [the API contract and scope requirements](HUBSPOT-TOOLS-API.md).
 
 ## Leaderboard and Inbox pagination
@@ -474,3 +474,5 @@ For local development, add the two variables to the ignored `.env.local`. Keep t
 The default `availableRule` in `lib/phone-hud-rule.mjs` shows every explicitly available, non-busy sales agent. Heartbeat and idle cutoffs can be configured there. Names, source labels and times are projected from upstream responses; phone numbers, emails and credentials never reach the board. Cached boards and access tokens are shared only within each server instance, so multiple Vercel instances can independently read PolicyTek.
 
 Run `node --test tests/phone-hud.test.mjs` for Queue filtering, caching, token retry, safe failures and endpoint authorization tests. Fixtures are synthetic and make no live PolicyTek calls.
+
+Automatic monthly application Google Sheets: see [setup, owner consent, weekly tabs and 9 am Eastern refresh](docs/application-sheets.md).

@@ -801,6 +801,20 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .summary-preview p { margin: 0 0 8px; }
 .summary-preview-open { font-weight: 600; }
 
+/* Inbox's interactive preview separates conversation details from its row actions. */
+#inbox-summary-preview { box-sizing: border-box; padding: 20px 24px; line-height: 1.6; }
+#inbox-summary-preview > .summary-preview-close { display: flex; flex-shrink: 0; width: fit-content; align-self: flex-end; margin: 0 0 12px auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; }
+#inbox-summary-preview .summary-preview-head { flex-shrink: 0; }
+#inbox-summary-preview .summary-preview-list { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+#inbox-summary-preview .summary-preview-head { align-items: center; flex-wrap: wrap; gap: 12px 20px; padding-bottom: 16px; margin-bottom: 0; border-bottom: 1px solid var(--line); }
+#inbox-summary-preview .summary-preview-list > li { gap: 12px; padding: 18px 0; }
+#inbox-summary-preview .summary-preview-list > li:first-child { border-top: 0; }
+#inbox-summary-preview .summary-preview-row { align-items: center; flex-wrap: nowrap; gap: 10px 16px; }
+#inbox-summary-preview .summary-preview-row > .summary-preview-select { flex: 1; min-height: 36px; white-space: normal; line-height: 1.5; }
+#inbox-summary-preview .summary-preview-row > .text-link { flex-shrink: 0; margin-left: auto; justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; line-height: 1.5; }
+#inbox-summary-preview .summary-preview-row > .text-link:hover { border-color: var(--gold); }
+@media (max-width: 480px) { #inbox-summary-preview { padding: 16px; } }
+
 /* The Follow up page. */
 .title-count { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; font-size: .6em; }
 .follow-up-days { color: var(--gold); font-variant-numeric: tabular-nums; }
@@ -894,7 +908,7 @@ a.summary-card-more:hover { text-decoration: underline; }
 .nav-site-link { justify-content: space-between; }
 .nav-site-link .icon { width: 14px; height: 14px; color: #a79b76; }
 /* The Email card uses the shared summary structure and follows its responsive grid. */
-.today-summaries { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.today-summaries { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .email-new-button { white-space: nowrap; font-size: 11px; padding: 5px 7px; }
 .email-dialog { width: min(820px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; border: 1px solid var(--border, #444); border-radius: 16px; padding: 24px; color: var(--text, #eee); background: var(--surface, #17191f); }
 .email-dialog::backdrop { background: #000a; }
@@ -1069,7 +1083,9 @@ body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-contain
 
 .launcher-brand-icon { display: inline-block; flex: 0 0 24px; width: 24px; height: 24px; background-position: center; background-repeat: no-repeat; background-size: contain; }
 
-#legacy-bot-dock { display: contents; }
+#legacy-bot-dock { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px; min-width: 0; pointer-events: auto; flex: 0 1 auto; }
+.support-panel { left: max(16px, env(safe-area-inset-left)); right: auto; }
+@media (max-width: 800px) { #legacy-bot-dock { gap: 8px; } }
 
 /* Icon-only bottom controls retain their spoken labels and native hover titles. */
 .floating-actions .legacy-bot-launcher, .legacy-bot-control .legacy-bot-launcher { width: 54px; height: 54px; padding: 0; gap: 0; justify-content: center; }
@@ -1094,3 +1110,14 @@ main.content:has(.shopper-embed) { max-width: none; padding-inline: 16px; }
 main.content.sales-calls-content { padding-top: 16px; }
 .sales-calls-content .dashboard-back-row { margin-bottom: 12px; }
 .sales-calls-content .sales-heading { margin-top: 12px; }
+
+/* Keep the left launchers in the workspace beside the expanded desktop sidebar. */
+@media (min-width: 801px) {
+  body:has(.app-shell:not(.sidebar-collapsed)) .floating-actions,
+  body:has(.app-shell:not(.sidebar-collapsed)) .support-panel {
+    left: calc(var(--sidebar-width) + 16px);
+  }
+  body:has(.app-shell:not(.sidebar-collapsed)) .support-panel {
+    max-width: calc(100vw - var(--sidebar-width) - 32px);
+  }
+}

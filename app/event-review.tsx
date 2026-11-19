@@ -7,6 +7,7 @@ import styles from './event-review.module.css';
 export type Review = { status: 'approved' | 'denied'; noteId: string; reviewedAt: string };
 export type ReviewStatus = Review['status'];
 export type EventReviews = {
+  reviews?: Record<string, Review>;
   // Approve, Deny, the decision and Add Note for one recruiting ticket.
   actions: (row: { ticketId: string | null; name: string }) => ReactNode;
   error: string;
@@ -67,5 +68,7 @@ export function useEventReviews({ reviews, reviewComplete, canReview = false, on
       {canReview && <RecruitQuickActions kinds={['note']} recruitId={id} recruitName={row.name} />}
     </div>;
   };
-  return { actions, error, retry: failed ? () => void save(failed.ticketId, failed.status) : null };
+  const merged = { ...reviews };
+  for (const [id, review] of Object.entries(localReviews)) merged[id] = newerEventReview(reviews?.[id], review) as Review;
+  return { actions, reviews: merged, error, retry: failed ? () => void save(failed.ticketId, failed.status) : null };
 }

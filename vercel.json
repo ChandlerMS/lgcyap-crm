@@ -19,6 +19,14 @@
     {
       "path": "/api/cron/no-contact-tasks",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/application-sheets",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/custom-recruits",
+      "schedule": "* * * * *"
     }
   ]
 }

@@ -1,0 +1,31 @@
+# Automatic monthly application Sheets
+
+Open Applications in the production CRM, signed in as **chandler@lgcyap.com**, and choose **Connect Google Sheets**. Choose that same Google account and allow file access. This is a one-time offline authorization, separate from CRM login and one-off exports. The chat's Google Drive connection cannot authorize a deployed server.
+
+After consent, an initial full sync runs in the background. The panel shows the current month's Sheet and last successful check; Sync now performs a deliberate full repair. Existing manual Google Sheets/CSV/Excel exports still work independently.
+
+## Setup
+
+Use the existing production GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BETTER_AUTH_SECRET, BETTER_AUTH_URL, DATABASE_URL, HUBSPOT_ACCESS_TOKEN and CRON_SECRET. Enable both **Google Drive API** and **Google Sheets API** for that OAuth client's Google Cloud project. Allow `https://www.googleapis.com/auth/drive.file` through Workspace controls if required. The flow reuses the existing registered callback `https://crm.lgcyap.com/api/auth/callback/google` with a distinct `application-sheets.` state prefix. No new callback registration is needed. A Google consent screen left in external Testing mode can expire refresh tokens after seven days; use an appropriate internal/published configuration for sustained background access.
+
+The additive migration `0015_application_sheets.sql` initializes lazily after request authorization. It stores an encrypted refresh token, monthly file IDs/fingerprints, last-success/error state, and a bounded job lease. Keep BETTER_AUTH_SECRET stable; reconnect Google Sheets after changing it.
+
+## Timing and source
+
+Production Vercel cron `/api/cron/application-sheets` runs every minute with CRON_SECRET bearer authorization. It checks the same HubSpot application notes as the Applications page, exports newly visible submissions, and updates changed records. HubSpot indexing latency applies. No browser or signed-in session needs to remain open.
+
+Starting at 9 am in **America/New_York**, it rewrites all managed monthly data even if the source fingerprint has not changed, repairing accidental cell edits. The local-time check follows daylight saving time. Successful repair progress is recorded per month and Eastern date, so interrupted runs resume later in the day without repeating already repaired months. Failed runs retry the following minute; this does not promise exact-second delivery during provider outages.
+
+The public application site is a separate deployment. For an immediate reconciliation request after its successful HubSpot submission, configure a separate random 32+ character **APPLICATION_SHEETS_NOTIFY_SECRET** in both servers, then have the submission server POST to `/api/applications/sheets/notify` with `Authorization: Bearer <notification secret>`. No applicant body is required or accepted as source data. This optional hook is not installed in the external application site by this change; the minutely source checks run independently. A notification before HubSpot search indexing completes is recovered by the next source check.
+
+## Files, rows and recovery
+
+Each Eastern calendar month has one native Google Sheet named `MM-YY Applications` in Chandler's My Drive, also visible in Google Sheets. It has all weekly tabs for that month, Monday–Sunday clipped at month boundaries (for example November 2026 starts with Week 1 (01-01)). The empty current month is created automatically. Prior months remain separate and are refreshed while their submissions remain in the authoritative report.
+
+Every HubSpot application note ID has one row, including repeat submissions by the same person. Columns include submitted time in Eastern, applicant information, requirement outcomes and private flags, current stage, HubSpot links, and all parsed question/answer fields. Photo ID is only an attached/not-attached indicator; no ID images or expiring download links are copied. Applicant text is written as literal strings, never executable formulas. Drive files are created without added sharing grants, so Chandler controls subsequent sharing in Drive.
+
+The synchronizer manages the generated weekly tabs and table columns. Do not add manual notes inside those columns: sync replaces their contents. Additional columns to the right are left alone. Application question changes can add managed columns, so put independent manual work in a separate tab. Spreadsheet styling and filter ranges are maintained by the sync.
+
+A two-minute DB lease serializes the 60-second jobs. The Google transport has a shared 50-second request budget. File IDs are saved before content writes, and a Drive appProperties marker recovers a file created before a crash. Repeated notifications and ambiguous content-write responses replace rows deterministically rather than appending duplicates. Ambiguous duplicate monthly files cause an error for investigation. Partial HubSpot results never replace a workbook. The strict Sheets source reader uses ID keysets past the dashboard's 2,000-note display limit, freezes its creation-time upper bound and rejects inconsistent totals or incomplete association/ticket batches. It preserves complete answers rather than applying dashboard display truncation. Provider errors and OAuth codes/tokens are not logged or returned in status responses.
+
+If Google access is revoked, the panel reports a failed sync and keeps the previous successful time. Reconnect Google Sheets and use Sync now. Revoking the app in Google Account settings stops future access; it does not delete monthly Sheets. No automated deletion or extra sharing is performed.

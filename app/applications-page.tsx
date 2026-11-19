@@ -1,10 +1,14 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
+import ApplicationSheetsPanel from "./application-sheets-panel";
 import PhotoIdViewer, { type PhotoNote } from "./photo-id-viewer";
 import { useEventReviews, type EventReviews, type Review } from "./event-review";
 import { useExpandCollapse } from "./expand-collapse";
 import PanelPager from "./panel-pager";
+import ApplicationExportButton from "./application-export-button";
+import { recruitingCalendarDate, resolveRecruitingPeriod } from "./recruiting-period.mjs";
+import { filterApplications } from "../lib/application-filters.mjs";
 import { pageWindow } from "./panel-pager.mjs";
 
 type Row = { label: string; value: string };
@@ -35,7 +39,6 @@ const OUTCOMES: Record<Application["outcome"], string> = {
   "contact-only": "No recruiting ticket: a required item was not met",
   unknown: "Recorded in HubSpot",
 };
-const matches = (item: Application, search: string) => !search || [item.name, item.preferredName, item.email, item.phone, item.city].some(value => value.toLowerCase().includes(search));
 
 // Every online agent application in one place for the admin team: who applied and when, any required item they did
 // not meet, what needs a private conversation, where the record is now, the Approved or Denied review, and every
@@ -47,6 +50,9 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
   const [query, setQuery] = useState("");
   const [office, setOffice] = useState("all");
   const [status, setStatus] = useState<Status>("all");
+  const [datePreset, setDatePreset] = useState('all');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dateSort, setDateSort] = useState('newest');
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [attempt, setAttempt] = useState(0);
   const [page, setPage] = useState(1);
@@ -89,10 +95,11 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
     return () => controller.abort();
   }, [attempt, waiting]);
 
-  const search = query.trim().toLowerCase();
   const all = report?.applications ?? [];
-  const shown = all.filter(item => matches(item, search) && (office === "all" || (item.officeKey ?? "other") === office)
-    && (status === "all" || (status === "not-met" && item.requirementsMet === false) || (status === "flagged" && item.flags.length > 0) || (status === "waiting" && item.waitingAtHiringEvent)));
+  const anchorDate = selectedDate || recruitingCalendarDate(report?.fetchedAt) || '';
+  const period = datePreset === 'all' || !anchorDate ? null : resolveRecruitingPeriod({ preset: datePreset === 'day' ? 'date' : datePreset === 'week' ? 'weekly' : 'monthly', startDate: anchorDate }, new Date(`${anchorDate}T12:00:00Z`));
+  const dateFilters = { startDate: period?.startDate ?? '', endDate: period?.endDate ?? '', sort: dateSort };
+  const shown = filterApplications(all, { query, office, status, ...dateFilters }) as Application[];
   // The page lists every match; the Event Attendance section shows them ten a page.
   const view = board ? pageWindow(shown.length, page, SECTION_PAGE_SIZE) : { start: 0, end: shown.length };
   const toggle = (id: string) => setOpen(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -106,7 +113,8 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
     if (tileOpen(key)) { setListOpen(false); return; }
     filter(key); setListOpen(true);
   };
-  const summary = report?.summary;
+  const dated = filterApplications(all, dateFilters) as Application[];
+  const summary = !report ? undefined : !period ? report.summary : { total: dated.length, met: dated.filter(item => item.requirementsMet === true).length, notMet: dated.filter(item => item.requirementsMet === false).length, flagged: dated.filter(item => item.flags.length > 0).length, waitingAtHiringEvent: dated.filter(item => item.waitingAtHiringEvent).length, photoId: dated.filter(item => item.photoId).length };
   const tiles: { key: Status; label: string; value: number | undefined; tone?: string }[] = [
     { key: "all", label: "Applications", value: summary?.total },
     { key: "not-met", label: "Did not meet a required item", value: summary?.notMet, tone: styles.bad },
@@ -128,9 +136,19 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         <p className={styles.lede}>Online agent applications from apply.lgcyap.com, newest first{report ? ` since ${SINCE.format(Date.parse(`${report.since}T12:00:00Z`))}` : ""}. Answers are private: share them only with the hiring team.</p>
       </div>
       <div className={styles.headActions}>
+        <ApplicationExportButton filters={{ query, office, status, ...dateFilters }} count={shown.length} applications={shown} reviews={reviewer.reviews} reviewComplete={report?.reviewComplete} disabled={loading || !report || report.partial} />
         {report && <span className={styles.updated}>Updated {WHEN.format(Date.parse(report.fetchedAt))}</span>}
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
       </div>
+    </div>
+    {!board && <ApplicationSheetsPanel />}
+    <div className={styles.dateFilters} aria-label="Application date filters">
+      <div className={styles.datePresets} role="group" aria-label="Application date period">
+        {[['all', 'All dates'], ['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([value, label]) => <button key={value} type="button" className="btn btn-secondary" aria-pressed={datePreset === value} onClick={() => { setDatePreset(value); setPage(1); }}>{label}</button>)}
+      </div>
+      {datePreset !== 'all' && <label className={styles.select}><span>{datePreset === 'day' ? 'Date' : `Date in ${datePreset}`}</span><input type="date" value={anchorDate} onChange={event => { if (event.target.value) { setSelectedDate(event.target.value); setPage(1); } }} /></label>}
+      <label className={styles.select}><span>Sort by date</span><select value={dateSort} onChange={event => { setDateSort(event.target.value); setPage(1); }}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+      <p className={styles.updated} role="status">{period?.description ?? 'All dates'} · Eastern time{datePreset === 'week' ? ' · Monday–Sunday' : ''}</p>
     </div>
     {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}{board ? " This list tries again after the next automatic update, within a minute." : ""}</p></div>}
     {report?.partial && <p className="partial-notice" role="status">HubSpot returned part of the applications. Refresh later for the rest.</p>}

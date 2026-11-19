@@ -3,10 +3,13 @@
 .inBoard { padding-bottom: 0; }
 .inBoard .head { margin-bottom: 14px; }
 .inBoard .who h3 { font-size: 17px; }
-.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin: 0 0 18px; }
+.head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px; margin: 0 0 18px; }
 .titleCount { margin-left: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .lede { max-width: 760px; margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
-.headActions { display: flex; align-items: center; gap: 14px; }
+.head > div:first-child { flex: 1 1 300px; min-width: 0; }
+.headActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 14px; margin-left: auto; }
+.headActions :global(.application-export) { text-align: right; }
+.headActions :global(.application-export-buttons) { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .updated { color: var(--muted); font-size: 12px; }
 /* In Event Attendance the list starts collapsed under the counts; each count opens it, filtered, and closes it again. */
 .inBoard:not(:has(#applications-list)) .tiles { margin-bottom: 0; }
@@ -86,3 +89,17 @@ dialog.photoDialog { width: min(980px, calc(100vw - 40px)); }
 .linkButton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .photoFrame { display: grid; gap: 8px; justify-items: center; width: 100%; margin: 0; }
 .photoFrame figcaption { justify-self: start; color: var(--muted); font-size: 13px; }
+
+.dateFilters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 0 0 18px; }
+.datePresets { display: flex; flex-wrap: wrap; gap: 6px; }
+.datePresets button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #241f12; }
+.dateFilters input { color-scheme: dark; min-height: 40px; padding: 8px 12px; background: #111110; color: var(--text); border: 1px solid var(--control-line); border-radius: 6px; font: inherit; }
+.dateFilters input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.sheetsPanel { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; margin: 0 0 18px; padding: 16px; border: 1px solid #4b4126; border-radius: 10px; background: #19170f; }
+.sheetsPanel > div:first-child { flex: 1 1 400px; min-width: 0; }
+.sheetsPanel h2 { margin: 0 0 6px; color: var(--text); font-size: 16px; }
+.sheetsPanel p { margin: 5px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.sheetsPanel p[role="alert"] { color: #f0c36a; }
+.sheetsActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media print { .sheetsPanel { display: none; } }

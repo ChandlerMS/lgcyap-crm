@@ -58,6 +58,12 @@ export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'calendar', label: 'Calendar' },
   { id: 'calls', label: 'Calls' },
 ].map(tool => Object.freeze(tool)));
+// Existing HubSpot communication views embedded in the dashboard.
+export const DASHBOARD_COMMUNICATION_TOOLS = Object.freeze(['inbox', 'help-desk', 'tickets'].map(id => {
+  const tool = HUBSPOT_TOOLS.find(candidate => candidate.id === id);
+  if (!tool) throw new Error(`Unknown dashboard tool: ${id}`);
+  return tool;
+}));
 // Full recruiting paths include every stage, including completed and withdrawn records.
 export const RECRUIT_PATH_PAGES = Object.freeze([
   Object.freeze({ id: 'referrals', label: 'Referrals', recruitingPath: 'genpop' }),
@@ -100,7 +106,7 @@ export function sidebarViewFor(view) {
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
   if (externalWorkspacePage(value)) return { view: value };
-  if (value === 'calls/shopper' || value === 'calls/standard') return { view: 'calls', source: value.slice('calls/'.length) };
+  if (value === 'calls/shopper' || value === 'calls/shopper-dispositions' || value === 'calls/standard' || value === 'calls/standard-dispositions') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
   if (RECRUIT_PATH_PAGES.some(page => page.id === value)) return { view: value };
   if (['queue', 'ringcx', 'event-attendance', 'applications', 'training-classes', 'loa', 'admin'].includes(value)) return { view: value };

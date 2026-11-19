@@ -2,6 +2,10 @@
 
 Audited 2026-11-04 and updated 2026-11-05. Code facts come from GitHub `main` at `28b54c6`; the production address and Next.js version were rechecked on 2026-11-19 against `main` at `306cbb9`. Access changes whenever someone reconnects a connector or edits a HubSpot permission, so re-check it before relying on it.
 
+## Custom Recruit sync update — 2026-11-19
+
+The owner authorized automatic intake and two-way synchronization with custom Recruits (`2-72246945`), using Referrals / Recruiters followed by Onboarding, and approved ten additional properties. Existing Recruiting Tickets remain the app’s operational records and communication history. See [custom-recruit-sync.md](custom-recruit-sync.md) for the bridge, field mapping, and recovery rules. This authorization covers the ongoing automation and the listed schema additions.
+
 ## Goal
 
 The owner wants this project connected to HubSpot to update the database and tie everything in with the Vercel app at https://crm.lgcyap.com. The app was already connected to HubSpot when this was written. The owner confirmed on 2026-11-05 that "updating the database" means full read and write on the HubSpot instance. Rule 1 on approval still applies until the owner says otherwise.

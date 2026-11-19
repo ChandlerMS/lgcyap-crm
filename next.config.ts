@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg"],
+  outputFileTracingIncludes: { "/api/svp-dispositions": ["./server-data/svp-dispositions.enc"] },
   async redirects() {
     return [
       { source: "/embed", has: [{ type: "host" as const, value: "queue.lgcyap.com" }], destination: "https://crm.lgcyap.com/queue-access?embedded=1", permanent: false },

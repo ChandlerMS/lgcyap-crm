@@ -203,6 +203,8 @@ test('Recruits path pages include every matching stage without mixing paths or i
 test('HubSpot Calls panels can open the matching Standard source without changing the sidebar default', () => {
   assert.deepEqual(resolveWorkspaceRoute('#calls/standard'),{view:'calls',source:'standard'});
   assert.deepEqual(resolveWorkspaceRoute('#calls/shopper'),{view:'calls',source:'shopper'});
+  assert.deepEqual(resolveWorkspaceRoute('#calls/shopper-dispositions'),{view:'calls',source:'shopper-dispositions'});
+  assert.deepEqual(resolveWorkspaceRoute('#calls/standard-dispositions'),{view:'calls',source:'standard-dispositions'});
   assert.deepEqual(resolveWorkspaceRoute('#calls'),{view:'calls'});
 });
 
@@ -211,4 +213,13 @@ test('Training Classes is a Recruits flyout destination with its own route', asy
   assert.ok(RECRUITS_CHILD_PAGES.some(page => page.id === 'training-classes' && page.label === 'Training Classes'));
   assert.deepEqual(resolveWorkspaceRoute('#training-classes'), { view: 'training-classes' });
   assert.equal(sidebarViewFor('training-classes'), 'recruits');
+});
+
+test('dashboard communication sections follow Calendar in the requested order before Recruits and Calls', async () => {
+  const { DASHBOARD_COMMUNICATION_TOOLS } = await import('../app/recruiting-navigation.mjs');
+  assert.deepEqual(DASHBOARD_COMMUNICATION_TOOLS.map(tool => tool.id), ['inbox', 'help-desk', 'tickets']);
+  const workspace = readFileSync(new URL('../app/recruiting-workspace.tsx', import.meta.url), 'utf8');
+  const order = ['calendar', 'email', 'inbox', 'help-desk', 'tickets', 'recruits', 'calls'];
+  const positions = order.map(id => workspace.indexOf(`<DashboardSection id="${id}"`));
+  assert.ok(positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1])));
 });
