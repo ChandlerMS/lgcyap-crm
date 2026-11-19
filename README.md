@@ -129,8 +129,9 @@ The full Inbox page reads plain-text messages. Its dashboard hover preview can r
 It groups HubSpot Sales Pipeline Sold deals by `writing_agent_name`, with policy
 counts and USD `annual_premium_amount` totals using Eastern close-date periods.
 The existing private app requires the approved `crm.objects.deals.read` grant.
-Shopper and Source Performance remain explicitly unconnected because no PolicyTek
-report source was supplied. See [LEADERBOARD-API.md](LEADERBOARD-API.md).
+Shopper and Source Performance read PolicyTek browser captures; Shopper uses the
+imported PolicyTek Calls and Applications reports for the days they cover
+([SHOPPER-IMPORT.md](SHOPPER-IMPORT.md)). See [LEADERBOARD-API.md](LEADERBOARD-API.md).
 
 Inbox reads one bounded provider page per request. Signed continuations bind the
 cursor to the current user, credential, archive filter and selected conversation.

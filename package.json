@@ -24,6 +24,7 @@
     "db:auth:migrate": "node --env-file-if-exists=.env.local scripts/auth-migration.mjs --apply",
     "svp-calls:import": "node scripts/svp-calls-import.mjs",
     "lead-data:import": "node scripts/lead-data-import.mjs",
+    "shopper:import": "node scripts/shopper-import.mjs",
     "onboard:check": "node scripts/onboard-source.mjs check",
     "onboard:pull": "node scripts/onboard-source.mjs pull",
     "onboard:push": "node scripts/onboard-source.mjs push"

@@ -53,6 +53,8 @@ with error `WHATSAPP_NOT_IMPORTED`.
 
 Shopper and Source read stored PolicyTek browser captures. See `POLICYTEK-SYNC.md` for the 15-minute weekday browser bridge, publisher contract, date semantics and freshness limits. Report totals and incomplete named rankings remain distinct. Missing date ranges are queued; no financial values are fabricated.
 
+Shopper reads the imported PolicyTek Calls and Applications reports instead wherever both cover every day of the range (see `SHOPPER-IMPORT.md`). Those responses add `basis: "reports"` and `dataThrough`, and `source` names the reports. Rows keep the same fields: `leads` holds the Calls report's calls (the board's Calls column), `submitted` the applications and `premium` their Policy: Premium. `reportTotals` sums every agent, including agents with calls but no applications, who are not ranked. The `all` board reads its Shopper half the same way, and its notice says whether Shopper activity is Calls report calls or PolicyTek leads.
+
 Validation: 12 mocked tests cover exact schema/grants, aggregation, unknowns,
 pagination, rate limits, privacy, auth/origin/body limits, and Eastern/DST dates.
 `scripts/smoke.mjs` includes this endpoint in anonymous/forged identity and

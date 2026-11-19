@@ -195,30 +195,45 @@ test('API All dispatch shares the initial clock, keeps the provider budget advan
     '@/db/svp-calls.mjs': 'export const getSvpCallsDb = async () => ({});',
     '@/lib/whatsapp-sales.mjs': 'export const readWhatsappLeaderboard = () => { throw Error("Wrong board"); }; export const readPendingWhatsappStandardPreferred = readWhatsappLeaderboard;',
     '@/db/whatsapp.mjs': 'export const getWhatsappDb = async () => { throw Error("Wrong database"); };',
+    '@/lib/shopper-reports.mjs': 'export const readShopperReportsLeaderboard = (...args) => globalThis.routeFixture.readShopperReports(...args);',
+    '@/db/shopper-reports.mjs': 'export const getShopperReportsDb = async () => ({});',
   };
   const bundle = await build({ entryPoints: [`${root}app/api/leaderboard/route.ts`], bundle: true, platform: 'node', format: 'cjs', write: false,
     plugins: [{ name: 'synthetic-route-sources', setup(builder) {
       builder.onResolve({ filter: /^@\// }, args => shims[args.path] ? { path: args.path, namespace: 'route-source' } : { path: `${root}${args.path.slice(2)}` });
       builder.onLoad({ filter: /.*/, namespace: 'route-source' }, args => ({ contents: shims[args.path], loader: 'js', resolveDir: root }));
     } }] });
-  let clockReads = 0, providerClock, sourceClock, callClock, applied = 0;
+  let clockReads = 0, providerClock, sourceClock, reportsClock, callClock, applied = 0, policytekReads = 0, imported = null;
   class ClockDate extends Date { static now() { return NOW + clockReads++ * 2; } }
   const routeFixture = {
-    readPolicytek: async (input, options) => { assert.equal(input.board, 'shopper'); sourceClock = options.now; return shopper(); },
+    // All reads Shopper as the Shopper board does: imported reports first, the browser sync when they do not cover the range.
+    readShopperReports: async (input, options) => { assert.equal(input.board, 'shopper'); reportsClock = options.now; return imported?.(input) ?? null; },
+    readPolicytek: async (input, options) => { assert.equal(input.board, 'shopper'); policytekReads++; sourceClock = options.now; return shopper(); },
     readLeaderboard: async (input, options) => {
       assert.equal(input.board, 'sp'); providerClock = options.now();
       assert.ok(options.now() > providerClock, 'provider budget clock must advance after its captured initial read');
-      return standardPreferred({ calls: { status: 'unavailable', total: null }, rows: [{ name: 'Synthetic Agent', attributed: true, sales: 4, annualPremium: .2, inboundCalls: null }] });
+      return standardPreferred({ period: input.period, calls: { status: 'unavailable', total: null }, rows: [{ name: 'Synthetic Agent', attributed: true, sales: 4, annualPremium: .2, inboundCalls: null }] });
     },
     readSvpCalls: async (_db, range, now) => { assert.equal(range.startDate, '2026-11-01'); callClock = now; return { status: 'available', total: 30, partial: false }; },
     applySvpCalls: (result, calls) => { applied++; return { ...result, calls, rows: result.rows.map(row => ({ ...row, inboundCalls: 20 })) }; },
   };
   const routeModule = { exports: {} };
   runInNewContext(bundle.outputFiles[0].text, { module: routeModule, exports: routeModule.exports, require: createRequire(import.meta.url), process: { env: {} }, routeFixture, Date: ClockDate, Request, Response, URL, TextDecoder, TextEncoder, AbortController, setTimeout, clearTimeout });
-  const response = await routeModule.exports.POST(new Request('https://app.example/api/leaderboard', { method: 'POST', headers: { Origin: 'https://app.example', 'Content-Type': 'application/json' }, body: JSON.stringify(selection) }));
-  const result = await response.json();
-  assert.equal(result.status, 'available'); assert.equal(applied, 1);
-  assert.equal(sourceClock, NOW); assert.equal(providerClock, NOW); assert.equal(callClock, NOW);
+  const post = async body => (await routeModule.exports.POST(new Request('https://app.example/api/leaderboard', { method: 'POST', headers: { Origin: 'https://app.example', 'Content-Type': 'application/json' }, body: JSON.stringify(body) }))).json();
+  const result = await post(selection);
+  assert.equal(result.status, 'available'); assert.equal(applied, 1); assert.equal(policytekReads, 1);
+  assert.equal(reportsClock, NOW); assert.equal(sourceClock, NOW); assert.equal(providerClock, NOW); assert.equal(callClock, NOW);
   assert.deepEqual(result.combinedTotals, { sales: 7, annualPremium: .4, calls: 45, closeRate: 7 / 45 });
   assert.equal(result.rows[0].inboundCalls, 30);
+  assert.match(result.notice, /Calls \/ leads adds PolicyTek leads/);
+
+  // Where the imported Shopper reports cover the range, All uses them instead of the browser sync, as the Shopper board does.
+  imported = input => shopper({ period: input.period, source: 'PolicyTek · Calls and Applications reports', basis: 'reports', notice: 'Calls are from the PolicyTek Calls report.',
+    rows: [{ name: 'Synthetic Agent', attributed: true, leads: 12, submitted: 5, premium: 1 }], reportTotals: { leads: 14, submitted: 6, premium: 1.5 } });
+  const fromReports = await post({ board: 'all', period: 'custom', from: '2026-11-01', to: '2026-11-01' });
+  assert.equal(fromReports.status, 'available'); assert.equal(policytekReads, 1, 'the browser sync is not read when the imports cover the range');
+  assert.deepEqual(fromReports.combinedTotals, { sales: 10, annualPremium: 1.7, calls: 44, closeRate: 10 / 44 });
+  assert.deepEqual(fromReports.rows.map(({ name, sales, inboundCalls }) => [name, sales, inboundCalls]), [['Synthetic Agent', 9, 32]]);
+  assert.match(fromReports.notice, /Calls \/ leads adds inbound calls from the imported PolicyTek Calls report/);
+  assert.match(fromReports.notice, /PolicyTek: Calls are from the PolicyTek Calls report/);
 });
