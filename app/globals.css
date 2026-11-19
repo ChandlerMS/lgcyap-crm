@@ -636,3 +636,21 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .communication-button.communication-button-labeled { width: 100%; gap: 6px; padding: 0 8px; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
 .communication-button-labeled:not(:disabled):hover { background: #211d10; border-color: var(--gold); }
 .communication-button-labeled:disabled { cursor: not-allowed; }
+
+/* Floating gold arrow that reopens the navigation: the collapsed sidebar on desktop, the slide-out menu on phones.
+   It sits just below the fixed version bar, in the page's left padding. */
+.sidebar-fab { position: fixed; top: 72px; left: 8px; z-index: 15; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 2px solid var(--gold); border-radius: 50%; background: #14130d; color: var(--gold); box-shadow: 0 6px 18px rgba(0, 0, 0, .55); cursor: pointer; }
+.sidebar-fab .icon { width: 22px; height: 22px; stroke-width: 2.2; }
+.sidebar-fab:hover { background: var(--gold); color: #111; }
+.sidebar-fab:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.sidebar-fab[hidden], .sidebar-fab-mobile { display: none; }
+/* Pages without the top bar start right under the version bar. */
+.without-topbar .queue-workspace-frame { height: calc(100dvh - 104px); }
+@media (max-width: 800px) {
+  .sidebar-fab-desktop { display: none; }
+  .sidebar-fab-mobile { display: inline-flex; top: 68px; left: 12px; width: 44px; height: 44px; }
+  .topbar { padding-left: 72px; }
+  /* Alerts and the source bar sit above the content, so the whole page area clears the arrow. */
+  .without-topbar { padding-top: 64px; }
+  .without-topbar .queue-workspace-frame { height: calc(100dvh - 156px); }
+}
