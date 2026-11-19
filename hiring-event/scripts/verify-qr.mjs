@@ -2,7 +2,7 @@
 // 1080p and 4K, the print page and the PDF itself) in headless Chrome, then decodes
 // each render with jsQR and checks it opens the expected sign-in address.
 //
-//   npm run verify-qr                                  # expects lgcyap-signin.vercel.app
+//   npm run verify-qr                                  # expects signin.lgcyap.com
 //   npm run verify-qr -- https://signin.example.com
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,7 +13,7 @@ import { PNG } from 'pngjs';
 import { headless } from './chrome.mjs';
 
 const pub = join(dirname(fileURLToPath(import.meta.url)), '..', 'signinqr', 'public');
-const base = new URL(process.argv[2] ?? 'https://lgcyap-signin.vercel.app');
+const base = new URL(process.argv[2] ?? 'https://signin.lgcyap.com');
 const expected = { room: new URL('/?s=room', base).href, lobby: new URL('/?s=lobby', base).href };
 const page = name => pathToFileURL(join(pub, name)).href;
 

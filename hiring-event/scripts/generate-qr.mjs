@@ -1,7 +1,7 @@
 // Writes the QR codes for the sign-in site into signinqr/public and updates the
 // printed/displayed address in the pages.
 //
-//   npm run qr                                   # https://lgcyap-signin.vercel.app
+//   npm run qr                                   # https://signin.lgcyap.com
 //   npm run qr -- https://signin.example.com     # after moving to a custom domain
 //
 // Each code carries ?s=room (conference room TV) or ?s=lobby (security desk), so the
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'signinqr', 'public');
-const base = new URL(process.argv[2] ?? 'https://lgcyap-signin.vercel.app');
+const base = new URL(process.argv[2] ?? 'https://signin.lgcyap.com');
 if (base.protocol !== 'https:') throw new Error('The sign-in address must use https.');
 const host = base.host;
 

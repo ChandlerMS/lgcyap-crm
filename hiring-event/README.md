@@ -4,8 +4,10 @@ Two small sites for walk-in recruits at hiring events. Neither shares code or se
 
 | Folder | Vercel project | Address | What it is |
 | --- | --- | --- | --- |
-| `signin/` | `lgcyap-signin` | https://lgcyap-signin.vercel.app | The sign-in form. Writes each sign-in to HubSpot. |
-| `signinqr/` | `lgcyap-signinqr` | https://lgcyap-signinqr.vercel.app | The QR screen for the 100-inch conference room TV. `/print` is the security-desk sign. |
+| `signin/` | `lgcyap-signin` | https://signin.lgcyap.com | The sign-in form. Writes each sign-in to HubSpot. |
+| `signinqr/` | `lgcyap-signinqr` | https://signinqr.lgcyap.com | The QR screen for the 100-inch conference room TV. `/print` is the security-desk sign. |
+
+The older `lgcyap-signin.vercel.app` and `lgcyap-signinqr.vercel.app` addresses redirect to these, so codes printed before the move still work.
 | `signinqr/public/Legacy-Sign-In-QR-Security-Desk.pdf` | | `/Legacy-Sign-In-QR-Security-Desk.pdf` | Printable Letter PDF: page 1 is the desk sign, page 2 is four cut-out cards. |
 
 The QR codes add where the person scanned: `?s=room` on the TV and `?s=lobby` on the security-desk sign. The HubSpot ticket records it, and lobby sign-ins are told to head up to the 4th floor.
@@ -83,12 +85,12 @@ Merge the branch into `main`. All three Vercel projects deploy from `main`, so t
 
 ## Before each event
 
-1. Open `https://lgcyap-signin.vercel.app/api/health`. It should return `"ok":true`, `"mode":"live"` and `"hubspot":"verified"`, plus `via`.
+1. Open `https://signin.lgcyap.com/api/health`. It should return `"ok":true`, `"mode":"live"` and `"hubspot":"verified"`, plus `via`.
    - `"mode":"closed"`: set `SIGNIN_WRITES_ENABLED=true` and redeploy.
    - `"hubspot":"access-needed"`: the token is wrong, expired or missing a scope.
 2. Scan the TV code and the printed code with a phone. Both should open the sign-in page.
-3. On the TV, open `https://lgcyap-signinqr.vercel.app` in the TV's browser, or on a laptop connected to it, then press **F** or click once for full screen. The page keeps the screen awake, hides the cursor, shifts a few pixels every two minutes to avoid burn-in, and reloads itself daily at 4 AM.
-4. Print the PDF from `https://lgcyap-signinqr.vercel.app/print` or `/Legacy-Sign-In-QR-Security-Desk.pdf`, at 100% scale, for the first-floor security desk.
+3. On the TV, open `https://signinqr.lgcyap.com` in the TV's browser, or on a laptop connected to it, then press **F** or click once for full screen. The page keeps the screen awake, hides the cursor, shifts a few pixels every two minutes to avoid burn-in, and reloads itself daily at 4 AM.
+4. Print the PDF from `https://signinqr.lgcyap.com/print` or `/Legacy-Sign-In-QR-Security-Desk.pdf`, at 100% scale, for the first-floor security desk.
 
 A test sign-in creates a real contact, ticket and note in HubSpot, so only do one with the owner's approval, and archive the test records afterward.
 
