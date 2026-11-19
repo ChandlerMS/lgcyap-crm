@@ -91,7 +91,7 @@ test('searches all seven areas with fixed scopes, normalized query and safe link
   assert.equal(result.query, 'Needle');
   assert.deepEqual(result.groups.map(group => group.id), groups);
   assert.ok(result.groups.every(group => group.status === 'available' && group.records.length === 1));
-  assert.equal(result.groups[0].records[0].href, '#recruit/25');
+  assert.equal(result.groups[0].records[0].href, 'https://app.hubspot.com/contacts/50894788/record/0-5/25');
   assert.equal(result.groups[4].records[0].href, '#inbox/thread/26');
   assert.equal(result.groups[1].records[0].href, 'https://app.hubspot.com/contacts/50894788/record/2-64481801/23');
   const searches = requests.filter(request => request.body);
@@ -128,7 +128,7 @@ test('bounds Inbox work and resumes message pages without skipping later threads
       return { results: [{ id: '41' }, { id: '42' }, { id: '43', subject: 'Needle thread' }] };
     }
     if (url.pathname.endsWith('/41/messages')) return { results: [{ id: 'm41', text: 'A Needle in a haystack.' }] };
-    if (url.pathname.endsWith('/42/messages')) {
+    if (url.pathname.endsWith('/42/messages') && url.searchParams.get('archived') === 'false') {
       const after = url.searchParams.get('after');
       if (after === '4') return { results: [{ id: 'match', text: 'Finally, a NEEDLE.' }] };
       const page = Number(after) || 0;
@@ -209,4 +209,41 @@ test('does not claim complete coverage when HubSpot truncated an unmatched Inbox
   assert.equal(inbox.partial, true);
   assert.equal(inbox.continuation, undefined);
   assert.deepEqual(inbox.records, []);
+});
+
+test('scans both message phases of active and archived threads across continuations', async () => {
+  const { fetchImpl, requests } = fixture(url => {
+    const archived = url.searchParams.get('archived') === 'true';
+    const after = Number(url.searchParams.get('after') ?? 0);
+    if (url.pathname.endsWith('/threads')) return { results: archived ? [{ id: '103' }] : [{ id: '101' }, { id: '102' }] };
+    if (url.pathname.endsWith('/101/messages') && archived) {
+      return after === 4
+        ? { results: [{ id: 'archived-match', text: 'A needle in archived messages.' }] }
+        : { results: [{ id: 'unrelated-' + after, text: 'Unrelated' }], paging: { next: { after: String(after + 1) } } };
+    }
+    if (url.pathname.endsWith('/103/messages') && !archived) return { results: [{ id: 'active-match', text: 'A needle in active messages.' }] };
+  });
+  const matches = [];
+  let continuation;
+  for (let round = 0; round < 8; round++) {
+    const input = { query: 'needle', ...(continuation ? { continuation } : {}) };
+    const response = await search(input, { fetchImpl });
+    assert.equal(response.status, 200);
+    const { groups: result } = await response.json();
+    const inbox = result.find(group => group.id === 'inbox');
+    matches.push(...inbox.records.map(row => row.id));
+    continuation = inbox.continuation;
+    if (!continuation) {
+      assert.equal(inbox.partial, false);
+      break;
+    }
+    assert.equal(inbox.partial, true);
+  }
+  assert.equal(continuation, undefined);
+  assert.deepEqual(matches, ['101', '103']);
+  const phases = id => requests.filter(({ url }) => url.pathname.endsWith('/' + id + '/messages'))
+    .map(({ url }) => [url.searchParams.get('archived'), url.searchParams.get('after')]);
+  assert.deepEqual(phases('101'), [['false', null], ['true', null], ['true', '1'], ['true', '2'], ['true', '3'], ['true', '4']]);
+  assert.deepEqual(phases('102'), [['false', null], ['true', null]]);
+  assert.deepEqual(phases('103'), [['false', null]]);
 });
