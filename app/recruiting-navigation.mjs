@@ -1,4 +1,4 @@
-import { externalWorkspacePage } from './external-workspace-pages.mjs';
+import { externalWorkspacePage, RECRUIT_PORTAL_PAGES } from './external-workspace-pages.mjs';
 import { STAGE_PAGES } from '../lib/recruiting-config.mjs';
 
 const page = (id, stageKey, filter = {}) => {
@@ -74,6 +74,7 @@ export const RECRUITS_CHILD_PAGES = Object.freeze([
   Object.freeze({ id: 'event-attendance', label: 'Event Attendance' }),
   // Online agent applications from apply.lgcyap.com, organized for the admin team.
   Object.freeze({ id: 'applications', label: 'Applications' }),
+  ...RECRUIT_PORTAL_PAGES,
   Object.freeze({ id: 'training-classes', label: 'Training Classes' }),
 ]);
 // The hiring-event sites, after the Recruits pages. They refuse to be framed (they take personal details and a photo ID),

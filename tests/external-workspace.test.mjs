@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADMIN_PAGES, AGENT_PORTAL_PAGES, GOOGLE_WORKSPACE_PAGES, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
+import { ADMIN_PAGES, AGENT_PORTAL_PAGES, GOOGLE_WORKSPACE_PAGES, RECRUIT_PORTAL_PAGES, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
 import { resolveWorkspaceRoute, sidebarViewFor } from '../app/recruiting-navigation.mjs';
 
 test('Admin and Agents keep each requested destination and distinguish RingEX from RingCX', () => {
@@ -18,7 +18,7 @@ test('Admin and Agents keep each requested destination and distinguish RingEX fr
   assert.notEqual(ADMIN_PAGES[1].detail, ADMIN_PAGES[2].detail);
 });
 test('every embedded route resolves independently and highlights its parent menu', () => {
-  for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES]) {
+  for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES]) {
     assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id);
     assert.equal(externalWorkspacePage(page.id), page);
     assert.equal(sidebarViewFor(page.id), page.group === 'agents' ? 'contract-agents' : page.group);
@@ -37,7 +37,7 @@ test('each console renders its exact iframe and a working external fallback', as
   try {
     await build({ entryPoints: ['app/external-workspace.tsx'], outfile: `${dir}/page.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*'], logLevel: 'silent' });
     const Page = createRequire(import.meta.url)(`${process.cwd()}/${dir}/page.cjs`).default;
-    for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES]) {
+    for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES]) {
       const html = renderToStaticMarkup(createElement(Page, { view: page.id }));
       assert.ok(html.includes(`src="${page.url}"`));
       assert.ok(html.includes(`href="${page.url}" target="_blank" rel="noopener noreferrer"`));
@@ -45,4 +45,14 @@ test('each console renders its exact iframe and a working external fallback', as
     }
     assert.equal(renderToStaticMarkup(createElement(Page, { view: 'https://evil.example' })), '');
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('Recruits Contracting opens the fixed portal without replacing the recruiting stage route', async () => {
+  const { RECRUITS_CHILD_PAGES } = await import('../app/recruiting-navigation.mjs');
+  assert.ok(RECRUITS_CHILD_PAGES.some(page => page.id === 'contracting-portal' && page.label === 'Contracting'));
+  assert.deepEqual(resolveWorkspaceRoute('#contracting-portal'), { view: 'contracting-portal' });
+  assert.equal(sidebarViewFor('contracting-portal'), 'recruits');
+  assert.equal(externalWorkspacePage('contracting-portal')?.url, 'https://contracting.lgcyagent.com/');
+  assert.deepEqual(resolveWorkspaceRoute('#contracting'), { view: 'contracting' });
+  assert.equal(externalWorkspacePage('contracting'), undefined);
 });
