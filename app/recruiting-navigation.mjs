@@ -1,3 +1,4 @@
+import { externalWorkspacePage } from './external-workspace-pages.mjs';
 import { STAGE_PAGES } from '../lib/recruiting-config.mjs';
 
 const page = (id, stageKey, filter = {}) => {
@@ -86,6 +87,8 @@ export const DASHBOARD_PAGES = Object.freeze(['tasks', 'follow-up', 'meetings', 
 // The sidebar link that stands for a page reached from another page: Add Recruits, the dashboard pages and the full
 // Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {
+  const external = externalWorkspacePage(view);
+  if (external) return external.group === 'admin' ? 'admin' : 'contract-agents';
   if (['add-recruits', ...DASHBOARD_PAGES].includes(view)) return 'today';
   if (RECRUITS_CHILD_PAGES.some(page => page.id === view)) return 'recruits';
   if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
@@ -95,6 +98,7 @@ export function sidebarViewFor(view) {
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
+  if (externalWorkspacePage(value)) return { view: value };
   if (value === 'calls/shopper' || value === 'calls/standard') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
   if (RECRUIT_PATH_PAGES.some(page => page.id === value)) return { view: value };
