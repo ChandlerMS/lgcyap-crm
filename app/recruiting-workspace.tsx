@@ -29,6 +29,7 @@ import RecruitsPanel from "./recruits-panel";
 import FollowUpPage from "./follow-up-page";
 import FollowUpPanel from "./follow-up-panel";
 import ApplicationsPage from "./applications-page";
+import TrainingClassesPage from "./training-classes-page";
 import { activityRecruits } from "./dashboard-activity.mjs";
 import RecruitActivity from "./recruit-activity";
 import DemoRecruitEditor from "./demo-recruit-editor";
@@ -397,7 +398,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const eventAttendanceView = route.view === "event-attendance";
   const applicationsView = route.view === "applications";
   const externalPage = externalWorkspacePage(route.view);
-  const embeddedView = route.view === "admin" || Boolean(externalPage) || Boolean(queuePage) || eventAttendanceView || route.view === "loa";
+  const embeddedView = route.view === "training-classes" || route.view === "admin" || Boolean(externalPage) || Boolean(queuePage) || eventAttendanceView || route.view === "loa";
   const sidebarView = sidebarViewFor(activeView);
   const hubspotTool = HUBSPOT_TOOLS.find(item => item.id === route.view && item.id !== "recruits");
   const activityPage = ACTIVITY_PAGES.find(page => page.id === route.view) ?? null;
@@ -529,6 +530,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     // Calls and Recruits open from their panel titles on the Recruits page, so their pages lead back there.
     // Add Recruits opens from its button on the dashboard, so it leads back there too.
     const dashboardLink = route.view !== "today" || route.id ? <div className="dashboard-back-row"><a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a></div> : null;
+    if (route.view === "training-classes") return <>{dashboardLink}<TrainingClassesPage onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (route.view === "loa") return <>{dashboardLink}<iframe className="queue-workspace-frame" src="https://legacyportal.io/" title="LOA · Legacy Portal" /></>;
     if (queuePage) return <>{dashboardLink}<iframe key={queuePage.id} className="queue-workspace-frame" src="https://queue.lgcyap.com/embed" title="Shopper and Standard vs Preferred live queues" allow="fullscreen; screen-wake-lock" /></>;
     if (route.view === "admin") return <>{dashboardLink}<AdminDashboard embedded /></>;

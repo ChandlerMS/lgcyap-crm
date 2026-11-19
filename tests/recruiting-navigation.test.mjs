@@ -205,3 +205,10 @@ test('HubSpot Calls panels can open the matching Standard source without changin
   assert.deepEqual(resolveWorkspaceRoute('#calls/shopper'),{view:'calls',source:'shopper'});
   assert.deepEqual(resolveWorkspaceRoute('#calls'),{view:'calls'});
 });
+
+test('Training Classes is a Recruits flyout destination with its own route', async () => {
+  const { RECRUITS_CHILD_PAGES } = await import('../app/recruiting-navigation.mjs');
+  assert.ok(RECRUITS_CHILD_PAGES.some(page => page.id === 'training-classes' && page.label === 'Training Classes'));
+  assert.deepEqual(resolveWorkspaceRoute('#training-classes'), { view: 'training-classes' });
+  assert.equal(sidebarViewFor('training-classes'), 'recruits');
+});

@@ -68,6 +68,7 @@ export const RECRUITS_CHILD_PAGES = Object.freeze([
   Object.freeze({ id: 'event-attendance', label: 'Event Attendance' }),
   // Online agent applications from apply.lgcyap.com, organized for the admin team.
   Object.freeze({ id: 'applications', label: 'Applications' }),
+  Object.freeze({ id: 'training-classes', label: 'Training Classes' }),
 ]);
 // The hiring-event sites, after the Recruits pages. They refuse to be framed (they take personal details and a photo ID),
 // so each opens in its own tab, which also suits putting the QR screen on a TV.
@@ -102,7 +103,7 @@ export function resolveWorkspaceRoute(hash) {
   if (value === 'calls/shopper' || value === 'calls/standard') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
   if (RECRUIT_PATH_PAGES.some(page => page.id === value)) return { view: value };
-  if (['queue', 'ringcx', 'event-attendance', 'applications', 'loa', 'admin'].includes(value)) return { view: value };
+  if (['queue', 'ringcx', 'event-attendance', 'applications', 'training-classes', 'loa', 'admin'].includes(value)) return { view: value };
   // Call Analytics was named Lead Data; saved links still open it.
   if (value === 'lead-data') return { view: 'call-analytics' };
   if (value === 'contacts') return { view: 'contract-agents' };
