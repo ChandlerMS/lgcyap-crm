@@ -20,9 +20,10 @@ type Report = {
 };
 type Status = "all" | "not-met" | "flagged" | "waiting";
 // Inside Event Attendance: its review state, a number that changes whenever it should read the applications again,
-// whether links leave the board's own page (which may sit in the workspace frame) for the top window, and wait, true
-// until the board's own first read is done, so the two HubSpot reads never run at the same moment.
-export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean; wait?: boolean };
+// whether links leave the board's own page (which may sit in the workspace frame) for the top window, wait, true
+// until the board's own first read is done, so the two HubSpot reads never run at the same moment, and afterRead,
+// which changes each time a board read finishes, so a failed read here tries again right after the board's next one.
+export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean; wait?: boolean; afterRead?: number };
 const SECTION_PAGE_SIZE = 10;
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const SINCE = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
@@ -55,6 +56,9 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
   // The board's Refresh, and a new application in its counts, read the list again.
   const [boardReload, setBoardReload] = useState(board?.reload);
   if (board && board.reload !== boardReload) { setBoardReload(board.reload); setLoading(true); setAttempt(value => value + 1); }
+  // In Event Attendance a failed read, a HubSpot rate limit say, tries again after the board's next read (each minute).
+  const [boardRead, setBoardRead] = useState(board?.afterRead);
+  if (board && board.afterRead !== boardRead) { setBoardRead(board.afterRead); if (error && !loading) { setLoading(true); setAttempt(value => value + 1); } }
   // On its own page the list keeps its own review state; in Event Attendance it shares the board's.
   const ownReview = useEventReviews({ reviews: report?.reviews, reviewComplete: report?.reviewComplete, canReview: report?.canReview, onSignedOut: () => unauthorized.current(), onStale: refresh });
   const reviewer = board?.review ?? ownReview;
@@ -113,7 +117,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
       </div>
     </div>
-    {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}</p></div>}
+    {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}{board ? " This list tries again after the next automatic update, within a minute." : ""}</p></div>}
     {report?.partial && <p className="partial-notice" role="status">HubSpot returned part of the applications. Refresh later for the rest.</p>}
     {/* The board shows its own review notice and errors above its lists. */}
     {!board && report?.reviewNotice && <p className="partial-notice" role="status">{report.reviewNotice}</p>}

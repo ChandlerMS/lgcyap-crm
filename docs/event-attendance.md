@@ -34,7 +34,7 @@ Details come from the note itself: name, email, phone, office, how they heard ab
 
 ## Applications
 
-The Applications section is the Applications page's list (`app/applications-page.tsx`, read from `POST /api/applications`): the same counts (Applications, Did not meet a required item, Need a private conversation, Still at Hiring Event), Hiring Event reminder, search, office and status filters, and one card per application with its answers, photo ID and links. It shows ten cards a page. Its title opens the full page. It reads again when the board's Refresh is used, and when the board's minute refresh finds a different number of applications. Its reads always start after the board's own read has finished, on the first load and on Refresh, so the two never reach HubSpot at the same moment: the dashboard already sends HubSpot about ten reads at once.
+The Applications section is the Applications page's list (`app/applications-page.tsx`, read from `POST /api/applications`): the same counts (Applications, Did not meet a required item, Need a private conversation, Still at Hiring Event), Hiring Event reminder, search, office and status filters, and one card per application with its answers, photo ID and links. It shows ten cards a page. Its title opens the full page. It reads again when the board's Refresh is used, and when the board's minute refresh finds a different number of applications. Its reads always start after the board's own read has finished, on the first load and on Refresh, so the two never reach HubSpot at the same moment: the dashboard already sends HubSpot about ten reads at once. If its read fails, for example on a HubSpot rate limit, it tries again right after the board's next read, within a minute, and says so.
 
 ## Approve and Deny
 

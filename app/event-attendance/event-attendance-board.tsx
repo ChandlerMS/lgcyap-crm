@@ -69,7 +69,8 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   // The Applications section reads the Applications page's list again on Refresh, or when a new application shows in the counts.
   // Its reads always follow this board's, never alongside it: the dashboard already sends HubSpot many reads at once.
   const [appsReload, setAppsReload] = useState(0);
-  const [appsReady, setAppsReady] = useState(false);
+  // Board reads finished so far. The section starts after the first, and a failed section read retries after the next.
+  const [boardReads, setBoardReads] = useState(0);
   const appsAfterRead = useRef(false);
   const appsTotal = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -101,7 +102,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     } finally {
       // Whether this read worked or not, the Applications section may read now.
       if (!controller.signal.aborted) {
-        setBusy(false); setAppsReady(true);
+        setBusy(false); setBoardReads(value => value + 1);
         if (appsAfterRead.current) { appsAfterRead.current = false; setAppsReload(value => value + 1); }
       }
       active.current = null;
@@ -213,7 +214,7 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     {/* The Applications page's list, ten a page, sharing this board's Refresh and Approve and Deny. Its title opens
         the full page: in the dashboard by its route, and from this page's own frame in the top window. */}
     <div className={styles.card}>
-      <ApplicationsPage onUnauthorized={applicationsSignedOut} board={{ review, reload: appsReload, topWindow: !section, wait: !appsReady }} />
+      <ApplicationsPage onUnauthorized={applicationsSignedOut} board={{ review, reload: appsReload, topWindow: !section, wait: boardReads === 0, afterRead: boardReads }} />
     </div>
 
     <details className={styles.card}>
