@@ -18,11 +18,11 @@ test('monthly Sheets panel shows owner status and current link, runs repair, and
     await build({ entryPoints: ['app/application-sheets-panel.tsx'], outfile: `${dir}/component.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*', 'react-dom', 'react-dom/*'], loader: { '.css': 'empty' }, logLevel: 'silent' });
     const Panel = createRequire(import.meta.url)(`${process.cwd()}/${dir}/component.cjs`).default;
     const status = { visible: true, owner: 'chandler@lgcyap.com', canConnect: true, connected: true, available: true, lastSuccessAt: '2026-11-19T14:00:00Z', error: 'SYNC_FAILED', current: { title: '11-26 Applications', url: 'https://docs.google.com/spreadsheets/d/synthetic-sheet/edit', syncedAt: '2026-11-19T14:00:00Z' } };
-    let hidden = false, submitted;
+    let hidden = false, submitted, signIns = false;
     globalThis.fetch = async (path, options = {}) => {
-      assert.equal(path, '/api/applications/sheets');
+      assert.equal(path, signIns ? '/api/event-attendance/sheets' : '/api/applications/sheets');
       if (options.method === 'POST') { submitted = JSON.parse(options.body); return Response.json({ ...status, error: null, result: { status: 'synced' } }); }
-      return Response.json(hidden ? { visible: false } : status);
+      return Response.json(hidden ? { visible: false } : signIns ? { ...status, current: { ...status.current, title: '11-26 Sign-Ins' } } : status);
     };
     root = createRoot(document.getElementById('app'));
     await act(async () => root.render(h(Panel)));
@@ -34,8 +34,12 @@ test('monthly Sheets panel shows owner status and current link, runs repair, and
     assert.deepEqual(submitted, { action: 'sync' });
     assert.match(document.body.textContent, /Sheets are up to date/);
     assert.equal(document.querySelector('[role="alert"]'), null);
+    signIns = true;
+    await act(async () => root.render(h(Panel, { key: 'sign-ins', report: 'sign-ins' })));
+    assert.match(document.body.textContent, /Monthly sign-in Sheets/);
+    assert.match(document.querySelector('a').textContent, /11-26 Sign-Ins/);
     await act(async () => root.unmount());
-    hidden = true; root = createRoot(document.getElementById('app'));
+    hidden = true; signIns = false; root = createRoot(document.getElementById('app'));
     await act(async () => root.render(h(Panel)));
     assert.equal(document.querySelector('aside'), null);
   } finally {

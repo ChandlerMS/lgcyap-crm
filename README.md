@@ -476,3 +476,5 @@ The default `availableRule` in `lib/phone-hud-rule.mjs` shows every explicitly a
 Run `node --test tests/phone-hud.test.mjs` for Queue filtering, caching, token retry, safe failures and endpoint authorization tests. Fixtures are synthetic and make no live PolicyTek calls.
 
 Automatic monthly application Google Sheets: see [setup, owner consent, weekly tabs and 9 am Eastern refresh](docs/application-sheets.md).
+
+Private received HubSpot Email: [mailbox setup and access](docs/private-hubspot-email.md). Monthly signed-in recruits: [Sign-Ins Sheets](docs/sign-in-sheets.md), using the Applications Google connection.

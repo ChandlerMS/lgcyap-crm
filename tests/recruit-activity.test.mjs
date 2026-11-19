@@ -96,7 +96,7 @@ function ownedActivity(kind, { ownersFail = false } = {}) {
     }
     if (url.includes('/objects/tickets/11?')) return response({ id: '11', properties: { hs_pipeline: PIPELINE_ID } });
     if (url.includes(`/tickets/11/associations/${kind}?`)) return response({ results: [{ toObjectId: '33' }, { toObjectId: '34' }, { toObjectId: '35' }], paging: { next: { after: '80' } } });
-    if (url.endsWith(`/${kind}/batch/read`)) return response({ status: 'COMPLETE', results: [{ id: '33', properties: { hubspot_owner_id: '777' } }, { id: '34', properties: { hubspot_owner_id: '888' } }, { id: '35', properties: {} }] });
+    if (url.endsWith(`/${kind}/batch/read`)) return response({ status: 'COMPLETE', results: [{ id: '33', properties: { hubspot_owner_id: '777', hs_email_headers: JSON.stringify({ to: [{ email: 'support@example.invalid' }] }) } }, { id: '34', properties: { hubspot_owner_id: '888', hs_email_headers: JSON.stringify({ to: [{ email: 'support@example.invalid' }] }) } }, { id: '35', properties: { hs_email_headers: JSON.stringify({ to: [{ email: 'support@example.invalid' }] }) } }] });
     throw Error('Unexpected API route');
   } };
 }
@@ -118,8 +118,25 @@ test('a failed owner lookup keeps every history entry and does not claim an owne
 });
 
 test('the activity route and panel no longer scope a recruit\'s history to the signed-in user, and the panel shows the owner', () => {
-  assert.doesNotMatch(readFileSync('app/api/recruits/[id]/activity/route.ts', 'utf8'), /viewerEmail/);
+  assert.doesNotMatch(readFileSync('app/api/recruits/[id]/activity/route.ts', 'utf8'), /readViewerOwnerIds/);
   const panel = readFileSync('app/recruit-activity.tsx', 'utf8');
   assert.doesNotMatch(panel, /assigned to you/);
   assert.match(panel, /Owner: \$\{row\.owner\}/);
+});
+test('email activity hides received Chandler mail and ambiguous recipients from other users', async () => {
+  const records = [
+    { id: '31', properties: { hs_email_subject: 'Synthetic private', hs_email_text: 'Private body', hs_email_headers: JSON.stringify({ from: { email: 'sender@example.invalid' }, to: [{ email: 'chandler@lgcyap.com' }] }) } },
+    { id: '32', properties: { hs_email_subject: 'Synthetic public', hs_email_text: 'Public body', hs_email_headers: JSON.stringify({ from: { email: 'sender@example.invalid' }, to: [{ email: 'support@example.invalid' }] }) } },
+    { id: '33', properties: { hs_email_subject: 'Synthetic unknown', hs_email_text: 'Unverified body' } },
+  ];
+  const fetchImpl = async (url) => {
+    if (url.includes('/objects/tickets/11?')) return response({ id: '11', properties: { hs_pipeline: PIPELINE_ID } });
+    if (url.includes('/associations/emails?')) return response({ results: records.map(row => ({ toObjectId: row.id })) });
+    if (url.endsWith('/emails/batch/read')) return response({ status: 'COMPLETE', results: records });
+    throw Error('Unexpected synthetic path');
+  };
+  const other = await readRecruitActivity('11', { kind: 'emails' }, { accessToken: 'test', fetchImpl, viewerEmail: 'other@example.invalid' });
+  assert.deepEqual(other.records.map(row => row.id), ['32']);
+  const owner = await readRecruitActivity('11', { kind: 'emails' }, { accessToken: 'test', fetchImpl, viewerEmail: 'chandler@lgcyap.com' });
+  assert.equal(owner.records.length, 3);
 });

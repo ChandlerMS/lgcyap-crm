@@ -163,3 +163,14 @@ test('verified removal of the last application clears its previously managed mon
     assert.equal(rows.some(row => row.values.some(cell => cell.userEnteredValue?.stringValue === '=Synthetic')), false);
   } finally { await db.close(); }
 });
+test('initiating report is encrypted into OAuth state and returned only after verified account consent', async () => {
+  const { startSheetsConnection, finishSheetsConnection, unseal } = await import('../lib/application-sheets-oauth.mjs');
+  const db = await database(), google = provider();
+  try {
+    const start = startSheetsConnection({ user, env, now: now(), report: 'sign-ins' });
+    const cookie = start.cookie.split(';')[0];
+    assert.equal(JSON.parse(unseal(cookie.slice(cookie.indexOf('=') + 1), env.BETTER_AUTH_SECRET)).report, 'sign-ins');
+    const request = new Request(`https://crm.example.invalid/api/auth/callback/google?code=synthetic&state=${new URL(start.url).searchParams.get('state')}`, { headers: { cookie } });
+    assert.equal((await finishSheetsConnection(request, { user, env, db, fetchImpl: google.fetchImpl, now: now() })).report, 'sign-ins');
+  } finally { await db.close(); }
+});

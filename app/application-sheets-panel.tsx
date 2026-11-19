@@ -4,7 +4,9 @@ import styles from "./applications-page.module.css";
 
 type Connection = { owner: string; canConnect: boolean; connected: boolean; available: boolean; lastSuccessAt: string | null; error: string | null; current: { title: string; url: string; syncedAt: string | null } | null };
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
-export default function ApplicationSheetsPanel() {
+export default function ApplicationSheetsPanel({ report = "applications" }: { report?: "applications" | "sign-ins" }) {
+  const endpoint = report === "sign-ins" ? "/api/event-attendance/sheets" : "/api/applications/sheets";
+  const title = report === "sign-ins" ? "Monthly sign-in Sheets" : "Monthly application Sheets";
   const [hidden, setHidden] = useState(false);
   const [connection, setConnection] = useState<Connection | null>(null);
   const [error, setError] = useState("");
@@ -26,12 +28,12 @@ export default function ApplicationSheetsPanel() {
       if (pending) return;
       pending = true;
       try {
-        const response = await fetch("/api/applications/sheets", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+        const response = await fetch(endpoint, { credentials: "same-origin", cache: "no-store", signal: controller.signal });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? "Google Sheets status is unavailable.");
         if (active) {
           if (data.visible === false) { setHidden(true); return; }
-          setConnection(data); setLoadError("");
+          setHidden(false); setConnection(data); setLoadError("");
           if (result && !callbackHandled) {
             callbackHandled = true;
             if (result === "connected") setNotice("Google Sheets connected. The first monthly sync is starting.");
@@ -44,24 +46,24 @@ export default function ApplicationSheetsPanel() {
     void load();
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 15000);
     return () => { active = false; controller.abort(); window.clearInterval(timer); };
-  }, []);
+  }, [endpoint]);
   const act = async (action: "connect" | "sync") => {
     setBusy(true); setError(""); setNotice("");
     try {
-      const response = await fetch("/api/applications/sheets", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+      const response = await fetch(endpoint, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Google Sheets is unavailable.");
-      if (action === "connect") { window.location.assign(result.url); return; }
+      if (action === "connect") { (window.top ?? window).location.assign(result.url); return; }
       setConnection(previous => ({ ...result, available: previous?.available ?? true }));
-      setNotice(result.result.status === "busy" ? "A sync is already running. This page will update when it finishes." : result.result.status === "synced" ? "Monthly application Sheets are up to date." : "Connect Google Sheets in the production CRM to enable syncing.");
+      setNotice(result.result.status === "busy" ? "A sync is already running. This page will update when it finishes." : result.result.status === "synced" ? `${title} are up to date.` : "Connect Google Sheets in the production CRM to enable syncing.");
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Google Sheets is unavailable."); }
     finally { setBusy(false); }
   };
   if (hidden) return null;
-  return <aside className={styles.sheetsPanel} aria-label="Monthly application Google Sheets">
+  return <aside className={styles.sheetsPanel} aria-label={title}>
     <div>
-      <h2>Monthly application Sheets</h2>
-      <p>One Sheet each month, with Monday–Sunday weekly tabs. New submissions are checked every minute after they appear in HubSpot. A full refresh runs daily at 9 am Eastern.</p>
+      <h2>{title}</h2>
+      <p>One Sheet each month, with Monday–Sunday weekly tabs. New {report === "sign-ins" ? "sign-ins" : "submissions"} are checked every minute after they appear in HubSpot. A full refresh runs daily at 9 am Eastern.</p>
       {connection && <p>{connection.connected ? `Connected to ${connection.owner}.` : `Connect ${connection.owner} to enable automatic updates.`}{connection.lastSuccessAt && ` Last checked ${WHEN.format(new Date(connection.lastSuccessAt))}.`}</p>}
       {connection?.current && <a className="text-link" href={connection.current.url} target="_blank" rel="noopener noreferrer">Open {connection.current.title} ↗</a>}
       {connection?.error && <p role="alert">The last sync failed. Automatic retries continue; reconnect Google Sheets if access was revoked.</p>}

@@ -1,4 +1,5 @@
 'use client';
+import ApplicationSheetsPanel from '../application-sheets-panel';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useEventReviews, type Review } from '../event-review';
@@ -248,6 +249,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
 
     {(!section || !data) && <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>}
 
+    <ApplicationSheetsPanel report="sign-ins" />
     <section className={styles.tiles} aria-label="Totals. Select one to see the people in it.">
       {tiles.map(tile => <button type="button" key={tile.key} className={`${styles.tile} ${tile.key === 'today' ? styles.todayTile : ''} ${openTile === tile.key ? styles.tileOpen : ''}`} disabled={!data} aria-expanded={openTile === tile.key} aria-controls="tile-people" onClick={() => toggleTile(tile.key)}>
         <span className={styles.tileLabel}>{tile.label}</span>
