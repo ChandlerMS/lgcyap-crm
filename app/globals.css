@@ -689,7 +689,7 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 /* The measured title-bar height includes wrapped mobile controls. */
 .sidebar-fab { top: calc(var(--crm-titlebar-height, 56px) + 16px); }
 .without-topbar .queue-workspace-frame { height: calc(100dvh - var(--crm-titlebar-height, 56px) - 48px); }
-.floating-actions { position: fixed; right: 24px; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 55; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); }
+.floating-actions { position: fixed; right: 24px; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 55; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px; max-width: calc(100vw - 32px); }
 .floating-actions .rc-launcher, .floating-actions .legacy-bot-launcher { position: static; flex-shrink: 0; margin: 0; }
 @media(max-width:800px) { .sidebar-fab-mobile { top: calc(var(--crm-titlebar-height, 56px) + 12px); }.without-topbar .queue-workspace-frame { height: calc(100dvh - var(--crm-titlebar-height, 56px) - 100px); } }
 @media(max-width:600px) { .floating-actions { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); gap: 8px; }.floating-actions .legacy-bot-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; }.floating-actions .rc-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; } }
@@ -1006,3 +1006,6 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 .summary-preview .cal-preview-day .cal-preview-time { color: var(--gold); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .cal-preview button:focus-visible, .cal-preview a:focus-visible, .cal-preview input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 @media (max-width: 600px) { .cal-preview-cell { min-height: 56px; padding: 3px; } .cal-preview-event > span:first-child { display: none; } .summary-preview .cal-preview-day li { grid-template-columns: 1fr; gap: 2px; } }
+
+.policytek-popup-notice { position: fixed; right: 16px; bottom: 90px; z-index: 56; max-width: min(360px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--gold); border-radius: 12px; background: #090909; color: var(--text); box-shadow: 0 4px 24px #0008; }
+.policytek-popup-notice a { color: var(--gold); text-decoration: underline; }
