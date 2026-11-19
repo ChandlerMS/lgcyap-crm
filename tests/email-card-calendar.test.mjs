@@ -68,4 +68,6 @@ test('New Email has one Recruit field: typing narrows the list to matching recru
   const email = readFileSync('app/recruit-email.tsx', 'utf8');
   assert.doesNotMatch(email, /Find recruit|Choose a recruit/, 'the separate search box and dropdown are gone');
   assert.match(email, /<RecruitCombobox recruits=\{choices\} query=\{query\} selectedId=\{target\}/);
+  // Arrowing through a long list keeps the highlighted recruit visible.
+  assert.match(readFileSync('app/recruit-combobox.tsx', 'utf8'), /useEffect\(\(\) => \{ if \(activeId\) document\.getElementById\(activeId\)\?\.scrollIntoView\(\{ block: "nearest" \}\); \}, \[activeId\]\);/);
 });

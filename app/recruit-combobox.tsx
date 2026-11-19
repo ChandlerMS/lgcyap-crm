@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, type KeyboardEvent } from "react";
 
 export type ComboRecruit = { id: string; name: string; email?: string | null; stage?: string | null };
 const LIMIT = 50;
@@ -31,10 +31,13 @@ export default function RecruitCombobox({ recruits, query, selectedId, onQuery, 
     else if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); }
   };
   const optionId = (recruit: ComboRecruit) => `${id}-option-${recruit.id}`;
+  // The arrow keys keep the highlighted recruit in view when the list scrolls.
+  const activeId = open && shown[current] ? optionId(shown[current]) : null;
+  useEffect(() => { if (activeId) document.getElementById(activeId)?.scrollIntoView({ block: "nearest" }); }, [activeId]);
   return <div className="recruit-combobox">
     <label htmlFor={`${id}-input`}>Recruit</label>
     <input id={`${id}-input`} type="text" role="combobox" autoComplete="off" spellCheck={false} aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-list`}
-      aria-activedescendant={open && shown[current] ? optionId(shown[current]) : undefined} placeholder="Type a recruit's name" value={query}
+      aria-activedescendant={activeId ?? undefined} placeholder="Type a recruit's name" value={query}
       onChange={event => { onQuery(event.target.value); setOpen(true); setActive(0); }} onFocus={() => setOpen(true)} onClick={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keyDown} />
     {open && <ul id={`${id}-list`} role="listbox" aria-label="Matching recruits" className="recruit-combobox-list">
       {shown.length ? shown.map((recruit, index) => <li key={recruit.id} id={optionId(recruit)} role="option" aria-selected={recruit.id === selectedId} className={index === current ? "is-active" : undefined}
