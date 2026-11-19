@@ -90,7 +90,7 @@ export const QUEUE_PAGES = Object.freeze([
   { id: 'ringcx', label: 'Standard vs Preferred', icon: 'phone', source: 'svp' },
 ].map(page => Object.freeze(page)));
 // Pages opened from the dashboard's summaries and panel titles rather than the sidebar.
-export const DASHBOARD_PAGES = Object.freeze(['tasks', 'follow-up', 'meetings', 'calendar']);
+export const DASHBOARD_PAGES = Object.freeze(['tasks', 'follow-up', 'meetings', 'calendar', 'email']);
 // The sidebar link that stands for a page reached from another page: Add Recruits, the dashboard pages and the full
 // Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {

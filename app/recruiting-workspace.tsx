@@ -430,7 +430,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const meetingAction = (view: string, trigger: "plus" | "button") => canAddActivity && ["meetings", "calendar"].includes(view)
     ? <RecruitQuickActions kinds={["meeting"]} recruits={activityRecruits(all)} trigger={trigger} meetingLabel={view === "calendar" ? "Add to Calendar" : "Add Meeting"} /> : undefined;
   // The top bar only appears when it has something to hold: the data source switch and search.
-  const pageName = route.id ? selected?.name ?? "Recruit" : externalPage?.label ?? hubspotTool?.label ?? pathPage?.label ?? NAV.find(item => item.id === route.view)?.label ?? (route.view === "recruits" ? "Recruits" : "Today");
+  const pageName = route.id ? selected?.name ?? "Recruit" : externalPage?.label ?? hubspotTool?.label ?? pathPage?.label ?? NAV.find(item => item.id === route.view)?.label ?? (route.view === "email" ? "Email" : route.view === "recruits" ? "Recruits" : "Today");
   const filteredSuffix = data?.partial ? " loaded" : "";
   const closeMenu = () => { restoreMenuFocus.current = true; setMenuOpen(false); };
   const navigateFromMenu = () => { if (menuOpen) focusPageAfterNav.current = true; setMenuOpen(false); setQuery(""); };
@@ -575,6 +575,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       checkingAccess={loading} onUnauthorized={expiredSignIn} onCreated={() => { void refresh(); }}
       onBusyChange={updateIntakeBusy} onDraftChange={updateIntakeDraft} /></>;
     if (!data) return <>{dashboardLink}{heading(pageName, "Your recruiting workspace", null)}{loading ? <section aria-label="Loading recruiting data" className="loading-state"><p role="status">Loading recruiting data from HubSpot…</p><div className="skeleton skeleton-stats" /><div className="skeleton skeleton-row" /><div className="skeleton skeleton-row" /><div className="skeleton skeleton-row" /></section> : <Empty title={error?.code === "CONNECTION_NOT_CONFIGURED" ? "Recruiting data is not connected yet" : "Recruiting data is unavailable"}>{error?.signInPath ? "Sign in to continue, then refresh the workspace." : error?.code === "CONNECTION_NOT_CONFIGURED" ? "The live connection needs to be completed before recruits can appear here." : "Use Refresh to try loading your recruiting records again."}</Empty>}</>;
+    if (route.view === "email") return <>{dashboardLink}<RecruitEmailPanel compact={false} recruits={all} onRefresh={demoMode ? undefined : () => { void refresh(); }} refreshing={loading} refreshDisabled={Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty || toolBusy || toolDirty)} /></>;
     if (route.view === "follow-up") return <>{dashboardLink}<FollowUpPage records={all} now={timestamp} partial={data.partial} query={query} canAddActivity={canEdit && !demoMode} /></>;
     if (route.id) {
       if (!selected) return <>{dashboardLink}{heading("Recruit not in this view", "This recruit may have moved or may be outside the loaded results.", null)}<a href="#recruits" className="btn btn-secondary">Back to recruits</a></>;

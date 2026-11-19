@@ -19,7 +19,7 @@ test('Email composes through the existing provider and compact Inbox retains ref
     await writeFile(`${dir}/entry.tsx`, `export {default as Email} from '../../app/recruit-email-panel'; export {RecruitEmailProvider} from '../../app/recruit-email'; export {default as Inbox} from '../../app/inbox-workspace'; export {DashboardSection} from '../../app/dashboard-section';`);
     await build({ entryPoints: [`${dir}/entry.tsx`], outfile: `${dir}/bundle.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*', 'react-dom', 'react-dom/*'], loader: { '.css': 'empty' }, logLevel: 'silent' });
     const { Email, RecruitEmailProvider, Inbox, DashboardSection } = require(`${process.cwd()}/${dir}/bundle.cjs`);
-    globalThis.fetch = async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); return Response.json({ status: 'available', tool: 'inbox', records: [], complete: true, continuation: null }); };
+    globalThis.fetch = async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); if (url === '/api/recruit-email') return Response.json({ recipient: { name: 'Alex', email: 'alex@example.test' }, contactUrl: 'https://app.hubspot.com/contacts/50894788/contact/123', templates: [] }); return Response.json({ status: 'available', tool: 'inbox', records: [], complete: true, continuation: null }); };
     let refreshed = 0;
     root = createRoot(document.getElementById('app'));
     await act(async () => root.render(h(RecruitEmailProvider, { recruits: [{ id: '123', name: 'Alex', email: 'alex@example.test' }], disabled: false }, h(DashboardSection, { id: 'email', label: 'Email' }, h(Email, { recruits: [{ id: '123', name: 'Alex', email: 'alex@example.test' }, { id: 'demo', name: 'Test', email: 'test@example.test', isDemo: true }], onRefresh: () => refreshed++ })))));
@@ -28,6 +28,16 @@ test('Email composes through the existing provider and compact Inbox retains ref
     await act(async () => button('Refresh').click()); assert.equal(refreshed, 1);
     await act(async () => button('New Email').click()); assert.equal(document.querySelector('dialog').open, true);
     assert.ok(button('Collapse Email'));
+    assert.equal(document.querySelector('#today-email-title a').getAttribute('href'), '#email');
+    const plus = button('New Email'); assert.ok(plus.classList.contains('summary-add')); assert.match(plus.textContent, /\+/);
+    await act(async () => button('Close email').click());
+    const address = [...document.querySelectorAll('td button')].find(item => item.textContent === 'alex@example.test');
+    assert.ok(address); await act(async () => address.click());
+    assert.equal(document.querySelector('dialog').open, true);
+    assert.equal(requests.at(-1).body.recruitId, '123');
+    assert.ok(document.querySelector('td [aria-label="Call Alex with RingCentral"]'));
+    assert.ok(document.querySelector('td [aria-label="Text Alex with RingCentral"]'));
+    assert.doesNotMatch(document.querySelector('table').textContent, /Email Alex/);
     await act(async () => root.render(h(DashboardSection, { id: 'inbox', label: 'Inbox' }, h(Inbox, { compact: true, pageHref: '#inbox', onUnauthorized() {} }))));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     assert.equal(document.querySelector('h1'), null); assert.equal(document.querySelector('h2 a').getAttribute('href'), '#inbox');
@@ -38,6 +48,10 @@ test('Email composes through the existing provider and compact Inbox retains ref
     await act(async () => button('Collapse Inbox').click());
     assert.equal(document.querySelector('.dashboard-section').classList.contains('is-collapsed'), true);
     assert.ok(button('Refresh'), 'header remains mounted when collapsed');
+    await act(async () => root.render(h(Email, { recruits: [], compact: false })));
+    assert.ok(document.querySelector('h1#page-title'));
+    assert.equal(document.querySelector('h1 a'), null);
+    assert.equal(button('Collapse Email'), undefined);
   } finally {
     if (root) await act(async () => root.unmount()); Object.assign(globalThis, previous); delete globalThis.IS_REACT_ACT_ENVIRONMENT;
     dom.window.close(); await rm(dir, { recursive: true, force: true });

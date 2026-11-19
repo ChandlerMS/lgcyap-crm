@@ -223,3 +223,8 @@ test('dashboard communication sections follow Calendar in the requested order be
   const positions = order.map(id => workspace.indexOf(`<DashboardSection id="${id}"`));
   assert.ok(positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1])));
 });
+
+test('Email has its own dashboard-linked page and keeps Dashboard selected', () => {
+  assert.deepEqual(resolveWorkspaceRoute('#email'), { view: 'email' });
+  assert.equal(sidebarViewFor('email'), 'today');
+});

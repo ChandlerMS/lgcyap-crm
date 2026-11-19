@@ -19,14 +19,14 @@ const ACTION_LABELS = { call: "Call", text: "Text", email: "Email" } as const;
  * `labeled` shows the action name beside each icon for larger quick-action buttons. `mini` is the small icon-and-name
  * style of a hover card's quick links, beside its Note, Task, Meeting and Calendar buttons.
  */
-export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, phone, isDemo = false, labeled = false, mini = false }: { recruitName: string; recruitId: string; hubspotUrl: string; phone?: string | null; isDemo?: boolean; labeled?: boolean; mini?: boolean }) {
+export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, phone, isDemo = false, labeled = false, mini = false, actions = ["call", "text", "email"] }: { recruitName: string; recruitId: string; hubspotUrl: string; phone?: string | null; isDemo?: boolean; labeled?: boolean; mini?: boolean; actions?: readonly ("call" | "text" | "email")[] }) {
   const id = useId();
   const ringCentral = useRingCentral();
   const email = useRecruitEmail();
   const number = communicationPhone(phone);
   const buttonClass = mini ? "mini-action-button" : labeled ? "communication-button communication-button-labeled" : "communication-button";
   return <div className={mini ? "mini-communications" : labeled ? "recruit-communications recruit-communications-labeled" : "recruit-communications"} role="group" aria-label={`Contact tools for ${recruitName}`}>
-    {(["call", "text", "email"] as const).map(action => {
+    {actions.map(action => {
       const content = <><CommunicationIcon action={action} />{!mini && labeled && <span className="communication-label" aria-hidden="true">{ACTION_LABELS[action]}</span>}</>;
       const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
       const ringAction = action !== "email";
