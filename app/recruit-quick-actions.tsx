@@ -11,8 +11,11 @@ type Props = {
   kinds?: readonly Kind[];
   // Without a recruitId the dialog first asks which recruit, from this list (Add Task and Add Follow-Up on the dashboard).
   recruits?: readonly ActivityRecruit[];
-  // icons: a recruit row's icon buttons; plus: a gold plus beside a dashboard summary title; button: a labeled panel button.
-  trigger?: "icons" | "plus" | "button";
+  // icons: a recruit row's icon buttons; plus: a gold plus beside a dashboard summary title; button: a labeled panel button;
+  // labeled: compact icon-and-name buttons, as in the hover pop-ups.
+  trigger?: "icons" | "plus" | "button" | "labeled";
+  // Told when a pop-up opens and closes, so a hover pop-up holding these buttons can stay open meanwhile.
+  onOpenChange?: (open: boolean) => void;
 };
 // Tasks and Follow up listen for this to reload after a task or follow-up is added.
 export const TASKS_CHANGED_EVENT = "crm:tasks-changed";
@@ -36,7 +39,7 @@ function Glyph({ kind }: { kind: Kind }) {
 }
 
 // Note, Task, Follow up and Meeting for one recruit. Each saves a HubSpot note, task or meeting assigned to you on that recruit.
-export default function RecruitQuickActions({ recruitId, recruitName = "", kinds = ALL_KINDS, recruits, trigger = "icons", meetingLabel = "Add Meeting" }: Props) {
+export default function RecruitQuickActions({ recruitId, recruitName = "", kinds = ALL_KINDS, recruits, trigger = "icons", meetingLabel = "Add Meeting", onOpenChange }: Props) {
   const uid = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<Kind | null>(null);
@@ -67,8 +70,9 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
     setTarget(recruitId ? { id: recruitId, name: recruitName } : null); setPickerQuery("");
     setKind(next); setRequestId(newId()); setToday(day); setBody(""); setSubject(""); setDueDate(addDays(day, 1)); setPreset("1"); setError(""); setDone(null);
     dialogRef.current?.showModal();
+    onOpenChange?.(true);
   };
-  const close = () => { if (busy) return; dialogRef.current?.close(); setKind(null); };
+  const close = () => { if (busy) return; dialogRef.current?.close(); setKind(null); onOpenChange?.(false); };
   // A mouse click outside the pop-up (on the dimmed backdrop) closes it, unless it is saving. The press must start
   // outside too, so dragging a text selection out of a field never closes it.
   const pressedOutsideRef = useRef(false);
@@ -113,10 +117,13 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
     ? <button key={item} type="button" className="summary-add" onClick={() => open(item)} title={(item === "meeting" ? meetingLabel : LABELS[item])}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
     : trigger === "button"
       ? <button key={item} type="button" className="summary-add panel-add-button" title={(item === "meeting" ? meetingLabel : LABELS[item])} onClick={() => open(item)}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
+      : trigger === "labeled"
+        ? <button key={item} type="button" className="add-activity-button" onClick={() => open(item)}><Glyph kind={item} /><span>{item === "meeting" ? meetingLabel : LABELS[item]}</span>{recruitName && <span className="sr-only"> for {recruitName}</span>}</button>
       : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
   return <>
     {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}
-    <dialog ref={dialogRef} className="modal quick-action-dialog" aria-labelledby={`${uid}-title`} onCancel={event => { event.preventDefault(); close(); }}
+    {/* Escape is handled here only, so it never also closes a hover pop-up the buttons sit in while a save is running. */}
+    <dialog ref={dialogRef} className="modal quick-action-dialog" aria-labelledby={`${uid}-title`} onCancel={event => { event.preventDefault(); close(); }} onKeyDown={event => { if (event.key === "Escape") event.stopPropagation(); }}
       onPointerDown={event => { pressedOutsideRef.current = onBackdrop(event); }}
       onClick={event => { const outside = pressedOutsideRef.current && onBackdrop(event); pressedOutsideRef.current = false; if (outside) close(); }}>
       {kind && <form onSubmit={event => void submit(event)} noValidate={false}>
@@ -160,4 +167,15 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
       </form>}
     </dialog>
   </>;
+}
+
+/**
+ * Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar together, as in the hover pop-ups: for one recruit,
+ * or, without a recruitId, for a recruit chosen from recruits in each pop-up.
+ */
+export function AddActivityButtons({ recruitId, recruitName, recruits, onOpenChange, className }: { recruitId?: string; recruitName?: string; recruits?: readonly ActivityRecruit[]; onOpenChange?: (open: boolean) => void; className?: string }) {
+  return <div className={`add-activity-buttons${className ? ` ${className}` : ""}`} role="group" aria-label={recruitName ? `Add for ${recruitName}` : "Add for a recruit"}>
+    <RecruitQuickActions recruitId={recruitId} recruitName={recruitName} recruits={recruits} kinds={["note", "task", "follow-up", "meeting"]} trigger="labeled" onOpenChange={onOpenChange} />
+    <RecruitQuickActions recruitId={recruitId} recruitName={recruitName} recruits={recruits} kinds={["meeting"]} meetingLabel="Add to Calendar" trigger="labeled" onOpenChange={onOpenChange} />
+  </div>;
 }

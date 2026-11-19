@@ -9,7 +9,7 @@ type State = { status: "loading" } | { status: "ready"; result: TasksResult } | 
 const FAILED = "Tasks could not be loaded from HubSpot.";
 // Open HubSpot tasks assigned to the signed-in user beside Follow Up, soonest due first; a chip opens that task in HubSpot and "+N more" opens HubSpot's task list.
 // lead is the gold Add Task plus beside the title.
-export default function RecruitTaskChips({ live, now, onUnauthorized, lead }: { live: boolean; now: number; onUnauthorized: () => void; lead?: ReactNode }) {
+export default function RecruitTaskChips({ live, now, onUnauthorized, lead, previewActions }: { live: boolean; now: number; onUnauthorized: () => void; lead?: ReactNode; previewActions?: ReactNode }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const unauthorizedRef = useRef(onUnauthorized);
@@ -44,6 +44,6 @@ export default function RecruitTaskChips({ live, now, onUnauthorized, lead }: { 
     : state.status === "loading" ? "Loading tasks from HubSpot…"
     : state.status === "failed" ? <>{state.message} <button className="text-link" onClick={() => { setState({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></>
     : "No open tasks assigned to you.";
-  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" lead={lead} count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
+  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" lead={lead} previewActions={previewActions} count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
     empty={empty} more={{ href: hubspotHref(ready?.hubspotUrl), external: true, label: "open tasks in HubSpot" }} />;
 }

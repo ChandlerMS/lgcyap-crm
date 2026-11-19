@@ -746,6 +746,13 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .quick-action-recruit select { width: 100%; min-height: 150px; padding: 4px; border: 1px solid var(--control-line); border-radius: 5px; background: #111110; color: var(--text); font: inherit; font-size: 14px; }
 .quick-action-recruit select option { padding: 6px 8px; border-radius: 3px; }
 .quick-action-recruit select option:checked { background: #2b2718; color: var(--gold); }
+/* Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar in the hover pop-ups. */
+.add-activity-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.add-activity-button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border: 1px solid #4a4028; border-radius: 999px; background: #14130f; color: #f4f1e8; font: inherit; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; }
+.add-activity-button .icon { width: 15px; height: 15px; color: var(--gold); }
+.add-activity-button:hover { border-color: var(--gold); background: #211d10; }
+.add-activity-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.summary-preview .add-activity-buttons { margin: 4px 0 12px; padding-top: 12px; border-top: 1px solid #ffffff14; }
 
 /* Note, Task and Follow up beside each recruit's contact tools. */
 .recruit-row-tools { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: nowrap; gap: 7px; }

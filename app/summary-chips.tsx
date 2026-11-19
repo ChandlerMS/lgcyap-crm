@@ -8,13 +8,14 @@ import { fitFollowUpChips } from "./recruit-follow-up.mjs";
 export type SummaryChip = { id: string; href?: string; external?: boolean; name: string; badge?: string; detail: string; previewDetail?: string };
 type More = { href?: string; external?: boolean; label: string };
 // href makes the title open its own page; hovering or focusing the title then previews the first few items.
-// lead sits to the left of the title, e.g. the gold plus that adds a task or follow-up.
-type Props = { id: string; title: string; count?: string; note: string; chips: readonly SummaryChip[]; empty: ReactNode; more: More; className?: string; href?: string; lead?: ReactNode };
+// lead sits to the left of the title, e.g. the gold plus that adds a task or follow-up. previewActions are buttons
+// inside the hover preview, e.g. Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar.
+type Props = { id: string; title: string; count?: string; note: string; chips: readonly SummaryChip[]; empty: ReactNode; more: More; className?: string; href?: string; lead?: ReactNode; previewActions?: ReactNode };
 const RENDERED = 24;
 const PREVIEW = 6;
 const newTab = (external?: boolean) => external ? { target: "_blank", rel: "noopener noreferrer" } : {};
 // Chips beside the Today totals, trimmed to the rows set by --chip-rows and ending in a "+N more" count.
-export default function SummaryChips({ id, title, count, note, chips, empty, more, className, href, lead }: Props) {
+export default function SummaryChips({ id, title, count, note, chips, empty, more, className, href, lead, previewActions }: Props) {
   const listRef = useRef<HTMLUListElement>(null);
   const [fit, setFit] = useState(RENDERED);
   const rowKey = chips.slice(0, RENDERED).map(chip => `${chip.id}:${chip.badge ?? ""}`).join(",") + `/${chips.length}`;
@@ -47,6 +48,7 @@ export default function SummaryChips({ id, title, count, note, chips, empty, mor
         <p className="summary-preview-title">{title}{count ? ` · ${count}` : ""}</p>
         {chips.length ? <ul>{chips.slice(0, PREVIEW).map(chip => <li key={chip.id}>{chip.href ? <a href={chip.href} {...newTab(chip.external)}>{chip.name}</a> : <span>{chip.name}</span>}<span className="muted">{chip.previewDetail ?? chip.detail}</span></li>)}</ul> : <p className="muted">{empty}</p>}
         {chips.length > PREVIEW && <p className="muted">+{chips.length - PREVIEW} more</p>}
+        {previewActions}
         <a className="text-link summary-preview-open" href={href}>Open {title}</a>
       </>}
     </SummaryPreview>;
