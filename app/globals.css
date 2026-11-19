@@ -1069,3 +1069,7 @@ body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-contain
 .launcher-brand-icon { display: inline-block; flex: 0 0 24px; width: 24px; height: 24px; background-position: center; background-repeat: no-repeat; background-size: contain; }
 
 #legacy-bot-dock { display: contents; }
+
+/* Icon-only bottom controls retain their spoken labels and native hover titles. */
+.floating-actions .legacy-bot-launcher, .legacy-bot-control .legacy-bot-launcher { width: 54px; height: 54px; padding: 0; gap: 0; justify-content: center; }
+@media (max-width: 600px) { .floating-actions .legacy-bot-launcher, .legacy-bot-control .legacy-bot-launcher { width: 44px; height: 44px; min-height: 44px; padding: 0; } }

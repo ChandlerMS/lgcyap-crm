@@ -11,7 +11,7 @@ type LauncherProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "
 
 // All bottom panel launchers share the same open/collapse contract.
 export default function FloatingLauncher({ expanded, onExpand, onCollapse, ...props }: LauncherProps) {
-  return <button {...props} type="button" aria-expanded={expanded} onClick={expanded ? onCollapse : onExpand} />;
+  return <button {...props} title={props.title ?? props["aria-label"]} type="button" aria-expanded={expanded} onClick={expanded ? onCollapse : onExpand} />;
 }
 
 export function FloatingActions({ children }: { children: ReactNode }) {

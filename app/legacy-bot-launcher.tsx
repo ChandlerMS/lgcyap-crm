@@ -103,7 +103,7 @@ export default function LegacyBotLauncher() {
       if (api) { openedByUser.current = true; setOpen(true); api.widget.open(); }
     }}>
       <span className="launcher-brand-icon" aria-hidden="true" style={{ backgroundImage: "url(/launcher-icons/hubspot.ico)" }} />
-      <span>Legacy Bot</span>
+      <span className="sr-only">Legacy Bot</span>
     </FloatingLauncher>
   </div></>;
   return dock ? createPortal(control, dock) : control;
