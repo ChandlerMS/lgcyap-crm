@@ -547,17 +547,17 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} previewActions={previewActions} />
         <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} previewActions={previewActions} />
       </div>
-      <RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} />
+      <details className="dashboard-pipeline"><summary>Recruiting pipeline</summary><RecruitPipeline records={periodRecords} stages={STAGE_PAGES} partial={data.partial} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} pendingId={stageSavingId} blockedIds={stageBlockedIds} onNavigate={view => { setQuery(""); window.location.hash = view; }} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></details>
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
       <div className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading"><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section />}</div>
       {/* Tasks and Follow up lead, directly above Recruits and Calls; Meetings and Calendar follow. */}
       <div className="today-overview">
         {recruitsPagePanel("tasks")}
         <FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} />
-        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} />
-        {recruitsPagePanel("calls")}
         {recruitsPagePanel("meetings")}
         {recruitsPagePanel("calendar")}
+        <RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} />
+        {recruitsPagePanel("calls")}
       </div>
     </>;
     }

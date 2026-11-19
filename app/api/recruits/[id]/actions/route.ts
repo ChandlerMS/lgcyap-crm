@@ -17,7 +17,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     accessToken: process.env.HUBSPOT_ACCESS_TOKEN, hmacSecret: process.env.BETTER_AUTH_SECRET,
     vercel: process.env.VERCEL, vercelEnv: process.env.VERCEL_ENV,
     saveData: (recruitId: string, input: unknown, options: { user: { userId: string; email: string; displayName?: string }; ledger: ReturnType<typeof createPostgresLedger> }) => createQuickAction(recruitId, input, {
-      ...options, accessToken: process.env.HUBSPOT_ACCESS_TOKEN, hmacSecret: process.env.BETTER_AUTH_SECRET,
+      ...options, accessToken: process.env.HUBSPOT_ACCESS_TOKEN, hmacSecret: process.env.BETTER_AUTH_SECRET, reviewSecret: process.env.EVENT_REVIEW_HMAC_SECRET || process.env.BETTER_AUTH_SECRET,
     }),
   });
 }

@@ -68,12 +68,12 @@ export const applicantColumns: Column<Applicant>[] = [
   { label: 'Records', render: hubspotCell },
 ];
 
-export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty }: { title: string; rows: T[]; columns: Column<T>[]; empty: string }) {
+export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode }) {
   return <div className={styles.peopleBlock}>
     <h3>{title} <span>{rows.length}</span></h3>
     {rows.length ? <div className={styles.tableWrap}><table className={`${styles.table} ${styles.peopleTable}`}>
-      <thead><tr>{columns.map(column => <th scope="col" key={column.label}>{column.label}</th>)}</tr></thead>
-      <tbody>{rows.map((row, index) => <tr key={`${row.ticketId ?? 'none'}-${index}`}>{columns.map((column, at) => at === 0 ? <th scope="row" key={column.label}>{column.render(row)}</th> : <td key={column.label}>{column.render(row)}</td>)}</tr>)}</tbody>
+      <thead><tr>{columns.map(column => <th scope="col" key={column.label}>{column.label}</th>)}{actions && <th scope="col">Review and notes</th>}</tr></thead>
+      <tbody>{rows.map((row, index) => <tr key={`${row.ticketId ?? 'none'}-${index}`}>{columns.map((column, at) => at === 0 ? <th scope="row" key={column.label}>{column.render(row)}</th> : <td key={column.label}>{column.render(row)}</td>)}{actions && <td>{actions(row)}</td>}</tr>)}</tbody>
     </table></div> : <p className={styles.empty}>{empty}</p>}
   </div>;
 }

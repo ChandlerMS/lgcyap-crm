@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EVENT_ATTENDANCE_SINCE, easternDay, noteKind, readEventAttendance, summarizeEventAttendance } from '../lib/event-attendance.mjs';
+import { eventReviewBody, eventReviewHtml, parseEventReview, newerEventReview } from '../lib/event-review.mjs';
 import { handleRecruitRequest } from '../lib/hubspot.mjs';
 
 const PIPELINE = '924992938';
@@ -198,4 +199,31 @@ test('the API keeps the workspace sign-in, editor and origin checks', async () =
   assert.equal(ok.status, 200);
   assert.match(ok.headers.get('Cache-Control'), /private, no-store/);
   assert.deepEqual(await ok.json(), { people: { signedIn: 1, applied: 0, hired: 0 } });
+});
+
+
+test('review reader joins decisions by recruiting ticket across signed-in and applied lists', async () => {
+  const {notes,noteTickets,tickets}=fixture();
+  const secret='event-review-test-secret-32-characters';
+  const review=(id,status,at)=>({id,properties:{hs_note_body:eventReviewHtml({ticketId:id==='23'?'106':id==='24'?'102':'101',status,requestId:`00000000-0000-4000-8000-${(id==='24'?'22':id).padStart(12,'0')}`,reviewedAt:new Date(at).toISOString(),secret}),hs_timestamp:at}});
+  const decisions=[review('21','approved','2026-11-18T21:00:00Z'),review('22','denied','2026-11-18T22:00:00Z'),review('23','approved','2026-11-18T22:00:00Z'),review('24','approved','2026-11-18T22:00:00Z')];
+  const links=new Map([...noteTickets,['21',['101']],['22',['101']],['23',['106']],['24',['102']]]);
+  let partial=false, associationFailure=false;
+  const {fetchImpl:baseFetch}=hubspot({
+    '/crm/v3/objects/notes/search': body=>[200,{total:body.filterGroups[0].filters.some(f=>f.propertyName==='hs_note_body')?(partial?2001:decisions.length):notes.length,results:body.filterGroups[0].filters.some(f=>f.propertyName==='hs_note_body')?decisions:notes}],
+    '/crm/v4/associations/notes/tickets/batch/read':body=>[207,{status:'COMPLETE',...(associationFailure && body.inputs.some(({id})=>id==='22')?{numErrors:1,errors:[{category:'OBJECT_NOT_FOUND'}]}:{}),results:body.inputs.map(({id})=>({from:{id},to:(links.get(id)??[]).map(ticket=>({toObjectId:Number(ticket),associationTypes:[]}))}))}],
+    '/crm/v3/objects/tickets/batch/read':body=>[200,{results:body.inputs.map(({id})=>({id,properties:{hs_pipeline:tickets.get(id).pipeline,hs_pipeline_stage:tickets.get(id).stageId}}))}],
+  });
+  const fetchImpl=async(url,init)=>{const path=new URL(url).pathname;const match=path.match(/^\/crm\/v4\/objects\/tickets\/(\d+)\/associations\/notes$/);if(match)return new Response(JSON.stringify({results:decisions.filter(note=>links.get(note.id)?.includes(match[1])).map(note=>({toObjectId:Number(note.id)}))}));if(path==='/crm/v3/objects/notes/batch/read'){const ids=JSON.parse(init.body).inputs.map(row=>row.id);return new Response(JSON.stringify({status:'COMPLETE',results:decisions.filter(note=>ids.includes(note.id))}));}return baseFetch(url,init);};
+  const report=await readEventAttendance({accessToken:'test-token',fetchImpl,includeReviews:true,reviewSecrets:[secret],now:()=>Date.parse('2026-11-18T23:00:00Z')});
+  assert.equal(report.reviews['101'].status,'denied');assert.equal(report.reviews['101'].noteId,'22');assert.equal(report.reviews['106'],undefined);assert.equal(report.reviewComplete,true);assert.equal(report.reviews['102'].status,'approved');
+  assert.ok(report.attendees.some(row=>row.ticketId==='101'&&row.appliedAt));assert.deepEqual(report.people,{signedIn:3,applied:2,hired:1});
+  assert.equal(parseEventReview({id:'24',properties:{hs_note_body:'A quick note mentioning LGCYEventReview',hs_timestamp:'2026-11-18T22:00:00Z'}}),null);
+  partial=true;
+  const fallback=await readEventAttendance({accessToken:'test-token',fetchImpl,includeReviews:true,reviewSecrets:[secret],now:()=>Date.parse('2026-11-18T23:00:00Z')});
+  assert.equal(fallback.reviewComplete,true);assert.equal(fallback.reviews['101'].status,'denied');assert.equal(fallback.reviews['102'].status,'approved');
+  partial=false;associationFailure=true;
+  const incomplete=await readEventAttendance({accessToken:'test-token',fetchImpl,includeReviews:true,reviewSecrets:[secret]});
+  assert.equal(incomplete.reviewComplete,false);assert.deepEqual(incomplete.reviews,{});assert.match(incomplete.reviewNotice,/could not refresh/);
+  assert.equal(newerEventReview({...report.reviews['101'],noteId:'20'},{...report.reviews['101'],noteId:'22'}).noteId,'22');
 });

@@ -1,6 +1,10 @@
 'use client';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import RecruitQuickActions from '../recruit-quick-actions';
+import { newerEventReview, keepEventReviewRequest } from '../../lib/event-review-model.mjs';
+
+type Review = { status: 'approved' | 'denied'; noteId: string; reviewedAt: string };
 import styles from './event-attendance.module.css';
 import AttendeeImport, { type AttendeeValues } from './attendee-import';
 import { ATTENDEE_TEMPLATE_CSV, HUBSPOT_SOURCE_URL, attendanceCsv, attendanceCsvFilename, parseAttendeeFile } from './attendance-files.mjs';
@@ -26,7 +30,7 @@ type Report = {
   applications: { total: number; fromAttendees: number; otherTickets: number; noTicket: number };
   stages: Stage[]; offices: Office[]; days: Day[];
   attendees?: Attendee[]; visits?: Visit[]; applicants?: Applicant[];
-  canImport?: boolean;
+  canImport?: boolean; canReview?: boolean; reviews?: Record<string, Review>; reviewComplete?: boolean; reviewNotice?: string;
 };
 
 const ZONE = 'America/New_York';
@@ -62,6 +66,12 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   const [importFile, setImportFile] = useState<{ name: string; attendees: AttendeeValues[]; id: number } | null>(null);
   const [importError, setImportError] = useState('');
   const [reading, setReading] = useState(false);
+  const [localReviews, setLocalReviews] = useState<Record<string, Review>>({});
+  const [reviewBusy, setReviewBusy] = useState<Set<string>>(new Set());
+  const [reviewError, setReviewError] = useState('');
+  const [reviewRetry, setReviewRetry] = useState<{ ticketId: string; status: 'approved' | 'denied' } | null>(null);
+  const writingReviews = useRef(new Set<string>());
+  const reviewRequests = useRef(new Map<string, { status: string; requestId: string }>());
   // One list open at a time: a tile, an event day, or one office on an event day.
   const [openTile, setOpenTile] = useState<Tile | null>(null);
   const [openDay, setOpenDay] = useState<{ day: string; office: string | null } | null>(null);
@@ -114,16 +124,52 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     { key: 'hired', label: 'Hired', value: count(people?.hired), note: `${share(people?.hired, people?.signedIn)} reached Completed` },
     { key: 'today', label: 'Today', value: data ? count(today?.signIns ?? 0) : '—', note: `Sign-ins · ${data ? count(today?.applications ?? 0) : '—'} applications` },
   ];
+  async function saveReview(ticketId: string, status: 'approved' | 'denied') {
+    if (!data?.canReview || writingReviews.current.has(ticketId)) return;
+    const previous = reviewRequests.current.get(ticketId);
+    const pending = previous?.status === status ? previous : { status, requestId: crypto.randomUUID() };
+    reviewRequests.current.set(ticketId, pending); writingReviews.current.add(ticketId);
+    setReviewBusy(new Set(writingReviews.current)); setReviewError(''); setReviewRetry(null);
+    try {
+      const response = await fetch(`/api/recruits/${encodeURIComponent(ticketId)}/actions`, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: pending.requestId, kind: 'event-review', reviewStatus: status }) });
+      const result = await response.json().catch(() => null);
+      if (response.status === 401) { setSignInNeeded(true); setData(null); setLocalReviews({}); return; }
+      if (!response.ok || result?.status !== 'saved') {
+        if (!keepEventReviewRequest(response.status, result?.error?.code)) reviewRequests.current.delete(ticketId);
+        setReviewError(result?.error?.message || 'The review could not be saved.');
+        if (result?.error?.code !== 'SAVE_UNCERTAIN') setReviewRetry({ ticketId, status });
+        return;
+      }
+      reviewRequests.current.delete(ticketId);
+      const review = result.review;
+      if (review?.status === status && /^[1-9]\d{0,19}$/.test(review.noteId) && Number.isFinite(Date.parse(review.reviewedAt))) setLocalReviews(values => ({ ...values, [ticketId]: newerEventReview(values[ticketId], review) }));
+      else void refresh();
+    } catch { setReviewError('The connection dropped. Retry will reuse the same review request.'); setReviewRetry({ ticketId, status }); }
+    finally { writingReviews.current.delete(ticketId); setReviewBusy(new Set(writingReviews.current)); }
+  }
+  const reviewActions = (row: { ticketId: string | null; name: string }) => {
+    if (!row.ticketId) return <span className={styles.muted}>No recruiting ticket</span>;
+    const id = row.ticketId;
+    const review = newerEventReview(data?.reviews?.[id], localReviews[id]) as Review | undefined;
+    const status = review?.status;
+    const busy = reviewBusy.has(id);
+    return <div className={styles.reviewActions} role="group" aria-label={`Review for ${row.name}`}>
+      <button type="button" className={`${styles.reviewButton} ${styles.approve}`} disabled={!data?.canReview || busy} aria-label={`Approve ${row.name}`} title="Approved" aria-pressed={status === 'approved'} onClick={() => void saveReview(id, 'approved')}>✓</button>
+      <button type="button" className={`${styles.reviewButton} ${styles.deny}`} disabled={!data?.canReview || busy} aria-label={`Deny ${row.name}`} title="Denied" aria-pressed={status === 'denied'} onClick={() => void saveReview(id, 'denied')}>×</button>
+      <span className={styles.reviewStatus} role="status">{busy ? 'Saving…' : status === 'approved' ? 'Approved' : status === 'denied' ? 'Denied' : data?.reviewComplete === false ? 'Status unavailable' : 'Not reviewed'}</span>
+      {data?.canReview && <RecruitQuickActions kinds={['note']} recruitId={id} recruitName={row.name} />}
+    </div>;
+  };
   const tileList = () => {
-    if (openTile === 'signedIn') return <PeopleTable title="Everyone who signed in" rows={attendees} columns={attendeeColumns} empty="No one has signed in yet." />;
-    if (openTile === 'applied') return <PeopleTable title="Signed in and applied online" rows={attendees.filter(person => person.appliedAt)} columns={appliedColumns} empty="No one who signed in has applied online yet." />;
+    if (openTile === 'signedIn') return <PeopleTable title="Everyone who signed in" rows={attendees} columns={attendeeColumns} actions={reviewActions} empty="No one has signed in yet." />;
+    if (openTile === 'applied') return <PeopleTable title="Signed in and applied online" rows={attendees.filter(person => person.appliedAt)} columns={appliedColumns} actions={reviewActions} empty="No one who signed in has applied online yet." />;
     if (openTile === 'hired') return <PeopleTable title="Signed in and reached Completed" rows={attendees.filter(person => person.stageId === COMPLETED_STAGE_ID)} columns={hiredColumns} empty="No one who signed in has reached Completed yet." />;
-    if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} empty="No online applications yet today." /></>;
+    if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} actions={reviewActions} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} actions={reviewActions} empty="No online applications yet today." /></>;
     return null;
   };
   const dayList = (day: string, office: string | null) => office
-    ? <PeopleTable title={`Signed in at ${officeName(office)} on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day && visit.office === office)} columns={visitColumns} empty="No sign-ins." />
-    : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} empty="No online applications this day." /></>;
+    ? <PeopleTable title={`Signed in at ${officeName(office)} on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day && visit.office === office)} columns={visitColumns} actions={reviewActions} empty="No sign-ins." />
+    : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} actions={reviewActions} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} actions={reviewActions} empty="No online applications this day." /></>;
   const funnel = people ? [
     { label: 'Signed in', value: people.signedIn, note: 'Everyone who signed in at an event' },
     { label: 'Applied', value: people.applied, note: `${share(people.applied, people.signedIn)} of sign-ins sent the online application` },
@@ -146,6 +192,8 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     {importError && <p role="alert" className={styles.alert}>{importError}</p>}
     {importFile && <AttendeeImport key={importFile.id} fileName={importFile.name} attendees={importFile.attendees} onClose={() => setImportFile(null)} onImported={() => void refresh()} />}
 
+    {data?.reviewNotice && <p role="status" className={styles.hint}>{data.reviewNotice}</p>}
+    {reviewError && <div className={styles.alert} role="alert">{reviewError} {reviewRetry ? <button type="button" onClick={() => void saveReview(reviewRetry.ticketId, reviewRetry.status)}>Retry review</button> : <button type="button" onClick={() => void refresh()}>Refresh statuses</button>}</div>}
     {error &&<div role="alert" className={styles.alert}><p>{error}{data ? ' The last numbers received are shown below.' : ''}</p>{signInNeeded && <a href="/sign-in?return_to=%2F%23event-attendance" target="_top">Sign in</a>}</div>}
     {data?.partial && <p role="status" className={styles.alert}>HubSpot returned more notes than this page reads at once, so the oldest sign-ins and applications may be missing from these counts.</p>}
 

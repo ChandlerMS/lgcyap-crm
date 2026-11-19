@@ -163,3 +163,17 @@ test('meeting validation rejects missing titles, invalid times and reversed time
   for(const changed of [{subject:''},{startsAt:'2026-02-30T15:00:00.000Z'},{endsAt:input.startsAt},{endsAt:'bad'},{dueDate:TODAY},{startsAt:'2030-11-20T15:00:00.000Z',endsAt:'2030-11-20T16:00:00.000Z'}]) assert.throws(()=>validateQuickAction({...input,...changed},{today:TODAY}),{code:'INVALID_QUICK_ACTION'});
   assert.throws(()=>validateQuickAction({requestId:id,kind:'note',body:'Note',startsAt:input.startsAt},{today:TODAY}),{code:'INVALID_QUICK_ACTION'});
 });
+
+
+test('event review decisions are fixed audited notes on the same recruiting ticket, and retries cannot duplicate them', async () => {
+  const provider = hubspot();const settings = await options(provider.fetchImpl);
+  const input={requestId:id,kind:'event-review',reviewStatus:'denied'};
+  const result=await createQuickAction('456',input,settings);
+  assert.equal(result.review.status,'denied');assert.equal(result.review.noteId,'9001');assert.equal(result.review.reviewedAt,new Date(clock()).toISOString());
+  const [note]=posts(provider.calls);assert.equal(note.pathname,'/crm/v3/objects/notes');assert.match(note.body.properties.hs_note_body,/Event attendance review \(LGCYEventReview\)/);assert.match(note.body.properties.hs_note_body,/Decision: Denied/);
+  assert.deepEqual(note.body.associations.map(item=>[item.to.id,item.types[0].associationTypeId]),[['456',228],['501',202]]);
+  assert.equal(provider.calls.some(call=>call.pathname==='/crm/v3/owners/'),false);
+  assert.equal((await createQuickAction('456',input,settings)).replayed,true);assert.equal(posts(provider.calls).length,1);
+  for(const changed of [{reviewStatus:'accepted'},{body:'forged'},{dueDate:TODAY}]) assert.throws(()=>validateQuickAction({...input,...changed},{today:TODAY}),{code:'INVALID_QUICK_ACTION'});
+  assert.throws(()=>validateQuickAction({requestId:id,kind:'note',body:'a note',reviewStatus:'approved'},{today:TODAY}),{code:'INVALID_QUICK_ACTION'});
+});

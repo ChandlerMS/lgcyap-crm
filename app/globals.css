@@ -849,3 +849,8 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .today-summaries .summary-chips-heading h2 > span { margin-left: 0; }
 
 .dashboard-back-row { display: flow-root; width: 100%; clear: both; margin: 0 0 20px; }.dashboard-back-row .back-link { margin: 0; }
+
+.dashboard-pipeline { margin-bottom: 24px; border: 1px solid var(--line); border-radius: 8px; }
+.dashboard-pipeline > summary { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; color: var(--gold); font-size: 20px; cursor: pointer; list-style: none; }
+.dashboard-pipeline > summary::-webkit-details-marker { display: none; }.dashboard-pipeline > summary::after { content: '+'; font-size: 26px; }.dashboard-pipeline[open] > summary::after { content: '−'; }
+.dashboard-pipeline > summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }.dashboard-pipeline[open] > summary { border-bottom: 1px solid var(--line); }
