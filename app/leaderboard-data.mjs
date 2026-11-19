@@ -126,7 +126,7 @@ export function leaderboardCsvCell(value) {
 export function leaderboardCsv(rows, board) {
   const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
   const sales = ['all', 'shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board);
-  const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
+  const fixed = (value, places) => value === null ? '' : Math.round(value * 10 ** places) / 10 ** places;
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
   const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : board === 'all' ? 'Calls / leads' : 'Calls', board === 'all' ? 'Sales / activity' : 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
   const lines = rows.map(row => [
@@ -157,7 +157,9 @@ export function filterLeaderboardRows(rows, query) {
   return words.length ? rows.filter(row => { const name = fold(row.name); return words.every(word => name.includes(word)); }) : rows;
 }
 
-/** Align named agents across two source snapshots without inventing activity for an absent source/row. */
+/** Align named agents across two source snapshots without inventing activity for an absent source/row.
+ * @param {{field:string,direction:'asc'|'desc'}|undefined} [sort]
+ */
 export function leaderboardComparisonRows(left, right, metric = 'ap', query = '', sort = undefined) {
   const agents = new Map();
   for (const [side, result] of [['left', left], ['right', right]]) {

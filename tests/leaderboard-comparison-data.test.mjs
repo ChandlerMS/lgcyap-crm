@@ -9,6 +9,7 @@ test('All uses policies sold and annual premium consistently in ranking, sorting
   assert.equal(data.leaderboardTotals(rows, 'all').second, 600);
   assert.equal(data.leaderboardSortValue(rows[0], 'all', 'calls'), 20);
   assert.match(data.leaderboardCsv(rows, 'all'), /Sales,Calls \/ leads,Sales \/ activity,Annual premium/);
+  assert.match(data.leaderboardCsv([{ ...rows[0], annualPremium: -12.34 }], 'all'), /,-12\.34\r\n$/, 'negative premium adjustments remain numeric in exports');
 });
 test('comparison matches only case and whitespace variants, preserves separate accents and unknown attribution', () => {
   const left = available('shopper', [{ name: ' Ana  Lee ', submitted: 3, premium: 100.1 }, { name: 'José', submitted: 1, premium: 60 }, { name: 'No name', attributed: false, submitted: 2, premium: 70 }]);
