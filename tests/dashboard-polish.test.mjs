@@ -12,7 +12,7 @@ test('the Today row, its totals and Add Recruits, Recruits and Agents sit inside
   assert.match(workspace, /<details className="dashboard-pipeline"><summary>Recruiting pipeline<\/summary><div className="dashboard-pipeline-body">\s*<RecruitingPeriodControls headingLevel=\{2\}[^\n]*Add Recruits[^\n]*Agents/);
   assert.doesNotMatch(workspace, /<details className="dashboard-pipeline" open/);
   // The dashboard keeps one centered width from 1080p to 4K.
-  assert.match(workspace, /className=\{route\.view === "today" && !route\.id \? "content dashboard-content" : "content"\}/);
+  assert.match(workspace, /className=\{route\.view === "today" && !route\.id \? "content dashboard-content" : route\.view === "sales" \|\| route\.view === "calls" \? "content sales-calls-content" : "content"\}/);
   assert.match(source('app/globals.css'), /main\.content\.dashboard-content \{ max-width: 1680px; margin-inline: auto; \}/);
 });
 

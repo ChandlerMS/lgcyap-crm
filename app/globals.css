@@ -745,6 +745,7 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 
 /* Add Task and Add Follow-Up: a labeled button in a panel heading, and a gold plus left of a dashboard summary title. */
 .panel-heading-actions { display: flex; align-items: center; gap: 10px; }
+.panel-heading-actions .summary-add { margin-top: 0; }
 .panel-add-button { display: inline-flex; align-items: center; gap: 8px; }
 .panel-add-plus { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: #17150f; font-size: 17px; font-weight: 700; line-height: 1; }
 .summary-chips-top { display: flex; align-items: flex-start; gap: 10px; }

@@ -24,6 +24,7 @@ import { useRecruitHoverCard } from "./recruit-hover";
 import RecruitFollowUpChips from "./recruit-follow-up-chips";
 import RecruitTaskChips from "./recruit-task-chips";
 import RecruitMeetingChips from "./recruit-meeting-chips";
+import RecruitsHubSpotLink from "./recruits-hubspot-link";
 import RecruitsPanel from "./recruits-panel";
 import FollowUpPage from "./follow-up-page";
 import FollowUpPanel from "./follow-up-panel";
@@ -583,12 +584,12 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         <DashboardSection id="follow-up" label="Follow up"><FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} /></DashboardSection>
         <DashboardSection id="meetings" label="Meetings">{recruitsPagePanel("meetings")}</DashboardSection>
         <DashboardSection id="calendar" label="Calendar">{recruitsPagePanel("calendar")}</DashboardSection>
-        <DashboardSection id="recruits" label="Recruits"><RecruitsPanel records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} blockedIds={stageBlockedIds} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></DashboardSection>
+        <DashboardSection id="recruits" label="Recruits"><RecruitsPanel showHubSpotLink={!demoMode} records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} blockedIds={stageBlockedIds} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></DashboardSection>
         <DashboardSection id="calls" label="Calls">{recruitsPagePanel("calls")}</DashboardSection>
       </div>
     </>;
     }
-    return <>{dashboardLink}{heading(stagePage?.label ?? "Recruits", route.view === "recruits" ? "Recruiting records connected to your HubSpot recruiting pipeline." : `Recruiting records in ${stagePage?.label ?? "Recruits"}`, null)}{collectionContent()}</>;
+    return <>{dashboardLink}{heading(stagePage?.label ?? "Recruits", route.view === "recruits" ? "Recruiting records connected to your HubSpot recruiting pipeline." : `Recruiting records in ${stagePage?.label ?? "Recruits"}`, !demoMode && route.view === "recruits" ? <RecruitsHubSpotLink /> : null)}{collectionContent()}</>;
   }
 
   // Queue shares the hash navigation and unsaved-edit protection of other workspace pages.
