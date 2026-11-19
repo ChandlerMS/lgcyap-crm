@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { upcomingMeetingChips, weekMeetingChips } from "./dashboard-activity.mjs";
 import { MEETINGS_CHANGED_EVENT } from "./recruit-quick-actions";
 import SummaryChips, { type SummaryChip } from "./summary-chips";
+import CalendarPreview from "./calendar-preview";
 
 type MeetingsResult = { status?: string; tool?: string; records?: { id: string; title: string; status?: string | null; scheduledAt?: string | null; hubspotUrl?: string }[]; partial?: boolean; error?: { message?: string } };
 type State = { status: "loading" } | { status: "ready"; result: MeetingsResult } | { status: "failed"; message: string };
@@ -49,7 +50,8 @@ export default function RecruitMeetingChips({ live, now, onUnauthorized, meeting
   return <>
     <SummaryChips id="meeting-chips-title" className="meeting-chips" title="Meetings" href="#meetings" lead={meetingLead} previewActions={previewActions} count={count(meetings)} note="Yours, upcoming" chips={meetings}
       empty={waiting("No upcoming meetings assigned to you.")} more={{ href: "#meetings", label: "upcoming meetings" }} />
-    <SummaryChips id="calendar-chips-title" className="calendar-chips" title="Calendar" href="#calendar" lead={calendarLead} previewActions={previewActions} count={count(calendar)} note="Next 7 days" chips={calendar}
+    <SummaryChips id="calendar-chips-title" className="calendar-chips" title="Calendar" href="#calendar" lead={calendarLead} previewActions={previewActions} count={count(calendar)} note="Next 7 days" chips={calendar} previewWidth={760}
+      previewExtra={<CalendarPreview meetings={ready?.records ?? []} now={now} status={!live ? "Switch to live data to see HubSpot meetings." : state.status === "loading" ? "Loading meetings from HubSpot…" : state.status === "failed" ? state.message : ready?.partial ? "Shows the meetings loaded from HubSpot." : undefined} />}
       empty={waiting("Nothing scheduled in the next 7 days.")} more={{ href: "#calendar", label: "meetings this week" }} />
   </>;
 }
