@@ -94,8 +94,6 @@ svg { flex-shrink: 0; }
 .pipeline-pages .nav-link { min-height: 44px; font-size: 15px; padding: 10px 22px; gap: 12px; }
 .pipeline-pages .nav-branch { margin: 0 0 0 7px; }
 .pipeline-pages .nav-flow-caption { margin: 14px 22px 4px; font-size: 15px; letter-spacing: 0; text-transform: none; }
-/* Recruiting Dashboard stands alone at the top of the sidebar, above a gold rule. */
-.nav-gold-divider { height: 3px; flex-shrink: 0; margin: 2px 28px 10px; border-radius: 2px; background: var(--gold); }
 /* Queues opens and closes the live queue links listed under it. */
 .nav-group-toggle { width: 100%; border: 0; background: transparent; cursor: pointer; }
 .nav-group-toggle > .icon:last-child { width: 16px; height: 16px; margin-left: auto; color: var(--muted); transition: transform 160ms ease; }

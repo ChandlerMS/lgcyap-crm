@@ -28,12 +28,12 @@ export const WORKSPACE_NAV_GROUPS = Object.freeze([
   { id: 'outcomes', label: 'Outcomes', branch: false, items: [page('completed', 'completed')] },
 ].map(group => Object.freeze({ ...group, items: Object.freeze(group.items) })));
 export const WORKSPACE_NAV = Object.freeze([
-  Object.freeze({ id: 'today', label: 'Recruiting Dashboard', icon: 'funnel' }),
+  Object.freeze({ id: 'today', label: 'Dashboard', icon: 'funnel' }),
   Object.freeze({ id: 'add-recruits', label: 'Add Recruits', icon: 'add-person' }),
   ...WORKSPACE_NAV_GROUPS.flatMap(group => group.items),
 ]);
 
-// Recruiting Dashboard heads the sidebar on its own. Add Recruits opens from a button on the dashboard,
+// Dashboard heads the sidebar on its own. Add Recruits opens from a button on the dashboard,
 // and the stage queues open from the pipeline.
 export const SIDEBAR_RECRUITING_PAGES = Object.freeze(WORKSPACE_NAV.slice(0, 1));
 
@@ -56,7 +56,7 @@ export const RECRUITS_PAGE_TOOLS = Object.freeze([
 ].map(tool => Object.freeze(tool)));
 // Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);
-// Live queues listed under Queues in the sidebar. Each opens on its own here; queue.lgcyap.com still shows both together.
+// Preserve saved source routes; the Queues sidebar link embeds the combined Queue site.
 export const QUEUE_PAGES = Object.freeze([
   { id: 'queue', label: 'Shopper', icon: 'phone', source: 'shopper' },
   { id: 'ringcx', label: 'Standard vs Preferred', icon: 'phone', source: 'svp' },

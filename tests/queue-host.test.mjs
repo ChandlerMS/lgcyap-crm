@@ -81,3 +81,16 @@ test('handoff never copies a different cookie than the verified database session
   assert.equal(response.status, 403);
   assert.equal(response.headers.get('set-cookie'), null);
 });
+
+// Embedding uses the same verified handoff, with a fixed Queue-only destination.
+test('embedded handoff keeps the Queue embedded and offers top-level sign-in when expired', async () => {
+  const request = new Request('https://crm.lgcyap.com/queue-access?embedded=1&return_to=https://evil.invalid', { headers: { Cookie: '__Secure-better-auth.session_token=synthetic.signed' } });
+  const options = { baseURL: canonical, getSession: async () => ({ session: { token: 'synthetic', expiresAt: new Date(Date.now() + 60000) } }), authorize: () => true };
+  const response = await queueAccessResponse(request, options);
+  assert.equal(response.headers.get('location'), 'https://queue.lgcyap.com/?embedded=1');
+  assert.match(response.headers.get('set-cookie'), /^__Secure-lgcy-queue.session_token=/);
+  const expired = await queueAccessResponse(request, { ...options, getSession: async () => null });
+  assert.equal(expired.status, 401);
+  assert.equal(expired.headers.get('location'), null);
+  assert.match(await expired.text(), /target="_top"/);
+});

@@ -8,7 +8,7 @@ import {
 } from '../app/recruiting-navigation.mjs';
 
 test('canonical stages are shared while each entry path has its own sidebar order', () => {
-  assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Recruiting Dashboard', 'Add Recruits']);
+  assert.deepEqual(WORKSPACE_NAV.slice(0, 2).map(page => page.label), ['Dashboard', 'Add Recruits']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'genpop').items.map(page => page.label), ['Hiring Event', 'Application', 'Phone Interview']);
   assert.deepEqual(WORKSPACE_NAV_GROUPS.find(group => group.id === 'mass-recruiting').items.map(page => page.label), ['Application', 'Phone Interview', 'Hiring Event']);
   assert.equal(new Set(STAGE_PAGES.map(page => page.id)).size, 10);
@@ -19,8 +19,8 @@ test('canonical stages are shared while each entry path has its own sidebar orde
   assert.equal(STAGE_PAGES.find(page => page.id === 'completed').stageId, '1416243218');
 });
 
-test('Recruiting Dashboard heads the sidebar alone and Add Recruits opens from a dashboard button', () => {
-  assert.deepEqual(SIDEBAR_RECRUITING_PAGES.map(page => [page.label, page.id, page.icon]), [['Recruiting Dashboard', 'today', 'funnel']]);
+test('Dashboard heads the sidebar alone and Add Recruits opens from a dashboard button', () => {
+  assert.deepEqual(SIDEBAR_RECRUITING_PAGES.map(page => [page.label, page.id, page.icon]), [['Dashboard', 'today', 'funnel']]);
   assert.deepEqual(resolveWorkspaceRoute('#today'), { view: 'today' });
   assert.deepEqual(resolveWorkspaceRoute('#add-recruits'), { view: 'add-recruits' });
   // Pages reached from another page light up that page's sidebar link.
@@ -32,9 +32,9 @@ test('Recruiting Dashboard heads the sidebar alone and Add Recruits opens from a
   // The dashboard is a direct link, not a row that only opens and closes.
   assert.match(workspace, /SIDEBAR_RECRUITING_PAGES\.map\(navigationLink\)/);
   assert.doesNotMatch(workspace, /nav-recruits|recruit-pages/);
-  // Sidebar order: Recruiting Dashboard, a gold rule, Leaderboard, Queues, then the HubSpot tools.
+  // Sidebar order: Dashboard, Leaderboard, Queues, then the HubSpot tools.
   const nav = workspace.slice(workspace.indexOf('const navigation = <>'), workspace.indexOf('const leaderboardSwitch'));
-  const order = ['SIDEBAR_RECRUITING_PAGES.map(navigationLink)', 'nav-gold-divider', 'navigationLink(WORKSPACE_EXTRA_PAGES[0])', '<span>Queues</span>', 'QUEUE_PAGES.map(navigationLink)', 'SIDEBAR_HUBSPOT_TOOLS.map'].map(token => nav.indexOf(token));
+  const order = ['SIDEBAR_RECRUITING_PAGES.map(navigationLink)', 'navigationLink(WORKSPACE_EXTRA_PAGES[0])', '<span>Queues</span>', 'SIDEBAR_HUBSPOT_TOOLS.map'].map(token => nav.indexOf(token));
   assert.ok(order.every(index => index >= 0), 'every sidebar entry is present');
   assert.deepEqual([...order].sort((a, b) => a - b), order);
   // Add Recruits, Call Analytics and Event Attendance open from their pages, not the sidebar.
@@ -43,13 +43,11 @@ test('Recruiting Dashboard heads the sidebar alone and Add Recruits opens from a
   assert.match(workspace, /actions=\{<a className="btn btn-primary add-recruits-button" href="#add-recruits">/);
 });
 
-test('Queues lists Shopper and Standard vs Preferred, and each opens on its own', () => {
+test('Queues opens the unified site while saved source routes remain available', () => {
   assert.deepEqual(QUEUE_PAGES.map(page => [page.label, page.id, page.source]), [['Shopper', 'queue', 'shopper'], ['Standard vs Preferred', 'ringcx', 'svp']]);
   for (const page of QUEUE_PAGES) assert.deepEqual(resolveWorkspaceRoute(`#${page.id}`), { view: page.id });
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
-  assert.match(workspace, /aria-expanded=\{queuesExpanded\} aria-controls="nav-queues"/);
-  assert.match(workspace, /<div id="nav-queues" className="nav-group-pages" hidden=\{!queuesExpanded\}>/);
-  assert.match(workspace, /src=\{`\/queue\?embedded=1&source=\$\{queuePage\.source\}`\}/);
+  assert.match(workspace, /src="https:\/\/queue\.lgcyap\.com\/embed"/);
   const queue = readFileSync('app/queue/page.tsx', 'utf8');
   assert.match(queue, /if \(source === "shopper"\) return <QueueBoard embedded=\{embedded\} \/>;/);
   assert.match(queue, /if \(source === "svp"\) return <RingCxDashboard \/>;/);

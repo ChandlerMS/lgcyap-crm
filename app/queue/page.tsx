@@ -7,7 +7,7 @@ import UnifiedQueue from "./unified-queue";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Queue · Legacy Agency Partners" };
 
-// The CRM sidebar opens each queue on its own with ?source=; without it both show together, as on queue.lgcyap.com.
+// Saved ?source= links retain individual queues; the CRM iframe and Queue site show both together.
 const SOURCES = { shopper: { label: "Shopper", hash: "queue" }, svp: { label: "Standard vs Preferred", hash: "ringcx" } } as const;
 
 export default async function Queue({ searchParams }: { searchParams: Promise<{ embedded?: string; source?: string }> }) {

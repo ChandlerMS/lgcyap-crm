@@ -189,7 +189,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // Queues opens by itself on a queue page until someone opens or closes it.
-  const [queuesOpen, setQueuesOpen] = useState<boolean | null>(null);
   const [periodSelection, setPeriodSelection] = useState<{preset:string;startDate?:string;endDate?:string}>({preset:"today"});
   const [now, setNow] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -355,7 +354,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const queuePage = QUEUE_PAGES.find(item => item.id === route.view);
   const eventAttendanceView = route.view === "event-attendance";
   const embeddedView = Boolean(queuePage) || eventAttendanceView;
-  const queuesExpanded = queuesOpen ?? Boolean(queuePage);
   const sidebarView = sidebarViewFor(activeView);
   const hubspotTool = HUBSPOT_TOOLS.find(item => item.id === route.view && item.id !== "recruits");
   // The top bar only appears when it has something to hold: the data source switch and search.
@@ -379,15 +377,11 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     if (!nextDemo) void refresh();
   }, [demoRecords.length, refresh]);
   const navigationLink = (item: { id: string; label: string; icon: string }) => <a key={item.id} className="nav-link" href={`#${item.id}`} aria-current={sidebarView === item.id ? "page" : undefined} onClick={navigateFromMenu}><Icon name={item.icon} /><span>{item.label}</span></a>;
-  // Recruiting Dashboard stands alone above a gold rule; Call Analytics opens from the Leaderboard page's toggle.
+  // Dashboard heads the sidebar; Call Analytics opens from the Leaderboard toggle.
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
-    <div className="nav-gold-divider" role="separator" />
     {navigationLink(WORKSPACE_EXTRA_PAGES[0])}
-    <div className="nav-group">
-      <button type="button" className="nav-link nav-group-toggle" aria-expanded={queuesExpanded} aria-controls="nav-queues" onClick={() => setQueuesOpen(!queuesExpanded)}><Icon name="headset" /><span>Queues</span><Icon name="chevron" /></button>
-      <div id="nav-queues" className="nav-group-pages" hidden={!queuesExpanded}>{QUEUE_PAGES.map(navigationLink)}</div>
-    </div>
+    <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={navigateFromMenu}><Icon name="headset" /><span>Queues</span></a>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {SIDEBAR_HUBSPOT_TOOLS.map(tool => <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode) switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
@@ -467,7 +461,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     // Calls and Recruits open from their panel titles on the Recruits page, so their pages lead back there.
     // Add Recruits opens from its button on the dashboard, so it leads back there too.
     const dashboardLink = route.view === "calls" || route.view === "recruits" || route.view === "add-recruits" ? <a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a> : null;
-    if (queuePage) return <iframe key={queuePage.id} className="queue-workspace-frame" src={`/queue?embedded=1&source=${queuePage.source}`} title={`${queuePage.label} live queue`} allow="fullscreen; screen-wake-lock" />;
+    if (queuePage) return <iframe key={queuePage.id} className="queue-workspace-frame" src="https://queue.lgcyap.com/embed" title="Shopper and Standard vs Preferred live queues" allow="fullscreen; screen-wake-lock" />;
     if (eventAttendanceView) return <iframe className="queue-workspace-frame" src="/event-attendance?embedded=1" title="Hiring event attendance" />;
     if (demoMode && hubspotTool) return <>{dashboardLink}{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;
     if (callAnalyticsView) return <>{leaderboardSwitch}<LeadData onUnauthorized={expiredSignIn} /></>;

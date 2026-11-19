@@ -12,11 +12,20 @@ test('Queue stays addressable inside workspace navigation', () => {
 
 test('Queue permits same-origin framing while private pages retain their embedding restrictions', async () => {
   const rules = await config.headers();
-  function effective(path) {
+  function effective(path, host = "crm.lgcyap.com") {
     const values = new Map();
-    for (const rule of rules) if (rule.source === '/:path*' || rule.source === path) for (const header of rule.headers) values.set(header.key.toLowerCase(), header.value);
+    for (const rule of rules) {
+      if (rule.has?.some(condition => condition.type === 'host' && condition.value !== host)) continue;
+      if (rule.missing?.some(condition => condition.type === 'host' && condition.value === host)) continue;
+      if (rule.source === '/:path*' || rule.source === path) for (const header of rule.headers) values.set(header.key.toLowerCase(), header.value);
+    }
     return values;
   }
+  const embeddedQueue = effective('/', 'queue.lgcyap.com');
+  assert.equal(embeddedQueue.get('x-frame-options'), undefined);
+  assert.match(embeddedQueue.get('content-security-policy'), /frame-ancestors 'self' https:\/\/crm\.lgcyap\.com;/);
+  assert.doesNotMatch(embeddedQueue.get('content-security-policy'), /frame-ancestors \*/);
+  assert.match(effective('/sign-in', 'queue.lgcyap.com').get('content-security-policy'), /frame-ancestors 'none'/);
   const queue = effective('/queue');
   assert.equal(queue.get('x-frame-options'), 'SAMEORIGIN');
   assert.match(queue.get('content-security-policy'), /frame-ancestors 'self';/);
