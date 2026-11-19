@@ -1082,12 +1082,12 @@ body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-contain
 .support-header button { font-size: 24px; }
 .support-panel iframe { display: block; flex: 1; min-height: 0; width: 100%; border: 0; background: #fff; }
 
-/* Enlarge the cross-origin Shopper site while retaining the frame's available space. */
-.shopper-embed { --shopper-scale: 1.25; width: 100%; min-height: 620px; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 210px); overflow: hidden; border-radius: 8px; background: #fff; }
+/* Give Shopper embeds a large viewport while retaining the enlarged site content. */
+.shopper-embed { --shopper-scale: 1.25; width: 100%; min-height: 900px; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 180px); overflow: hidden; border-radius: 8px; background: #fff; }
 .shopper-embed-frame { display: block; width: calc(100% / var(--shopper-scale)); height: calc(100% / var(--shopper-scale)); border: 0; transform: scale(var(--shopper-scale)); transform-origin: top left; }
 
-.shopper-calls-embed { height: min(640px, calc(100dvh - 190px)); }
-@media (max-width: 600px) { .shopper-calls-embed { height: min(640px, calc(100dvh - 220px)); } }
+main.content:has(.shopper-embed) { max-width: none; padding-inline: 16px; }
+@media (max-width: 600px) { .shopper-embed { min-height: 700px; } }
 
 /* Keep sales and calls close to their navigation and view tabs. */
 main.content.sales-calls-content { padding-top: 16px; }
