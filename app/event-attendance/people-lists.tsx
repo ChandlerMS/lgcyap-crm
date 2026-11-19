@@ -4,7 +4,9 @@ import styles from './event-attendance.module.css';
 
 type Person = { ticketId: string | null; name: string; email: string; phone: string; office: string; stageId: string; stage: string; hubspotUrl: string | null };
 export type Visit = Person & { day: string; at: string; heardAbout: string; license: string; source: string; imported: boolean };
-export type Applicant = Person & { day: string; at: string; requirementsMet: boolean | null; fromAttendee: boolean };
+// group matches the Applications counts: signed in at an event, a new applicant, or no recruiting ticket (a required item was not met).
+export type ApplicantGroup = 'signed-in' | 'new' | 'no-ticket';
+export type Applicant = Person & { day: string; at: string; license?: string; location?: string; fromAttendee: boolean; group?: ApplicantGroup };
 export type Attendee = Person & { ticketId: string; signIns: number; firstDay: string; lastDay: string; appliedAt: string | null };
 type Column<T> = { label: string; render: (row: T) => ReactNode };
 
@@ -61,16 +63,18 @@ export const visitColumns: Column<Visit>[] = [
 ];
 export const applicantColumns: Column<Applicant>[] = [
   ...contact,
-  { label: 'Sent', render: row => when(row.at) },
-  { label: 'Required items', render: row => row.requirementsMet === true ? 'Met' : row.requirementsMet === false ? 'Not met' : '—' },
+  { label: 'Applied', render: row => when(row.at) },
+  { label: 'License', render: row => row.license || '—' },
+  { label: 'Location', render: row => row.location || '—' },
   { label: 'Signed in at an event', render: row => row.fromAttendee ? 'Yes' : 'No' },
   { label: 'Stage', render: row => row.stage || 'No recruiting ticket' },
   { label: 'Records', render: hubspotCell },
 ];
 
-export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode }) {
+// total is the whole list's size when rows is one page of it.
+export function PeopleTable<T extends { ticketId: string | null }>({ title, rows, columns, empty, actions, total = rows.length }: { title: string; rows: T[]; columns: Column<T>[]; empty: string; actions?: (row: T) => ReactNode; total?: number }) {
   return <div className={styles.peopleBlock}>
-    <h3>{title} <span>{rows.length}</span></h3>
+    <h3>{title} <span>{total}</span></h3>
     {rows.length ? <div className={styles.tableWrap}><table className={`${styles.table} ${styles.peopleTable}`}>
       <thead><tr>{columns.map(column => <th scope="col" key={column.label}>{column.label}</th>)}{actions && <th scope="col">Review and notes</th>}</tr></thead>
       <tbody>{rows.map((row, index) => <tr key={`${row.ticketId ?? 'none'}-${index}`}>{columns.map((column, at) => at === 0 ? <th scope="row" key={column.label}>{column.render(row)}</th> : <td key={column.label}>{column.render(row)}</td>)}{actions && <td>{actions(row)}</td>}</tr>)}</tbody>

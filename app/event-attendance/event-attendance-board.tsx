@@ -8,10 +8,16 @@ type Review = { status: 'approved' | 'denied'; noteId: string; reviewedAt: strin
 import styles from './event-attendance.module.css';
 import AttendeeImport, { type AttendeeValues } from './attendee-import';
 import { ATTENDEE_TEMPLATE_CSV, HUBSPOT_SOURCE_URL, attendanceCsv, attendanceCsvFilename, parseAttendeeFile } from './attendance-files.mjs';
-import { applicantColumns, appliedColumns, attendeeColumns, hiredColumns, PeopleTable, visitColumns, type Applicant, type Attendee, type Visit } from './people-lists';
+import { applicantColumns, appliedColumns, attendeeColumns, hiredColumns, PeopleTable, visitColumns, type Applicant, type ApplicantGroup, type Attendee, type Visit } from './people-lists';
+import PanelPager from '../panel-pager';
+import { pageWindow } from '../panel-pager.mjs';
 
 const COMPLETED_STAGE_ID = '1416243218';
 type Tile = 'signedIn' | 'applied' | 'hired' | 'today';
+type AppGroup = 'all' | ApplicantGroup;
+const APPS_PAGE_SIZE = 10;
+// Older reports have no group; work it out the same way the server counts it.
+const groupOf = (item: Applicant): ApplicantGroup => item.group ?? (item.fromAttendee ? 'signed-in' : item.ticketId ? 'new' : 'no-ticket');
 
 function download(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
@@ -75,6 +81,9 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   // One list open at a time: a tile, an event day, or one office on an event day.
   const [openTile, setOpenTile] = useState<Tile | null>(null);
   const [openDay, setOpenDay] = useState<{ day: string; office: string | null } | null>(null);
+  // The Applications list sits under its counts and opens on All online applications.
+  const [openApps, setOpenApps] = useState<AppGroup | null>('all');
+  const [appsPage, setAppsPage] = useState(1);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const active = useRef<AbortController | null>(null);
   async function chooseFile(file: File | undefined) {
@@ -118,6 +127,16 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
   const toggleTile = (tile: Tile) => { setOpenDay(null); setOpenTile(current => current === tile ? null : tile); };
   const toggleDay = (day: string, office: string | null) => { setOpenTile(null); setOpenDay(current => current?.day === day && current.office === office ? null : { day, office }); };
   const officeName = (key: string) => data?.offices.find(office => office.key === key)?.label ?? key;
+  const toggleApps = (group: AppGroup) => { setAppsPage(1); setOpenApps(current => current === group ? null : group); };
+  const appGroups: { key: AppGroup; label: string; value: number | undefined; note?: string; title: string; empty: string }[] = [
+    { key: 'all', label: 'All online applications', value: data?.applications.total, title: 'All online applications', empty: 'No online applications yet.' },
+    { key: 'signed-in', label: 'From people who signed in', value: data?.applications.fromAttendees, title: 'From people who signed in', empty: 'No one who signed in has applied online yet.' },
+    { key: 'new', label: 'New applicants', value: data?.applications.otherTickets, note: 'Not signed in at an event', title: 'New applicants', empty: 'No new applicants yet.' },
+    { key: 'no-ticket', label: 'Did not meet a required item', value: data?.applications.noTicket, note: 'No recruiting ticket was created', title: 'Did not meet a required item', empty: 'No applications are missing a required item.' },
+  ];
+  const appGroup = appGroups.find(group => group.key === openApps);
+  const appRows = openApps === 'all' ? applicants : applicants.filter(item => groupOf(item) === openApps);
+  const appsView = pageWindow(appRows.length, appsPage, APPS_PAGE_SIZE);
   const tiles: { key: Tile; label: string; value: string; note: string }[] = [
     { key: 'signedIn', label: 'Signed in', value: count(people?.signedIn), note: `People · ${count(data?.signIns)} sign-ins in all` },
     { key: 'applied', label: 'Applied', value: count(people?.applied), note: `${share(people?.applied, people?.signedIn)} of people who signed in` },
@@ -256,13 +275,20 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
     </section>
 
     <section className={styles.card} aria-labelledby="apps-title">
-      <h2 id="apps-title">Online applications</h2>
-      <div className={styles.appTotals}>
-        <article><h3>All online applications</h3><strong>{count(data?.applications.total)}</strong></article>
-        <article><h3>From people who signed in</h3><strong>{count(data?.applications.fromAttendees)}</strong></article>
-        <article><h3>New applicants</h3><strong>{count(data?.applications.otherTickets)}</strong><span>Not signed in at an event</span></article>
-        <article><h3>Did not meet a required item</h3><strong>{count(data?.applications.noTicket)}</strong><span>No recruiting ticket was created</span></article>
+      {/* The title opens the full Applications page: in the dashboard by its route, and from this page's own frame in the top window. */}
+      <div className={styles.sectionHeading}><h2 id="apps-title"><a className="panel-title-link" href={section ? '#applications' : '/#applications'} target={section ? undefined : '_top'}>Applications</a></h2><span>Newest first · Select a count to see who is in it · Every answer is on the Applications page</span></div>
+      <div className={styles.appTotals} role="group" aria-label="Applications by group. Select one to see the people in it.">
+        {appGroups.map(group => <button type="button" key={group.key} className={`${styles.appTotal} ${openApps === group.key ? styles.appTotalOpen : ''}`} disabled={!data} aria-expanded={openApps === group.key} aria-controls="app-people" onClick={() => toggleApps(group.key)}>
+          <span className={styles.appLabel}>{group.label}</span>
+          <strong>{count(group.value)}</strong>
+          {group.note && <span className={styles.appNote}>{group.note}</span>}
+          <span className={styles.tileMore}>{openApps === group.key ? 'Hide people ▲' : 'Show people ▼'}</span>
+        </button>)}
       </div>
+      {appGroup && data && <div id="app-people" className={styles.appPeople}>
+        <PeopleTable title={appGroup.title} rows={appRows.slice(appsView.start, appsView.end)} total={appRows.length} columns={applicantColumns} actions={reviewActions} empty={appGroup.empty} />
+        <PanelPager count={appRows.length} page={appsView.page} size={APPS_PAGE_SIZE} label={appGroup.title} onPage={setAppsPage} numbers />
+      </div>}
     </section>
 
     <details className={styles.card}>
@@ -273,8 +299,8 @@ export default function EventAttendanceBoard({ section = false }: { section?: bo
         <li><strong>Applied</strong>: people who signed in and also sent the online application, before or after signing in.</li>
         <li><strong>Hired</strong>: people who signed in whose recruiting ticket is now at Completed. Withdrawn tickets are not hires.</li>
         <li><strong>Office</strong>: the office the person picked when signing in.</li>
-        <li><strong>Online applications</strong>: every application sent from the application page. Someone who applies twice counts twice.</li>
-        <li>Numbers come from HubSpot each time this page loads and every minute while it is open. The lists show what each person entered when signing in or applying, with their current stage. Like the rest of the recruiting workspace, they are visible only to recruiting editors. Application answers, including which required item was missed, stay in HubSpot.</li>
+        <li><strong>Applications</strong>: every application sent from the application page. Someone who applies twice counts twice. <strong>From people who signed in</strong> are applications linked to someone who signed in; <strong>New applicants</strong> have a ticket but did not sign in; <strong>Did not meet a required item</strong> have no recruiting ticket, because the application page creates one only when every required item is met.</li>
+        <li>Numbers come from HubSpot each time this page loads and every minute while it is open. The lists show what each person entered when signing in or applying, with their current stage. Like the rest of the recruiting workspace, they are visible only to recruiting editors. Every application answer, including which required item was missed, is on the Applications page.</li>
       </ul>
     </details>
   </Root>;

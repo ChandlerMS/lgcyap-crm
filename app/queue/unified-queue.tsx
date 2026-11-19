@@ -31,7 +31,7 @@ export default function UnifiedQueue({ embedded = false, initialView = "all", tv
         <button type="button" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}>Full screen</button>
       </div>
     </header>
-    {!tv && <div className={tabs.boardTabs} role="group" aria-label="Queue view">{([['all', 'All'], ['shopper', 'Shopper'], ['standard', 'Standard vs. Preferred']] as const).map(([id, label]) => <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>)}</div>}
+    {!tv && <div className={`${tabs.boardTabs} ${styles.viewTabs}`} role="group" aria-label="Queue view">{([['all', 'All'], ['shopper', 'Shopper'], ['standard', 'Standard vs. Preferred']] as const).map(([id, label]) => <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>)}</div>}
     <div className={`${styles.groups}${view !== "all" ? ` ${styles.singleGroup}` : ""}`}>
       {view !== "standard" && <section aria-label="Shopper" className={styles.group}><QueueBoard embedded={embedded} grouped tv={tv} /></section>}
       {view !== "shopper" && <section aria-label="Standard vs Preferred" className={styles.group}><RingCxDashboard grouped tv={tv} /></section>}

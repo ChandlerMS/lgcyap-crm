@@ -35,9 +35,16 @@
 .table th,.table td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .table th:first-child{text-align:left}.table thead th{color:var(--muted);font-weight:500;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
 .table tbody th{font-weight:500}.table tbody tr:last-child>*{border-bottom:0}.total{color:var(--gold);font-weight:600}
-.appTotals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-top:16px}
-.appTotals article{display:flex;flex-direction:column;gap:6px}.appTotals article+article{border-left:1px solid var(--line);padding-left:24px}
-.appTotals h3{font-size:14px;font-weight:400;color:var(--muted);margin:0}.appTotals strong{font-size:38px;color:var(--gold);font-weight:400;font-variant-numeric:tabular-nums}.appTotals span{color:var(--muted);font-size:12px}
+/* Each Applications count is a button that opens its people in a list of 10 rows a page beneath; All starts open. */
+.appTotals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.appTotal{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:none;border:1px solid var(--line);border-radius:6px;padding:12px 16px 14px;color:inherit;font:inherit;cursor:pointer;min-width:0}
+.appTotal:hover:not(:disabled){background:#14130d;border-color:#6d633e}
+.appTotalOpen,.appTotalOpen:hover:not(:disabled){background:#14130d;border-color:var(--gold)}
+.appTotal:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.appTotal:disabled{cursor:default}
+.appLabel{font-size:14px;color:var(--muted)}.appTotal:hover:not(:disabled) .appLabel,.appTotalOpen .appLabel{color:var(--text)}
+.appTotal strong{font-size:38px;line-height:1.1;color:var(--gold);font-weight:400;font-variant-numeric:tabular-nums}
+.appNote{color:var(--muted);font-size:12px}.appTotal .tileMore{margin-top:4px}
+.appPeople{margin-top:8px}
 .card summary{cursor:pointer;font-weight:600;color:var(--gold)}
 .definitions{margin:14px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6}.definitions strong{color:var(--text)}
 /* Expandable tiles, event days and office counts, and the people lists they open. */
@@ -83,11 +90,11 @@
 .importActions button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}
 .importActions button:hover{background:#282311}.importActions button:disabled{opacity:.6;cursor:not-allowed}
 .importActions .primary{background:var(--gold);border-color:var(--gold);color:#111;font-weight:600}.importActions .primary:hover{background:#e2c25a}
-@media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals article:nth-child(3){border-left:0;padding-left:0}}
+@media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:800px){.pair{grid-template-columns:1fr;gap:0}}
 @media(max-width:640px){.header{align-items:flex-start;flex-direction:column;gap:16px}.identity{gap:14px}.logo{width:72px}.brand{font-size:10px}.header h1{font-size:21px}.subtitle{font-size:12px}
 .tiles{gap:18px}.big{font-size:40px}.card{padding:18px}.card h2{font-size:18px}
-.appTotals{grid-template-columns:1fr 1fr;gap:16px}.appTotals article+article{padding-left:16px}.appTotals strong{font-size:30px}.table th,.table td{padding:10px 8px;font-size:14px}}
+.appTotals{grid-template-columns:1fr 1fr;gap:10px}.appTotal{padding:10px 12px 12px}.appTotal strong{font-size:30px}.table th,.table td{padding:10px 8px;font-size:14px}}
 
 .reviewActions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 240px; }
 .reviewButton { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid currentColor; border-radius: 5px; background: transparent; font: inherit; font-size: 24px; cursor: pointer; opacity: .6; }

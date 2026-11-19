@@ -12,7 +12,7 @@ const signIn = (id, time, office = 'Orlando', existing = false) => ({ id, proper
   hs_timestamp: time,
   hs_note_body: `<p><strong>Hiring event sign-in${existing ? ' (this person already had an open recruiting ticket, so no new ticket was created)' : ''}</strong></p><p><strong>Signed in:</strong> today</p><p><strong>Signed in from:</strong> Conference room screen (QR)</p><p><strong>Name:</strong> Test Person ${id}</p><p><strong>Email:</strong> person${id}@example.invalid</p><p><strong>Phone:</strong> (407) 555-01${id.padStart(2, '0')}</p>${office ? `<p><strong>Office:</strong> ${office}</p>` : ''}<p><strong>How they heard about us:</strong> Job posting: Indeed</p><p><strong>License:</strong> Unlicensed</p><p><strong>Photo ID (building security):</strong> Attached to the sign-in note (private file)</p>`,
 } });
-const application = (id, time, met = true) => ({ id, properties: { hs_timestamp: time, hs_note_body: `<p><strong>Agent application (v3.1) submitted online, ${time}</strong></p><p><strong>Required items:</strong> ${met ? 'Meets all required items' : 'Did not meet: Secret required item'}</p><p><strong>YOUR INFORMATION</strong></p><ul><li><strong>Full legal name</strong><br>Test Applicant ${id}</li><li><strong>Email address</strong><br>applicant${id}@example.invalid</li><li><strong>Mobile phone</strong><br>(407) 555-02${id.padStart(2, '0')}</li><li><strong>Which office are you applying for?</strong><br>Orlando</li></ul><p><strong>ELIGIBILITY</strong></p><ul><li><strong>Private answer</strong><br>Sensitive answer text</li></ul>` } });
+const application = (id, time, met = true) => ({ id, properties: { hs_timestamp: time, hs_note_body: `<p><strong>Agent application (v3.1) submitted online, ${time}</strong></p><p><strong>Required items:</strong> ${met ? 'Meets all required items' : 'Did not meet: Secret required item'}</p><p><strong>YOUR INFORMATION</strong></p><ul><li><strong>Full legal name</strong><br>Test Applicant ${id}</li><li><strong>Email address</strong><br>applicant${id}@example.invalid</li><li><strong>Mobile phone</strong><br>(407) 555-02${id.padStart(2, '0')}</li><li><strong>City</strong><br>Winter Park</li><li><strong>State</strong><br>FL</li><li><strong>Which office are you applying for?</strong><br>Orlando</li><li><strong>Which best describes you today?</strong><br>${met ? 'Licensed' : 'Not answered'}</li></ul><p><strong>ELIGIBILITY</strong></p><ul><li><strong>Private answer</strong><br>Sensitive answer text</li></ul>` } });
 const other = (id, time) => ({ id, properties: { hs_timestamp: time, hs_note_body: '<p>Left a voicemail about the Hiring event sign-in</p>' } });
 
 function fixture() {
@@ -106,6 +106,14 @@ test('every count has the people behind it, with the same office and day as the 
     ['Test Applicant 6', true, true, '101'], ['Test Applicant 5', true, true, '103'],
   ]);
   assert.deepEqual([report.applicants[2].email, report.applicants[2].phone, report.applicants[2].office], ['applicant7@example.invalid', '(407) 555-0207', 'orlando']);
+  // Each applicant's group matches the counts, so a count opens exactly its people. A ticket in another pipeline is a new applicant.
+  assert.deepEqual(report.applicants.map(item => [item.name, item.group, item.license, item.location]), [
+    ['Test Applicant 9', 'new', 'Licensed', 'Winter Park, FL'], ['Test Applicant 8', 'no-ticket', '', 'Winter Park, FL'], ['Test Applicant 7', 'new', 'Licensed', 'Winter Park, FL'],
+    ['Test Applicant 6', 'signed-in', 'Licensed', 'Winter Park, FL'], ['Test Applicant 5', 'signed-in', 'Licensed', 'Winter Park, FL'],
+  ]);
+  for (const [key, group] of [['fromAttendees', 'signed-in'], ['otherTickets', 'new'], ['noTicket', 'no-ticket']]) {
+    assert.equal(report.applicants.filter(item => item.group === group).length, report.applications[key]);
+  }
 });
 
 test('an imported sign-in is marked, and the ticket fills in a missing name', () => {

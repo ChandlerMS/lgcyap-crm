@@ -11,7 +11,7 @@ type Application = {
   ticket: { id: string; stageId: string; stage: string; url: string } | null; contact: { id: string; url: string } | null; waitingAtHiringEvent: boolean;
 };
 type Report = { fetchedAt: string; since: string; partial: boolean; summary: { total: number; met: number; notMet: number; flagged: number; waitingAtHiringEvent: number; photoId: number }; applications: Application[] };
-type Status = "all" | "met" | "not-met" | "flagged" | "waiting";
+type Status = "all" | "not-met" | "flagged" | "waiting";
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const SINCE = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
 const OUTCOMES: Record<Application["outcome"], string> = {
@@ -22,8 +22,8 @@ const OUTCOMES: Record<Application["outcome"], string> = {
 };
 const matches = (item: Application, search: string) => !search || [item.name, item.preferredName, item.email, item.phone, item.city].some(value => value.toLowerCase().includes(search));
 
-// Every online agent application in one place for the admin team: who applied and when, whether they meet the
-// required items, what needs a private conversation, where the record is now, and every answer on request.
+// Every online agent application in one place for the admin team: who applied and when, any required item they did
+// not meet, what needs a private conversation, where the record is now, and every answer on request.
 export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,13 +56,12 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
   const search = query.trim().toLowerCase();
   const all = report?.applications ?? [];
   const shown = all.filter(item => matches(item, search) && (office === "all" || (item.officeKey ?? "other") === office)
-    && (status === "all" || (status === "met" && item.requirementsMet === true) || (status === "not-met" && item.requirementsMet === false) || (status === "flagged" && item.flags.length > 0) || (status === "waiting" && item.waitingAtHiringEvent)));
+    && (status === "all" || (status === "not-met" && item.requirementsMet === false) || (status === "flagged" && item.flags.length > 0) || (status === "waiting" && item.waitingAtHiringEvent)));
   const toggle = (id: string) => setOpen(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const allOpen = shown.length > 0 && shown.every(item => open.has(item.id));
   const summary = report?.summary;
   const tiles: { key: Status; label: string; value: number | undefined; tone?: string }[] = [
     { key: "all", label: "Applications", value: summary?.total },
-    { key: "met", label: "Meet the required items", value: summary?.met, tone: styles.good },
     { key: "not-met", label: "Did not meet a required item", value: summary?.notMet, tone: styles.bad },
     { key: "flagged", label: "Need a private conversation", value: summary?.flagged, tone: styles.warn },
     { key: "waiting", label: "Still at Hiring Event", value: summary?.waitingAtHiringEvent, tone: styles.warn },
@@ -92,7 +91,7 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
       <div className={styles.filters}>
         <label className={styles.search}><span className="sr-only">Search applications</span><input type="search" placeholder="Search name, email, phone or city" value={query} onChange={event => setQuery(event.target.value)} /></label>
         <label className={styles.select}><span>Office</span><select value={office} onChange={event => setOffice(event.target.value)}><option value="all">All offices</option><option value="orlando">Orlando</option><option value="miami">Miami</option><option value="tampa">Tampa</option><option value="other">Not recorded</option></select></label>
-        <label className={styles.select}><span>Status</span><select value={status} onChange={event => setStatus(event.target.value as Status)}><option value="all">All</option><option value="met">Meet the required items</option><option value="not-met">Did not meet a required item</option><option value="flagged">Need a private conversation</option><option value="waiting">Still at Hiring Event</option></select></label>
+        <label className={styles.select}><span>Status</span><select value={status} onChange={event => setStatus(event.target.value as Status)}><option value="all">All</option><option value="not-met">Did not meet a required item</option><option value="flagged">Need a private conversation</option><option value="waiting">Still at Hiring Event</option></select></label>
         <button type="button" className="btn btn-quiet" disabled={!shown.length} onClick={() => setOpen(allOpen ? new Set() : new Set(shown.map(item => item.id)))}>{allOpen ? "Collapse all" : "Expand all"}</button>
       </div>
       <p className={styles.resultCount} role="status">{shown.length === all.length ? `${all.length} application${all.length === 1 ? "" : "s"}` : `${shown.length} of ${all.length} applications`}</p>
@@ -107,7 +106,6 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
                 <p className={styles.when}>Applied {WHEN.format(Date.parse(item.at))} ET</p>
               </div>
               <div className={styles.badges}>
-                {item.requirementsMet === true && <span className={`${styles.badge} ${styles.good}`}>Meets required items</span>}
                 {item.requirementsMet === false && <span className={`${styles.badge} ${styles.bad}`}>Did not meet {item.missed.length || ""} required item{item.missed.length === 1 ? "" : "s"}</span>}
                 {item.flags.length > 0 && <span className={`${styles.badge} ${styles.warn}`}>Private conversation: {item.flags.length}</span>}
                 {item.waitingAtHiringEvent && <span className={`${styles.badge} ${styles.warn}`}>Still at Hiring Event</span>}
@@ -131,7 +129,7 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
             </div>
             {expanded && <div id={`application-${item.id}`} className={styles.answers}>
               <div className={styles.review}>
-                <div><h3>Required items</h3>{item.requirementsMet === false ? <ul>{item.missed.map(text => <li key={text}>{text}</li>)}</ul> : <p>{item.requirementsMet ? "Meets every required item." : "Not recorded."}</p>}</div>
+                {item.requirementsMet === false && <div><h3>Required items not met</h3>{item.missed.length ? <ul>{item.missed.map(text => <li key={text}>{text}</li>)}</ul> : <p>Not recorded.</p>}</div>}
                 <div><h3>Needs a private conversation</h3>{item.flags.length ? <ul>{item.flags.map(text => <li key={text}>{text}</li>)}</ul> : <p>Nothing flagged.</p>}</div>
                 <div><h3>In HubSpot</h3><p>{item.outcomeText || OUTCOMES[item.outcome]}</p>{item.existingContact && <p className={styles.muted}>The email matched an existing contact, which wasn&apos;t changed. Confirm details with the person before updating it.</p>}</div>
               </div>
