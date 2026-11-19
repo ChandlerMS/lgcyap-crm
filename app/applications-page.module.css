@@ -89,3 +89,9 @@ dialog.photoDialog { width: min(980px, calc(100vw - 40px)); }
 .linkButton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .photoFrame { display: grid; gap: 8px; justify-items: center; width: 100%; margin: 0; }
 .photoFrame figcaption { justify-self: start; color: var(--muted); font-size: 13px; }
+
+.dateFilters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 0 0 18px; }
+.datePresets { display: flex; flex-wrap: wrap; gap: 6px; }
+.datePresets button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #241f12; }
+.dateFilters input { color-scheme: dark; min-height: 40px; padding: 8px 12px; background: #111110; color: var(--text); border: 1px solid var(--control-line); border-radius: 6px; font: inherit; }
+.dateFilters input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

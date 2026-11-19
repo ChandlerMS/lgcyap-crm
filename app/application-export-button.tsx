@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Application } from './applications-page';
 import type { Review } from './event-review';
 
-type Filters = { query: string; office: string; status: string };
+type Filters = { query: string; office: string; status: string; startDate?: string; endDate?: string; sort?: string };
 type ExportResult = { url: string; count: number };
 export default function ApplicationExportButton({ filters, count, disabled, applications = [], reviews = {}, reviewComplete = false }: { filters: Filters; count: number; disabled?: boolean; applications?: Application[]; reviews?: Record<string, Review>; reviewComplete?: boolean }) {
   const [busy, setBusy] = useState(false);

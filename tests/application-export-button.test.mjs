@@ -56,6 +56,7 @@ test('both standalone Applications and the Event Attendance Applications section
       const html = renderToStaticMarkup(h(Page, { onUnauthorized() {}, board }));
       assert.match(html, />Export to Google Sheets<\/button>/);
       assert.match(html, />Export CSV<\/button>/);
+      for (const label of ["All dates", "Day", "Week", "Month", "Newest first", "Oldest first"]) assert.ok(html.includes(label));
       assert.match(html, />Export XLS<\/button>/);
     }
   } finally { await rm(dir, { recursive: true, force: true }); }

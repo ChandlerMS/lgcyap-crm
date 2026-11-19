@@ -133,3 +133,25 @@ test('CSV includes every answer and review, quotes multiline fields and neutrali
   assert.ok(csv.includes('"Approved"'));
   assert.ok(csv.includes('"\'+15551234567"'));
 });
+
+
+test('application date filters use Eastern calendar boundaries and sort all matches without mutating the source', () => {
+  const applications = [
+    { ...rows[1], id: 'late', at: '2026-11-20T04:59:59Z' },
+    { ...rows[1], id: 'next', at: '2026-11-20T05:00:00Z' },
+    { ...rows[1], id: 'early', at: '2026-11-19T05:00:00Z' },
+    { ...rows[1], id: 'prior', at: '2026-11-19T04:59:59Z' },
+  ];
+  const bounds = { startDate: '2026-11-19', endDate: '2026-11-19' };
+  assert.deepEqual(filterApplications(applications, bounds).map(item => item.id), ['late', 'early']);
+  assert.deepEqual(filterApplications(applications, { ...bounds, sort: 'oldest' }).map(item => item.id), ['early', 'late']);
+  assert.equal(applications[0].id, 'late');
+});
+
+test('Google Sheets export preserves validated date bounds and order', async () => {
+  const { exportFilters } = await import('../lib/applications-export.mjs');
+  const input = { query: '', office: 'all', status: 'all', startDate: '2026-11-01', endDate: '2026-11-30', sort: 'oldest' };
+  assert.deepEqual(exportFilters(input), input);
+  assert.throws(() => exportFilters({ ...input, startDate: '2026-02-30' }));
+  assert.throws(() => exportFilters({ ...input, startDate: '2026-12-01' }));
+});
