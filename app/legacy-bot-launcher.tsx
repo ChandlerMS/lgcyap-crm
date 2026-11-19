@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { legacyBotPosition } from "./legacy-bot-position.mjs";
 
 import FloatingLauncher from "./floating-launcher";
+import SupportLauncher from "./support-launcher";
 
 type ChatApi = {
   widget: { open(): void; close(): void; status(): { loaded: boolean } };
@@ -105,6 +106,6 @@ export default function LegacyBotLauncher() {
       <span className="launcher-brand-icon" aria-hidden="true" style={{ backgroundImage: "url(/launcher-icons/hubspot.ico)" }} />
       <span className="sr-only">Legacy Bot</span>
     </FloatingLauncher>
-  </div></>;
+  </div><SupportLauncher /></>;
   return dock ? createPortal(control, dock) : control;
 }

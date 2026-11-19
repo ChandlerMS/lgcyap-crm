@@ -92,11 +92,38 @@ test('WhatsApp repeats open, close and reopen for its separate popup', () => fix
   assert.equal(opened, 2);
 }));
 
-test('Legacy Bot is rightmost with the uploaded icon and Gemini is absent', () => fixture(async () => {
+test('Support follows Legacy Bot in the right dock and Gemini is absent', () => fixture(async () => {
   await act(async () => { await new Promise(resolve => window.requestAnimationFrame(resolve)); });
   assert.equal(document.querySelector('.floating-actions-ai'), null);
   const right = document.querySelector('.floating-actions-communications');
-  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral', 'Legacy Bot']);
+  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral', 'Legacy Bot', 'Support']);
   assert.match(right.querySelector('.legacy-bot-control .launcher-brand-icon').style.backgroundImage, /hubspot\.ico/);
   assert.doesNotMatch(document.body.textContent, /Gemini/);
+}));
+
+test('Support sits after Legacy Bot and preserves its ticket iframe when collapsed', () => fixture(async ({ click }) => {
+  // The portal attaches on the next animation frame.
+  await act(async () => { await new Promise(resolve => window.requestAnimationFrame(resolve)); });
+  const bot = document.querySelector('.legacy-bot-control');
+  const button = document.querySelector('.support-launcher');
+  assert.ok(button);
+  assert.ok(bot.compareDocumentPosition(button) & window.Node.DOCUMENT_POSITION_FOLLOWING);
+  assert.ok(button.querySelector('svg'), 'life-ring icon');
+  assert.equal(button.textContent, 'Support');
+  await click('.support-launcher');
+  const panel = document.getElementById('support-panel');
+  const frame = panel.querySelector('iframe');
+  assert.equal(frame.src, 'https://50894788.hs-sites.com/legacy-partners-knowledge/kb-tickets/new');
+  assert.equal(panel.hidden, false);
+  await click('.support-launcher');
+  assert.equal(panel.hidden, true);
+  await click('.support-launcher');
+  assert.equal(panel.querySelector('iframe'), frame);
+  assert.equal(button.getAttribute('aria-expanded'), 'true');
+  await act(async () => panel.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  assert.equal(panel.hidden, true);
+  assert.equal(document.activeElement, button);
+  await click('.support-launcher');
+  await click('[aria-label="Close Support"]');
+  assert.equal(panel.hidden, true);
 }));

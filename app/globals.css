@@ -1073,3 +1073,11 @@ body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-contain
 /* Icon-only bottom controls retain their spoken labels and native hover titles. */
 .floating-actions .legacy-bot-launcher, .legacy-bot-control .legacy-bot-launcher { width: 54px; height: 54px; padding: 0; gap: 0; justify-content: center; }
 @media (max-width: 600px) { .floating-actions .legacy-bot-launcher, .legacy-bot-control .legacy-bot-launcher { width: 44px; height: 44px; min-height: 44px; padding: 0; } }
+
+.support-panel { display: flex; flex-direction: column; width: 720px; height: min(720px, calc(100dvh - var(--floating-actions-clearance, 90px) - 24px)); overflow: hidden; }
+.support-panel[hidden] { display: none; }
+.support-header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 12px 16px; border-bottom: 1px solid #d4af3733; }
+.support-header h2 { margin: 0; font-size: 18px; }
+.support-header a { margin-left: auto; color: var(--gold); font-size: 13px; }
+.support-header button { font-size: 24px; }
+.support-panel iframe { display: block; flex: 1; min-height: 0; width: 100%; border: 0; background: #fff; }
