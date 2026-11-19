@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import usePortalHost from "./use-portal-host";
 import { createPortal } from "react-dom";
 import WorkspaceSearch from "./workspace-search";
 import styles from "./workspace-titlebar.module.css";
@@ -16,11 +17,9 @@ type Props = {
 const SUPPORT: { id: SupportArea; label: string }[] = [{ id: "inbox", label: "Inbox" }, { id: "help-desk", label: "Help Desk" }, { id: "tickets", label: "Tickets" }];
 
 export default function WorkspaceTitlebar(props: Props) {
-  const [host, setHost] = useState<HTMLElement | null>(null);
+  const host = usePortalHost("crm-title-controls");
   useEffect(() => {
-    const target = document.getElementById("crm-title-controls");
-    setHost(target);
-    const bar = target?.closest("nav");
+    const bar = host?.closest("nav");
     if (!bar) return;
     let height = 0;
     const measure = () => {
@@ -29,7 +28,7 @@ export default function WorkspaceTitlebar(props: Props) {
     };
     measure(); const observer = new ResizeObserver(measure); observer.observe(bar);
     return () => { observer.disconnect(); document.documentElement.style.removeProperty("--crm-titlebar-height"); };
-  }, []);
+  }, [host]);
   if (!host) return null;
   const disabled = props.modeDisabled || props.menuOpen;
   return createPortal(<div className={styles.controls} inert={props.menuOpen}>

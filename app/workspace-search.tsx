@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { demoSearchGroups, mergeSearchGroups, normalizeSearchGroups, workspaceSearchStatus } from "./workspace-search-view.mjs";
 import styles from "./workspace-titlebar.module.css";
 
@@ -33,9 +33,13 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
   useEffect(() => {
     const version = ++sequence.current;
     request.current?.abort(); continuationRequest.current?.abort();
-    setCompletedKey(""); setGroups([]); setActive(-1); setError(""); setContinuing(false); setBusy(false);
-    if (disabled || normalized.length < 2 || normalized.length > 200) return;
-    if (demo) { setGroups(demoSearchGroups(demoRecords, normalized) as Group[]); setCompletedKey(`${demo}:${normalized}`); return; }
+    const resetTimer = window.setTimeout(() => {
+      setCompletedKey(""); setGroups([]); setActive(-1); setError(""); setContinuing(false); setBusy(false);
+      if (!disabled && normalized.length >= 2 && normalized.length <= 200 && demo) {
+        setGroups(demoSearchGroups(demoRecords, normalized) as Group[]); setCompletedKey(`${demo}:${normalized}`);
+      }
+    }, 0);
+    if (disabled || normalized.length < 2 || normalized.length > 200 || demo) return () => window.clearTimeout(resetTimer);
     const controller = new AbortController(); request.current = controller;
     const timer = window.setTimeout(async () => {
       if (cooldown.current > Date.now()) { setError("HubSpot is limiting requests. Please wait before searching again."); return; }
@@ -58,7 +62,7 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
         if (!controller.signal.aborted && sequence.current === version) setError(failure instanceof Error ? failure.message : "Workspace search is unavailable. Try again.");
       } finally { if (!controller.signal.aborted && sequence.current === version) setBusy(false); }
     }, 350);
-    return () => { clearTimeout(timer); controller.abort(); };
+    return () => { window.clearTimeout(resetTimer); clearTimeout(timer); controller.abort(); };
   }, [normalized, demo, demoRecords, disabled, attempt]);
 
   useEffect(() => {
@@ -67,7 +71,8 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
     return () => { document.removeEventListener("pointerdown", close); continuationRequest.current?.abort(); };
   }, []);
 
-  const results = groups.flatMap(group => group.records);
+  const visibleGroups = completedKey === `${demo}:${normalized}` ? groups : [];
+  const results = visibleGroups.flatMap(group => group.records);
   const selected = active >= 0 ? results[active] : null;
   const shown = open && !disabled && normalized.length >= 2;
   const navigate = () => { setOpen(false); setActive(-1); callbacks.current.onNavigate(); };
@@ -85,7 +90,7 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
   };
   useEffect(() => { if (active >= 0) root.current?.querySelector(`[data-search-index="${active}"]`)?.scrollIntoView({ block: "nearest" }); }, [active]);
 
-  async function continueInbox(continuation: string) {
+  const continueInbox = useCallback(async (continuation: string) => {
     if (continuing || demo || disabled) return;
     if (cooldown.current > Date.now()) { setError("HubSpot is limiting requests. Please wait before continuing the search."); return; }
     const version = sequence.current;
@@ -107,7 +112,7 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
     } catch (failure) {
       if (!controller.signal.aborted && version === sequence.current) setError(failure instanceof Error ? failure.message : "The search could not continue.");
     } finally { if (!controller.signal.aborted && version === sequence.current) setContinuing(false); }
-  }
+  }, [continuing, demo, disabled, normalized]);
 
   let index = 0;
   return <div ref={root} className={styles.search}>
@@ -117,7 +122,7 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
       <p className={styles.searchSummary} role="status">{workspaceSearchStatus({ demo, busy, pending: completedKey !== `${demo}:${normalized}`, error, groups })}</p>
       {error && <div className={styles.searchError} role="alert"><p>{error}</p>{!busy && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry search</button>}</div>}
       <div id={`${uid}-results`} role="listbox" aria-label="Workspace search results" className={styles.results}>
-        {groups.map(group => <div key={group.id} role="group" aria-label={group.label}>
+        {visibleGroups.map(group => <div key={group.id} role="group" aria-label={group.label}>
           <h2 className={styles.groupTitle}>{group.label}{group.partial && <span> · Partial results</span>}</h2>
           {group.records.map(record => {
             const current = index++;
@@ -127,7 +132,7 @@ export default function WorkspaceSearch({ demo, demoRecords, disabled, onUnautho
         </div>)}
       </div>
       <div className={styles.searchNotices}>
-        {groups.filter(group => group.notice || group.continuation).map(group => <div key={group.id}>
+        {visibleGroups.filter(group => group.notice || group.continuation).map(group => <div key={group.id}>
           {group.notice && <p><strong>{group.label}:</strong> {group.notice}</p>}
           {group.continuation && <button type="button" disabled={continuing} onClick={() => void continueInbox(group.continuation!)}>{continuing ? "Searching more conversations…" : "Continue Inbox search"}</button>}
         </div>)}

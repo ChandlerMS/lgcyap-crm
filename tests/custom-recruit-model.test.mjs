@@ -48,7 +48,7 @@ test('intake pipelines derive missing paths and office alias only fills blanks',
 test('patches normalize typed fields and preserve unrelated values and alias stages', () => {
   const source = { ...ticket('offer', 'genpop', 'licensed'), orientation_registered: false, orientation_date: null, unrelated: 'keep', licensed_at_offer: 'false' };
   const custom = { ...createRecruitProperties(source, '1'), hs_pipeline_stage: P.onboarding.stages.offer, unrelated: 'keep' };
-  assert.deepEqual(recruitPatch({ orientation_checked_in: true, subject: 'ignored' }, custom), { orientation_checked_in: 'true' });
+  assert.deepEqual(recruitPatch({ orientation_checked_in: true, subject: 'Updated ticket' }, custom), { orientation_checked_in: 'true', subject: 'Updated ticket' });
   assert.deepEqual(ticketPatch({ orientation_checked_in: false, hs_pipeline: 'ignored', unrelated: 'bad' }, source), { orientation_checked_in: 'false' });
   assert.equal(ticketCanonical(source).orientation_registered, 'false');
   assert.equal(ticketCanonical(source).orientation_date, '');
@@ -60,7 +60,7 @@ test('patches normalize typed fields and preserve unrelated values and alias sta
   assert.ok(SYNC_FIELDS.every(key => typeof ticketCanonical(source)[key] === 'string'));
 });
 test('approved schema declares exact property types and safe unique linkage', () => {
-  assert.equal(APPROVED_RECRUIT_PROPERTIES.length, 10);
+  assert.equal(APPROVED_RECRUIT_PROPERTIES.length, 15);
   assert.equal(APPROVED_RECRUIT_PROPERTIES.find(p => p.name === 'crm_ticket_id').hasUniqueValue, true);
   for (const p of APPROVED_RECRUIT_PROPERTIES.filter(p => p.type === 'bool')) assert.deepEqual(p.options.map(o => o.value), ['true', 'false']);
   assert.deepEqual(APPROVED_RECRUIT_PROPERTIES.find(p => p.name === 'orientation_office').options.map(o => o.value), ['orlando', 'miami', 'tampa']);
@@ -71,6 +71,7 @@ test('shared field values reject invalid types, enums and unsafe names', () => {
     orientation_office: ['Orlando', 'unknown'], intake_license_status: ['licensed'], recruit_type: ['other'],
     orientation_registered: ['yes', '1'], orientation_checked_in: ['TRUE'], licensing_started: ['no'],
     contracting_registered: ['0'], appointments_created: ['yes'], hubspot_owner_id: ['0', '-1', '123456789012345678901', 'abc'],
+    subject: ['a'.repeat(181), 'bad\nname'],
     recruit_name: ['a'.repeat(181), 'private\nname', 'private\u007fname'],
     orientation_date: ['2026-02-30', '2026-13-01', '2026-1-01', '2026-11-19T12:00:00Z', '1', 'Infinity'],
   };

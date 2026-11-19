@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EVENT_ATTENDANCE_SINCE, easternDay, noteKind, readEventAttendance, summarizeEventAttendance } from '../lib/event-attendance.mjs';
-import { eventReviewBody, eventReviewHtml, parseEventReview, newerEventReview } from '../lib/event-review.mjs';
+import { eventReviewHtml, parseEventReview, newerEventReview } from '../lib/event-review.mjs';
 import { handleRecruitRequest } from '../lib/hubspot.mjs';
 
 const PIPELINE = '924992938';
