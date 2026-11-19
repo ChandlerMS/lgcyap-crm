@@ -77,7 +77,7 @@ export const RECRUITS_CHILD_PAGES = Object.freeze([
   ...RECRUIT_PORTAL_PAGES,
   Object.freeze({ id: 'training-classes', label: 'Training Classes' }),
 ]);
-// The hiring-event sites, after the Recruits pages. They refuse to be framed (they take personal details and a photo ID),
+// The hiring-event sites, first in the Recruits flyout. They refuse to be framed (they take personal details and a photo ID),
 // so each opens in its own tab, which also suits putting the QR screen on a TV.
 export const RECRUITS_SITE_LINKS = Object.freeze([
   Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/' }),

@@ -7,7 +7,7 @@ import {
   recordsForStagePage, unmappedStageRecords, sidebarViewFor, RECRUITS_SITE_LINKS,
 } from '../app/recruiting-navigation.mjs';
 
-test('the Recruits flyout ends with the hiring-event sign-in sites, which open in a new tab', () => {
+test('the Recruits flyout includes the hiring-event sign-in sites, which open in a new tab', () => {
   assert.deepEqual(RECRUITS_SITE_LINKS.map(link => [link.label, link.href]), [['Sign-In', 'https://signin.lgcyap.com/'], ['QR Code Sign-in', 'https://signinqr.lgcyap.com/']]);
   const flyout = readFileSync(new URL('../app/recruiting-workspace.tsx', import.meta.url), 'utf8');
   assert.match(flyout, /RECRUITS_SITE_LINKS\.map\(item => <a className="nav-link nav-site-link" key=\{item\.id\} href=\{item\.href\} target="_blank" rel="noopener noreferrer"/);
