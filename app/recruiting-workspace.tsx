@@ -23,6 +23,7 @@ import RecruitPipeline from "./recruit-pipeline";
 import { useRecruitHoverCard } from "./recruit-hover";
 import RecruitFollowUpChips from "./recruit-follow-up-chips";
 import RecruitTaskChips from "./recruit-task-chips";
+import SupportSummary from "./support-summary";
 import RecruitMeetingChips from "./recruit-meeting-chips";
 import RecruitsHubSpotLink from "./recruits-hubspot-link";
 import RecruitsPanel from "./recruits-panel";
@@ -577,6 +578,9 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         <RecruitFollowUpChips records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} lead={canAddActivity ? <RecruitQuickActions kinds={["follow-up"]} recruits={followUpChoices} trigger="plus" /> : undefined} previewActions={previewActions} />
         <RecruitMeetingChips live={!demoMode} now={timestamp} onUnauthorized={expiredSignIn} meetingLead={meetingAction("meetings", "plus")} calendarLead={meetingAction("calendar", "plus")} previewActions={previewActions} />
         <RecruitEmailSummary recruits={all} />
+        <SupportSummary tool="inbox" live={!demoMode} onUnauthorized={expiredSignIn} />
+        <SupportSummary tool="help-desk" live={!demoMode} onUnauthorized={expiredSignIn} />
+        <SupportSummary tool="tickets" live={!demoMode} onUnauthorized={expiredSignIn} />
       </div></CollapsibleCards>
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
       <DashboardSection id="event-attendance" label="Event Attendance" className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading" data-section-heading><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2><div className="panel-heading-actions"><SectionToggle /></div></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section recruits={all} canAddActivity={canAddActivity} now={timestamp} />}</DashboardSection>
