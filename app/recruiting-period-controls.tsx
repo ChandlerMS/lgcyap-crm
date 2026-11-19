@@ -19,9 +19,12 @@ type Props = {
   aside?: ReactNode;
   // Page actions on the title's line, such as Add Recruits.
   actions?: ReactNode;
+  // 2 inside a dashboard section, under the page's own h1.
+  headingLevel?: 1 | 2;
 };
 
-export default function RecruitingPeriodControls({ records, stages, selection, onSelectionChange, basis = "createdAt", now, partial = false, aside, actions }: Props) {
+export default function RecruitingPeriodControls({ records, stages, selection, onSelectionChange, basis = "createdAt", now, partial = false, aside, actions, headingLevel = 1 }: Props) {
+  const Heading = headingLevel === 2 ? "h2" : "h1";
   const period = resolveRecruitingPeriod(selection, now);
   const stats = recruitingPeriodStats(records, stages, period, basis);
   const usesCreated = basis === "createdAt";
@@ -30,12 +33,12 @@ export default function RecruitingPeriodControls({ records, stages, selection, o
   return <section className={styles.section} aria-labelledby="today-period-title">
     <div className={styles.heading}>
       <div className={styles.titleRow}>
-        <h1 id="today-period-title" className={styles.title} tabIndex={-1}>
+        <Heading id="today-period-title" className={styles.title} tabIndex={-1}>
           <label className="sr-only" htmlFor="recruiting-reporting-period">Reporting period</label>
           <select id="recruiting-reporting-period" value={selection.preset} onChange={event => onSelectionChange({ ...selection, preset: event.target.value })} aria-describedby="recruiting-period-description recruiting-period-context">
             {RECRUITING_PERIODS.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
           </select>
-        </h1>
+        </Heading>
         <p id="recruiting-period-description" className={styles.description}>{period.valid ? `${period.description}${selection.preset === "weekly" ? " · Monday–Sunday" : ""}` : "Select a valid reporting date or range."}</p>
         {/* What the totals count, on hover or focus of the info mark. */}
         <span className={styles.info}><button type="button" className={styles.infoButton} aria-label="About these totals" aria-describedby="recruiting-period-context">i</button><span id="recruiting-period-context" role="tooltip" className={styles.tip}>{context} Times are Eastern.</span></span>

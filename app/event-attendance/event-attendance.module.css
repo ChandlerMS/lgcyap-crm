@@ -2,7 +2,7 @@
 .board{min-height:100vh;background:var(--canvas);color:var(--text);padding:clamp(16px,3vw,40px);color-scheme:dark}
 /* A section of the Recruiting Dashboard: no page padding, and a title sized like the dashboard's other panels. */
 .section{min-height:0;padding:0;background:none}
-.section .header h2{margin:0 0 8px;font-size:clamp(28px,3vw,34px);font-weight:600;letter-spacing:-.025em;color:var(--text)}
+.section .header h2{margin:0 0 6px;font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
 .header{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid #6d633e;padding-bottom:24px}
 .identity{display:flex;align-items:center;gap:24px;min-width:0}.logo{width:120px;height:auto;object-fit:contain}
 .brand{color:var(--muted);margin:0 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
@@ -114,3 +114,14 @@
 .hoverBadges .hoverBad{background:#3a1d14;color:#f0a58a}
 .hoverBadges .hoverWarn{background:#3a2a14;color:#f0b866}
 .hoverList{margin:0;padding-left:18px;color:#e8e2d3;font-size:13px;line-height:1.5}
+
+/* On the dashboard: a quieter header with the update time in the subtitle, and inner cards in the dashboard's card colors. */
+.section .header{padding-bottom:18px;border-bottom-color:#2c2818}
+.section .card{background:#13120e;border-color:#2c2818;padding:20px 22px}
+.section .tiles{padding:22px 0 24px}
+.updated{color:var(--muted);white-space:nowrap}
+.updatedWarning{color:#f1c678;white-space:nowrap}
+:global(.is-collapsed)>.section .header{padding-bottom:0;border-bottom:0}
+/* The day-by-day table folds from the chevron at the right of its title. */
+.sectionHeading>span{margin-left:auto}
+.sectionHeading :global(.section-toggle){margin-left:-8px}

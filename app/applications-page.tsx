@@ -97,6 +97,13 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
   const toggle = (id: string) => setOpen(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const allOpen = shown.length > 0 && shown.every(item => open.has(item.id));
   const filter = (next: Status) => { setStatus(next); setPage(1); };
+  // In Event Attendance each count opens the list filtered to it; selecting the open one again collapses the list.
+  const tileOpen = (key: Status) => listOpen && status === key;
+  const pickTile = (key: Status) => {
+    if (!board) { filter(key === status ? "all" : key); return; }
+    if (tileOpen(key)) { setListOpen(false); return; }
+    filter(key); setListOpen(true);
+  };
   const summary = report?.summary;
   const tiles: { key: Status; label: string; value: number | undefined; tone?: string }[] = [
     { key: "all", label: "Applications", value: summary?.total },
@@ -121,7 +128,6 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
       <div className={styles.headActions}>
         {report && <span className={styles.updated}>Updated {WHEN.format(Date.parse(report.fetchedAt))}</span>}
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
-        {board && <button type="button" className={styles.listToggle} aria-expanded={listOpen} aria-controls="applications-list" onClick={() => setListOpen(value => !value)}>{listOpen ? "Hide applications" : summary ? `Show ${summary.total} application${summary.total === 1 ? "" : "s"}` : "Show applications"}<span aria-hidden="true">{listOpen ? " ▲" : " ▼"}</span></button>}
       </div>
     </div>
     {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}{board ? " This list tries again after the next automatic update, within a minute." : ""}</p></div>}
@@ -130,12 +136,13 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
     {!board && report?.reviewNotice && <p className="partial-notice" role="status">{report.reviewNotice}</p>}
     {!board && reviewer.error && <div className="connection-alert" role="alert"><strong>Review not saved</strong><p>{reviewer.error}</p>{reviewer.retry ? <button type="button" className="btn btn-secondary" onClick={reviewer.retry}>Retry review</button> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>Refresh statuses</button>}</div>}
     {!report && loading && <p className={styles.empty} role="status">Loading applications from HubSpot…</p>}
+    {/* The counts stay in view; in Event Attendance they also open and close the list below them. */}
+    {report && <div className={styles.tiles} role="group" aria-label={board ? "Show applications by status" : "Filter by status"}>
+      {tiles.map(tile => <button key={tile.key} type="button" className={`${styles.tile} ${tile.tone ?? ""}`} {...board ? { "aria-expanded": tileOpen(tile.key), "aria-controls": "applications-list" } : { "aria-pressed": status === tile.key }} onClick={() => pickTile(tile.key)}>
+        <strong>{tile.value ?? 0}</strong><span>{tile.label}</span>{board && <em className={styles.tileMore} aria-hidden="true">{tileOpen(tile.key) ? "Hide ▲" : "Show ▼"}</em>}
+      </button>)}
+    </div>}
     {report && listOpen && <div id="applications-list">
-      <div className={styles.tiles} role="group" aria-label="Filter by status">
-        {tiles.map(tile => <button key={tile.key} type="button" className={`${styles.tile} ${tile.tone ?? ""}`} aria-pressed={status === tile.key} onClick={() => filter(tile.key === status ? "all" : tile.key)}>
-          <strong>{tile.value ?? 0}</strong><span>{tile.label}</span>
-        </button>)}
-      </div>
       {summary && summary.waitingAtHiringEvent > 0 && <p className={styles.callout}>{summary.waitingAtHiringEvent} applicant{summary.waitingAtHiringEvent === 1 ? "'s" : "s'"} recruiting ticket is still at Hiring Event. {"Applying doesn't move a ticket that already exists: confirm it's the same person, then move it to Application."}</p>}
       <div className={styles.filters}>
         <label className={styles.search}><span className="sr-only">Search applications</span><input type="search" placeholder="Search name, email, phone or city" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>

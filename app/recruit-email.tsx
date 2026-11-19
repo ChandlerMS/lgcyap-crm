@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import SummaryChips from './summary-chips';
 
-type Recruit = { id: string; name: string; isDemo?: boolean };
+type Recruit = { id: string; name: string; isDemo?: boolean; email?: string | null; stage?: string | null; office?: string | null };
 type Handoff = { recipient: { email: string; name: string }; contactUrl: string; templates: { id: string; name: string; url: string }[] };
 // Names also support attendees outside the provider's recruit list.
 const EmailContext = createContext<{ open: (id?: string, name?: string) => void; disabled: boolean }>({ open: () => {}, disabled: true });
@@ -60,8 +60,13 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
   </EmailContext.Provider>;
 }
 
-export function RecruitEmailSummary(_props: { recruits: Recruit[] }) {
+// The Email card's hover list: every loaded recruit with an email address, by name, each with its address, stage and
+// office and an Email button that opens New Email for them (compose and send in HubSpot).
+export function RecruitEmailSummary({ recruits }: { recruits: Recruit[] }) {
   const { open, disabled } = useRecruitEmail();
-  void _props;
-  return <SummaryChips id="email-summary" title="Email" note="Compose and send in HubSpot" chips={[]} empty={disabled ? 'Email is unavailable for demo recruits.' : 'Choose an offer template or compose a new message.'} more={{ label: 'emails' }} lead={<button className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button>} />;
+  const reachable = disabled ? [] : recruits.filter(r => !r.isDemo && r.email && /^[1-9]\d{0,29}$/.test(r.id)).sort((a, b) => a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' }));
+  const list = reachable.map(r => ({ id: r.id, href: `#recruit/${encodeURIComponent(r.id)}`, name: r.name, detail: r.email ?? '',
+    facts: [['Email', r.email ?? ''], ['Stage', r.stage || 'Not recorded'], ...(r.office ? [['Office', r.office] as const] : [])] as const,
+    actions: <button type="button" className="btn btn-quiet email-new-button" onClick={() => open(r.id, r.name)}>Email {r.name.split(' ')[0]}</button> }));
+  return <SummaryChips id="email-summary" title="Email" preview previewChips={list} count={disabled ? undefined : String(reachable.length)} note="Compose and send in HubSpot" chips={[]} empty={disabled ? 'Email is unavailable for demo recruits.' : 'Choose an offer template or compose a new message.'} more={{ label: 'emails' }} lead={<button className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button>} previewActions={<div className="summary-preview-new"><button type="button" className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button></div>} />;
 }
