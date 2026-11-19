@@ -51,7 +51,7 @@ test('Gmail stays in app with inbox, sent, paging, a protected reader and Reply'
     await ui.click('Newer messages'); assert.match(document.body.textContent, /Inbox message/);
     await ui.click('Read Inbox message');
     const frame = document.querySelector('iframe[title="Email message"]');
-    assert.equal(frame.getAttribute('sandbox'), '');
+    assert.equal(frame.getAttribute('sandbox'), 'allow-popups allow-popups-to-escape-sandbox', 'sanitized message links can open on an explicit click while scripts and same-origin access remain blocked');
     assert.match(frame.getAttribute('srcdoc'), /Complete message body/);
     assert.match(frame.getAttribute('srcdoc'), /img-src data:/);
     assert.doesNotMatch(frame.getAttribute('srcdoc'), /img-src[^;]*https:/);
