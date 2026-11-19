@@ -18,7 +18,8 @@ export default function RecruitTaskChips({ live, now, onUnauthorized, lead, prev
   useEffect(() => {
     const reload = () => setAttempt(value => value + 1);
     window.addEventListener(TASKS_CHANGED_EVENT, reload);
-    return () => window.removeEventListener(TASKS_CHANGED_EVENT, reload);
+    const timer = window.setInterval(() => { if (!document.hidden) reload(); }, 60000);
+    return () => { window.removeEventListener(TASKS_CHANGED_EVENT, reload); window.clearInterval(timer); };
   }, []);
   useEffect(() => {
     if (!live) return;
@@ -43,7 +44,7 @@ export default function RecruitTaskChips({ live, now, onUnauthorized, lead, prev
   const empty = !live ? "Switch to live data to see HubSpot tasks."
     : state.status === "loading" ? "Loading tasks from HubSpot…"
     : state.status === "failed" ? <>{state.message} <button className="text-link" onClick={() => { setState({ status: "loading" }); setAttempt(value => value + 1); }}>Try again</button></>
-    : "No open tasks assigned to you.";
-  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" lead={lead} previewActions={previewActions} count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours, open, soonest due" chips={chips}
+    : "No open personal tasks or shared recruiting follow-ups.";
+  return <SummaryChips id="task-chips-title" className="task-chips" title="Tasks" href="#tasks" lead={lead} previewActions={previewActions} count={ready ? `${chips.length}${ready.partial ? "+" : ""}` : undefined} note="Yours and shared follow-ups, soonest due" chips={chips}
     empty={empty} more={{ href: hubspotHref(ready?.hubspotUrl), external: true, label: "open tasks in HubSpot" }} />;
 }

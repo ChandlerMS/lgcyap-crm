@@ -396,3 +396,29 @@ test('Sales reads all HubSpot Deals without restricting the pipeline and retains
   assert.equal(result.records[0].title,'Synthetic sale');assert.equal(result.records[0].status,'Sold');assert.equal(result.records[0].subtitle,'100 USD');assert.match(result.records[0].hubspotUrl,/record\/0-3\/1001/);
   assert.equal(normalizeToolRecord('sales',row('1002',{pipeline:'other',dealname:'Another pipeline'})).title,'Another pipeline');
 });
+
+test('shared automatic follow-ups are readable by other viewers without exposing their unrelated private tasks', async () => {
+ const requests = [];
+ const fetchImpl = withOwners(async (url, options) => {
+   requests.push({ url, body: JSON.parse(options.body || '{}') });
+   if (url.endsWith('/batch/read')) return provider([row('202', { hs_task_subject: 'Shared follow-up', hs_task_status: 'NOT_STARTED', hubspot_owner_id: '888' })]);
+   return provider([row('101', { hs_task_subject: 'Personal task', hubspot_owner_id: '777' })]);
+ });
+ const result = await readHubSpotTool('tasks', {}, { accessToken: token, now, viewerEmail, fetchImpl, sharedTaskIds: ['202'] });
+ assert.equal(result.status, 'available');
+ assert.deepEqual(result.records.map(item => item.id), ['101','202']);
+ assert.equal(result.records[1].sharedFollowUp, true);
+ assert.equal(result.total, 2);
+ const personal = requests.find(item => item.url.endsWith('/search'));
+ assert.deepEqual(personal.body.filterGroups[0].filters, [{ propertyName: 'hubspot_owner_id', operator: 'IN', values: ['777'] }]);
+ assert.deepEqual(requests.find(item => item.url.endsWith('/batch/read')).body.inputs, [{ id: '202' }]);
+});
+
+test('a viewer without a personal owner mapping still sees shared tasks without an unfiltered personal search', async () => {
+ const calls = [];
+ const result = await readHubSpotTool('tasks', {}, { accessToken: token, now, viewerEmail: 'no-owner@example.invalid', sharedTaskIds: ['202'], fetchImpl: withOwners(async (url) => { calls.push(url); return provider([row('202', { hs_task_subject: 'Shared task' })]); }, []) });
+ assert.equal(result.status, 'available');
+ assert.deepEqual(result.records.map(record => record.id), ['202']);
+ assert.ok(!calls.some(url => url.endsWith('/search')));
+ assert.equal(result.total, 1);
+});

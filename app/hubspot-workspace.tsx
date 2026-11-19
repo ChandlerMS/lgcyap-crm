@@ -202,7 +202,8 @@ function CrmWorkspace({ tool, label, description, compact = false, pageHref, pag
     if (!event) return;
     const reload = () => { if (!editorOpen) void load(null); };
     window.addEventListener(event, reload);
-    return () => window.removeEventListener(event, reload);
+    const timer = tool === "tasks" ? window.setInterval(() => { if (!document.hidden) reload(); }, 60000) : null;
+    return () => { window.removeEventListener(event, reload); if (timer) window.clearInterval(timer); };
   }, [tool, load, editorOpen]);
   useEffect(() => {
     if (!failure?.retryAt) return;
