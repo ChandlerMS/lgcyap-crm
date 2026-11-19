@@ -6,9 +6,9 @@ Two small sites for walk-in recruits at hiring events. Neither shares code or se
 | --- | --- | --- | --- |
 | `signin/` | `lgcyap-signin` | https://signin.lgcyap.com | The sign-in form. Writes each sign-in to HubSpot. |
 | `signinqr/` | `lgcyap-signinqr` | https://signinqr.lgcyap.com | The QR screen for the 100-inch conference room TV. `/print` is the security-desk sign. |
-
-The older `lgcyap-signin.vercel.app` and `lgcyap-signinqr.vercel.app` addresses redirect to these, so codes printed before the move still work.
 | `signinqr/public/Legacy-Sign-In-QR-Security-Desk.pdf` | | `/Legacy-Sign-In-QR-Security-Desk.pdf` | Printable Letter PDF: page 1 is the desk sign, page 2 is four cut-out cards. |
+
+The older `lgcyap-signin.vercel.app` and `lgcyap-signinqr.vercel.app` addresses redirect to these with a 308, keeping the path and query, so codes printed before the move still work.
 
 The QR codes add where the person scanned: `?s=room` on the TV and `?s=lobby` on the security-desk sign. The HubSpot ticket records it, and lobby sign-ins are told to head up to the 4th floor.
 
