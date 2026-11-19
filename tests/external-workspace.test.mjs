@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { ADMIN_PAGES, AGENT_PORTAL_PAGES, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
 import { resolveWorkspaceRoute, sidebarViewFor } from '../app/recruiting-navigation.mjs';
 
-test('Admin and Agents keep each requested destination and distinguish the two RingCX consoles', () => {
+test('Admin and Agents keep each requested destination and distinguish RingEX from RingCX', () => {
   assert.deepEqual(ADMIN_PAGES.map(page => [page.label, page.url]), [
-    ['PolicyTek Admin', 'https://app.policytek.com/admin'],
-    ['RingCX Admin', 'https://service.ringcentral.com/application/adminHome'],
-    ['RingCX Admin', 'https://ringcx.ringcentral.com/voice/admin/home'],
-    ['HubSpot Admin', 'https://app.hubspot.com/settings/50894788/users/active_users'],
+    ['PolicyTek', 'https://app.policytek.com/admin'],
+    ['RingEX', 'https://service.ringcentral.com/application/adminHome'],
+    ['RingCX', 'https://ringcx.ringcentral.com/voice/admin/home'],
+    ['HubSpot', 'https://app.hubspot.com/settings/50894788/users/active_users'],
   ]);
   assert.deepEqual(AGENT_PORTAL_PAGES.map(page => [page.label, page.url]), [
     ['PolicyTek Agents', 'https://app.policytek.com/agents'],
