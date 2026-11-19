@@ -35,11 +35,8 @@ test('Email composes through the existing provider and compact Inbox retains ref
     const compose = button('New Email'); assert.ok(compose.classList.contains('summary-add'));
     assert.equal(compose.querySelector('[aria-hidden="true"]').textContent, '+');
     assert.equal(compose.nextElementSibling.getAttribute('aria-label'), 'Collapse Email');
-    assert.equal([...document.querySelectorAll('[data-section-heading] a')].some(link => link.textContent.startsWith('Open Gmail')), false, 'native Gmail access uses the account-bound inbox link in the connection card');
-    const emailNative = document.querySelector('[aria-label="Gmail connection"] a[href$="#inbox"]');
-    assert.ok(emailNative);
-    assert.match(emailNative.href, /authuser=staff%40example.test/);
-    assert.equal(emailNative.target, '_blank');
+    assert.equal(document.querySelector('a[href*="mail.google.com"]'), null, 'Email never launches the Gmail website');
+    assert.ok(document.querySelector('[aria-label="Gmail connection"]'));
     assert.equal([...document.querySelectorAll('button')].filter(item => item.getAttribute('aria-label') === 'New Email').length, 1);
     assert.equal(document.querySelectorAll('[aria-label="Collapse Email"]').length, 1);
     await act(async () => button('Close email').click());
