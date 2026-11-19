@@ -106,3 +106,5 @@
 .compareTable tfoot tr:last-child th, .compareTable tfoot tr:last-child td { color: var(--text); font-weight: 600; border-bottom: 0; }
 @media (max-width: 1100px) { .compare { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 480px) { .chart.leadRows li, .chartHead.leadRows { grid-template-columns: 23px minmax(70px, 38%) minmax(25px, 1fr) auto; gap: 8px; } }
+
+.notes { display: flex; flex-direction: column; gap: 12px; }
