@@ -11,9 +11,9 @@ export default function SalesPage({ onUnauthorized, onDirtyChange, onBusyChange 
       <button type="button" aria-pressed={view === "standard"} onClick={() => setView("standard")}>Standard vs Preferred</button>
     </div>
     {view === "shopper" ? <section aria-label="Shopper sales" className="shopper-sales">
-      <div className="sales-heading"><h1 className="page-title" id="page-title" tabIndex={-1}>Shopper Sales</h1><a className="btn btn-secondary" href="https://app.policytek.com/leads" target="_blank" rel="noopener noreferrer">Open in PolicyTek<span className="sr-only"> (opens in a new tab)</span></a></div>
-      <p className="helper">Live leads from PolicyTek. If prompted, sign in to PolicyTek in this view or open PolicyTek in a new tab.</p>
-      <div className="shopper-embed"><iframe className="shopper-embed-frame" src="https://app.policytek.com/leads" title="Shopper sales · PolicyTek leads" referrerPolicy="no-referrer" /></div>
+      <div className="sales-heading"><h1 className="page-title" id="page-title" tabIndex={-1}>Shopper Sales</h1><a className="btn btn-secondary" href="https://app.policytek.com/applications" target="_blank" rel="noopener noreferrer">Open in PolicyTek<span className="sr-only"> (opens in a new tab)</span></a></div>
+      <p className="helper">Live applications from PolicyTek. If prompted, sign in to PolicyTek in this view or open PolicyTek in a new tab.</p>
+      <div className="shopper-embed"><iframe className="shopper-embed-frame" src="https://app.policytek.com/applications" title="Shopper sales · PolicyTek applications" referrerPolicy="no-referrer" /></div>
     </section> : <div className="sales-records"><HubSpotWorkspace tool="sales" label="Sales" description="Standard vs Preferred deals from HubSpot." onUnauthorized={onUnauthorized} onDirtyChange={onDirtyChange} onBusyChange={onBusyChange} /></div>}
   </>;
 }
