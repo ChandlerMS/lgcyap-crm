@@ -195,15 +195,15 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   const clearDate = () => { setSignedOn(''); setFrom(''); setTo(''); };
   const dateControls = <>
     <label><span>Signed in</span><select value={signedOn} onChange={event => setSignedOn(event.target.value)}><option value="">Any date</option>{signInDays.map(day => <option key={day} value={day}>{dayLabel(day)}</option>)}<option value="range">Date range…</option></select></label>
-    {signedOn === 'range' && <>
-      <label><span>From</span><input type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
-      <label><span>To</span><input type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
-    </>}
-    {dateActive && <button type="button" className={styles.linkButton} onClick={clearDate}>Clear date</button>}
+    <div className={styles.dateRangeFields}>
+      <label><span>From</span><input type="date" disabled={signedOn !== 'range'} value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
+      <label><span>To</span><input type="date" disabled={signedOn !== 'range'} value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
+    <button type="button" disabled={!dateActive} className={styles.linkButton} onClick={clearDate}>Clear date</button>
+    </div>
   </>;
   const dateFilter = <div className={styles.dateFilter} role="group" aria-label="Filter by sign-in date">{dateControls}</div>;
   const signedInFilters = { office: signedInOffice, name: signedInName, review: signedInReview, sort: signedInSort };
-  const signedInControls = <div className={styles.dateFilter} role="group" aria-label="Filter and sort signed-in recruits">
+  const signedInControls = <div className={`${styles.dateFilter} ${styles.peopleFilters}`} role="group" aria-label="Filter and sort signed-in recruits">
     {dateControls}
     <label><span>Office</span><select value={signedInOffice} onChange={event => setSignedInOffice(event.target.value)}><option value="all">All offices</option>{Array.from(new Set(attendees.map(person => person.office))).sort().map(office => <option key={office} value={office}>{officeLabel(office)}</option>)}</select></label>
     <label><span>Name</span><input type="search" maxLength={200} placeholder="Search names" value={signedInName} onChange={event => setSignedInName(event.target.value)} /></label>

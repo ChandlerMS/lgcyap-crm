@@ -6,6 +6,7 @@ import styles from './event-attendance.module.css';
 export default function PeopleExport({ rows, title, googleExport }: { rows: readonly object[]; title: string; googleExport?: { startDate: string; endDate: string; office?: string; name?: string; review?: string; sort?: string } }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [feedbackTarget, setFeedbackTarget] = useState<HTMLDivElement | null>(null);
   const download = async (format: 'csv' | 'xlsx') => {
     if (busy || !rows.length) return;
     setBusy(true); setError('');
@@ -19,5 +20,5 @@ export default function PeopleExport({ rows, title, googleExport }: { rows: read
     } catch (error) { setError(error instanceof Error ? error.message : 'The export could not be created. Try again.'); }
     finally { setBusy(false); }
   };
-  return <div className={styles.peopleExport}><div><button type="button" disabled={busy || !rows.length} onClick={() => void download('csv')}>Export CSV</button>{googleExport && <SignedInSheetExport count={rows.length} filters={googleExport} disabled={busy} />}<button type="button" disabled={busy || !rows.length} onClick={() => void download('xlsx')} title="Download an Excel workbook (.xlsx)">Export XLS</button></div>{error && <p role="alert">{error}</p>}</div>;
+  return <div className={styles.peopleExport}><div className={styles.peopleExportButtons}><button type="button" disabled={busy || !rows.length} onClick={() => void download('csv')}>Export CSV</button>{googleExport && <SignedInSheetExport feedbackTarget={feedbackTarget} count={rows.length} filters={googleExport} disabled={busy} />}<button type="button" disabled={busy || !rows.length} onClick={() => void download('xlsx')} title="Download an Excel workbook (.xlsx)">Export XLS</button></div><div className={styles.exportFeedback}><div ref={setFeedbackTarget} />{error && <p role="alert">{error}</p>}</div></div>;
 }
