@@ -68,6 +68,12 @@ export const RECRUITS_CHILD_PAGES = Object.freeze([
   // Online agent applications from apply.lgcyap.com, organized for the admin team.
   Object.freeze({ id: 'applications', label: 'Applications' }),
 ]);
+// The hiring-event sites, after the Recruits pages. They refuse to be framed (they take personal details and a photo ID),
+// so each opens in its own tab, which also suits putting the QR screen on a TV.
+export const RECRUITS_SITE_LINKS = Object.freeze([
+  Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/' }),
+  Object.freeze({ id: 'sign-in-qr', label: 'QR Code Sign-in', href: 'https://signinqr.lgcyap.com/' }),
+]);
 // Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);
 // Preserve saved source routes; the Queues sidebar link embeds the combined Queue site.
