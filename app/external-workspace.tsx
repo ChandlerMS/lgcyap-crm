@@ -3,7 +3,7 @@ import { externalWorkspacePage } from './external-workspace-pages.mjs';
 export default function ExternalWorkspace({ view }: { view: string }) {
   const page = externalWorkspacePage(view);
   if (!page) return null;
-  const largeFrame = page.id === "contracting-portal";
+  const largeFrame = ["contracting-portal", "lead-payments"].includes(page.id);
   const frame = <iframe key={page.id} className={largeFrame ? "shopper-embed-frame" : "policytek-frame"} src={page.url} title={`${page.label} · ${page.detail}`} referrerPolicy="no-referrer" allow={page.id === "google-meet" ? "camera; microphone; display-capture; fullscreen; autoplay" : undefined} />;
   return <section className="external-workspace" aria-labelledby="page-title">
     <div className="page-head"><div><h1 id="page-title" className="page-title" tabIndex={-1}>{page.label}</h1><p className="subheading">{page.detail}</p></div><a className="btn btn-secondary" href={page.url} target="_blank" rel="noopener noreferrer">Open in new tab<span className="sr-only"> · {page.label}</span></a></div>
