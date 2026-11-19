@@ -46,6 +46,9 @@ test('Inbox hover Open shows the correct conversation, preserves drafts across c
     assert.equal(panel.style.height, '', 'Inbox stays compact until a conversation is opened');
     const openButton = [...panel.querySelectorAll('button')].find(button => button.textContent.startsWith('Open conversation'));
     assert.ok(openButton);
+    assert.ok(openButton.closest('.summary-preview-row'), 'Open sits on the right of the conversation row');
+    assert.equal(panel.querySelector('.summary-preview-row .summary-card-badge'), null, 'the status text is replaced by the button');
+    assert.equal(panel.querySelector('.summary-preview-actions'), null, 'there is no duplicate bottom action row');
     await act(async () => { openButton.click(); await wait(); });
     await act(wait);
     assert.equal(panel.style.height, 'calc(100dvh - 24px)');

@@ -7,7 +7,7 @@ import SummaryPreview from "./summary-preview";
 // the title's hover preview. external links open in a new tab.
 // facts and actions fill the item's row in the hover list: its details as label and value, and buttons such as Call or Add Note.
 // onSelect makes the item a button instead of a link, e.g. an Email card recruit that opens New Email.
-export type SummaryChip = { id: string; href?: string; external?: boolean; name: string; badge?: string; detail: string; previewDetail?: string; facts?: readonly (readonly [string, string])[]; actions?: ReactNode; onSelect?: () => void; previewOnSelect?: () => void };
+export type SummaryChip = { id: string; href?: string; external?: boolean; name: string; badge?: string; detail: string; previewDetail?: string; facts?: readonly (readonly [string, string])[]; actions?: ReactNode; previewAction?: ReactNode; onSelect?: () => void; previewOnSelect?: () => void };
 type More = { href?: string; external?: boolean; label: string };
 // href makes the title open its own page; hovering or focusing the title then previews the first few items.
 // lead is the card's gold plus that adds a task, follow-up or meeting. previewActions are buttons inside the hover
@@ -38,7 +38,7 @@ export default function SummaryChips({ id, title, count, note, chips, empty, mor
         {previewExtra}
         {previewActions}
         {items.length ? <ul className="summary-preview-list">{items.map(chip => <li key={chip.id}>
-          <div className="summary-preview-row">{(chip.previewOnSelect ?? chip.onSelect) ? <button type="button" className="summary-preview-select" onClick={chip.previewOnSelect ?? chip.onSelect}>{chip.name}</button> : chip.href ? <a href={chip.href} {...newTab(chip.external)}>{chip.name}{chip.external && <span className="sr-only"> (opens in HubSpot)</span>}</a> : <span>{chip.name}</span>}{chip.badge && <span className="summary-card-badge">{chip.badge}</span>}</div>
+          <div className="summary-preview-row">{(chip.previewOnSelect ?? chip.onSelect) ? <button type="button" className="summary-preview-select" onClick={chip.previewOnSelect ?? chip.onSelect}>{chip.name}</button> : chip.href ? <a href={chip.href} {...newTab(chip.external)}>{chip.name}{chip.external && <span className="sr-only"> (opens in HubSpot)</span>}</a> : <span>{chip.name}</span>}{chip.previewAction ?? (chip.badge && <span className="summary-card-badge">{chip.badge}</span>)}</div>
           {chip.facts?.length ? <dl className="summary-preview-facts">{chip.facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl> : <span className="muted">{chip.previewDetail ?? chip.detail}</span>}
           {chip.actions && <div className="summary-preview-actions">{chip.actions}</div>}
         </li>)}</ul> : <p className="muted">{empty}</p>}
