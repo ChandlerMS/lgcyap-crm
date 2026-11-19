@@ -193,8 +193,8 @@ test('API All dispatch shares the initial clock, keeps the provider budget advan
     '@/db/policytek.mjs': 'export const getPolicytekDb = async () => ({});',
     '@/lib/svp-calls.mjs': 'export const readSvpCalls = (...args) => globalThis.routeFixture.readSvpCalls(...args); export const applySvpCalls = (...args) => globalThis.routeFixture.applySvpCalls(...args);',
     '@/db/svp-calls.mjs': 'export const getSvpCallsDb = async () => ({});',
-    '@/lib/whatsapp-sales.mjs': 'export const readWhatsappLeaderboard = () => { throw Error("Wrong board"); }; export const readPendingWhatsappStandardPreferred = readWhatsappLeaderboard;',
-    '@/db/whatsapp.mjs': 'export const getWhatsappDb = async () => { throw Error("Wrong database"); };',
+    '@/lib/whatsapp-sales.mjs': 'export const readWhatsappLeaderboard = () => { throw Error("Wrong board"); }; export const readWhatsappSvpLeaderboard = readWhatsappLeaderboard;',
+    '@/db/whatsapp.mjs': 'export const getWhatsappDb = async () => { throw Error("Wrong database"); }; export const getWhatsappSvpDb = getWhatsappDb;',
   };
   const bundle = await build({ entryPoints: [`${root}app/api/leaderboard/route.ts`], bundle: true, platform: 'node', format: 'cjs', write: false,
     plugins: [{ name: 'synthetic-route-sources', setup(builder) {

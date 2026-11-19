@@ -6,8 +6,8 @@ import { readAllLeaderboard } from '@/lib/leaderboard-all.mjs';
 
 import { readPolicytekLeaderboard } from '@/lib/policytek.mjs';
 import { getPolicytekDb } from '@/db/policytek.mjs';
-import { readWhatsappLeaderboard, readPendingWhatsappStandardPreferred } from '@/lib/whatsapp-sales.mjs';
-import { getWhatsappDb } from '@/db/whatsapp.mjs';
+import { readWhatsappLeaderboard, readWhatsappSvpLeaderboard } from '@/lib/whatsapp-sales.mjs';
+import { getWhatsappDb, getWhatsappSvpDb } from '@/db/whatsapp.mjs';
 import { applySvpCalls, readSvpCalls } from '@/lib/svp-calls.mjs';
 import { getSvpCallsDb } from '@/db/svp-calls.mjs';
 
@@ -39,7 +39,7 @@ async function handle(request: Request) {
       readShopper: async (selected, options) => readPolicytekLeaderboard(selected, { db: await getPolicytekDb(), ...options }),
       readStandardPreferred,
     })
-      : input.board === 'whatsapp-sp' ? readPendingWhatsappStandardPreferred(input)
+      : input.board === 'whatsapp-sp' ? readWhatsappSvpLeaderboard(input, { db: await getWhatsappSvpDb() })
       : input.board === 'sp' ? readStandardPreferred(input)
       : input.board === 'whatsapp' ? readWhatsappLeaderboard(input, { db: await getWhatsappDb() })
       : readPolicytekLeaderboard(input, { db: await getPolicytekDb() }),

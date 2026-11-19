@@ -41,7 +41,7 @@ function SourceSummary({ result, board, label, error, loading, start, end }: { r
       <p>{firstDate}{lastDate && lastDate !== firstDate ? ` – ${lastDate}` : ""} · Eastern time{!result && " · selected range"}</p>
       <p>{result?.fetchedAt && timestamp(result.fetchedAt) ? `Updated ${timestamp(result.fetchedAt)}` : "Updated time unavailable"}</p>
       {loading && !result && <p role="status">Loading source data…</p>}
-      {!available && !loading && <p role="status">{error ?? result?.error?.message ?? result?.notice ?? (board === "whatsapp-sp" ? "Awaiting separate Standard vs Preferred WhatsApp spreadsheets." : "Source data unavailable for this period.")}</p>}
+      {!available && !loading && <p role="status">{error ?? result?.error?.message ?? result?.notice ?? (board === "whatsapp-sp" ? "Standard vs Preferred WhatsApp sales have not been imported yet." : "Source data unavailable for this period.")}</p>}
       {available && error && <DismissibleNotice className={styles.alert} role="alert">Showing the last loaded source. {error}</DismissibleNotice>}
       {available && result.notice && <p role="status">{result.notice}</p>}
       {result?.stale && <p role="status">Saved results are stale. This source has not refreshed successfully.</p>}
@@ -51,7 +51,8 @@ function SourceSummary({ result, board, label, error, loading, start, end }: { r
       {board === "sp" && <p>HubSpot Sold deals by close date. {leaderboardSpCallLabel(result?.calls?.basis)}. Close is sold ÷ calls.</p>}
       {board === "shopper" && <p>PolicyTek Shopper Agent Report by submit date. Policy and annual premium comparisons use submitted values; report totals can include activity without a named agent.</p>}
       {board === "all" && <p>PolicyTek Shopper + HubSpot Standard vs Preferred. Calls / leads combines Shopper leads and Standard vs Preferred calls. Sales / activity uses that mixed basis; source totals can include activity without a named agent.</p>}
-      {(board === "whatsapp" || board === "whatsapp-sp") && <p>Imported daily agent reports by sale date. Total Production is annual premium.{result?.dataThrough ? ` Activity through ${result.dataThrough}.` : ""} {result?.calls?.basis === "monthly" ? "Calls are entered monthly totals; Close is sales ÷ calls." : `Calls are connected inbound queue calls; Close is queue sold ÷ calls, recorded from ${result?.calls?.coverageStart ?? "2026-06-17"}.`}</p>}
+      {board === "whatsapp-sp" && <p>Standard vs Preferred WhatsApp group posts by post date. Each sale amount posted counts as one policy sold and its amount as annual premium.{result?.dataThrough ? ` Posts through ${result.dataThrough}.` : ""} This chat has no dialer calls, so Calls and Close are not shown.</p>}
+      {board === "whatsapp" && <p>Imported daily agent reports by sale date. Total Production is annual premium.{result?.dataThrough ? ` Activity through ${result.dataThrough}.` : ""} {result?.calls?.basis === "monthly" ? "Calls are entered monthly totals; Close is sales ÷ calls." : `Calls are connected inbound queue calls; Close is queue sold ÷ calls, recorded from ${result?.calls?.coverageStart ?? "2026-06-17"}.`}</p>}
     </div>
   </section>;
 }

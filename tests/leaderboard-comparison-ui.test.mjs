@@ -68,14 +68,16 @@ test('comparison tabs request the specified sources and keep available rows besi
       assert.match(table.textContent, /Annual premium/);
       if (right === 'whatsapp-sp') {
         const side = document.querySelector('section[aria-label="WhatsApp · Standard vs Preferred"]');
-        assert.match(side.textContent, /Awaiting separate WhatsApp spreadsheets/);
+        assert.match(side.textContent, /Standard vs Preferred WhatsApp sales have not been imported yet/);
+        assert.match(side.textContent, /group posts by post date/);
+        assert.doesNotMatch(side.textContent, /daily agent reports|queue calls/i, 'the chat dataset is not described as the dialer reports');
         assert.ok([...side.querySelectorAll('dd')].every(value => value.textContent === '—'));
         assert.ok([...table.querySelectorAll('tbody tr')].every(row => [...row.children].slice(3).every(cell => cell.textContent === '—')));
       }
     }
     assert.match(document.body.textContent, /2026-11-19/);
     assert.match(document.body.textContent, /Updated/);
-  }, input => Response.json(result(input, input.board === 'whatsapp-sp' ? { status: 'unavailable', rows: [], notice: 'Awaiting separate WhatsApp spreadsheets.' } : {})));
+  }, input => Response.json(result(input, input.board === 'whatsapp-sp' ? { status: 'unavailable', rows: [], notice: 'Standard vs Preferred WhatsApp sales have not been imported yet.' } : {})));
 });
 
 test('paired rows share a magnitude scale and common metric, sort, search, and Custom date controls', async () => {
@@ -152,7 +154,7 @@ test('comparison sources expose their own partial, stale, import coverage, and u
     assert.match(left.textContent, /Saved · stale/);
     assert.match(left.textContent, /Incomplete results/);
     assert.match(left.textContent, /Report call coverage caveat/);
-    assert.match(right.textContent, /Activity through 2026-11-18/);
+    assert.match(right.textContent, /Posts through 2026-11-18/);
     assert.match(right.textContent, /Right import caveat/);
     assert.doesNotMatch(right.textContent, /Saved · stale/);
     assert.match(left.textContent, /Updated/); assert.match(right.textContent, /Updated/);

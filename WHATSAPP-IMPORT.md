@@ -46,8 +46,42 @@ production (to the cent), connected calls and queue sold. Tests: `tests/whatsapp
 
 WhatsApp Sales has its own top-level tab beside Leaderboard and Call Analytics.
 Its All view reads the combined imported reports. Standard vs Preferred is a
-separate WhatsApp dataset, awaiting separately supplied spreadsheets. Until those
-files are provided and an importer is implemented for them, that view returns an
-explicit unavailable state with empty rows, rather than using HubSpot or All
-figures. Daily, Weekly, Monthly and Custom periods and the policies-sold/annual-
-premium ranking controls remain available for both views.
+separate dataset read from the Standard vs Preferred WhatsApp group chat (below);
+it never uses HubSpot or All figures, and until that chat is imported it shows an
+explicit unavailable state with empty rows. Daily, Weekly, Monthly and Custom
+periods and the policies-sold/annual-premium ranking controls remain available
+for both views.
+
+## Standard vs Preferred chat import
+
+In WhatsApp, export the Standard vs Preferred group without media, unzip it, and pass the `.txt` file:
+
+```bash
+npm run whatsapp-svp:import -- "C:/Users/Chand/Downloads/Standard vs Preferred/chat.txt"
+npm run whatsapp-svp:import -- "C:/Users/Chand/Downloads/Standard vs Preferred/chat.txt" --apply
+```
+
+Without `--apply` the export is only parsed and summarized (message, sale, day and poster counts, never names or
+amounts). With `--apply` it asks for the connection string if `DATABASE_URL` is not set, then, in one transaction,
+replaces every day from the export's first message through its last. Days outside the export are kept, so an export
+from a phone with shorter history cannot erase earlier days. If the export starts after the imported posts begin, its
+first day may start mid-day, so the stored rows for that day are kept and replacement starts the next day; such an
+export is refused if it starts on or after the last imported day, because neither copy of that day would be whole. An
+export that ends before the posts already imported is refused too. WhatsApp writes messages in time order, so a message
+line dated before the one above it, or in the future, is treated as a chat header typed into a post: the export is
+refused and the line number shown, so text inside a post can never move the replaced dates. A refused export changes nothing. Re-run with each
+newer export; its last day replaces the partial day the previous export ended on.
+
+`lib/whatsapp-chat-sales.mjs` reads sale posts with the rules that rebuilt the LAP Daily Agent Reports from the main
+sales chat: one sale per amount line (His and Hers count separately); Total, Both and `=` lines are dropped when the
+message has other amounts; day, week and `$40k`-style figures, amounts in prose, dates and phone numbers are ignored;
+amounts without `$` count with cents or next to His/Hers, a carrier or an emoji; obvious typos such as `$1.884.72`,
+`$2.015.4`, `$3002,76` and `525$` are read as amounts; the poster is credited; and the same post again (all of its
+sale lines) from the same poster within 30 minutes counts once, while a new post that shares only some lines counts in full. Days follow the chat's own clock (the exporting phone's time zone). Posters are grouped
+by their WhatsApp name, case-insensitively, so a poster saved only as a phone number appears as that number.
+
+Storage: `migrations/0020_whatsapp_svp_sales.sql` (`whatsapp_svp_sales_daily` and the one-row `whatsapp_svp_import`
+coverage), additive and reversible with `DROP TABLE whatsapp_svp_sales_daily, whatsapp_svp_import;`. The view shows
+each post's amount as annual premium and each amount line as one policy sold. The chat has no dialer calls, so Calls
+and Close are blank. Ranges that start before the imported chat or reach the export's last day are marked incomplete,
+and the notice gives the export's last message time. Tests: `tests/whatsapp-svp-sales.test.mjs`.
