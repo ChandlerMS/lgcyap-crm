@@ -1075,3 +1075,5 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 /* Leave every bottom launcher reachable while its panel is expanded, including wrapped rows. */
 .rc-panel { bottom: calc(var(--floating-actions-clearance, 90px) + 12px); max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px); }
 body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-container { max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px) !important; }
+
+.launcher-brand-icon { display: inline-block; flex: 0 0 24px; width: 24px; height: 24px; background-position: center; background-repeat: no-repeat; background-size: contain; }
