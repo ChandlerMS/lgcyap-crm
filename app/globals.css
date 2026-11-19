@@ -1024,3 +1024,6 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 .recruit-combobox-list li.is-active { background: #232118; box-shadow: inset 2px 0 0 var(--gold); }
 .recruit-combobox-list li[aria-selected="true"] span { color: var(--gold); font-weight: 600; }
 .recruit-combobox-empty { padding: 10px; color: #9a9a92; }
+
+.whatsapp-popup-notice { position: fixed; right: 16px; bottom: 150px; z-index: 65; max-width: min(360px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--gold); border-radius: 12px; background: #090909; color: var(--text); box-shadow: 0 4px 24px #0008; }
+.whatsapp-popup-notice a { color: var(--gold); text-decoration: underline; }
