@@ -4,7 +4,7 @@ import tabs from "./leaderboard.module.css";
 
 export default function CallsPage({ view, onSourceChange, onUnauthorized, onDirtyChange, onBusyChange }: { view: "shopper" | "standard"; onSourceChange: (source: "shopper" | "standard") => void; onUnauthorized: () => void; onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void }) {
   return <>
-    <div className={tabs.boardTabs} role="group" aria-label="Calls view">
+    <div className={`${tabs.boardTabs} ${tabs.centeredBoardTabs}`} role="group" aria-label="Calls view">
       <button type="button" aria-pressed={view === "shopper"} onClick={() => onSourceChange("shopper")}>Shopper</button>
       <button type="button" aria-pressed={view === "standard"} onClick={() => onSourceChange("standard")}>Standard vs Preferred</button>
     </div>

@@ -6,7 +6,7 @@ import tabs from "./leaderboard.module.css";
 export default function SalesPage({ onUnauthorized, onDirtyChange, onBusyChange }: { onUnauthorized: () => void; onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void }) {
   const [view, setView] = useState<"shopper" | "standard">("shopper");
   return <>
-    <div className={tabs.boardTabs} role="group" aria-label="Sales view">
+    <div className={`${tabs.boardTabs} ${tabs.centeredBoardTabs}`} role="group" aria-label="Sales view">
       <button type="button" aria-pressed={view === "shopper"} onClick={() => setView("shopper")}>Shopper</button>
       <button type="button" aria-pressed={view === "standard"} onClick={() => setView("standard")}>Standard vs Preferred</button>
     </div>

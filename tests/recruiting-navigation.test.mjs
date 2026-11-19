@@ -91,8 +91,8 @@ test('the dashboard Calendar shows every meeting in its day, without pointing at
 
 test('Leaderboard and Call Analytics switch with a toggle at the top of both pages', () => {
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
-  assert.match(workspace, /if \(callAnalyticsView\) return <>\{dashboardLink\}\{leaderboardSwitch\}<LeadData /);
-  assert.match(workspace, /if \(leaderboardView\) return <>\{dashboardLink\}\{leaderboardSwitch\}<Leaderboard /);
+  assert.match(workspace, /if \(callAnalyticsView\) return <>\{dashboardLink\}<LeadData navigation=\{leaderboardSwitch\} /);
+  assert.match(workspace, /if \(leaderboardView\) return <>\{dashboardLink\}<Leaderboard navigation=\{leaderboardSwitch\} /);
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {

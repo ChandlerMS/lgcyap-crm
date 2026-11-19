@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { filterLeaderboardRows, leaderboardBarWidth, leaderboardCallsRefreshActive, leaderboardCallsRefreshDelay } from "./leaderboard-data.mjs";
 import { LeaderboardPeriodTabs, LeaderboardRangeForm, useLeaderboardDates } from "./leaderboard-date-range";
 import { LEAD_DATA_METRICS, LEAD_DATA_REPORTS, LEAD_DATA_SOURCES, leadDataCompareRows, leadDataCsv, leadDataCsvFilename, rankLeadDataRows, sortLeadDataRows } from "./lead-data-view.mjs";
@@ -22,7 +22,7 @@ const COUNT_SORT: RowSort = { field: "count", direction: "desc" };
 function number(value: unknown) { return typeof value === "number" && Number.isFinite(value) ? NUMBER.format(value) : "—"; }
 function updated(value: string | undefined) { const stamp = value ? Date.parse(value) : NaN; return Number.isFinite(stamp) ? UPDATED.format(stamp) : null; }
 
-export default function LeadData({ onUnauthorized }: { onUnauthorized: () => void }) {
+export default function LeadData({ onUnauthorized, navigation }: { onUnauthorized: () => void; navigation?: ReactNode }) {
   // RingCentral opens first because PolicyTek has no numbers to show yet.
   const [source, setSource] = useState<Source>("ringcentral");
   const [metric, setMetric] = useState<Metric>("instantDisconnects");
@@ -96,6 +96,7 @@ export default function LeadData({ onUnauthorized }: { onUnauthorized: () => voi
   const ringEmpty = <div className={styles.empty} role="status">{loading && !current ? "Loading Call Analytics…" : <><h3>RingCentral data unavailable</h3><p>{current?.ringcentral.message ?? "Call Analytics could not be loaded. Try Refresh."}</p></>}</div>;
   return <section className={styles.leaderboard} aria-labelledby="lead-data-title" aria-busy={loading}>
     <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Lead quality</p><h1 id="lead-data-title" tabIndex={-1}>Call Analytics</h1><p>Instant Disconnects and Short Duration Calls by agent.</p></header>
+    {navigation}
     <div className={styles.boardTabs} role="group" aria-label="Call Analytics source">{LEAD_DATA_SOURCES.map(value => <button key={value.id} type="button" aria-pressed={source === value.id} onClick={() => setSource(value.id as Source)}>{value.label}</button>)}</div>
     {source !== "compare" && <div className={styles.boardTabs} role="group" aria-label="Call type">{LEAD_DATA_METRICS.map(value => <button key={value.id} type="button" aria-pressed={metric === value.id} onClick={() => setMetric(value.id as Metric)}>{value.label}</button>)}</div>}
     <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Call Analytics period" /><button className="btn btn-secondary" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>

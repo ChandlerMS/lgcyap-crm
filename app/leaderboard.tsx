@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LEADERBOARD_BOARDS, LEADERBOARD_SP_CALL_TOTALS, leaderboardBarWidth, leaderboardCallsRefreshActive, leaderboardCallsRefreshDelay, leaderboardCsv, leaderboardCsvFilename, filterLeaderboardRows, leaderboardMetrics, leaderboardSortFields, leaderboardSortValue, leaderboardSpCallLabel, leaderboardTotals, rankLeaderboardRows, sortLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from "./leaderboard-data.mjs";
 import { hubspotRetryDeadline } from "./hubspot-workspace-view.mjs";
 import { leaderboardPeriod } from "../lib/leaderboard-period.mjs";
@@ -24,7 +24,7 @@ const SOURCE_COLUMNS =[{ field: "name", label: "Source" }, { field: "leads", lab
 function number(value: unknown, currency = false) { return typeof value === "number" && Number.isFinite(value) ? (currency ? MONEY : NUMBER).format(value) : "—"; }
 function updated(value: string | undefined) { const stamp = value ? Date.parse(value) : NaN; return Number.isFinite(stamp) ? UPDATED.format(stamp) : null; }
 
-export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => void }) {
+export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthorized: () => void; navigation?: ReactNode }) {
   const [board, setBoard] = useState<Board>("sp");
   const dates = useLeaderboardDates();
   const { period, range, periodLabel } = dates;
@@ -136,7 +136,8 @@ export default function Leaderboard({ onUnauthorized }: { onUnauthorized: () => 
     ...(board === "sp" ? [{ label: "Total Calls Connected", value: number(current?.calls?.connected) }, { label: "Total Calls Abandoned", value: number(current?.calls?.abandoned) }] : []),
   ];
   return <section className={styles.leaderboard} aria-labelledby="leaderboard-title" aria-busy={loading}>
-    <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>Agent Leaderboard</h1><p>Sold policies by writing agent.</p></header>
+    <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>Agent Leaderboard</h1></header>
+    {navigation}
     <div className={styles.boardTabs} role="group" aria-label="Leaderboard">{LEADERBOARD_BOARDS.map(value => <button key={value.id} type="button" aria-pressed={board === value.id} onClick={() => setBoard(value.id as Board)}>{value.label}</button>)}{["shopper", "sp"].includes(board) && <a className={styles.tvLink} href={`https://leaderboard.lgcyap.com/${board === "shopper" ? "shopper" : "standard"}`} target="_blank" rel="noopener noreferrer" aria-label={`${board === "shopper" ? "Shopper" : "Standard vs Preferred"} Leaderboard TV HUD (opens in a new tab)`}>TV HUD</a>}</div>
     <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Leaderboard period" /><div className={styles.segment} role="group" aria-label="Rank by"><button type="button" aria-pressed={metric === "sales"} onClick={() => rankBy("sales")}>{keys.firstLabel}</button><button type="button" aria-pressed={metric === "ap"} onClick={() => rankBy("ap")}>{keys.secondLabel}</button></div><button className="btn btn-secondary" type="button" disabled={loading || (board !== "whatsapp" && Boolean(retryAt))} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
     <LeaderboardRangeForm dates={dates} />
