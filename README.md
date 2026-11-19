@@ -474,3 +474,5 @@ For local development, add the two variables to the ignored `.env.local`. Keep t
 The default `availableRule` in `lib/phone-hud-rule.mjs` shows every explicitly available, non-busy sales agent. Heartbeat and idle cutoffs can be configured there. Names, source labels and times are projected from upstream responses; phone numbers, emails and credentials never reach the board. Cached boards and access tokens are shared only within each server instance, so multiple Vercel instances can independently read PolicyTek.
 
 Run `node --test tests/phone-hud.test.mjs` for Queue filtering, caching, token retry, safe failures and endpoint authorization tests. Fixtures are synthetic and make no live PolicyTek calls.
+
+Automatic monthly application Google Sheets: see [setup, owner consent, weekly tabs and 9 am Eastern refresh](docs/application-sheets.md).

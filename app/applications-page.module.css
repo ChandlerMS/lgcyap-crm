@@ -95,3 +95,11 @@ dialog.photoDialog { width: min(980px, calc(100vw - 40px)); }
 .datePresets button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #241f12; }
 .dateFilters input { color-scheme: dark; min-height: 40px; padding: 8px 12px; background: #111110; color: var(--text); border: 1px solid var(--control-line); border-radius: 6px; font: inherit; }
 .dateFilters input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.sheetsPanel { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; margin: 0 0 18px; padding: 16px; border: 1px solid #4b4126; border-radius: 10px; background: #19170f; }
+.sheetsPanel > div:first-child { flex: 1 1 400px; min-width: 0; }
+.sheetsPanel h2 { margin: 0 0 6px; color: var(--text); font-size: 16px; }
+.sheetsPanel p { margin: 5px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.sheetsPanel p[role="alert"] { color: #f0c36a; }
+.sheetsActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media print { .sheetsPanel { display: none; } }
