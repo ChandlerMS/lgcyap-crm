@@ -27,3 +27,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Inspect the actual diff and run relevant checks after a worker returns. Never run concurrent writers in one checkout.
 - Keep credentials, environment files, and customer records out of task packets and logs.
 - Both checkouts target existing Vercel project `legacy-recruiting-private`, team `main-team8`. Never create a duplicate project or deploy merely to test collaboration.
+
+## Bottom window launchers
+
+Use `FloatingLauncher` from `app/floating-launcher.tsx` for every bottom window button,
+inside `FloatingActions`. Supply its current `expanded` state and `onExpand`/`onCollapse`
+callbacks. Keep the launcher visible while open. Embedded windows must remain mounted
+when collapsed so sign-in and ongoing work survive. WhatsApp is a separate popup and
+its second click closes that popup. The dock measures its wrapped height so panels
+remain above all buttons on narrow screens.

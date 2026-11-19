@@ -658,7 +658,7 @@ a.summary-chip:hover { border-color: var(--gold); }
 .legacy-bot-launcher:hover { background: #221d0d; }
 .legacy-bot-launcher:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 .legacy-bot-launcher:disabled { opacity: .6; cursor: wait; }
-.legacy-bot-control[data-open="true"] .legacy-bot-launcher { visibility: hidden; }
+
 /* Override HubSpot's corner placement only while our launcher has opened the chat. */
 body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-container {
   position: fixed !important;
@@ -1077,3 +1077,8 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
   .ai-provider-panel { left: 16px; bottom: 160px; width: calc(100vw - 32px); height: calc(100dvh - 240px); }
 }
 @media (max-width:600px) { .ai-provider-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; } }
+/* Leave every bottom launcher reachable while its panel is expanded, including wrapped rows. */
+.rc-panel { bottom: calc(var(--floating-actions-clearance, 90px) + 12px); max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px); }
+body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-container { max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px) !important; }
+
+.ai-provider-panel { bottom: calc(var(--floating-actions-clearance, 90px) + 12px); max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px); min-height: 0; }

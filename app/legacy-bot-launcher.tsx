@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import AiProviderLaunchers from "./ai-provider-launchers";
 import { legacyBotPosition } from "./legacy-bot-position.mjs";
 
+import FloatingLauncher from "./floating-launcher";
+
 type ChatApi = {
   widget: { open(): void; close(): void; status(): { loaded: boolean } };
   on(event: string, callback: () => void): void;
@@ -94,13 +96,16 @@ export default function LegacyBotLauncher() {
   }, [open, dock]);
 
   const control = <><div className="legacy-bot-control" data-ready={ready} data-open={open}>
-    <button ref={button} className="legacy-bot-launcher" type="button" disabled={!ready} aria-label={ready ? "Open Legacy Bot" : "Legacy Bot is loading"} aria-expanded={open} aria-controls="hubspot-messages-iframe-container" onClick={() => {
+    <FloatingLauncher ref={button} className="legacy-bot-launcher" type="button" disabled={!ready} aria-label={ready ? (open ? "Collapse Legacy Bot" : "Open Legacy Bot") : "Legacy Bot is loading"} expanded={open} aria-controls="hubspot-messages-iframe-container" onCollapse={() => {
+      (window as ChatWindow).HubSpotConversations?.widget.close();
+      setOpen(false);
+    }} onExpand={() => {
       const api = (window as ChatWindow).HubSpotConversations;
       if (api) { openedByUser.current = true; setOpen(true); api.widget.open(); }
     }}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z" /><path d="M7 9h10M7 13h6" /></svg>
       <span>Legacy Bot</span>
-    </button>
+    </FloatingLauncher>
   </div><AiProviderLaunchers /></>;
   return dock ? createPortal(control, dock) : control;
 }

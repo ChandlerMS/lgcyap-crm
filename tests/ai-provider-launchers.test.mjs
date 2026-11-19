@@ -32,6 +32,12 @@ test('assistant panels load on demand, preserve frames, switch and restore focus
       assert.equal(panel.querySelector('a').href, urls[index]);
       assert.equal(document.activeElement, panel.querySelector('h2'));
       assert.equal([...document.querySelectorAll('[role="dialog"]')].filter(item => !item.hidden).length, 1);
+      const frame = panel.querySelector('iframe');
+      await act(async () => button.click());
+      assert.equal(panel.hidden, true);
+      await act(async () => button.click());
+      assert.equal(panel.hidden, false);
+      assert.equal(panel.querySelector('iframe'), frame);
       await act(async () => panel.querySelector('button').click());
       assert.equal(panel.hidden, true);
       assert.equal(document.activeElement, button);
