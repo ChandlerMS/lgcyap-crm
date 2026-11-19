@@ -127,7 +127,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         <p className={styles.lede}>Online agent applications from apply.lgcyap.com, newest first{report ? ` since ${SINCE.format(Date.parse(`${report.since}T12:00:00Z`))}` : ""}. Answers are private: share them only with the hiring team.</p>
       </div>
       <div className={styles.headActions}>
-        <ApplicationExportButton filters={{ query, office, status }} count={shown.length} disabled={loading || !report || report.partial} />
+        <ApplicationExportButton filters={{ query, office, status }} count={shown.length} applications={shown} reviews={reviewer.reviews} reviewComplete={report?.reviewComplete} disabled={loading || !report || report.partial} />
         {report && <span className={styles.updated}>Updated {WHEN.format(Date.parse(report.fetchedAt))}</span>}
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
       </div>

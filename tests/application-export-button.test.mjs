@@ -55,6 +55,8 @@ test('both standalone Applications and the Event Attendance Applications section
     for (const board of [undefined, { review, reload: 0, topWindow: true }]) {
       const html = renderToStaticMarkup(h(Page, { onUnauthorized() {}, board }));
       assert.match(html, />Export to Google Sheets<\/button>/);
+      assert.match(html, />Export CSV<\/button>/);
+      assert.match(html, />Export XLS<\/button>/);
     }
   } finally { await rm(dir, { recursive: true, force: true }); }
 });

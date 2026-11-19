@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import type { Application } from './applications-page';
+import type { Review } from './event-review';
 
 type Filters = { query: string; office: string; status: string };
 type ExportResult = { url: string; count: number };
-export default function ApplicationExportButton({ filters, count, disabled }: { filters: Filters; count: number; disabled?: boolean }) {
+export default function ApplicationExportButton({ filters, count, disabled, applications = [], reviews = {}, reviewComplete = false }: { filters: Filters; count: number; disabled?: boolean; applications?: Application[]; reviews?: Record<string, Review>; reviewComplete?: boolean }) {
   const [busy, setBusy] = useState(false);
+  const [exportKind, setExportKind] = useState<'sheet' | 'download'>('sheet');
   const [error, setError] = useState('');
   const [saved, setSaved] = useState<ExportResult | null>(null);
   const popup = useRef<Window | null>(null);
@@ -27,7 +30,7 @@ export default function ApplicationExportButton({ filters, count, disabled }: { 
     setError(''); setSaved(null);
     const connection = window.open('about:blank', 'crm-applications-export', 'popup,width=600,height=740');
     if (!connection) { setError('Allow popups for the CRM to connect Google Drive.'); return; }
-    popup.current = connection; running.current = true; setBusy(true);
+    popup.current = connection; running.current = true; setExportKind('sheet'); setBusy(true);
     try {
       const response = await fetch('/api/applications/export', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(filters), signal: AbortSignal.timeout(20000) });
       const result = await response.json();
@@ -40,9 +43,27 @@ export default function ApplicationExportButton({ filters, count, disabled }: { 
       connection.close(); stop(); setError(problem instanceof Error ? problem.message : 'The export could not start.');
     }
   };
-  return <div>
+  const download = async (format: 'csv' | 'xlsx') => {
+    if (disabled || busy || !applications.length) return;
+    setError(''); setExportKind('download'); setBusy(true);
+    try {
+      const { applicationCsv, applicationWorkbook } = await import('../lib/application-download.mjs');
+      const content = format === 'csv' ? applicationCsv(applications, reviews, reviewComplete) : new Uint8Array(applicationWorkbook(applications, reviews, reviewComplete));
+      const blob = new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = `applications-${new Date().toISOString().slice(0, 10)}.${format}`;
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (problem) { setError(problem instanceof Error ? problem.message : 'The download could not be created.'); }
+    finally { setBusy(false); }
+  };
+  return <div className="application-export">
+    <div className="application-export-buttons">
     <button type="button" className="btn btn-secondary" disabled={disabled || busy || !count} onClick={() => void exportSheet()} title={`Export all ${count} matching applications across every page to your Google Drive`}>{busy ? 'Exporting…' : 'Export to Google Sheets'}</button>
-    {busy && <p className="helper" role="status">Complete the Google Drive connection in the popup. Use the same Google account as your CRM sign-in.</p>}
+    <button type="button" className="btn btn-secondary" disabled={disabled || busy || !applications.length} onClick={() => void download('csv')}>Export CSV</button>
+    <button type="button" className="btn btn-secondary" disabled={disabled || busy || !applications.length} onClick={() => void download('xlsx')} title="Download an Excel workbook (.xlsx)">Export XLS</button>
+    </div>
+    {busy && exportKind === 'sheet' && <p className="helper" role="status">Complete the Google Drive connection in the popup. Use the same Google account as your CRM sign-in.</p>}
     {error && <p className="helper" role="alert">{error}</p>}
     {saved && <p className="helper" role="status">Saved {saved.count} applications to your Google Drive. <a className="text-link" href={saved.url} target="_blank" rel="noopener noreferrer">Open Google Sheet</a></p>}
   </div>;

@@ -123,3 +123,13 @@ test('an uncertain Google write is not automatically retried', async () => {
   await assert.rejects(() => exportGoogleSheet({ accessToken: 'synthetic', applications: rows, fetcher: async () => { calls++; throw new Error('network interruption'); } }), /Check your Drive/);
   assert.equal(calls, 1);
 });
+
+test('CSV includes every answer and review, quotes multiline fields and neutralizes formulas', async () => {
+  const { applicationCsv } = await import('../lib/application-download.mjs');
+  const csv = applicationCsv([{ ...rows[0], name: '=1+1', sections: [{ title: 'Answers', rows: [{ label: 'Notes', value: 'First, "quoted"\nSecond' }] }] }], { '7': { status: 'approved' } }, true);
+  assert.ok(csv.startsWith('\uFEFF"Application ID"'));
+  assert.ok(csv.includes('"\'=1+1"'));
+  assert.ok(csv.includes('"First, ""quoted""\nSecond"'));
+  assert.ok(csv.includes('"Approved"'));
+  assert.ok(csv.includes('"\'+15551234567"'));
+});

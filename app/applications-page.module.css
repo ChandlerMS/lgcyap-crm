@@ -3,10 +3,13 @@
 .inBoard { padding-bottom: 0; }
 .inBoard .head { margin-bottom: 14px; }
 .inBoard .who h3 { font-size: 17px; }
-.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin: 0 0 18px; }
+.head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px; margin: 0 0 18px; }
 .titleCount { margin-left: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .lede { max-width: 760px; margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
-.headActions { display: flex; align-items: center; gap: 14px; }
+.head > div:first-child { flex: 1 1 300px; min-width: 0; }
+.headActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 14px; margin-left: auto; }
+.headActions :global(.application-export) { text-align: right; }
+.headActions :global(.application-export-buttons) { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .updated { color: var(--muted); font-size: 12px; }
 /* In Event Attendance the list starts collapsed under the counts; each count opens it, filtered, and closes it again. */
 .inBoard:not(:has(#applications-list)) .tiles { margin-bottom: 0; }
