@@ -73,3 +73,12 @@ test('a failed review read stops the sync before any record read or write', asyn
   const report = await withRecords({ partial: false, applications: [], reviews: {} }, ['7', undefined], { accessToken: 'synthetic', fetchImpl: ok.fetchImpl });
   assert.equal(report.records['7'].properties.recruit_name, 'A');
 });
+
+test('failed syncs record which step failed as a fixed code, without provider text', async () => {
+  const { failureCode } = await import('../lib/monthly-sheets-sync.mjs');
+  assert.equal(failureCode('HUBSPOT', Object.assign(new Error('secret body'), { code: 'HUBSPOT_RATE_LIMITED' })), 'HUBSPOT:HUBSPOT_RATE_LIMITED');
+  assert.equal(failureCode('GOOGLE_SHEETS', Object.assign(new Error('x'), { code: 'GOOGLE_PERMISSION_REQUIRED' })), 'GOOGLE_SHEETS:GOOGLE_PERMISSION_REQUIRED');
+  assert.equal(failureCode('LAYOUT', new Error('Refusing partial sign-in data.')), 'LAYOUT:PARTIAL');
+  assert.equal(failureCode('HUBSPOT', new Error('anything'), { aborted: true }), 'HUBSPOT:TIMEOUT');
+  assert.equal(failureCode('DATABASE', Object.assign(new Error('x'), { code: '23505' })), 'DATABASE:FAILED');
+});

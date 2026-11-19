@@ -104,7 +104,7 @@ test('partial data makes no external writes and failures preserve last success f
     await assert.rejects(syncApplicationSheets({ ...options, fetchImpl: failed.fetchImpl, readReport: async () => report }), /Google/i);
     const connection = (await db.query('SELECT * FROM application_sheets_connection')).rows[0];
     assert.equal(connection.last_success_at, null);
-    assert.equal(connection.last_error, 'SYNC_FAILED');
+    assert.equal(connection.last_error, 'GOOGLE_SHEETS:GOOGLE_PERMISSION_REQUIRED');
     assert.equal((await db.query('SELECT fingerprint FROM application_sheets_months')).rows[0].fingerprint, null);
     // Retry after a write failure reuses the persisted file ID rather than creating another file.
     const recovered = await syncApplicationSheets({ ...options, readReport: async () => report });

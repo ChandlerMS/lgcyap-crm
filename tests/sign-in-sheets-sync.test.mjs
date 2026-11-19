@@ -68,6 +68,6 @@ test('new sign-ins replace rows once, daily repair is Eastern, and partial data 
     assert.equal(provider.writes.length, 3);
     await assert.rejects(syncSignInSheets({ ...deps, readReport: async () => ({ partial: true, visits: [] }) }), /partial/i);
     assert.equal(provider.writes.length, 3);
-    assert.equal((await db.query('SELECT last_error FROM sign_in_sheets_state')).rows[0].last_error, 'SYNC_FAILED');
+    assert.equal((await db.query('SELECT last_error FROM sign_in_sheets_state')).rows[0].last_error, 'LAYOUT:PARTIAL');
   } finally { await db.close(); }
 });
