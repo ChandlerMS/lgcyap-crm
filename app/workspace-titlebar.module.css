@@ -32,3 +32,6 @@
 
 .support { gap: 8px; }.support a { padding: 9px 12px; font-size: 16px; font-weight: 650; color: #f1d27a; border: 1px solid #806a35; background: #2a2312; }.support a:hover, .support a[aria-current="page"] { background: #423419; border-color: #e3bf5e; }
 @media(max-width:720px) { .support { flex-wrap: wrap; }.support a { font-size: 15px; padding: 8px 10px; } }
+
+/* Borderless title-bar controls retain their active and focus treatments. */
+.mode, .search input, .support a { border: 0; }

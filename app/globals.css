@@ -815,3 +815,20 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 .page-switch button:hover { color: var(--text); }.page-switch button[aria-pressed="true"] { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); color: #0a0905; }.page-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 @media(max-width:520px) { .page-switch { flex-wrap: wrap; border-radius: 16px; }.page-switch a, .page-switch button { padding: 8px 12px; } }
 @media(max-width:1100px) { .today-summaries { contain: layout paint; } }
+
+/* Recruit actions share the compact gold icon treatment. */
+.communication-button { width: 36px; min-height: 36px; border: 0; background: transparent; color: var(--gold); }
+.communication-button .icon { width: 17px; height: 17px; }
+.recruit-quick-actions .quick-action-button { border: 0; background: transparent; color: var(--gold); }
+.recruit-quick-actions .quick-action-button:hover, a.communication-button:hover { border: 0; background: #ffffff0c; color: var(--gold); }
+.recruits-panel .column-sort, .recruits-panel .panel-pager button { color: var(--gold); }
+.summary-add, .summary-add:hover, .panel-add-button { border: 0; background: transparent; color: var(--gold); box-shadow: none; }
+
+:root body .recruit-communications .communication-button { width: 36px; height: 36px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--gold); }
+:root body .recruit-communications .communication-button .icon { width: 17px; height: 17px; }
+:root body .recruit-communications .communication-label { display: none; }
+.sales-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 24px; }
+.sales-heading h1 { margin-bottom: 0; }
+.shopper-sales-frame { display: block; width: 100%; min-height: 620px; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 210px); border: 0; border-radius: 8px; background: #fff; }
+
+.sales-records { min-width: 0; contain: layout paint; }

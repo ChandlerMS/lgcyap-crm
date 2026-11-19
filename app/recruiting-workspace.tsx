@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import SalesPage from "./sales-page";
 import TvHudLinks from "./tv-hud-links";
 import SidebarFlyout from "./sidebar-flyout";
 import WorkspaceTitlebar from "./workspace-titlebar";
@@ -418,20 +419,9 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   // Dashboard heads the sidebar; Call Analytics opens from the Leaderboard toggle.
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
-    <div className="nav-group" onMouseEnter={() => enterNav("leaderboard")} onMouseLeave={leaveNav}>
-      <a className="nav-link nav-group-toggle" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "leaderboard"} aria-controls="leaderboard-tv-links" onKeyDown={event => focusFlyout(event, "leaderboard-tv-links", "leaderboard")} onClick={() => { setLeaderboardHud(false); setHoveredNav(null); setExpandedNav(value => value === "leaderboard" ? null : "leaderboard"); }}><Icon name="chart" /><span>Leaderboard</span><Icon name="chevron" /></a>
-      <SidebarFlyout onEnter={() => enterNav("leaderboard")} onLeave={leaveNav} id="leaderboard-tv-links" hidden={(hoveredNav ?? expandedNav) !== "leaderboard"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>
-        <a className="nav-link" href="https://leaderboard.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper TV Leaderboard</a>
-        <a className="nav-link" href="https://leaderboard.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred TV Leaderboard</a>
-      </SidebarFlyout>
-    </div>
-    <div className="nav-group" onMouseEnter={() => enterNav("queue")} onMouseLeave={leaveNav}>
-      <a className="nav-link nav-group-toggle" href="#queue" aria-current={queuePage ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "queue"} aria-controls="queue-tv-links" onKeyDown={event => focusFlyout(event, "queue-tv-links", "queue")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "queue" ? null : "queue"); }}><Icon name="headset" /><span>Queues</span><Icon name="chevron" /></a>
-      <SidebarFlyout onEnter={() => enterNav("queue")} onLeave={leaveNav} id="queue-tv-links" hidden={(hoveredNav ?? expandedNav) !== "queue"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>
-        <a className="nav-link" href="https://queue.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer">Shopper Queue TV</a>
-        <a className="nav-link" href="https://queue.lgcyap.com/standard" target="_blank" rel="noopener noreferrer">Standard vs Preferred Queue TV</a>
-      </SidebarFlyout>
-    </div>
+    <a className="nav-link" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} onClick={() => { setLeaderboardHud(false); dismissNav(); navigateFromMenu(); }}><Icon name="chart" /><span>Leaderboard</span></a>
+    <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="headset" /><span>Queues</span></a>
+    <a className="nav-link" href="#sales" aria-current={route.view === "sales" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "sales"); navigateFromMenu(); }}><Icon name="chart" /><span>Sales</span></a>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.id === "contract-agents" ? <div className="nav-group" key={tool.id} onMouseEnter={() => enterNav("agents")} onMouseLeave={leaveNav}>
       <a className="nav-link nav-group-toggle" href="#contract-agents" aria-current={sidebarView === tool.id ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "agents"} aria-controls="agent-object-links" onKeyDown={event => focusFlyout(event, "agent-object-links", "agents")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "agents" ? null : "agents"); if (demoMode) switchDataMode(false, tool.id); }}><Icon name="people" /><span>Agents</span><Icon name="chevron" /></a>
@@ -523,6 +513,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     const dashboardLink = route.view !== "today" || route.id ? <a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a> : null;
     if (queuePage) return <>{dashboardLink}<iframe key={queuePage.id} className="queue-workspace-frame" src="https://queue.lgcyap.com/embed" title="Shopper and Standard vs Preferred live queues" allow="fullscreen; screen-wake-lock" /></>;
     if (eventAttendanceView) return <>{dashboardLink}<iframe className="queue-workspace-frame" src="/event-attendance?embedded=1" title="Hiring event attendance" /></>;
+    if (route.view === "sales" && !demoMode) return <>{dashboardLink}<SalesPage onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (demoMode && hubspotTool) return <>{dashboardLink}{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;
     // Tasks opens from the dashboard's Tasks summary: HubSpot tasks assigned to you, with the same view and edits as other HubSpot pages.
     if (activityPage && demoMode) return <>{dashboardLink}{heading(activityPage.label, "This page shows live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, activityPage.id)}>Open live {activityPage.label}</button></>;

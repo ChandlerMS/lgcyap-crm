@@ -39,6 +39,7 @@ export const SIDEBAR_RECRUITING_PAGES = Object.freeze(WORKSPACE_NAV.slice(0, 1))
 
 // Destinations read from this portal's native HubSpot navigation.
 export const HUBSPOT_TOOLS = Object.freeze([
+  { id: 'sales', label: 'Sales', icon: 'chart', path: '/contacts/50894788/objects/0-3' },
   { id: 'inbox', label: 'Inbox', icon: 'inbox', path: '/live-messages/50894788' },
   { id: 'calls', label: 'Calls', icon: 'phone', path: '/contacts/50894788/objects/0-48' },
   { id: 'recruits', label: 'Recruits', icon: 'people', path: '/contacts/50894788/objects/0-5' },

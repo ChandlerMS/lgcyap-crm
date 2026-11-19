@@ -105,7 +105,7 @@ export default function RecruitQuickActions({ recruitId, recruitName = "", kinds
   const buttons = kinds.map(item => trigger === "plus"
     ? <button key={item} type="button" className="summary-add" onClick={() => open(item)} title={(item === "meeting" ? meetingLabel : LABELS[item])}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
     : trigger === "button"
-      ? <button key={item} type="button" className="btn btn-secondary panel-add-button" onClick={() => open(item)}><span className="panel-add-plus" aria-hidden="true">+</span>{(item === "meeting" ? meetingLabel : LABELS[item])}</button>
+      ? <button key={item} type="button" className="summary-add panel-add-button" title={(item === "meeting" ? meetingLabel : LABELS[item])} onClick={() => open(item)}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
       : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
   return <>
     {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}

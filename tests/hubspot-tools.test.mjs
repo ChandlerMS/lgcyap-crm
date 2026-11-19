@@ -14,8 +14,8 @@ const VIEWER_OWNED = ['calls', 'tasks', 'meetings', 'calendar'];
 // Answers HubSpot's owner list so Tasks, Calls and Meetings can resolve the signed-in user; everything else goes to fetchImpl.
 const withOwners = (fetchImpl, active = [{ id: '777', email: viewerEmail }], archived = []) => async (url, options) => url.startsWith('https://api.hubapi.com/crm/v3/owners/') ? new Response(JSON.stringify({ results: url.includes('archived=true') ? archived : active })) : fetchImpl(url, options);
 
-test('tool selection accepts only twelve fixed tools and inbox thread selection, without caller authority', () => {
-  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 12);
+test('tool selection accepts only thirteen fixed tools and inbox thread selection, without caller authority', () => {
+  assert.equal(Object.keys(HUBSPOT_TOOL_CONFIG).length, 13);
   for (const tool of Object.keys(HUBSPOT_TOOL_CONFIG)) assert.deepEqual(validateToolInput(tool, {}), {});
   assert.deepEqual(validateToolInput('inbox', { threadId: '123' }), { threadId: '123' });
   for (const tool of ['constructor', '../contacts', 'companies', 'https://attacker.invalid']) assert.throws(() => validateToolInput(tool, {}));
@@ -385,4 +385,14 @@ test('carrier views use verified custom object IDs and display properties', () =
   assert.match(appointment.hubspotUrl,/record\/2-64481803\/101/);
   const carrier = normalizeToolRecord('carriers',row('102',{carrier_name:'Synthetic carrier'}));
   assert.equal(carrier.title,'Synthetic carrier');assert.match(carrier.hubspotUrl,/record\/2-64481805\/102/);
+});
+
+
+test('Sales reads all HubSpot Deals without restricting the pipeline and retains currency', async () => {
+  let requested;
+  const result = await readHubSpotTool('sales',{}, {accessToken:token,now,fetchImpl:async(url,options)=>{requested={url,body:JSON.parse(options.body)};return provider([row('1001',{pipeline:'default',dealname:'Synthetic sale',dealstage:'closedwon',amount:'100',deal_currency_code:'USD',closedate:'2026-11-19T12:00:00Z'})]);}});
+  assert.equal(requested.url,'https://api.hubapi.com/crm/v3/objects/deals/search');
+  assert.equal(requested.body.filterGroups,undefined);
+  assert.equal(result.records[0].title,'Synthetic sale');assert.equal(result.records[0].status,'Sold');assert.equal(result.records[0].subtitle,'100 USD');assert.match(result.records[0].hubspotUrl,/record\/0-3\/1001/);
+  assert.equal(normalizeToolRecord('sales',row('1002',{pipeline:'other',dealname:'Another pipeline'})).title,'Another pipeline');
 });

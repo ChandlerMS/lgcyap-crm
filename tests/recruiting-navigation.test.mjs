@@ -78,7 +78,7 @@ test('Leaderboard and Call Analytics switch with a toggle at the top of both pag
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
-  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Inbox', 'Calls', 'Recruits', 'Contract Agents', 'Carrier Appointments', 'Carriers', 'Help Desk', 'Tickets']);
+  assert.deepEqual(HUBSPOT_TOOLS.map(tool => tool.label), ['Sales', 'Inbox', 'Calls', 'Recruits', 'Contract Agents', 'Carrier Appointments', 'Carriers', 'Help Desk', 'Tickets']);
   for (const tool of HUBSPOT_TOOLS) {
     assert.deepEqual(resolveWorkspaceRoute(`#${tool.id}`), { view: tool.id });
     assert.equal(new URL(tool.href).origin, 'https://app.hubspot.com');
