@@ -1057,23 +1057,21 @@ main.content.dashboard-content { max-width: 1680px; margin-inline: auto; }
 
 .sidebar-bottom-link { margin-inline: -24px; }
 
-/* Assistant dock follows the visible sidebar and wraps on narrow screens. */
-.floating-actions { left: calc(var(--sidebar-width) + 16px); right: 16px; justify-content: flex-start; width: fit-content; max-width: calc(100vw - var(--sidebar-width) - 32px); }
-#legacy-bot-dock { display: contents; }
+/* Independent AI and communications groups share a measured bottom dock. */
+.floating-actions { left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); width: auto; max-width: none; justify-content: space-between; align-items: flex-end; flex-wrap: nowrap; gap: 24px; pointer-events: none; }
+.floating-actions-ai, .floating-actions-communications { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; pointer-events: auto; }
+.floating-actions-ai { justify-content: flex-start; }
+.floating-actions-communications { justify-content: flex-end; margin-left: auto; }
 .ai-provider-launcher { min-height: 54px; border-radius: 999px; box-shadow: 0 4px 24px #0008; }
-@media (min-width:801px) {
-  body:has(.sidebar-collapsed) .floating-actions { left: 16px; max-width: calc(100vw - 32px); }
-}
-@media (max-width:800px) {
-  .floating-actions { left: 16px; max-width: calc(100vw - 32px); }
-}
-@media (max-width:600px) { .ai-provider-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; } }
+.ai-provider-panel { position: fixed; left: 16px; bottom: calc(var(--floating-actions-clearance, 90px) + 12px); z-index: 65; display: flex; flex-direction: column; width: min(720px, calc(100vw - 32px)); height: min(700px, calc(100dvh - var(--floating-actions-clearance, 90px) - 24px)); min-height: 0; overflow: hidden; border: 1px solid var(--gold); border-radius: 16px; background: #141414; color: var(--text); box-shadow: 0 12px 60px #000b; }
+.ai-provider-panel[hidden] { display: none; }
+.ai-provider-panel header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+.ai-provider-panel h2 { margin: 0; font-size: 18px; flex: 1; }
+.ai-provider-panel a { color: var(--gold); font-size: 13px; }
+.ai-provider-panel p { margin: 0; padding: 0 16px 12px; color: var(--muted); font-size: 12px; }
+.ai-provider-panel iframe { width: 100%; flex: 1; min-height: 0; border: 0; background: white; }
+@media(max-width:800px) { .floating-actions-ai, .floating-actions-communications { flex: 1 1 0; gap: 8px; } .floating-actions { gap: 12px; } }
+@media(max-width:600px) { .ai-provider-launcher { min-height: 44px; padding: 8px 10px; font-size: 13px; } }
 /* Leave every bottom launcher reachable while its panel is expanded, including wrapped rows. */
 .rc-panel { bottom: calc(var(--floating-actions-clearance, 90px) + 12px); max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px); }
 body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-container { max-height: calc(100dvh - var(--floating-actions-clearance, 90px) - 24px) !important; }
-
-
-.ai-popup-notice { position: fixed; left: 16px; bottom: 170px; z-index: 65; display: flex; align-items: flex-start; gap: 12px; max-width: min(480px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--gold); border-radius: 12px; background: #141414; color: var(--text); box-shadow: 0 4px 24px #0008; }
-.ai-popup-notice p { margin: 0; }
-.ai-popup-notice a { color: var(--gold); text-decoration: underline; }
-@media (min-width:801px) { body:not(:has(.sidebar-collapsed)) .ai-popup-notice { left: calc(var(--sidebar-width) + 16px); max-width: min(480px, calc(100vw - var(--sidebar-width) - 32px)); } }

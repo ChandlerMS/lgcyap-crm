@@ -91,3 +91,11 @@ test('WhatsApp repeats open, close and reopen for its separate popup', () => fix
   await click('.whatsapp-launcher');
   assert.equal(opened, 2);
 }));
+
+test('AI buttons occupy the left group and communications occupy the right group', () => fixture(async () => {
+  await act(async () => { await new Promise(resolve => window.requestAnimationFrame(resolve)); });
+  const left = document.querySelector('.floating-actions-ai');
+  const right = document.querySelector('.floating-actions-communications');
+  assert.deepEqual([...left.querySelectorAll('button')].map(button => button.textContent), ['Legacy Bot', 'Gemini']);
+  assert.deepEqual([...right.querySelectorAll('button')].map(button => button.textContent), ['WhatsApp', 'PolicyTek', 'RingCentral']);
+}));
