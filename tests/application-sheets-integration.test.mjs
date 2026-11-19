@@ -252,3 +252,23 @@ test('a review decision or a recruit field edit rewrites the month on the next c
     assert.ok(cells().includes('Miami') && !cells().includes('Orlando'));
   } finally { await db.close(); }
 });
+
+test('a HubSpot rate limit is retried within the run instead of failing the minute', async () => {
+  const { syncApplicationSheets } = await import('../lib/application-sheets-sync.mjs');
+  const db = await database(), google = provider();
+  try {
+    await connect(db, google.fetchImpl);
+    let reads = 0;
+    const limited = () => Object.assign(new Error('HubSpot is limiting requests.'), { code: 'HUBSPOT_RATE_LIMITED', retryAfterSeconds: 0.01 });
+    const result = await syncApplicationSheets({ db, env, fetchImpl: google.fetchImpl, now: now(), readReport: async () => { reads++; if (reads === 1) throw limited(); return report; } });
+    assert.equal(result.status, 'synced');
+    assert.equal(reads, 2);
+    reads = 0;
+    await assert.rejects(syncApplicationSheets({ db, env, fetchImpl: google.fetchImpl, now: new Date('2026-11-19T14:05:00Z'), readReport: async () => { reads++; throw limited(); } }), /limiting/);
+    assert.equal(reads, 3, 'two retries at most');
+    assert.equal((await db.query('SELECT last_error FROM application_sheets_connection')).rows[0].last_error, 'HUBSPOT:HUBSPOT_RATE_LIMITED');
+    reads = 0;
+    await assert.rejects(syncApplicationSheets({ db, env, fetchImpl: google.fetchImpl, now: new Date('2026-11-19T14:06:00Z'), readReport: async () => { reads++; throw Object.assign(new Error('x'), { code: 'HUBSPOT_RESPONSE_INVALID' }); } }));
+    assert.equal(reads, 1, 'other HubSpot failures are not retried');
+  } finally { await db.close(); }
+});
