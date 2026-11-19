@@ -1,22 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 // Portaling outside the scrollable sidebar prevents its overflow from clipping the flyout.
 export default function SidebarFlyout({ id, hidden, layoutKey, onDismiss, onEnter, onLeave, children }: { id: string; hidden: boolean; layoutKey: string; onDismiss: () => void; onEnter: () => void; onLeave: () => void; children: ReactNode }) {
-  const hoverOffset = useRef<number | null>(null);
-  useEffect(() => {
-    const hover = (event: MouseEvent) => {
-      const trigger = document.querySelector<HTMLElement>(`[aria-controls="${id}"]`);
-      if (trigger?.closest(".nav-group")?.contains(event.target as Node)) hoverOffset.current = event.clientY - trigger.getBoundingClientRect().top;
-    };
-    const keyboard = () => { hoverOffset.current = null; };
-    // Capture the entry position before React opens the menu. Keyboard openings use the row itself.
-    document.addEventListener("mouseover", hover, true);
-    document.addEventListener("keydown", keyboard, true);
-    return () => { document.removeEventListener("mouseover", hover, true); document.removeEventListener("keydown", keyboard, true); };
-  }, [id]);
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number; width: number } | null>(null);
   useLayoutEffect(() => {
@@ -30,7 +18,7 @@ export default function SidebarFlyout({ id, hidden, layoutKey, onDismiss, onEnte
       const width = Math.min(300, window.innerWidth - 16);
       const left = Math.max(8, Math.min(sidebar.getBoundingClientRect().right, window.innerWidth - width - 8));
       const height = panelRef.current?.offsetHeight ?? 160;
-      setPosition({ left, width, top: Math.max(8, Math.min(rect.top + (hoverOffset.current ?? 0), window.innerHeight - height - 8)) });
+      setPosition({ left, width, top: Math.max(8, Math.min(rect.top + rect.height / 2 - height / 2, window.innerHeight - height - 8)) });
     };
     measure();
     const observer = new ResizeObserver(measure); observer.observe(sidebar);
