@@ -111,3 +111,14 @@
 .compact .calendar { margin-bottom: 0; }
 .compact .weekdays, .compact .days { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 476px; }
 .compact .day, .compact .paddingDay { min-height: 84px; padding: 8px 6px; }
+
+/* Dashboard Calendar: each week is a collapsed row of day numbers and meeting counts that opens its meetings under the pointer. */
+.weekRow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 476px; transition: background-color .15s; }
+.compact .weekRow .paddingDay { min-height: 0; }
+.weekDay { min-width: 0; padding: 9px 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.weekDayHead { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 20px; }
+.weekDayHead time { color: #c8c2b2; font-size: 12px; }
+.weekCount { min-width: 20px; padding: 0 6px; border-radius: 999px; background: #3a3018; color: #f0d078; font-size: 11px; font-weight: 600; line-height: 20px; text-align: center; }
+.weekWithMeetings:hover, .weekWithMeetings:focus-visible, .weekWithMeetings:has(:focus-visible) { background: #14130e; }
+.weekRow:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.weekDay .event:first-child { margin-top: 8px; }

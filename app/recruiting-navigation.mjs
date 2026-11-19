@@ -50,7 +50,7 @@ export const HUBSPOT_TOOLS = Object.freeze([
 ].map(tool => Object.freeze({ ...tool, href: `https://app.hubspot.com${tool.path}` })));
 // Calls and Recruits keep their pages but open from their panel titles on the Recruits page, not the sidebar.
 export const SIDEBAR_HUBSPOT_TOOLS = Object.freeze(HUBSPOT_TOOLS.filter(tool => ['recruits', 'contract-agents'].includes(tool.id)));
-// HubSpot views shown as panels on the Recruits page. Those without a page of their own (Meetings, Calendar) send their old links to Recruits.
+// HubSpot views shown as panels on the dashboard. Meetings and Calendar open their full pages from there (see DASHBOARD_PAGES).
 export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'meetings', label: 'Meetings' },
   { id: 'calendar', label: 'Calendar' },
@@ -72,10 +72,12 @@ export const QUEUE_PAGES = Object.freeze([
   { id: 'queue', label: 'Shopper', icon: 'phone', source: 'shopper' },
   { id: 'ringcx', label: 'Standard vs Preferred', icon: 'phone', source: 'svp' },
 ].map(page => Object.freeze(page)));
-// The sidebar link that stands for a page reached from another page: Add Recruits, Tasks, Follow up and the full
+// Pages opened from the dashboard's summaries and panel titles rather than the sidebar.
+export const DASHBOARD_PAGES = Object.freeze(['tasks', 'follow-up', 'meetings', 'calendar']);
+// The sidebar link that stands for a page reached from another page: Add Recruits, the dashboard pages and the full
 // Event Attendance page (a section of the dashboard, kept for saved links) from the dashboard, Call Analytics from Leaderboard.
 export function sidebarViewFor(view) {
-  if (['add-recruits', 'tasks', 'follow-up'].includes(view)) return 'today';
+  if (['add-recruits', ...DASHBOARD_PAGES].includes(view)) return 'today';
   if (RECRUITS_CHILD_PAGES.some(page => page.id === view)) return 'recruits';
   if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
   if (view === 'call-analytics') return 'leaderboard';
@@ -90,8 +92,8 @@ export function resolveWorkspaceRoute(hash) {
   // Call Analytics was named Lead Data; saved links still open it.
   if (value === 'lead-data') return { view: 'call-analytics' };
   if (value === 'contacts') return { view: 'contract-agents' };
-  // Tasks and Follow up open their own pages from the dashboard's summaries.
-  if (value === 'follow-up' || value === 'tasks') return { view: value };
+  // Tasks, Follow up, Meetings and Calendar open their own pages from the dashboard's summaries and panel titles.
+  if (DASHBOARD_PAGES.includes(value)) return { view: value };
   if (value === 'add-recruit') return { view: 'add-recruits' };
   if (['orientation', 'licensing', 'transfers'].includes(value)) return { view: 'today' };
   if (RECRUITS_PAGE_TOOLS.some(tool => tool.id === value) && !HUBSPOT_TOOLS.some(tool => tool.id === value)) return { view: 'today' };
