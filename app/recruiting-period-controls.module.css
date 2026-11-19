@@ -57,3 +57,13 @@
 @container (min-width: 900px) { .heading { grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 28px; } }
 @media (max-width: 620px) { .titleRow { flex-wrap: wrap; } .stats dd { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+/* Keep the period explanation within the mobile header, including while hidden. */
+@media (max-width: 620px) {
+  .titleRow { position: relative; }
+  .info { position: static; }
+  .tip { left: 0; width: min(300px, 100%); max-width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 620px) {
+  .stats div { flex: 0 1 auto; max-width: 100%; }
+  .stats dt { white-space: normal; }
+}
