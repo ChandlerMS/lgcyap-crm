@@ -32,7 +32,7 @@ export function leaderboardCallsRefreshDelay(now = Date.now()) {
 export function leaderboardMetrics(board) {
   return board === 'sp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     // Total Production in the imported reports is annual premium, confirmed by the report owner.
-    : board === 'whatsapp' ? { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
+    : ['whatsapp', 'whatsapp-sp'].includes(board) ? { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     : { first: 'submitted', second: 'premium', firstLabel: 'Submitted', secondLabel: 'Submitted premium' };
 }
 
@@ -81,7 +81,7 @@ export function sourceLeaderboardValue(row, field) {
 /** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
 export function leaderboardSortFields(board) {
   const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : 'Calls';
-  return [{ field: 'production', label: keys.secondLabel }, ...(['shopper', 'sp', 'whatsapp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
+  return [{ field: 'production', label: keys.secondLabel }, ...(['shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
 }
 
 /** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
@@ -90,7 +90,7 @@ export function leaderboardSortValue(row, board, field) {
   if (field === 'sales') return nonnegative(row[leaderboardMetrics(board).first]);
   if (field === 'production') return signedNumber(row[leaderboardMetrics(board).second]);
   if (board === 'sp') return nonnegative({ calls: row.inboundCalls, closeRate: row.soldPerInboundLog, connected: row.connectedCalls, abandoned: row.abandonedCalls }[field]);
-  if (board === 'whatsapp') return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
+  if (['whatsapp', 'whatsapp-sp'].includes(board)) return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
   return field === 'calls' ? nonnegative(row.leads) : field === 'closeRate' ? sourceLeaderboardValue(row, 'closeRate') : null;
 }
 
@@ -124,7 +124,7 @@ export function leaderboardCsvCell(value) {
  */
 export function leaderboardCsv(rows, board) {
   const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
-  const sales = ['shopper', 'sp', 'whatsapp'].includes(board);
+  const sales = ['shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board);
   const fixed = (value, places) => value === null ? '' : String(Math.round(value * 10 ** places) / 10 ** places);
   const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
   const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : 'Calls', 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];

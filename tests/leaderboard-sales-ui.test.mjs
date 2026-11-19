@@ -18,6 +18,7 @@ test('Shopper and Standard vs Preferred show Sales before Calls with their own s
     const Leaderboard = require(`${process.cwd()}/${dir}/bundle.cjs`).default;
     globalThis.fetch = async (_url, options) => {
       const input = JSON.parse(options.body);
+      if (input.board === "whatsapp-sp") return Response.json({ ...input, status: "unavailable", source: "WhatsApp Sales · Standard vs Preferred", partial: false, rows: [], notice: "Awaiting separate Standard vs Preferred WhatsApp spreadsheets." });
       return Response.json({ ...input, status: 'available', source: 'Synthetic', partial: false, rows: Array.from({ length: input.board === 'shopper' ? 61 : 1 }, (_, index) => ({ name: `Agent ${String(index + 1).padStart(2, '0')}`, sales: 3, production: 1000, annualPremium: 1000, inboundCalls: 20, soldPerInboundLog: .15, submitted: 7, premium: 2000 - index, leads: 40, connectedCalls: 22, abandonedCalls: 2 })) });
     };
     root = createRoot(document.getElementById('app'));
@@ -70,7 +71,9 @@ test('Shopper and Standard vs Preferred show Sales before Calls with their own s
     await act(async () => { views.querySelectorAll('button')[1].click(); await wait(); });
     await act(async () => { await wait(); });
     assert.equal(views.querySelectorAll('button')[1].getAttribute('aria-pressed'), 'true');
-    assert.match(document.querySelector('ol').textContent, /Total Calls Connected/);
+    assert.equal(document.querySelector('ol'), null);
+    assert.match(document.body.textContent, /Awaiting separate Standard vs Preferred WhatsApp spreadsheets/);
+    assert.doesNotMatch(document.body.textContent, /existing HubSpot leaderboard/);
     await act(async () => { views.querySelectorAll('button')[0].click(); await wait(); });
     await act(async () => { await wait(); });
     assert.equal(views.querySelectorAll('button')[0].getAttribute('aria-pressed'), 'true');

@@ -114,3 +114,15 @@ test('the API accepts the whatsapp board and reports a clear unavailable state b
     await assert.rejects(readWhatsappLeaderboard({ board: 'sp', period: 'day' }, { db, now: NOW }), TypeError);
   } finally { await db.close(); }
 });
+
+
+test('Standard vs Preferred WhatsApp dataset awaits its own reports, never substitutes HubSpot or All rows', async () => {
+  const { readPendingWhatsappStandardPreferred } = await import('../lib/whatsapp-sales.mjs');
+  for (const period of ['day', 'week', 'month', 'custom']) {
+    const input = { board: 'whatsapp-sp', period, ...(period === 'custom' ? { from: '2026-07-01', to: '2026-07-03' } : {}) };
+    const result = readPendingWhatsappStandardPreferred(input, NOW);
+    assert.equal(result.board, 'whatsapp-sp'); assert.equal(result.status, 'unavailable');
+    assert.deepEqual(result.rows, []); assert.match(result.notice, /separate Standard vs Preferred WhatsApp spreadsheets/);
+    assert.ok(result.startDate); assert.ok(result.endDate);
+  }
+});
