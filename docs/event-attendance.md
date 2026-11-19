@@ -75,3 +75,7 @@ Each ready row goes to `POST /api/event-attendance/import` as `{ requestId, firs
 3. Otherwise a note headed "Hiring event sign-in (imported from a sign-in list)" is added to the ticket and contact. Its time is noon Eastern on the event day, and it records the office and who imported it.
 
 Results: `201 { status: "added", ticketCreated, contact, recruit, noteId }`, or `200 { status: "already_recorded", ... }`. If the note's outcome is unconfirmed, the row can be imported again: the same request ID replays the intake, and the same-day check stops a second note.
+
+## Attendance count pages and previews
+
+The Sign-ins and Online applications counts in each event-day row link to `/event-attendance?kind=sign-ins&day=YYYY-MM-DD` or `kind=applications`. Hovering or focusing a count opens a scrollable floating preview. Both surfaces use the same day-filtered records and detail cards, including contact information, sign-in/application fields, stage, and gold contact and activity controls. Existing messaging restrictions and activity permissions still apply; applications without a recruiting ticket cannot save activities.

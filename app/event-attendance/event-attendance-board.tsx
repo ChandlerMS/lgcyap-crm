@@ -10,6 +10,7 @@ import { useRecruitHoverCard } from '../recruit-hover';
 import type { PipelineRecruit } from '../recruit-pipeline';
 import styles from './event-attendance.module.css';
 import AttendeeDetails from './attendee-details';
+import AttendanceCount, { AttendanceDetails, type AttendanceSelection } from './attendance-count';
 import AttendeeImport, { type AttendeeValues } from './attendee-import';
 import { ATTENDEE_TEMPLATE_CSV, HUBSPOT_SOURCE_URL, attendanceCsv, attendanceCsvFilename, parseAttendeeFile } from './attendance-files.mjs';
 import { applicantColumns, appliedColumns, attendeeColumns, hiredColumns, officeLabel, PeopleTable, phoneText, visitColumns, type Applicant, type Attendee, type Person, type Visit } from './people-lists';
@@ -61,7 +62,7 @@ function validReport(value: unknown): value is Report {
 // As a section of the Recruiting Dashboard it drops the logo and page title and sits under the page's own heading.
 // There, recruits are the dashboard's loaded recruiting records, whose CRM details fill each name's hover card, and
 // canAddActivity is whether this account can save notes, tasks and meetings (on its own page, recruiting reviewers can).
-export default function EventAttendanceBoard({ section = false, recruits, canAddActivity, now }: { section?: boolean; recruits?: readonly PipelineRecruit[]; canAddActivity?: boolean; now?: number }) {
+export default function EventAttendanceBoard({ section = false, recruits, canAddActivity, now, selection }: { selection?: AttendanceSelection; section?: boolean; recruits?: readonly PipelineRecruit[]; canAddActivity?: boolean; now?: number }) {
   const Root = section ? 'section' : 'main';
   const Title = section ? 'h2' : 'h1';
   const [data, setData] = useState<Report | null>(null);
@@ -214,6 +215,13 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
     ? <PeopleTable title={`Signed in at ${officeName(office)} on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day && visit.office === office)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins." />
     : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} actions={reviewActions} hover={applicationHover} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} actions={reviewActions} hover={applicantHover} empty="No online applications this day." /></>;
 
+  if (selection) return <main className={styles.board}>
+    <a href="/event-attendance">← Event Attendance</a>
+    <h1>{selection.kind === 'sign-ins' ? 'Sign-ins' : 'Online applications'} · {dayLabel(selection.day)}</h1>
+    {error && <p role="alert">{error}</p>}
+    {signInNeeded && <a href={`/sign-in?return_to=${encodeURIComponent(`/event-attendance?kind=${selection.kind}&day=${selection.day}`)}`} target="_top">Sign in</a>}
+    {busy && !data ? <p>Loading recruits…</p> : data && <AttendanceDetails selection={selection} visits={visits} applicants={applicants} canAdd={canAddActivity ?? Boolean(data.canReview)} />}
+  </main>;
   return <Root className={section ? `${styles.board} ${styles.section}` : styles.board} aria-labelledby={section ? 'event-attendance-title' : undefined}>
     {!section && <div className={styles.topRow}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{statusText}</span></div>}
     <header className={styles.header}>
@@ -267,7 +275,7 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
                   const cellOpen = openDay?.day === row.day && openDay.office === office.key;
                   return <td key={office.key}>{value ? <button type="button" className={`${styles.countButton} ${cellOpen ? styles.countOpen : ''}`} aria-expanded={cellOpen} aria-controls={`day-${row.day}`} aria-label={`${value} signed in at ${office.label} on ${dayLabel(row.day)}. ${cellOpen ? 'Hide' : 'Show'} people.`} onClick={() => toggleDay(row.day, office.key)}>{count(value)}</button> : count(0)}</td>;
                 })}
-                <td className={styles.total}>{count(row.signIns)}</td><td>{count(row.applications)}</td>
+                <td className={styles.total}><AttendanceCount selection={{ kind: 'sign-ins', day: row.day }} value={row.signIns} visits={visits} applicants={applicants} canAdd={canAddActivity ?? Boolean(data.canReview)} /></td><td><AttendanceCount selection={{ kind: 'applications', day: row.day }} value={row.applications} visits={visits} applicants={applicants} canAdd={canAddActivity ?? Boolean(data.canReview)} /></td>
               </tr>
               {openDay?.day === row.day && <tr className={styles.detailRow}><td id={`day-${row.day}`} colSpan={data.offices.length + 3}>
                 <div className={styles.peopleHead}><p className={styles.muted}>Point at a name for details and quick actions, or select it to open the recruit in the CRM.</p><button type="button" onClick={() => setOpenDay(null)}>Close</button></div>

@@ -125,3 +125,16 @@
 /* The day-by-day table folds from the chevron at the right of its title. */
 .sectionHeading>span{margin-left:auto}
 .sectionHeading :global(.section-toggle){margin-left:-8px}
+
+.countPreview { position: fixed; z-index: 110; width: min(640px, calc(100vw - 16px)); max-height: min(65vh, 600px); overflow: auto; padding: 18px; background: #171610; color: #ede9dd; border: 1px solid #bfa34c; border-radius: 12px; box-shadow: 0 18px 60px #0009; text-align: left; }
+.countPreview a { color: #dfbf62; }
+.countDetails { display: grid; gap: 16px; }
+.countDetails article { border: 1px solid #55492b; border-radius: 10px; padding: 16px; }
+.countDetails h3 { margin: 0 0 12px; }
+.countDetails dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.countDetails dt { color: #aaa594; font-size: 12px; }
+.countDetails dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.countDetails :global(.add-activity-buttons) { margin-top: 10px; }
+.unlinkedActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.unlinkedActions a, .unlinkedActions button { color: #dfbf62; border: 1px solid #79662f; border-radius: 6px; padding: 7px 10px; background: #211d10; }
+.countDetails :global(.add-activity-button), .countDetails :global(.communication-button) { color: #dfbf62; border-color: #79662f; background: #211d10; }
