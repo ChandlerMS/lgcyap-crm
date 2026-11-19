@@ -1,19 +1,18 @@
 # CRM version switch
 
-## Current Version 2: live website embed
+## Current Version 2: open the live website directly
 
-`/v2` requires CRM sign-in and embeds `https://lgcy-onboard.carlos-831.workers.dev/`
-directly. It displays that site’s deployed code and records; it no longer frames `/v2/app`.
-The site manages its own authentication and may require a separate sign-in. The toolbar
-provides Open in new tab for browsers that restrict embedded authentication.
-The host never reads the cross-origin document or reloads it over user edits.
-The GitHub title-bar link opens `LegacyAgencyPartners/LGCY-Onboard`, which owns the live
-Cloudflare application (`onboard/` plus the root mockup). Updates appear here when that
-website is deployed; a GitHub commit alone does not deploy it.
+`/v2` requires CRM sign-in and redirects to `https://lgcy-onboard.carlos-831.workers.dev/`
+in the same browser tab. This avoids the refused iframe navigation and permits the site's
+SameSite=Lax sign-in cookie to work in a top-level browsing context. The external site
+manages its own sign-in. Browser Back returns to the CRM.
+
+The host does not proxy the website, remove security headers, or alter its records.
+Changing the site's iframe policy or session cookie requires deployment access to its
+owning Cloudflare account, which the current connection does not have.
 
 The Vercel port and its routes remain available for compatibility. The following sections
 document that earlier integration; they no longer describe the Version 2 tab.
-
 
 ## Version 2 GitHub source
 

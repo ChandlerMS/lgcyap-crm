@@ -1,7 +1,0 @@
-/* Keep scrolling inside the live workspace, below the version bar. */
-:global(html):has(.host) { min-width: 0; overflow: hidden; }
-.host { position: fixed; inset: 56px 0 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: #0b0b0a; }
-.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; color: #b8b09c; font: 12px/1.4 system-ui, sans-serif; }
-.toolbar a { flex-shrink: 0; color: #f1d27a; }
-.toolbar a:focus-visible { outline: 2px solid #f1d27a; outline-offset: 3px; }
-.frame { display: block; flex: 1; width: 100%; min-width: 0; min-height: 0; border: 0; background: #0b0b0a; }

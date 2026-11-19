@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Production deployments
 
-- Version 2 (`/v2`) embeds `https://lgcy-onboard.carlos-831.workers.dev/` directly. The live site's source is `LegacyAgencyPartners/LGCY-Onboard` (Cloudflare app in `onboard/` and the root mockup). Shared title controls and the iframe remain in this host. The earlier Vercel port at `vendor/lgcy-onboard/` and its pinned `version2/` source are retained for legacy routes, not used by the Version 2 tab. Do not confuse their databases or deploy targets.
+- Version 2 (`/v2`) requires CRM sign-in, then redirects to `https://lgcy-onboard.carlos-831.workers.dev/` as a top-level navigation. Do not restore the cross-site iframe: the browser refused its navigation and the site's SameSite=Lax session also prevents reliable embedded sign-in. The site's source is `LegacyAgencyPartners/LGCY-Onboard` (Cloudflare app in `onboard/` and the root mockup). Its deployment requires access to its owning Cloudflare account. Legacy Vercel routes and their separate database remain unchanged.
 
 - Production is `main` in `ChandlerMS/lgcyap-crm` on GitHub, deployed by the existing Vercel Git integration.
 - Before publishing, fetch `origin/main` and incorporate its latest changes without overwriting other work. Push or merge the complete reviewed change to `main`; wait for that Git deployment and verify its commit against GitHub.
