@@ -9,9 +9,9 @@ const APPLICATION = '1473318769';
 const COMPLETED = '1416243218';
 const signIn = (id, time, office = 'Orlando', existing = false) => ({ id, properties: {
   hs_timestamp: time,
-  hs_note_body: `<p><strong>Hiring event sign-in${existing ? ' (this person already had an open recruiting ticket, so no new ticket was created)' : ''}</strong></p><p><strong>Signed in:</strong> today</p><p><strong>Name:</strong> Test Person ${id}</p>${office ? `<p><strong>Office:</strong> ${office}</p>` : ''}`,
+  hs_note_body: `<p><strong>Hiring event sign-in${existing ? ' (this person already had an open recruiting ticket, so no new ticket was created)' : ''}</strong></p><p><strong>Signed in:</strong> today</p><p><strong>Signed in from:</strong> Conference room screen (QR)</p><p><strong>Name:</strong> Test Person ${id}</p><p><strong>Email:</strong> person${id}@example.invalid</p><p><strong>Phone:</strong> (407) 555-01${id.padStart(2, '0')}</p>${office ? `<p><strong>Office:</strong> ${office}</p>` : ''}<p><strong>How they heard about us:</strong> Job posting: Indeed</p><p><strong>License:</strong> Unlicensed</p><p><strong>Photo ID (building security):</strong> Attached to the sign-in note (private file)</p>`,
 } });
-const application = (id, time) => ({ id, properties: { hs_timestamp: time, hs_note_body: `<p><strong>Agent application (v3.1) submitted online, ${time}</strong></p><p>Full legal name Test Applicant ${id}</p>` } });
+const application = (id, time, met = true) => ({ id, properties: { hs_timestamp: time, hs_note_body: `<p><strong>Agent application (v3.1) submitted online, ${time}</strong></p><p><strong>Required items:</strong> ${met ? 'Meets all required items' : 'Did not meet: Secret required item'}</p><p><strong>YOUR INFORMATION</strong></p><ul><li><strong>Full legal name</strong><br>Test Applicant ${id}</li><li><strong>Email address</strong><br>applicant${id}@example.invalid</li><li><strong>Mobile phone</strong><br>(407) 555-02${id.padStart(2, '0')}</li><li><strong>Which office are you applying for?</strong><br>Orlando</li></ul><p><strong>ELIGIBILITY</strong></p><ul><li><strong>Private answer</strong><br>Sensitive answer text</li></ul>` } });
 const other = (id, time) => ({ id, properties: { hs_timestamp: time, hs_note_body: '<p>Left a voicemail about the Hiring event sign-in</p>' } });
 
 function fixture() {
@@ -23,17 +23,17 @@ function fixture() {
     application('5', '2026-11-17T12:00:00Z'), // applied before signing in, on ticket 103
     application('6', '2026-11-18T00:05:00Z'), // attendee 101
     application('7', '2026-11-18T13:11:00Z'), // new applicant ticket 105
-    application('8', '2026-11-18T13:20:00Z'), // no ticket: did not meet a required item
+    application('8', '2026-11-18T13:20:00Z', false), // no ticket: did not meet a required item
     application('9', '2026-11-18T14:00:00Z'), // ticket moved to another pipeline
     other('10', '2026-11-18T15:00:00Z'),
   ];
   const noteTickets = new Map([['1', ['101']], ['2', ['102']], ['3', ['101']], ['4', ['103']], ['5', ['103']], ['6', ['101']], ['7', ['105']], ['8', []], ['9', ['106']]]);
   const tickets = new Map([
-    ['101', { pipeline: PIPELINE, stageId: COMPLETED, office: 'orlando' }],
-    ['102', { pipeline: PIPELINE, stageId: HIRING_EVENT, office: 'miami' }],
-    ['103', { pipeline: PIPELINE, stageId: APPLICATION, office: 'miami' }],
-    ['105', { pipeline: PIPELINE, stageId: APPLICATION, office: 'orlando' }],
-    ['106', { pipeline: '0', stageId: '1', office: 'orlando' }],
+    ['101', { pipeline: PIPELINE, stageId: COMPLETED, office: 'orlando', name: 'Ticket Name 101', email: '', phone: '' }],
+    ['102', { pipeline: PIPELINE, stageId: HIRING_EVENT, office: 'miami', name: 'Ticket Name 102', email: '', phone: '' }],
+    ['103', { pipeline: PIPELINE, stageId: APPLICATION, office: 'miami', name: 'Ticket Name 103', email: '', phone: '' }],
+    ['105', { pipeline: PIPELINE, stageId: APPLICATION, office: 'orlando', name: 'Ticket Name 105', email: '', phone: '' }],
+    ['106', { pipeline: '0', stageId: '1', office: 'orlando', name: 'Ticket Name 106', email: '', phone: '' }],
   ]);
   return { notes, noteTickets, tickets };
 }
@@ -64,15 +64,54 @@ test('people, the funnel, stages, days and applications come from sign-in and ap
     { stageId: APPLICATION, label: 'Application', count: 1 },
     { stageId: COMPLETED, label: 'Completed', count: 1 },
   ]);
-  assert.deepEqual(report.offices, [{ key: 'orlando', label: 'Orlando' }, { key: 'miami', label: 'Miami' }]);
+  assert.deepEqual(report.offices, [{ key: 'orlando', label: 'Orlando' }, { key: 'miami', label: 'Miami' }, { key: 'tampa', label: 'Tampa' }]);
   assert.deepEqual(report.days, [
     { day: '2026-11-18', offices: { orlando: 1, miami: 1 }, signIns: 2, applications: 3 },
     { day: '2026-11-17', offices: { orlando: 1, miami: 1 }, signIns: 2, applications: 2 },
   ]);
   assert.equal(report.since, '2026-11-10');
   assert.equal(report.partial, false);
-  // Counts only: no names or answers leave the server.
-  assert.doesNotMatch(JSON.stringify(report), /Test (Person|Applicant)|voicemail/);
+  // Application answers, the missed required item and unrelated notes never leave the server.
+  assert.doesNotMatch(JSON.stringify(report), /Sensitive answer|Secret required item|voicemail|Photo ID/);
+});
+
+test('every count has the people behind it, with the same office and day as the table', () => {
+  const report = summarizeEventAttendance({ ...fixture(), fetchedAt: '2026-11-18T22:00:00.000Z' });
+  // People who signed in: latest sign-in details, current stage and first application.
+  assert.deepEqual(report.attendees.map(person => [person.ticketId, person.name, person.office, person.stage, person.signIns, person.firstDay, person.lastDay, person.appliedAt]), [
+    ['101', 'Test Person 3', 'orlando', 'Completed', 2, '2026-11-17', '2026-11-18', '2026-11-18T00:05:00.000Z'],
+    ['103', 'Test Person 4', 'miami', 'Application', 1, '2026-11-18', '2026-11-18', '2026-11-17T12:00:00.000Z'],
+    ['102', 'Test Person 2', 'miami', 'Hiring Event', 1, '2026-11-17', '2026-11-17', null],
+  ]);
+  const first = report.attendees[0];
+  assert.equal(first.email, 'person3@example.invalid');
+  assert.equal(first.phone, '(407) 555-0103');
+  assert.equal(first.hubspotUrl, 'https://app.hubspot.com/contacts/50894788/record/0-5/101');
+  // Every sign-in, newest first, with the answers from that sign-in.
+  assert.equal(report.visits.length, report.signIns);
+  assert.deepEqual(report.visits.map(visit => [visit.day, visit.office, visit.name]), [
+    ['2026-11-18', 'miami', 'Test Person 4'], ['2026-11-18', 'orlando', 'Test Person 3'],
+    ['2026-11-17', 'miami', 'Test Person 2'], ['2026-11-17', 'orlando', 'Test Person 1'],
+  ]);
+  assert.deepEqual({ heardAbout: report.visits[0].heardAbout, license: report.visits[0].license, source: report.visits[0].source, imported: report.visits[0].imported, stage: report.visits[0].stage },
+    { heardAbout: 'Job posting: Indeed', license: 'Unlicensed', source: 'Conference room screen (QR)', imported: false, stage: 'Application' });
+  // Each table cell's count matches the people listed for that day and office.
+  for (const row of report.days) for (const [office, count] of Object.entries(row.offices)) {
+    assert.equal(report.visits.filter(visit => visit.day === row.day && visit.office === office).length, count);
+  }
+  // Applications: name and contact details, and only whether required items were met.
+  assert.deepEqual(report.applicants.map(item => [item.name, item.requirementsMet, item.fromAttendee, item.ticketId]), [
+    ['Test Applicant 9', true, false, null], ['Test Applicant 8', false, false, null], ['Test Applicant 7', true, false, '105'],
+    ['Test Applicant 6', true, true, '101'], ['Test Applicant 5', true, true, '103'],
+  ]);
+  assert.deepEqual([report.applicants[2].email, report.applicants[2].phone, report.applicants[2].office], ['applicant7@example.invalid', '(407) 555-0207', 'orlando']);
+});
+
+test('an imported sign-in is marked, and the ticket fills in a missing name', () => {
+  const imported = { id: '1', properties: { hs_timestamp: '2026-11-17T17:00:00Z', hs_note_body: '<p><strong>Hiring event sign-in (imported from a sign-in list)</strong></p><p><strong>Event date:</strong> Tue, Nov 17, 2026</p><p><strong>Office:</strong> Tampa</p>' } };
+  const report = summarizeEventAttendance({ notes: [imported], noteTickets: new Map([['1', ['101']]]), tickets: new Map([['101', { pipeline: PIPELINE, stageId: HIRING_EVENT, office: 'tampa', name: 'Ticket Name', email: 'ticket@example.invalid', phone: '+14075550100' }]]), fetchedAt: '2026-11-18T22:00:00.000Z' });
+  assert.deepEqual([report.visits[0].imported, report.visits[0].name, report.visits[0].email, report.visits[0].office], [true, 'Ticket Name', 'ticket@example.invalid', 'tampa']);
+  assert.deepEqual(report.days[0].offices, { tampa: 1 });
 });
 
 test('a sign-in with no office anywhere is shown as not recorded', () => {

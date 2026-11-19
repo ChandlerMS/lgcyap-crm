@@ -19,13 +19,23 @@ Days are Eastern calendar days. Tickets outside the Recruiting pipeline are left
 
 1. `POST /crm/v3/objects/notes/search` for notes whose record source is an integration, created since the start date, 100 per page and at most 20 pages. A larger result sets `partial` and the page says so.
 2. `POST /crm/v4/associations/notes/tickets/batch/read` for the sign-in and application notes only.
-3. `POST /crm/v3/objects/tickets/batch/read` for pipeline, stage and office.
+3. `POST /crm/v3/objects/tickets/batch/read` for pipeline, stage, office and recruit name.
 
-Notes are classified by their fixed opening heading. The response holds counts only: no names, contact details or answers reach the browser. The page refreshes every minute while it is visible.
+Notes are classified by their fixed opening heading. The page refreshes every minute while it is visible.
+
+## People lists
+
+Select a tile (Signed in, Applied, Hired, Today), an event day, or an office count on an event day to open the people behind that number. One list is open at a time. Each name opens the recruit in the CRM, and each row links to the ticket in HubSpot.
+
+- **Signed in:** one row per person, with sign-in count, stage and first online application.
+- **Applied** and **Hired:** the same people, filtered.
+- **Today**, an **event day** or an **office on a day:** one row per sign-in, with the answers from that sign-in. Today and a whole day also list that day's online applications.
+
+Details come from the note itself: name, email, phone, office, how they heard about us, license and source for a sign-in; name, email, phone, office and whether required items were met for an application. The ticket fills in a missing name, email or phone. These are shown only to recruiting editors, the same people who see recruits in the workspace. Other application answers, and which required item was missed, are not sent to the browser. Every office count matches the sign-ins listed for that day and office. Orlando, Miami and Tampa always have a column.
 
 ## Response
 
-200: `{ fetchedAt, since, timeZone, partial, people: { signedIn, applied, hired }, signIns, applications: { total, fromAttendees, otherTickets, noTicket }, stages: [{ stageId, label, count }], offices: [{ key, label }], days: [{ day, offices, signIns, applications }], canImport }`. `canImport` only decides whether the Import button shows; the import route repeats every check. Errors use the recruiting workspace's error shape. All responses are private and not cached.
+200: `{ fetchedAt, since, timeZone, partial, people: { signedIn, applied, hired }, signIns, applications: { total, fromAttendees, otherTickets, noTicket }, stages: [{ stageId, label, count }], offices: [{ key, label }], days: [{ day, offices, signIns, applications }], attendees: [{ ticketId, name, email, phone, office, stageId, stage, signIns, firstDay, lastDay, appliedAt, hubspotUrl }], visits: [{ ticketId, day, at, name, email, phone, office, heardAbout, license, source, imported, stageId, stage, hubspotUrl }], applicants: [{ ticketId, day, at, name, email, phone, office, requirementsMet, fromAttendee, stageId, stage, hubspotUrl }], canImport }`. `canImport` only decides whether the Import button shows; the import route repeats every check. Errors use the recruiting workspace's error shape. All responses are private and not cached.
 
 ## Open in HubSpot
 

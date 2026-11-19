@@ -13,11 +13,7 @@
 .alert a{color:#111;background:var(--gold);border-radius:6px;padding:8px 14px;text-decoration:none;font-weight:600}
 .lede{font-size:clamp(16px,1.4vw,19px);line-height:1.6;margin:24px 0 0;max-width:70ch}.lede strong{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) .8fr;gap:30px;padding:28px 0}
-.tiles article+article,.tiles aside{border-left:1px solid var(--line);padding-left:30px}
-.tiles h2{font-size:18px;font-weight:500;margin:0}
 .big{font-size:clamp(44px,5.5vw,76px);font-weight:400;line-height:1.1;margin:12px 0;font-variant-numeric:tabular-nums;letter-spacing:-2px;color:var(--gold)}
-.tiles aside .big{color:var(--text)}
-.tiles span{color:var(--muted);font-size:13px}
 .pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .card{background:var(--panel);border:1px solid #6d633e;border-radius:6px;padding:24px;margin-bottom:20px;min-width:0}
 .card h2{margin:0 0 6px;font-size:20px;font-weight:600}.card h2:before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--gold);margin-right:12px;vertical-align:3px}
@@ -28,7 +24,8 @@
 .bars .muted{margin-top:6px}
 .empty{color:var(--muted);text-align:center;padding:20px;margin:0;font-size:14px}
 .sectionHeading{display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap}.sectionHeading span{font-size:12px;color:var(--muted)}
-.tableWrap{overflow-x:auto;margin-top:14px}
+/* Positioned so screen-reader-only text inside scrolls with the table instead of widening the page. */
+.tableWrap{overflow-x:auto;margin-top:14px;position:relative}
 .table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px}
 .table th,.table td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .table th:first-child{text-align:left}.table thead th{color:var(--muted);font-weight:500;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
@@ -38,6 +35,33 @@
 .appTotals h3{font-size:14px;font-weight:400;color:var(--muted);margin:0}.appTotals strong{font-size:38px;color:var(--gold);font-weight:400;font-variant-numeric:tabular-nums}.appTotals span{color:var(--muted);font-size:12px}
 .card summary{cursor:pointer;font-weight:600;color:var(--gold)}
 .definitions{margin:14px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6}.definitions strong{color:var(--text)}
+/* Expandable tiles, event days and office counts, and the people lists they open. */
+.tiles .tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;background:none;border:1px solid transparent;border-left:1px solid var(--line);border-radius:6px;padding:10px 14px 12px 30px;margin:-10px 0;color:inherit;font:inherit;cursor:pointer;min-width:0}
+.tiles .tile:first-child{border-left-color:transparent;padding-left:14px}
+.tiles .tile:hover:not(:disabled),.tiles .tileOpen{background:#14130d;border-color:#6d633e}
+.tiles .tile:focus-visible,.dayButton:focus-visible,.countButton:focus-visible,.peopleHead button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.tiles .tile:disabled{cursor:default}
+.tileLabel{font-size:18px;font-weight:500}
+.tileNote{color:var(--muted);font-size:13px}
+.tileMore{margin-top:10px;color:var(--gold);font-size:12px;letter-spacing:.04em}
+.todayTile .big{color:var(--text)}
+.peoplePanel{border-color:var(--gold);margin-top:4px}
+.peopleHead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.peopleHead button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit;font-size:13px}
+.peopleBlock{margin-top:16px}.peopleBlock+.peopleBlock{margin-top:24px}
+.peopleBlock h3{margin:0;font-size:16px;font-weight:600}.peopleBlock h3 span{color:var(--gold);font-variant-numeric:tabular-nums;margin-left:6px}
+.peopleTable th,.peopleTable td{text-align:left;white-space:normal;font-size:14px;vertical-align:top;min-width:90px}
+.peopleTable th:first-child{min-width:150px}
+.peopleTable a{color:var(--gold);text-decoration:none}.peopleTable a:hover{text-decoration:underline}
+.peopleTable a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dayButton{background:none;border:0;padding:0;color:var(--text);font:inherit;font-weight:500;cursor:pointer;text-align:left}
+.dayButton:hover{color:var(--gold)}.dayButton span{color:var(--gold);font-size:11px}
+.countButton{background:#1a180f;border:1px solid #6d633e;border-radius:999px;color:var(--gold);font:inherit;font-variant-numeric:tabular-nums;min-width:38px;padding:3px 10px;cursor:pointer}
+.countButton:hover,.countOpen{background:var(--gold);color:#111;border-color:var(--gold)}
+.rowOpen>*{background:#14130d}
+.detailRow>td{text-align:left;white-space:normal;background:#100f0b;border-bottom:1px solid #6d633e;padding:16px 18px}
+@media(max-width:1100px){.tiles .tile:nth-child(3){border-left-color:transparent;padding-left:14px}}
+@media(max-width:640px){.tiles .tile{padding:8px 10px 10px}.tileLabel{font-size:16px}.detailRow>td{padding:12px 8px}}
 /* Header actions, the HubSpot hint and the import panel. */
 .controls .action{display:inline-flex;align-items:center;gap:6px;background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;text-decoration:none;font-size:14px}
 .controls .action:hover{background:#282311}.controls .action:focus-visible,.linkButton:focus-visible,.importActions button:focus-visible,.result a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
@@ -54,8 +78,8 @@
 .importActions button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}
 .importActions button:hover{background:#282311}.importActions button:disabled{opacity:.6;cursor:not-allowed}
 .importActions .primary{background:var(--gold);border-color:var(--gold);color:#111;font-weight:600}.importActions .primary:hover{background:#e2c25a}
-@media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles article:nth-child(3){border-left:0;padding-left:0}.appTotals{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals article:nth-child(3){border-left:0;padding-left:0}}
+@media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals article:nth-child(3){border-left:0;padding-left:0}}
 @media(max-width:800px){.pair{grid-template-columns:1fr;gap:0}}
 @media(max-width:640px){.header{align-items:flex-start;flex-direction:column;gap:16px}.identity{gap:14px}.logo{width:72px}.brand{font-size:10px}.header h1{font-size:21px}.subtitle{font-size:12px}
-.tiles{gap:18px}.tiles article+article,.tiles aside{padding-left:18px}.big{font-size:40px}.card{padding:18px}.card h2{font-size:18px}
+.tiles{gap:18px}.big{font-size:40px}.card{padding:18px}.card h2{font-size:18px}
 .appTotals{grid-template-columns:1fr 1fr;gap:16px}.appTotals article+article{padding-left:16px}.appTotals strong{font-size:30px}.table th,.table td{padding:10px 8px;font-size:14px}}

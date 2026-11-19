@@ -1,9 +1,13 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import styles from './event-attendance.module.css';
 import AttendeeImport, { type AttendeeValues } from './attendee-import';
 import { ATTENDEE_TEMPLATE_CSV, HUBSPOT_SOURCE_URL, attendanceCsv, attendanceCsvFilename, parseAttendeeFile } from './attendance-files.mjs';
+import { applicantColumns, appliedColumns, attendeeColumns, hiredColumns, PeopleTable, visitColumns, type Applicant, type Attendee, type Visit } from './people-lists';
+
+const COMPLETED_STAGE_ID = '1416243218';
+type Tile = 'signedIn' | 'applied' | 'hired' | 'today';
 
 function download(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
@@ -21,6 +25,7 @@ type Report = {
   signIns: number;
   applications: { total: number; fromAttendees: number; otherTickets: number; noTicket: number };
   stages: Stage[]; offices: Office[]; days: Day[];
+  attendees?: Attendee[]; visits?: Visit[]; applicants?: Applicant[];
   canImport?: boolean;
 };
 
@@ -54,6 +59,9 @@ export default function EventAttendanceBoard() {
   const [importFile, setImportFile] = useState<{ name: string; attendees: AttendeeValues[]; id: number } | null>(null);
   const [importError, setImportError] = useState('');
   const [reading, setReading] = useState(false);
+  // One list open at a time: a tile, an event day, or one office on an event day.
+  const [openTile, setOpenTile] = useState<Tile | null>(null);
+  const [openDay, setOpenDay] = useState<{ day: string; office: string | null } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const active = useRef<AbortController | null>(null);
   async function chooseFile(file: File | undefined) {
@@ -93,6 +101,26 @@ export default function EventAttendanceBoard() {
   const today = data?.days.find(row => row.day === todayKey);
   const since = data ? SINCE_LABEL.format(Date.parse(`${data.since}T12:00:00Z`)) : 'Nov 10, 2026';
   const stageTotal = data?.stages.reduce((sum, stage) => sum + stage.count, 0) ?? 0;
+  const attendees = data?.attendees ?? [], visits = data?.visits ?? [], applicants = data?.applicants ?? [];
+  const toggleTile = (tile: Tile) => { setOpenDay(null); setOpenTile(current => current === tile ? null : tile); };
+  const toggleDay = (day: string, office: string | null) => { setOpenTile(null); setOpenDay(current => current?.day === day && current.office === office ? null : { day, office }); };
+  const officeName = (key: string) => data?.offices.find(office => office.key === key)?.label ?? key;
+  const tiles: { key: Tile; label: string; value: string; note: string }[] = [
+    { key: 'signedIn', label: 'Signed in', value: count(people?.signedIn), note: `People · ${count(data?.signIns)} sign-ins in all` },
+    { key: 'applied', label: 'Applied', value: count(people?.applied), note: `${share(people?.applied, people?.signedIn)} of people who signed in` },
+    { key: 'hired', label: 'Hired', value: count(people?.hired), note: `${share(people?.hired, people?.signedIn)} reached Completed` },
+    { key: 'today', label: 'Today', value: data ? count(today?.signIns ?? 0) : '—', note: `Sign-ins · ${data ? count(today?.applications ?? 0) : '—'} applications` },
+  ];
+  const tileList = () => {
+    if (openTile === 'signedIn') return <PeopleTable title="Everyone who signed in" rows={attendees} columns={attendeeColumns} empty="No one has signed in yet." />;
+    if (openTile === 'applied') return <PeopleTable title="Signed in and applied online" rows={attendees.filter(person => person.appliedAt)} columns={appliedColumns} empty="No one who signed in has applied online yet." />;
+    if (openTile === 'hired') return <PeopleTable title="Signed in and reached Completed" rows={attendees.filter(person => person.stageId === COMPLETED_STAGE_ID)} columns={hiredColumns} empty="No one who signed in has reached Completed yet." />;
+    if (openTile === 'today') return <><PeopleTable title="Signed in today" rows={visits.filter(visit => visit.day === todayKey)} columns={visitColumns} empty="No sign-ins yet today." /><PeopleTable title="Applied online today" rows={applicants.filter(item => item.day === todayKey)} columns={applicantColumns} empty="No online applications yet today." /></>;
+    return null;
+  };
+  const dayList = (day: string, office: string | null) => office
+    ? <PeopleTable title={`Signed in at ${officeName(office)} on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day && visit.office === office)} columns={visitColumns} empty="No sign-ins." />
+    : <><PeopleTable title={`Signed in on ${dayLabel(day)}`} rows={visits.filter(visit => visit.day === day)} columns={visitColumns} empty="No sign-ins this day." /><PeopleTable title={`Applied online on ${dayLabel(day)}`} rows={applicants.filter(item => item.day === day)} columns={applicantColumns} empty="No online applications this day." /></>;
   const funnel = people ? [
     { label: 'Signed in', value: people.signedIn, note: 'Everyone who signed in at an event' },
     { label: 'Applied', value: people.applied, note: `${share(people.applied, people.signedIn)} of sign-ins sent the online application` },
@@ -120,12 +148,18 @@ export default function EventAttendanceBoard() {
 
     <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>
 
-    <section className={styles.tiles} aria-label="Totals">
-      <article><h2>Signed in</h2><p className={styles.big}>{count(people?.signedIn)}</p><span>People · {count(data?.signIns)} sign-ins in all</span></article>
-      <article><h2>Applied</h2><p className={styles.big}>{count(people?.applied)}</p><span>{share(people?.applied, people?.signedIn)} of people who signed in</span></article>
-      <article><h2>Hired</h2><p className={styles.big}>{count(people?.hired)}</p><span>{share(people?.hired, people?.signedIn)} reached Completed</span></article>
-      <aside><h2>Today</h2><p className={styles.big}>{data ? count(today?.signIns ?? 0) : '—'}</p><span>Sign-ins · {data ? count(today?.applications ?? 0) : '—'} applications</span></aside>
+    <section className={styles.tiles} aria-label="Totals. Select one to see the people in it.">
+      {tiles.map(tile => <button type="button" key={tile.key} className={`${styles.tile} ${tile.key === 'today' ? styles.todayTile : ''} ${openTile === tile.key ? styles.tileOpen : ''}`} disabled={!data} aria-expanded={openTile === tile.key} aria-controls="tile-people" onClick={() => toggleTile(tile.key)}>
+        <span className={styles.tileLabel}>{tile.label}</span>
+        <span className={styles.big}>{tile.value}</span>
+        <span className={styles.tileNote}>{tile.note}</span>
+        <span className={styles.tileMore}>{openTile === tile.key ? 'Hide people ▲' : 'Show people ▼'}</span>
+      </button>)}
     </section>
+    {openTile && data && <section id="tile-people" className={`${styles.card} ${styles.peoplePanel}`} aria-label={`${tiles.find(tile => tile.key === openTile)?.label} — people`}>
+      <div className={styles.peopleHead}><p className={styles.muted}>Select a name to open the recruit in the CRM.</p><button type="button" onClick={() => setOpenTile(null)}>Close</button></div>
+      {tileList()}
+    </section>}
 
     <div className={styles.pair}>
       <section className={styles.card} aria-labelledby="funnel-title">
@@ -143,11 +177,28 @@ export default function EventAttendanceBoard() {
     </div>
 
     <section className={styles.card} aria-labelledby="days-title">
-      <div className={styles.sectionHeading}><h2 id="days-title">Attendance by event day and office</h2><span>Newest first · Eastern time</span></div>
+      <div className={styles.sectionHeading}><h2 id="days-title">Attendance by event day and office</h2><span>Newest first · Eastern time · Select a day or a number to see who signed in</span></div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead><tr><th scope="col">Event day</th>{data?.offices.map(office => <th scope="col" key={office.key}>{office.label}</th>)}<th scope="col">Sign-ins</th><th scope="col">Online applications</th></tr></thead>
-          <tbody>{data?.days.map(row => <tr key={row.day}><th scope="row">{dayLabel(row.day)}</th>{data.offices.map(office => <td key={office.key}>{count(row.offices[office.key] ?? 0)}</td>)}<td className={styles.total}>{count(row.signIns)}</td><td>{count(row.applications)}</td></tr>)}</tbody>
+          <tbody>{data?.days.map(row => {
+            const dayOpen = openDay?.day === row.day && openDay.office === null;
+            return <Fragment key={row.day}>
+              <tr className={openDay?.day === row.day ? styles.rowOpen : undefined}>
+                <th scope="row"><button type="button" className={styles.dayButton} aria-expanded={dayOpen} aria-controls={`day-${row.day}`} onClick={() => toggleDay(row.day, null)}>{dayLabel(row.day)}<span aria-hidden="true">{dayOpen ? ' ▲' : ' ▼'}</span></button></th>
+                {data.offices.map(office => {
+                  const value = row.offices[office.key] ?? 0;
+                  const cellOpen = openDay?.day === row.day && openDay.office === office.key;
+                  return <td key={office.key}>{value ? <button type="button" className={`${styles.countButton} ${cellOpen ? styles.countOpen : ''}`} aria-expanded={cellOpen} aria-controls={`day-${row.day}`} aria-label={`${value} signed in at ${office.label} on ${dayLabel(row.day)}. ${cellOpen ? 'Hide' : 'Show'} people.`} onClick={() => toggleDay(row.day, office.key)}>{count(value)}</button> : count(0)}</td>;
+                })}
+                <td className={styles.total}>{count(row.signIns)}</td><td>{count(row.applications)}</td>
+              </tr>
+              {openDay?.day === row.day && <tr className={styles.detailRow}><td id={`day-${row.day}`} colSpan={data.offices.length + 3}>
+                <div className={styles.peopleHead}><p className={styles.muted}>Select a name to open the recruit in the CRM.</p><button type="button" onClick={() => setOpenDay(null)}>Close</button></div>
+                {dayList(row.day, openDay.office)}
+              </td></tr>}
+            </Fragment>;
+          })}</tbody>
         </table>
       </div>
       {data && !data.days.length && <p className={styles.empty}>No sign-ins or applications yet.</p>}
@@ -172,7 +223,7 @@ export default function EventAttendanceBoard() {
         <li><strong>Hired</strong>: people who signed in whose recruiting ticket is now at Completed. Withdrawn tickets are not hires.</li>
         <li><strong>Office</strong>: the office the person picked when signing in.</li>
         <li><strong>Online applications</strong>: every application sent from the application page. Someone who applies twice counts twice.</li>
-        <li>Numbers come from HubSpot each time this page loads and every minute while it is open. Only counts reach this page; names and answers stay in HubSpot.</li>
+        <li>Numbers come from HubSpot each time this page loads and every minute while it is open. The lists show what each person entered when signing in or applying, with their current stage. Like the rest of the recruiting workspace, they are visible only to recruiting editors. Application answers, including which required item was missed, stay in HubSpot.</li>
       </ul>
     </details>
   </main>;
