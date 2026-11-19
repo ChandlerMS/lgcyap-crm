@@ -1,4 +1,5 @@
 // Fixed destinations only: hash routes never supply an arbitrary iframe URL.
+export const QR_PRESENTATION_PAGE = Object.freeze({ id: 'qr-code-presentation', label: 'QR Code Presentation', url: 'https://comp.lgcyagent.com/#1.', detail: 'comp.lgcyagent.com', group: 'recruits' });
 export const RECRUIT_PORTAL_PAGES = Object.freeze([
   Object.freeze({ id: 'contracting-portal', label: 'Contracting', url: 'https://contracting.lgcyagent.com/', detail: 'contracting.lgcyagent.com', group: 'recruits' }),
 ]);
@@ -25,5 +26,5 @@ export const GOOGLE_WORKSPACE_PAGES = Object.freeze([
 ].map(page => Object.freeze(page)));
 export const KNOWLEDGE_CENTER_PAGE = Object.freeze({ id: 'knowledge-center', label: 'Knowledge Center', url: 'https://50894788.hs-sites.com/legacy-partners-knowledge', detail: 'Legacy Partners Knowledge', group: 'knowledge-center' });
 export function externalWorkspacePage(id) {
-  return [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE].find(page => page.id === id);
+  return [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE, QR_PRESENTATION_PAGE].find(page => page.id === id);
 }

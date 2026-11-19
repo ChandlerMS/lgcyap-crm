@@ -77,11 +77,11 @@ export const RECRUITS_CHILD_PAGES = Object.freeze([
   ...RECRUIT_PORTAL_PAGES,
   Object.freeze({ id: 'training-classes', label: 'Training Classes' }),
 ]);
-// The hiring-event sites, first in the Recruits flyout. They refuse to be framed (they take personal details and a photo ID),
-// so each opens in its own tab, which also suits putting the QR screen on a TV.
+// The presentation leads the flyout and opens inside the CRM. Personal sign-in
+// remains a separate site because it collects attendee details and a photo ID.
 export const RECRUITS_SITE_LINKS = Object.freeze([
-  Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/' }),
-  Object.freeze({ id: 'sign-in-qr', label: 'QR Code Sign-in', href: 'https://signinqr.lgcyap.com/' }),
+  Object.freeze({ id: 'qr-code-presentation', label: 'QR Code Presentation', href: '#qr-code-presentation', embedded: true }),
+  Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/', embedded: false }),
 ]);
 // Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
 export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);

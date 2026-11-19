@@ -7,10 +7,13 @@ import {
   recordsForStagePage, unmappedStageRecords, sidebarViewFor, RECRUITS_SITE_LINKS,
 } from '../app/recruiting-navigation.mjs';
 
-test('the Recruits flyout includes the hiring-event sign-in sites, which open in a new tab', () => {
-  assert.deepEqual(RECRUITS_SITE_LINKS.map(link => [link.label, link.href]), [['Sign-In', 'https://signin.lgcyap.com/'], ['QR Code Sign-in', 'https://signinqr.lgcyap.com/']]);
-  const flyout = readFileSync(new URL('../app/recruiting-workspace.tsx', import.meta.url), 'utf8');
-  assert.match(flyout, /RECRUITS_SITE_LINKS\.map\(item => <a className="nav-link nav-site-link" key=\{item\.id\} href=\{item\.href\} target="_blank" rel="noopener noreferrer"/);
+test('QR Code Presentation is first in the Recruits flyout and opens an embedded workspace route', () => {
+  assert.deepEqual(RECRUITS_SITE_LINKS.map(link => [link.label, link.href, link.embedded]), [
+    ['QR Code Presentation', '#qr-code-presentation', true],
+    ['Sign-In', 'https://signin.lgcyap.com/', false],
+  ]);
+  assert.deepEqual(resolveWorkspaceRoute('#qr-code-presentation'), { view: 'qr-code-presentation' });
+  assert.equal(sidebarViewFor('qr-code-presentation'), 'recruits');
 });
 
 test('canonical stages are shared while each entry path has its own sidebar order', () => {
