@@ -4,9 +4,7 @@ import styles from './event-attendance.module.css';
 
 type Person = { ticketId: string | null; name: string; email: string; phone: string; office: string; stageId: string; stage: string; hubspotUrl: string | null };
 export type Visit = Person & { day: string; at: string; heardAbout: string; license: string; source: string; imported: boolean };
-// group matches the Applications counts: signed in at an event, a new applicant, or no recruiting ticket (a required item was not met).
-export type ApplicantGroup = 'signed-in' | 'new' | 'no-ticket';
-export type Applicant = Person & { day: string; at: string; license?: string; location?: string; fromAttendee: boolean; group?: ApplicantGroup };
+export type Applicant = Person & { day: string; at: string; license?: string; fromAttendee: boolean };
 export type Attendee = Person & { ticketId: string; signIns: number; firstDay: string; lastDay: string; appliedAt: string | null };
 type Column<T> = { label: string; render: (row: T) => ReactNode };
 
@@ -24,51 +22,40 @@ function phoneText(value: string) {
   return local.length === 10 ? `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}` : value;
 }
 
-// The recruit opens in the workspace around this frame; HubSpot opens in a new tab.
+// The recruit opens in the workspace around this frame.
 const nameCell = (row: Person) => row.ticketId ? <a href={`/#recruit/${row.ticketId}`} target="_top" title="Open this recruit in the CRM">{row.name}</a> : row.name;
 const phoneCell = (row: Person) => row.phone ? <a href={`tel:${row.phone.replace(/[^\d+]/g, '')}`}>{phoneText(row.phone)}</a> : '—';
 const emailCell = (row: Person) => row.email ? <a href={`mailto:${row.email}`}>{row.email}</a> : '—';
-const hubspotCell = (row: Person) => row.hubspotUrl ? <a href={row.hubspotUrl} target="_blank" rel="noopener noreferrer">HubSpot<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a> : <span className={styles.muted}>No ticket</span>;
 const contact: Column<Person>[] = [
   { label: 'Name', render: nameCell }, { label: 'Phone', render: phoneCell }, { label: 'Email', render: emailCell }, { label: 'Office', render: row => officeLabel(row.office) },
 ];
 
+// The previews leave out stage, location and the HubSpot link: the recruit and the Applications page have them.
 export const attendeeColumns: Column<Attendee>[] = [
   ...contact,
   { label: 'Sign-ins', render: row => row.signIns > 1 ? `${row.signIns} · last ${shortDay(row.lastDay)}` : shortDay(row.lastDay) },
-  { label: 'Stage', render: row => row.stage || '—' },
   { label: 'Applied online', render: row => row.appliedAt ? when(row.appliedAt) : 'Not yet' },
-  { label: 'Records', render: hubspotCell },
 ];
 export const appliedColumns: Column<Attendee>[] = [
   ...contact,
   { label: 'Applied online', render: row => when(row.appliedAt) },
   { label: 'Signed in', render: row => shortDay(row.lastDay) },
-  { label: 'Stage', render: row => row.stage || '—' },
-  { label: 'Records', render: hubspotCell },
 ];
 export const hiredColumns: Column<Attendee>[] = [
   ...contact,
   { label: 'First signed in', render: row => shortDay(row.firstDay) },
-  { label: 'Stage', render: row => row.stage || '—' },
-  { label: 'Records', render: hubspotCell },
 ];
 export const visitColumns: Column<Visit>[] = [
   ...contact,
   { label: 'Signed in', render: row => row.imported ? `${shortDay(row.day)} · imported list` : when(row.at) },
   { label: 'How they heard', render: row => row.heardAbout || '—' },
   { label: 'License', render: row => row.license || '—' },
-  { label: 'Stage', render: row => row.stage || '—' },
-  { label: 'Records', render: hubspotCell },
 ];
 export const applicantColumns: Column<Applicant>[] = [
   ...contact,
   { label: 'Applied', render: row => when(row.at) },
   { label: 'License', render: row => row.license || '—' },
-  { label: 'Location', render: row => row.location || '—' },
   { label: 'Signed in at an event', render: row => row.fromAttendee ? 'Yes' : 'No' },
-  { label: 'Stage', render: row => row.stage || 'No recruiting ticket' },
-  { label: 'Records', render: hubspotCell },
 ];
 
 // total is the whole list's size when rows is one page of it.

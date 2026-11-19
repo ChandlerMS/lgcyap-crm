@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
 import PhotoIdViewer, { type PhotoNote } from "./photo-id-viewer";
+import { useEventReviews, type EventReviews, type Review } from "./event-review";
+import PanelPager from "./panel-pager";
+import { pageWindow } from "./panel-pager.mjs";
 
 type Row = { label: string; value: string };
 type Application = {
@@ -11,8 +14,15 @@ type Application = {
   existingContact: boolean; photoId: boolean; photos?: PhotoNote[]; sections: { title: string; rows: Row[] }[];
   ticket: { id: string; stageId: string; stage: string; url: string } | null; contact: { id: string; url: string } | null; waitingAtHiringEvent: boolean;
 };
-type Report = { fetchedAt: string; since: string; partial: boolean; summary: { total: number; met: number; notMet: number; flagged: number; waitingAtHiringEvent: number; photoId: number }; applications: Application[] };
+type Report = {
+  fetchedAt: string; since: string; partial: boolean; summary: { total: number; met: number; notMet: number; flagged: number; waitingAtHiringEvent: number; photoId: number }; applications: Application[];
+  canReview?: boolean; reviews?: Record<string, Review>; reviewComplete?: boolean; reviewNotice?: string;
+};
 type Status = "all" | "not-met" | "flagged" | "waiting";
+// Inside Event Attendance: its review state, a number that changes whenever it should read the applications again,
+// and whether links leave the board's own page (which may sit in the workspace frame) for the top window.
+export type BoardLink = { review: EventReviews; reload: number; topWindow: boolean };
+const SECTION_PAGE_SIZE = 10;
 const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const SINCE = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
 const OUTCOMES: Record<Application["outcome"], string> = {
@@ -24,8 +34,9 @@ const OUTCOMES: Record<Application["outcome"], string> = {
 const matches = (item: Application, search: string) => !search || [item.name, item.preferredName, item.email, item.phone, item.city].some(value => value.toLowerCase().includes(search));
 
 // Every online agent application in one place for the admin team: who applied and when, any required item they did
-// not meet, what needs a private conversation, where the record is now, and every answer on request.
-export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: () => void }) {
+// not meet, what needs a private conversation, where the record is now, the Approved or Denied review, and every
+// answer on request. Event Attendance shows the same list as its Applications section, ten a page.
+export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthorized: () => void; board?: BoardLink }) {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,10 +45,18 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
   const [status, setStatus] = useState<Status>("all");
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [attempt, setAttempt] = useState(0);
+  const [page, setPage] = useState(1);
   // The applicant whose photo ID is open, if any.
   const [photoFor, setPhotoFor] = useState<Application | null>(null);
   const unauthorized = useRef(onUnauthorized);
   useEffect(() => { unauthorized.current = onUnauthorized; }, [onUnauthorized]);
+  const refresh = useCallback(() => { setLoading(true); setAttempt(value => value + 1); }, []);
+  // The board's Refresh, and a new application in its counts, read the list again.
+  const [boardReload, setBoardReload] = useState(board?.reload);
+  if (board && board.reload !== boardReload) { setBoardReload(board.reload); setLoading(true); setAttempt(value => value + 1); }
+  // On its own page the list keeps its own review state; in Event Attendance it shares the board's.
+  const ownReview = useEventReviews({ reviews: report?.reviews, reviewComplete: report?.reviewComplete, canReview: report?.canReview, onSignedOut: () => unauthorized.current(), onStale: refresh });
+  const reviewer = board?.review ?? ownReview;
   // Each Refresh starts a new read; state changes only once HubSpot answers.
   useEffect(() => {
     const controller = new AbortController();
@@ -54,14 +73,16 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
     })();
     return () => controller.abort();
   }, [attempt]);
-  const refresh = useCallback(() => { setLoading(true); setAttempt(value => value + 1); }, []);
 
   const search = query.trim().toLowerCase();
   const all = report?.applications ?? [];
   const shown = all.filter(item => matches(item, search) && (office === "all" || (item.officeKey ?? "other") === office)
     && (status === "all" || (status === "not-met" && item.requirementsMet === false) || (status === "flagged" && item.flags.length > 0) || (status === "waiting" && item.waitingAtHiringEvent)));
+  // The page lists every match; the Event Attendance section shows them ten a page.
+  const view = board ? pageWindow(shown.length, page, SECTION_PAGE_SIZE) : { start: 0, end: shown.length };
   const toggle = (id: string) => setOpen(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const allOpen = shown.length > 0 && shown.every(item => open.has(item.id));
+  const filter = (next: Status) => { setStatus(next); setPage(1); };
   const summary = report?.summary;
   const tiles: { key: Status; label: string; value: number | undefined; tone?: string }[] = [
     { key: "all", label: "Applications", value: summary?.total },
@@ -69,49 +90,62 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
     { key: "flagged", label: "Need a private conversation", value: summary?.flagged, tone: styles.warn },
     { key: "waiting", label: "Still at Hiring Event", value: summary?.waitingAtHiringEvent, tone: styles.warn },
   ];
+  // From the board's own page, recruit and Applications links open in the workspace around its frame.
+  const top = board?.topWindow ? { target: "_top" } : {};
+  const recruitHref = (id: string) => `${board?.topWindow ? "/" : ""}#recruit/${encodeURIComponent(id)}`;
+  const Title = board ? "h2" : "h1";
+  const Name = board ? "h3" : "h2";
 
-  return <section className={styles.page} aria-labelledby="applications-title">
+  return <section className={board ? `${styles.page} ${styles.inBoard}` : styles.page} aria-labelledby="applications-title">
     <div className={styles.head}>
       <div>
-        <h1 id="applications-title" className="page-title" tabIndex={-1}>Applications{summary && <span className={styles.titleCount}>{summary.total}</span>}</h1>
+        {board
+          ? <Title id="applications-title"><a className="panel-title-link" href={board.topWindow ? "/#applications" : "#applications"} {...top}>Applications</a>{summary && <span className={styles.titleCount}>{summary.total}</span>}</Title>
+          : <Title id="applications-title" className="page-title" tabIndex={-1}>Applications{summary && <span className={styles.titleCount}>{summary.total}</span>}</Title>}
         <p className={styles.lede}>Online agent applications from apply.lgcyap.com, newest first{report ? ` since ${SINCE.format(Date.parse(`${report.since}T12:00:00Z`))}` : ""}. Answers are private: share them only with the hiring team.</p>
       </div>
       <div className={styles.headActions}>
         {report && <span className={styles.updated}>Updated {WHEN.format(Date.parse(report.fetchedAt))}</span>}
-        <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>
+        {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
       </div>
     </div>
     {error && <div className="connection-alert" role="alert"><strong>{report ? "Showing the last loaded applications" : "Applications unavailable"}</strong><p>{error}</p></div>}
     {report?.partial && <p className="partial-notice" role="status">HubSpot returned part of the applications. Refresh later for the rest.</p>}
+    {/* The board shows its own review notice and errors above its lists. */}
+    {!board && report?.reviewNotice && <p className="partial-notice" role="status">{report.reviewNotice}</p>}
+    {!board && reviewer.error && <div className="connection-alert" role="alert"><strong>Review not saved</strong><p>{reviewer.error}</p>{reviewer.retry ? <button type="button" className="btn btn-secondary" onClick={reviewer.retry}>Retry review</button> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>Refresh statuses</button>}</div>}
     {!report && loading && <p className={styles.empty} role="status">Loading applications from HubSpot…</p>}
     {report && <>
       <div className={styles.tiles} role="group" aria-label="Filter by status">
-        {tiles.map(tile => <button key={tile.key} type="button" className={`${styles.tile} ${tile.tone ?? ""}`} aria-pressed={status === tile.key} onClick={() => setStatus(tile.key === status ? "all" : tile.key)}>
+        {tiles.map(tile => <button key={tile.key} type="button" className={`${styles.tile} ${tile.tone ?? ""}`} aria-pressed={status === tile.key} onClick={() => filter(tile.key === status ? "all" : tile.key)}>
           <strong>{tile.value ?? 0}</strong><span>{tile.label}</span>
         </button>)}
       </div>
       {summary && summary.waitingAtHiringEvent > 0 && <p className={styles.callout}>{summary.waitingAtHiringEvent} applicant{summary.waitingAtHiringEvent === 1 ? "'s" : "s'"} recruiting ticket is still at Hiring Event. {"Applying doesn't move a ticket that already exists: confirm it's the same person, then move it to Application."}</p>}
       <div className={styles.filters}>
-        <label className={styles.search}><span className="sr-only">Search applications</span><input type="search" placeholder="Search name, email, phone or city" value={query} onChange={event => setQuery(event.target.value)} /></label>
-        <label className={styles.select}><span>Office</span><select value={office} onChange={event => setOffice(event.target.value)}><option value="all">All offices</option><option value="orlando">Orlando</option><option value="miami">Miami</option><option value="tampa">Tampa</option><option value="other">Not recorded</option></select></label>
-        <label className={styles.select}><span>Status</span><select value={status} onChange={event => setStatus(event.target.value as Status)}><option value="all">All</option><option value="not-met">Did not meet a required item</option><option value="flagged">Need a private conversation</option><option value="waiting">Still at Hiring Event</option></select></label>
+        <label className={styles.search}><span className="sr-only">Search applications</span><input type="search" placeholder="Search name, email, phone or city" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
+        <label className={styles.select}><span>Office</span><select value={office} onChange={event => { setOffice(event.target.value); setPage(1); }}><option value="all">All offices</option><option value="orlando">Orlando</option><option value="miami">Miami</option><option value="tampa">Tampa</option><option value="other">Not recorded</option></select></label>
+        <label className={styles.select}><span>Status</span><select value={status} onChange={event => filter(event.target.value as Status)}><option value="all">All</option><option value="not-met">Did not meet a required item</option><option value="flagged">Need a private conversation</option><option value="waiting">Still at Hiring Event</option></select></label>
         <button type="button" className="btn btn-quiet" disabled={!shown.length} onClick={() => setOpen(allOpen ? new Set() : new Set(shown.map(item => item.id)))}>{allOpen ? "Collapse all" : "Expand all"}</button>
       </div>
       <p className={styles.resultCount} role="status">{shown.length === all.length ? `${all.length} application${all.length === 1 ? "" : "s"}` : `${shown.length} of ${all.length} applications`}</p>
       {!shown.length ? <p className={styles.empty}>{all.length ? "No applications match these filters." : "No online applications yet."}</p> : <ol className={styles.list}>
-        {shown.map(item => {
+        {shown.slice(view.start, view.end).map(item => {
           const expanded = open.has(item.id);
           const location = [item.city, [item.state, item.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
           return <li key={item.id} className={styles.card}>
             <div className={styles.cardHead}>
               <div className={styles.who}>
-                <h2>{item.name || "Name not recorded"}{item.preferredName && <span className={styles.preferred}> ({item.preferredName})</span>}</h2>
+                <Name>{item.name || "Name not recorded"}{item.preferredName && <span className={styles.preferred}> ({item.preferredName})</span>}</Name>
                 <p className={styles.when}>Applied {WHEN.format(Date.parse(item.at))} ET</p>
               </div>
-              <div className={styles.badges}>
-                {item.requirementsMet === false && <span className={`${styles.badge} ${styles.bad}`}>Did not meet {item.missed.length || ""} required item{item.missed.length === 1 ? "" : "s"}</span>}
-                {item.flags.length > 0 && <span className={`${styles.badge} ${styles.warn}`}>Private conversation: {item.flags.length}</span>}
-                {item.waitingAtHiringEvent && <span className={`${styles.badge} ${styles.warn}`}>Still at Hiring Event</span>}
+              <div className={styles.headSide}>
+                <div className={styles.badges}>
+                  {item.requirementsMet === false && <span className={`${styles.badge} ${styles.bad}`}>Did not meet {item.missed.length || ""} required item{item.missed.length === 1 ? "" : "s"}</span>}
+                  {item.flags.length > 0 && <span className={`${styles.badge} ${styles.warn}`}>Private conversation: {item.flags.length}</span>}
+                  {item.waitingAtHiringEvent && <span className={`${styles.badge} ${styles.warn}`}>Still at Hiring Event</span>}
+                </div>
+                {reviewer.actions({ ticketId: item.ticket?.id ?? null, name: item.name || "this applicant" })}
               </div>
             </div>
             <dl className={styles.facts}>
@@ -127,7 +161,7 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
             <div className={styles.actions}>
               <button type="button" className="btn btn-secondary" aria-expanded={expanded} aria-controls={`application-${item.id}`} onClick={() => toggle(item.id)}>{expanded ? "Hide answers" : "View all answers"}</button>
               {Boolean(item.photos?.length) && <button type="button" className="btn btn-secondary" onClick={() => setPhotoFor(item)}>View photo ID</button>}
-              {item.ticket && <a className="btn btn-quiet" href={`#recruit/${encodeURIComponent(item.ticket.id)}`}>Open recruit</a>}
+              {item.ticket && <a className="btn btn-quiet" href={recruitHref(item.ticket.id)} {...top}>Open recruit</a>}
               {item.ticket && <a className="btn btn-quiet" href={item.ticket.url} target="_blank" rel="noopener noreferrer">HubSpot ticket<span className="sr-only"> (opens in a new tab)</span></a>}
               {item.contact && <a className="btn btn-quiet" href={item.contact.url} target="_blank" rel="noopener noreferrer">HubSpot contact<span className="sr-only"> (opens in a new tab)</span></a>}
             </div>
@@ -145,6 +179,7 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
           </li>;
         })}
       </ol>}
+      {board && <PanelPager count={shown.length} page={page} size={SECTION_PAGE_SIZE} label="Applications" onPage={setPage} numbers />}
     </>}
     {photoFor?.photos?.length ? <PhotoIdViewer key={photoFor.id} photos={photoFor.photos} name={photoFor.name || "this applicant"} onClose={() => setPhotoFor(null)} /> : null}
   </section>;
