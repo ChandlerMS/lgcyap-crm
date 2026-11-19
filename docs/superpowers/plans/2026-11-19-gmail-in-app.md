@@ -13,8 +13,10 @@ No website embedding or automatic Gmail launch. Own verified employee email and 
 
 ## Tasks
 
-- [ ] Expand Gmail consent/status/access with readonly permission and a backwards-compatible reconnect state. Test old and new grants, missing consent, wrong identity.
-- [ ] Add lib/gmail-mail.mjs and /api/gmail/mail for paged Inbox/Sent and message reading; export readReplyTarget for composer. Test authorization, bounded work, MIME sanitization, incomplete/provider errors and safe reply headers.
-- [ ] Extend lib/gmail-compose.mjs preview/prepare for replyMessageId and send action. Add gmail_send_requests schema/migration and preview-bound durable send/confirmation tests, including ambiguity/duplicate replays. Keep old drafts backwards compatible.
-- [ ] Update composer and Email connection panel with mailbox, reading/reply, template dropdown and explicit preview/send, no Gmail launch. Test template selection, successful/uncertain sends, close/account races and mailbox paging.
+- [x] Expand Gmail consent/status/access with readonly permission and a backwards-compatible reconnect state. Test old and new grants, missing consent, wrong identity.
+- [x] Add lib/gmail-mail.mjs and /api/gmail/mail for paged Inbox/Sent and message reading; export readReplyTarget for composer. Test authorization, bounded work, MIME sanitization, incomplete/provider errors and safe reply headers.
+- [x] Extend lib/gmail-compose.mjs preview/prepare for replyMessageId and send action. Add gmail_send_requests schema/migration and preview-bound durable send/confirmation tests, including ambiguity/duplicate replays. Keep old drafts backwards compatible.
+- [x] Update composer and Email connection panel with mailbox, reading/reply, template dropdown and explicit preview/send, no Gmail launch. Test template selection, successful/uncertain sends, close/account races and mailbox paging.
 - [ ] Update privacy and setup docs; independently review; run relevant/full tests, TypeScript, lint and build; integrate current main, push through Git deployment and verify production commit.
+
+Delivery hardening: at most one pending/uncertain operation per employee. Connection status restores its request ID after reload; only an explicit request-bound acknowledgement releases uncertainty, and active pending sends cannot be acknowledged for two minutes. Acknowledging a missing request writes a tombstone so a delayed original cannot deliver. Replies preserve empty subjects and support up to 1,000 characters with folded RFC 2047 MIME headers; larger subjects report reply unavailable. Saved #gmail links now open native Email.

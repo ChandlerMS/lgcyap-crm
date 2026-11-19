@@ -20,7 +20,7 @@ test('Admin and Agents keep each requested destination and distinguish RingEX fr
 });
 test('every embedded route resolves independently and highlights its parent menu', () => {
   for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE]) {
-    assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id);
+    assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id === 'gmail' ? 'email' : page.id);
     assert.equal(externalWorkspacePage(page.id), page);
     assert.equal(sidebarViewFor(page.id), page.group === 'agents' ? 'contract-agents' : page.group);
   }

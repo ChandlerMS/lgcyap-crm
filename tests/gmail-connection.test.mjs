@@ -54,6 +54,7 @@ test('status validates the current Google subject, exposes no credentials, and p
   try {
     await db.exec('CREATE TABLE "account" (id text, "userId" text, "providerId" text, "accountId" text)');
     await db.exec(await readFile(new URL('../migrations/0017_gmail_drafts.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../migrations/0019_gmail_send_requests.sql', import.meta.url), 'utf8'));
     const getDb = async () => db;
     const read = () => handleGmailConnection(new Request(`${env.BETTER_AUTH_URL}/api/gmail`), { env, getUser, getDb });
     let response = await read(), body = await response.json();
@@ -81,6 +82,7 @@ test('disconnect deletes only this employees Gmail credentials and clears in-fli
   const db = new PGlite();
   try {
     await db.exec(await readFile(new URL('../migrations/0017_gmail_drafts.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../migrations/0019_gmail_send_requests.sql', import.meta.url), 'utf8'));
     await db.exec(await readFile(new URL('../migrations/0015_application_sheets.sql', import.meta.url), 'utf8'));
     for (const [id, email] of [[user.userId, user.email], ['editor-2', 'other@example.invalid']]) await db.query('INSERT INTO gmail_connection VALUES ($1,$2,$3,$4,$5,now())', [id, email, `sub-${id}`, 'encrypted-token', 'https://www.googleapis.com/auth/gmail.compose']);
     await db.query('INSERT INTO application_sheets_connection(id,email,refresh_token,connected_at) VALUES(1,$1,$2,now())', ['chandler@lgcyap.com', 'sheets-token']);
@@ -100,6 +102,7 @@ test('callbacks redirect to Email and clear state on success and any authorizati
   try {
     await db.exec('CREATE TABLE "account" (id text, "userId" text, "providerId" text, "accountId" text)');
     await db.exec(await readFile(new URL('../migrations/0017_gmail_drafts.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../migrations/0019_gmail_send_requests.sql', import.meta.url), 'utf8'));
     await db.query('INSERT INTO "account" VALUES ($1,$2,$3,$4)', ['account-1', user.userId, 'google', 'google-sub-1']);
     const start = startGmailConnection({ user, env });
     const callback = new Request(`${env.BETTER_AUTH_URL}/api/auth/callback/google?code=sensitive-code&state=${new URL(start.url).searchParams.get('state')}`, { headers: { Cookie: start.cookie.split(';')[0] } });
@@ -116,5 +119,36 @@ test('callbacks redirect to Email and clear state on success and any authorizati
       assert.match(response.headers.get('set-cookie'), /^gmail_oauth=.*Max-Age=0/);
       assert.equal((await response.text()).includes('sensitive'), false);
     }
+  } finally { await db.close(); }
+});
+
+test('unresolved delivery survives reload and only its displayed request can be acknowledged', async () => {
+  const { GMAIL_SCHEMA } = await import('../db/gmail.mjs');
+  const { handleGmailConnection } = await import('../lib/gmail-connection.mjs');
+  const db = new PGlite();
+  const firstId = '9e283fd5-8e92-4cbe-b97f-af16cc216659', secondId = '6e283fd5-8e92-4cbe-b97f-af16cc216659';
+  try {
+    await db.exec(GMAIL_SCHEMA);
+    await db.exec('CREATE TABLE "account" (id text, "userId" text, "providerId" text, "accountId" text)');
+    const deps = { env, getUser, getDb: async () => db };
+    const read = async () => (await handleGmailConnection(new Request(`${env.BETTER_AUTH_URL}/api/gmail`), deps)).json();
+    const ack = requestId => handleGmailConnection(new Request(`${env.BETTER_AUTH_URL}/api/gmail`, { method: 'POST', headers: { origin: env.BETTER_AUTH_URL, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'acknowledge-send', requestId }) }), deps);
+    await db.query("INSERT INTO gmail_send_requests(user_id,request_id,payload_hash,status) VALUES($1,$2,'hash','pending')", [user.userId, firstId]);
+    const pending = await read(); assert.equal(pending.unresolvedSend, true); assert.equal(pending.unresolvedRequestId, firstId);
+    assert.ok(pending.acknowledgeAfter);
+    assert.equal((await ack(firstId)).status, 409, 'an active operation cannot be dismissed');
+    await db.query("UPDATE gmail_send_requests SET created_at=now()-interval '3 minutes'");
+    assert.equal((await ack(firstId)).status, 200);
+    assert.equal((await read()).unresolvedSend, false);
+    await db.query("INSERT INTO gmail_send_requests(user_id,request_id,payload_hash,status) VALUES($1,$2,'hash','uncertain')", [user.userId, secondId]);
+    assert.equal((await ack(firstId)).status, 409, 'an old receipt cannot dismiss a newer operation');
+    assert.equal((await read()).unresolvedRequestId, secondId);
+    assert.equal((await ack(secondId)).status, 200);
+    assert.equal((await read()).unresolvedSend, false);
+    const sentId = '7e283fd5-8e92-4cbe-b97f-af16cc216659', unknownId = '8e283fd5-8e92-4cbe-b97f-af16cc216659';
+    await db.query("INSERT INTO gmail_send_requests(user_id,request_id,payload_hash,status) VALUES($1,$2,'hash','sent')", [user.userId, sentId]);
+    assert.equal((await ack(sentId)).status, 200, 'a lost final response can be acknowledged after checking Sent');
+    assert.equal((await ack(unknownId)).status, 200, 'a pre-claim transport failure can be dismissed safely');
+    assert.equal((await db.query('SELECT status FROM gmail_send_requests WHERE request_id=$1', [unknownId])).rows[0].status, 'acknowledged', 'a tombstone stops the original delayed request from sending later');
   } finally { await db.close(); }
 });

@@ -16,7 +16,7 @@ test('Saved Google Workspace routes retain their destinations after sidebar remo
   ]);
   for (const page of GOOGLE_WORKSPACE_PAGES) {
     assert.equal(externalWorkspacePage(page.id), page);
-    assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id);
+    assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id === 'gmail' ? 'email' : page.id);
     assert.equal(sidebarViewFor(page.id), 'google-workspace');
   }
 });

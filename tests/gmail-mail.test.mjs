@@ -207,6 +207,13 @@ test('reply target is read from own verified mailbox, prefers a sole Reply-To an
   assert.deepEqual(result, { email: 'reply@example.invalid', name: 'Reply Person', firstName: 'Reply', route: 'unknown', subject: 'Re: A useful message', threadId: 'def456', rfcMessageId: '<current@example.invalid>', references: '<first@example.invalid> <second@example.invalid>' });
 });
 
+test('empty subjects retain their reply semantics instead of inserting display placeholder text', async () => {
+  const { readReplyTarget } = await import('../lib/gmail-mail.mjs');
+  const headers = defaults.filter(value => value.name !== 'Subject');
+  const result = await readReplyTarget('abc123', { user, env, db: {}, access: options().access, fetchImpl: onlyMessage(message({ payload: { headers } })) });
+  assert.equal(result.subject, 'Re:');
+});
+
 test('replying to Sent uses the sole To recipient and does not add a second reply subject prefix', async () => {
   const { readReplyTarget } = await import('../lib/gmail-mail.mjs');
   const headers = [header('From', 'Editor <editor@example.invalid>'), header('To', '"Person, Reply" <REPLY@example.invalid>'), header('Reply-To', 'alias@example.invalid'), header('Subject', 'RE: Re: Existing subject')];

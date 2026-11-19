@@ -15,7 +15,7 @@ async function fixture(t, mode = '') {
   const posts = []; let changed = false;
   const deps = { env, getUser: async () => user, getDb: async () => db, templates: [template], now: () => 1795090000000,
     recipient: async () => ({ ...target, ...(changed ? { email: 'changed@example.test' } : {}) }),
-    replyTarget: async () => ({ email: 'sender@example.test', name: 'Sender', firstName: 'Sender', route: 'unknown', subject: 'Re: Appointment', threadId: 'abcdef', rfcMessageId: '<original@example.test>', references: '<previous@example.test> <original@example.test>' }),
+    replyTarget: async () => ({ email: 'sender@example.test', name: 'Sender', firstName: 'Sender', route: 'unknown', subject: 'Re: Appointment', threadId: 'abcdef', rfcMessageId: '<original@example.test>', references: '<previous@example.test>' }),
     access: async options => { assert.equal(options.requireRead, true); return { accessToken: 'synthetic', email: user.email }; },
     fetchImpl: async (url, init) => {
       assert.ok(url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/'));
@@ -81,4 +81,38 @@ test('simultaneous delivery requests share one durable send claim', async t => {
   assert.equal(s.posts.length, 1);
   assert.ok(results.some(result => result.data.sent === true));
   assert.ok(results.every(result => result.data.sent === true || result.data.code === 'SEND_UNCERTAIN'));
+});
+test('the composer prepares, previews and sends a reply through the real mailbox target resolver', async t => {
+  const s = await fixture(t), delivery = s.deps.fetchImpl;
+  delete s.deps.replyTarget;
+  s.deps.fetchImpl = async (url, init) => String(url).includes('format=metadata') ? Response.json({
+    id: 'abc123', threadId: 'abcdef', payload: { headers: [
+      { name: 'From', value: 'Sender <sender@example.test>' }, { name: 'To', value: user.email },
+      { name: 'Subject', value: 'A'.repeat(250) }, { name: 'Message-ID', value: '<original@example.test>' },
+    ] },
+  }) : delivery(url, init);
+  const prepared = await s.call({ action: 'prepare', replyMessageId: 'abc123' });
+  assert.equal(prepared.data.recipient.email, 'sender@example.test');
+  assert.equal(prepared.data.subject, 'Re: ' + 'A'.repeat(250));
+  const reply = { replyMessageId: 'abc123', subject: prepared.data.subject, templateId: '', fields: {}, body: 'Thank you.' };
+  const preview = await s.call({ action: 'preview', ...reply });
+  const result = await s.call({ action: 'send', ...reply, requestId, previewToken: preview.data.previewToken });
+  assert.equal(result.data.sent, true, result.data.error);
+  assert.equal(s.posts[0].threadId, 'abcdef');
+  assert.match(Buffer.from(s.posts[0].raw, 'base64url').toString(), /References: <original@example.test>/);
+});
+
+test('another UUID cannot deliver while an earlier send outcome is unresolved', async t => {
+  const s = await fixture(t, 'timeout'), payload = { action: 'send', ...input, requestId, previewToken: s.preview.previewToken };
+  assert.equal((await s.call(payload)).data.code, 'SEND_UNCERTAIN');
+  assert.equal((await s.call({ ...payload, requestId: '6e283fd5-8e92-4cbe-b97f-af16cc216659' })).data.code, 'SEND_UNCERTAIN');
+  assert.equal(s.posts.length, 1);
+});
+test('acknowledging a missing operation prevents its delayed original request from delivering', async t => {
+  const s = await fixture(t);
+  const { handleGmailConnection } = await import('../lib/gmail-connection.mjs');
+  const acknowledgment = new Request('https://crm.test/api/gmail', { method: 'POST', headers: { origin: env.BETTER_AUTH_URL, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'acknowledge-send', requestId }) });
+  assert.equal((await handleGmailConnection(acknowledgment, s.deps)).status, 200);
+  const late = await s.call({ action: 'send', ...input, requestId, previewToken: s.preview.previewToken });
+  assert.equal(late.data.code, 'REQUEST_ID_REUSED'); assert.equal(s.posts.length, 0);
 });

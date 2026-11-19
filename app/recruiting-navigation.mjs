@@ -106,6 +106,8 @@ export function sidebarViewFor(view) {
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
+  // Gmail now uses the native Email workspace, including saved sidebar links.
+  if (value === 'gmail') return { view: 'email' };
   if (externalWorkspacePage(value)) return { view: value };
   if (value === 'calls/shopper' || value === 'calls/shopper-dispositions' || value === 'calls/standard' || value === 'calls/standard-dispositions') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
