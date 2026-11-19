@@ -16,7 +16,7 @@ import RecruitEditor from "./recruit-editor";
 import RecruitCommunications from "./recruit-communications";
 import RecruitPathPage from "./recruit-path-page";
 import RecruitQuickActions, { AddActivityButtons } from "./recruit-quick-actions";
-import RingCentralPanel from "./ringcentral-panel";
+import RingCentralPanel, { NewCallButton } from "./ringcentral-panel";
 import RecruitEmailPanel from "./recruit-email-panel";
 import { RecruitEmailProvider, RecruitEmailSummary } from "./recruit-email";
 import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
@@ -542,7 +542,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
     // Meetings shows five rows a page (up to 25 by choice); Calls shows ten; Tasks shows five with numbered pages and Add Task.
     // Tasks and Meetings rows stay collapsed until the pointer is over them; the full-width Calendar shows every
     // meeting in its day.
-    const paging = id === "meetings" ? { pageSize: 5, pageSizes: [5, 10, 15, 20, 25], hoverRows: true, headerAction: meetingAction(id, "button") } : id === "calls" ? { pageSize: 10 } : id === "calendar" ? { headerAction: meetingAction(id, "button") }
+    const paging = id === "meetings" ? { pageSize: 5, pageSizes: [5, 10, 15, 20, 25], hoverRows: true, headerAction: meetingAction(id, "button") } : id === "calls" ? { pageSize: 10, headerAction: <NewCallButton /> } : id === "calendar" ? { headerAction: meetingAction(id, "button") }
       : id === "tasks" ? { pageSize: 5, pageNumbers: true, hoverRows: true, headerAction: canAddActivity ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : undefined } : {};
     return <HubSpotWorkspace compact tool={tool.id} label={tool.label} pageHref={pageHref} onUnauthorized={expiredSignIn} {...paging} {...panelReports[tool.id]} />;
   }
@@ -605,8 +605,10 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       </div></CollapsibleCards>
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
       <DashboardSection id="event-attendance" label="Event Attendance" className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading" data-section-heading><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2><div className="panel-heading-actions"><SectionToggle /></div></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section recruits={all} canAddActivity={canAddActivity} now={timestamp} />}</DashboardSection>
-      {/* Stacked, one per row: Tasks, Follow up, Meetings, Calendar, Email, Inbox, Help Desk, Tickets, Recruits, then Calls. */}
+      {/* Stacked, one per row: Recruits, Calls, Tasks, Follow up, Meetings, Calendar, Email, Inbox, Help Desk, then Tickets. */}
       <div className="today-overview">
+        <DashboardSection id="recruits" label="Recruits"><RecruitsPanel headerAction={<button type="button" className="summary-add" title="Add recruit" aria-label="Add recruit" disabled={demoMode || Boolean(editingId || stageSavingId || intakeBusy || intakeDirty || toolBusy || toolDirty)} onClick={() => { window.location.hash = "add-recruits"; }}><span aria-hidden="true">+</span><span className="sr-only">Add recruit</span></button>} onRefresh={demoMode ? undefined : () => { void refresh(); }} refreshing={loading} refreshDisabled={Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty || toolBusy || toolDirty)} showHubSpotLink={!demoMode} records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} blockedIds={stageBlockedIds} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></DashboardSection>
+        <DashboardSection id="calls" label="Calls">{recruitsPagePanel("calls")}</DashboardSection>
         <DashboardSection id="tasks" label="Tasks">{recruitsPagePanel("tasks")}</DashboardSection>
         <DashboardSection id="follow-up" label="Follow up"><FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} /></DashboardSection>
         <DashboardSection id="meetings" label="Meetings">{recruitsPagePanel("meetings")}</DashboardSection>
@@ -615,8 +617,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         <DashboardSection id="inbox" label="Inbox">{recruitsPagePanel("inbox")}</DashboardSection>
         <DashboardSection id="help-desk" label="Help Desk">{recruitsPagePanel("help-desk")}</DashboardSection>
         <DashboardSection id="tickets" label="Tickets">{recruitsPagePanel("tickets")}</DashboardSection>
-        <DashboardSection id="recruits" label="Recruits"><RecruitsPanel onRefresh={demoMode ? undefined : () => { void refresh(); }} refreshing={loading} refreshDisabled={Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty || toolBusy || toolDirty)} showHubSpotLink={!demoMode} records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} blockedIds={stageBlockedIds} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></DashboardSection>
-        <DashboardSection id="calls" label="Calls">{recruitsPagePanel("calls")}</DashboardSection>
       </div>
     </>;
     }

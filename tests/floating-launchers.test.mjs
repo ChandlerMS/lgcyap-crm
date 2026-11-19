@@ -17,7 +17,7 @@ async function fixture(run) {
   for (const [key, value] of Object.entries(values)) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
   let root;
   try {
-    await build({ stdin: { contents: 'export { default as Panel, useRingCentral } from "./app/ringcentral-panel"; export { default as Bot } from "./app/legacy-bot-launcher"; export { default as Launcher } from "./app/floating-launcher";', resolveDir: process.cwd(), loader: 'tsx' }, outfile: `${dir}/components.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*', 'react-dom', 'react-dom/*'], logLevel: 'silent' });
+    await build({ stdin: { contents: 'export { default as Panel, useRingCentral, NewCallButton } from "./app/ringcentral-panel"; export { default as Bot } from "./app/legacy-bot-launcher"; export { default as Launcher } from "./app/floating-launcher";', resolveDir: process.cwd(), loader: 'tsx' }, outfile: `${dir}/components.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*', 'react-dom', 'react-dom/*'], logLevel: 'silent' });
     const components = createRequire(import.meta.url)(`${process.cwd()}/${dir}/components.cjs`);
     const handlers = new Map();
     let opens = 0, closes = 0;
@@ -25,7 +25,7 @@ async function fixture(run) {
     root = createRoot(document.getElementById('app'));
     function CallAction() { const rc = components.useRingCentral(); return h('button', { id: 'call-recruit', onClick: () => rc.open({ action: 'call', phone: '5551234567', name: 'Test Recruit' }) }, 'Call recruit'); }
     function FutureLauncher() { const [open, setOpen] = useState(false); return h(components.Launcher, { id: 'future-launcher', expanded: open, onExpand: () => setOpen(true), onCollapse: () => setOpen(false) }, 'Future tool'); }
-    await act(async () => root.render(h(components.Panel, { clientId: 'test-client', isDemo: false }, h(components.Bot), h(CallAction), h(FutureLauncher))));
+    await act(async () => root.render(h(components.Panel, { clientId: 'test-client', isDemo: false }, h(components.Bot), h(components.NewCallButton), h(CallAction), h(FutureLauncher))));
     const click = async selector => { const button = document.querySelector(selector); assert.ok(button, selector); await act(async () => button.click()); return button; };
     await run({ click, opens: () => opens, closes: () => closes });
   } finally {
@@ -127,4 +127,14 @@ test('Support sits after Legacy Bot and preserves its ticket iframe when collaps
   await click('.support-launcher');
   await click('[aria-label="Close Support"]');
   assert.equal(panel.hidden, true);
+}));
+
+test('dashboard call plus opens RingCentral without preparing or placing a call', () => fixture(async ({ click }) => {
+  const plus = document.querySelector('[aria-label="New call"]');
+  assert.ok(plus.classList.contains('summary-add'));
+  assert.equal(plus.disabled, false);
+  await click('[aria-label="New call"]');
+  assert.equal(document.querySelector('#ringcentral-panel').hidden, false);
+  assert.ok(document.querySelector('#ringcentral-panel iframe'));
+  assert.equal(document.querySelector('.rc-recipient'), null);
 }));

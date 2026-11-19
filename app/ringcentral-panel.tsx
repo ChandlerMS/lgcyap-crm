@@ -6,9 +6,14 @@ import { communicationCommand, RINGCENTRAL_ORIGIN, ringCentralStatus, ringCentra
 import FloatingLauncher, { FloatingActions } from "./floating-launcher";
 
 type Intent = { action: "call" | "text"; phone: string; name: string };
-type Communications = { configured: boolean; open: (intent: Intent) => void };
+type Communications = { configured: boolean; open: (intent?: Intent) => void };
 const Context = createContext<Communications>({ configured: false, open: () => {} });
 export const useRingCentral = () => useContext(Context);
+
+export function NewCallButton() {
+  const phone = useRingCentral();
+  return <button type="button" className="summary-add" title="New call" aria-label="New call" disabled={!phone.configured} onClick={() => phone.open()}><span aria-hidden="true">+</span><span className="sr-only">New call</span></button>;
+}
 
 export default function RingCentralPanel({ clientId, isDemo, children }: { clientId: string; isDemo: boolean; children: ReactNode }) {
   const src = ringCentralUrl(clientId);

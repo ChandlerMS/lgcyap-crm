@@ -73,7 +73,7 @@ test('the dashboard runs header, pipeline, cards, Event Attendance, then stacked
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
   const today = workspace.slice(workspace.indexOf('if (route.view === "today")'));
   const order = ['<RecruitingPeriodControls', '<RecruitPipeline', '<RecruitTaskChips', '<RecruitEmailSummary', '<EventAttendanceBoard section',
-    '<DashboardSection id="tasks"', '<DashboardSection id="follow-up"', '<DashboardSection id="meetings"', '<DashboardSection id="calendar"', '<DashboardSection id="recruits"', '<DashboardSection id="calls"'];
+    '<DashboardSection id="recruits"', '<DashboardSection id="calls"', '<DashboardSection id="tasks"', '<DashboardSection id="follow-up"', '<DashboardSection id="meetings"', '<DashboardSection id="calendar"'];
   const at = order.map(marker => today.indexOf(marker));
   assert.ok(at.every(index => index >= 0), `every dashboard part is present: ${order.filter((_, index) => at[index] < 0).join(', ')}`);
   assert.deepEqual([...at].sort((a, b) => a - b), at, 'the dashboard parts run in the requested order');
@@ -215,11 +215,11 @@ test('Training Classes is a Recruits flyout destination with its own route', asy
   assert.equal(sidebarViewFor('training-classes'), 'recruits');
 });
 
-test('dashboard communication sections follow Calendar in the requested order before Recruits and Calls', async () => {
+test('dashboard places Recruits and Calls immediately after Event Attendance before Tasks', async () => {
   const { DASHBOARD_COMMUNICATION_TOOLS } = await import('../app/recruiting-navigation.mjs');
   assert.deepEqual(DASHBOARD_COMMUNICATION_TOOLS.map(tool => tool.id), ['inbox', 'help-desk', 'tickets']);
   const workspace = readFileSync(new URL('../app/recruiting-workspace.tsx', import.meta.url), 'utf8');
-  const order = ['calendar', 'email', 'inbox', 'help-desk', 'tickets', 'recruits', 'calls'];
+  const order = ['event-attendance', 'recruits', 'calls', 'tasks', 'follow-up', 'meetings', 'calendar', 'email', 'inbox', 'help-desk', 'tickets'];
   const positions = order.map(id => workspace.indexOf(`<DashboardSection id="${id}"`));
   assert.ok(positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1])));
 });
