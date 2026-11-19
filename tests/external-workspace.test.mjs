@@ -9,6 +9,7 @@ test('Admin and Agents keep each requested destination and distinguish RingEX fr
     ['RingEX', 'https://service.ringcentral.com/application/adminHome'],
     ['RingCX', 'https://ringcx.ringcentral.com/voice/admin/home'],
     ['HubSpot', 'https://app.hubspot.com/settings/50894788/users/active_users'],
+    ['Google Admin', 'https://admin.google.com/u/1/ac/home'],
   ]);
   assert.deepEqual(AGENT_PORTAL_PAGES.map(page => [page.label, page.url]), [
     ['PolicyTek Agents', 'https://app.policytek.com/agents'],

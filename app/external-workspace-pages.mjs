@@ -4,6 +4,7 @@ export const ADMIN_PAGES = Object.freeze([
   { id: 'ringcentral-admin', label: 'RingEX', url: 'https://service.ringcentral.com/application/adminHome', detail: 'service.ringcentral.com', group: 'admin' },
   { id: 'ringcx-admin', label: 'RingCX', url: 'https://ringcx.ringcentral.com/voice/admin/home', detail: 'ringcx.ringcentral.com', group: 'admin' },
   { id: 'hubspot-admin', label: 'HubSpot', url: 'https://app.hubspot.com/settings/50894788/users/active_users', detail: 'HubSpot users', group: 'admin' },
+  { id: 'google-admin', label: 'Google Admin', url: 'https://admin.google.com/u/1/ac/home', detail: 'Google Admin Console', group: 'admin' },
 ].map(page => Object.freeze(page)));
 export const AGENT_PORTAL_PAGES = Object.freeze([
   { id: 'policytek-agents', label: 'PolicyTek Agents', url: 'https://app.policytek.com/agents', detail: 'app.policytek.com', group: 'agents' },

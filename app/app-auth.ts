@@ -1,4 +1,6 @@
 import "server-only";
+import { currentAccessPolicy } from "@/lib/admin-access.mjs";
+import { CRM_AUTHORIZED } from "@/lib/admin-policy.mjs";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionCookie } from "better-auth/cookies";
@@ -22,7 +24,9 @@ export async function getAppUser(): Promise<AppUser | null> {
   if (!auth) return null;
   try {
     const session = await auth.api.getSession({ headers: requestHeaders });
-    return sessionUser(session, process.env.RECRUITING_EDITOR_EMAILS, Date.now(), process.env.GOOGLE_PERSONAL_EMAILS, process.env.GOOGLE_EXTERNAL_EMAILS, process.env.GOOGLE_WORKSPACE_DOMAIN);
+    const policy = await currentAccessPolicy();
+    const user = sessionUser(session, policy.RECRUITING_EDITOR_EMAILS, Date.now(), policy.GOOGLE_PERSONAL_EMAILS, policy.GOOGLE_EXTERNAL_EMAILS, policy.GOOGLE_WORKSPACE_DOMAIN);
+    return user ? Object.assign(user, { [CRM_AUTHORIZED]: true }) : null;
   } catch { throw new AuthUnavailableError(); }
 }
 
