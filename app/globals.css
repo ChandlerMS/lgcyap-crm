@@ -1123,8 +1123,8 @@ main.content.sales-calls-content { padding-top: 16px; }
   }
 }
 
-/* Lead Payments needs room for the full payment page rather than a dashboard-height viewport. */
-.shopper-embed.lead-payments-embed { height: 2400px; min-height: 1200px; resize: vertical; }
+/* Full website embeds need more vertical room than a dashboard-height viewport. */
+.shopper-embed.lead-payments-embed, .shopper-embed.knowledge-center-embed { height: 2400px; min-height: 1200px; resize: vertical; }
 
 /* Keep the full Inbox composer and message history comfortably scrollable. */
 .inbox-conversation-page { min-height: 620px; }
