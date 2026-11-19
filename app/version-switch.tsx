@@ -9,6 +9,6 @@ export default function VersionSwitch({ version }: { version: 1 | 2 }) {
       <a href="/" aria-current={version === 1 ? "page" : undefined}>Version 1</a>
       <a href="/v2" aria-current={version === 2 ? "page" : undefined}>Version 2</a>
     </div>
-    {version === 1 ? <div id="crm-title-controls" className={styles.controlHost} /> : <span className={styles.note}>LGCY Onboard · Separate workspace</span>}
+    {version === 1 ? <div id="crm-title-controls" className={styles.controlHost} /> : <a className={styles.github} href="https://github.com/LegacyAgencyPartners/LGCY-Onboard/tree/main/version2" target="_blank" rel="noopener noreferrer" aria-label="Open Version 2 source on GitHub">GitHub<span> · LGCY-Onboard</span></a>}
   </nav></div>;
 }

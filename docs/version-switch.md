@@ -1,5 +1,27 @@
 # CRM version switch
 
+## Version 2 GitHub source
+
+The Version 2 title bar opens `LegacyAgencyPartners/LGCY-Onboard/tree/main/version2`.
+That folder owns the Vercel/PostgreSQL source used by this host. The repository's
+original Cloudflare app remains in `onboard/`; it has a different runtime and database.
+The `version2/` folder starts with the existing deployed Vercel port, preserving its
+sign-in, database schema, and application behavior. This does not migrate the Cloudflare
+app's newer features or records into Version 2.
+
+- `npm run onboard:pull` imports the current GitHub `version2/` source. It refuses to overwrite local edits.
+- Edit `vendor/lgcy-onboard/` and stage new files. `npm run onboard:push -- "Describe the change"`
+  publishes that source to LGCY-Onboard main, refusing to overwrite a newer upstream commit.
+- Commit the vendor changes and `onboard-source.json` together in this host. The lock records the
+  exact source commit and SHA-256 of every file; builds fail if the local source differs.
+- `npm run onboard:check` verifies that snapshot without network access or build credentials.
+- Push host main using the existing Git deployment to release the pinned source. Repository updates
+  alone do not automatically deploy this host; import and validate them first.
+
+Synchronization uses the developer's existing Git authorization. No access token is embedded
+in code or sent to the browser. Saved recruiting records remain in PostgreSQL and are not source code.
+Shared sign-in and hosting adapters remain in `ChandlerMS/lgcyap-crm`.
+
 - Version 1 (`/`) is the existing HubSpot CRM. Its workspace component and APIs are unchanged.
 - Version 2 (`/v2`) frames the uploaded LGCY Onboard app at `/v2/app`. The tabs are outside the document, so the existing CRM CSS cannot affect the supplied layout.
 - `vendor/lgcy-onboard/` is the complete, byte-for-byte source from `lgcy-onboard-vercel.zip` (45 files). Do not port or redesign its UI.

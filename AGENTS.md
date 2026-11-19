@@ -10,6 +10,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Production deployments
 
+- Version 2 source is `LegacyAgencyPartners/LGCY-Onboard`, `version2/`. Run `npm run onboard:pull` before source work. Edit `vendor/lgcy-onboard/`, stage any new files, then run `npm run onboard:push -- "Describe the change"` to publish source and update its pinned snapshot. Commit the vendor files and `onboard-source.json` here together. Builds reject unpublished source edits. Do not replace this host's origin or copy V1 credentials/data to the source repository. Shared hosting adapters and version title controls remain in this host repository.
+
 - Production is `main` in `ChandlerMS/lgcyap-crm` on GitHub, deployed by the existing Vercel Git integration.
 - Before publishing, fetch `origin/main` and incorporate its latest changes without overwriting other work. Push or merge the complete reviewed change to `main`; wait for that Git deployment and verify its commit against GitHub.
 - Do not use local `vercel --prod`, `vercel deploy --prod`, prebuilt production uploads, arbitrary alias assignments, or promotion of another branch to publish this project. Local checkouts are for development and preview deployments.

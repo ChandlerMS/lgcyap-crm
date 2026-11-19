@@ -23,7 +23,10 @@
     "db:auth:check": "node --env-file-if-exists=.env.local scripts/auth-migration.mjs --check",
     "db:auth:migrate": "node --env-file-if-exists=.env.local scripts/auth-migration.mjs --apply",
     "svp-calls:import": "node scripts/svp-calls-import.mjs",
-    "lead-data:import": "node scripts/lead-data-import.mjs"
+    "lead-data:import": "node scripts/lead-data-import.mjs",
+    "onboard:check": "node scripts/onboard-source.mjs check",
+    "onboard:pull": "node scripts/onboard-source.mjs pull",
+    "onboard:push": "node scripts/onboard-source.mjs push"
   },
   "dependencies": {
     "@next/env": "16.4.6",

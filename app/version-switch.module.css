@@ -10,6 +10,10 @@
 .tabs a[aria-current="page"] { color: #f1d27a; background: #201c12; border-bottom-color: #e3bf5e; }
 .tabs a:focus-visible { outline: 2px solid #f1d27a; outline-offset: -5px; }
 .note { margin-left: auto; color: #b8b09c; font-size: 12px; }
+.github { margin-left: auto; color: #f1d27a; font-size: 12px; text-decoration: none; white-space: nowrap; padding: 8px; border: 1px solid #66552c; border-radius: 6px; }
+.github:hover { background: #242016; }
+.github:focus-visible { outline: 2px solid #f1d27a; outline-offset: 3px; }
+@media (max-width: 720px) { .github span { display: none; } .bar:has(.github) { gap: 8px; } .bar:has(.github) .brand { font-size: 10px; letter-spacing: .04em; } .bar:has(.github) .mark { height: 24px; margin-right: 4px; } .bar:has(.github) .tabs a { min-width: 0; padding: 0 7px; font-size: 12px; } }
 :global(html):has(.versionOne) { min-width: 0; }
 .versionOne { width: 100%; min-width: 0; }
 .versionOne :global(.content) { width: 100%; max-width: none; }
