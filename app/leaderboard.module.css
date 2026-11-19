@@ -139,3 +139,23 @@
 .shopperPagination label { display: flex; align-items: center; gap: 8px; }
 .shopperPagination select { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: #141414; color: var(--text); font: inherit; }
 .shopperPagination select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.comparisonSources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.comparisonSource { min-width: 0; }
+.comparisonSource .cardHeading { margin-bottom: 16px; }
+.comparisonSource .cardHeading h2 { font-size: 18px; }
+.comparisonStatus { font-size: 12px; color: #bfb08a; }
+.comparisonSourceNotes { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.comparisonSourceNotes p { margin: 0; }
+.comparisonTableWrap { max-width: 100%; overflow-x: auto; margin-top: 18px; }
+.comparisonTable { min-width: 710px; table-layout: fixed; }
+.comparisonTable th:first-child { width: 22%; }
+.comparisonTable thead tr:first-child th:not(:first-child) { text-align: center; white-space: normal; color: #d8c99c; }
+.comparisonTable th:nth-child(2), .comparisonTable td:nth-child(2), .comparisonTable th:nth-child(4), .comparisonTable td:nth-child(4) { border-left: 1px solid var(--line); }
+.comparisonTable tbody th { overflow-wrap: anywhere; }
+.comparisonValue { position: relative; vertical-align: top; }
+.comparisonBarTrack { display: block; height: 9px; margin-top: 9px; background: #242119; border-radius: 3px; }
+.comparisonBarRight { background: linear-gradient(100deg, #77726b, #c1b9a5); }
+.comparisonLegend { margin-top: 18px; text-align: left; }
+@media (max-width: 760px) { .comparisonSources { grid-template-columns: minmax(0, 1fr); } .comparisonTable { min-width: 650px; } }
+@media (forced-colors: active) { .comparisonBarTrack { border: 1px solid CanvasText; } .comparisonBarTrack .bar { background: Highlight; } }

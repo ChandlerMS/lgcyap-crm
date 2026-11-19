@@ -62,7 +62,7 @@ test('Shopper and Standard vs Preferred show Sales before Calls with their own s
     await act(async () => { await wait(); });
     assert.equal(document.querySelector('h1').textContent, 'WhatsApp Sales');
     const views = document.querySelector('[aria-label="WhatsApp Sales views"]');
-    assert.deepEqual([...views.querySelectorAll('button')].map(button => button.textContent), ['All', 'Standard vs Preferred']);
+    assert.deepEqual([...views.querySelectorAll('button')].map(button => button.textContent), ['All', 'Standard vs Preferred', 'vs HubSpot', 'vs PolicyTek', 'vs All']);
     const ranks = document.querySelector('[aria-label="Rank by"]');
     assert.deepEqual([...ranks.querySelectorAll('button')].map(button => button.textContent), ['Policies sold', 'Annual premium']);
     assert.deepEqual([...document.querySelector('[aria-label="Leaderboard period"]').querySelectorAll('button')].map(button => button.textContent), ['Daily', 'Weekly', 'Monthly', 'Custom']);
