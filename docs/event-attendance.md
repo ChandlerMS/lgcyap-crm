@@ -25,4 +25,32 @@ Notes are classified by their fixed opening heading. The response holds counts o
 
 ## Response
 
-200: `{ fetchedAt, since, timeZone, partial, people: { signedIn, applied, hired }, signIns, applications: { total, fromAttendees, otherTickets, noTicket }, stages: [{ stageId, label, count }], offices: [{ key, label }], days: [{ day, offices, signIns, applications }] }`. Errors use the recruiting workspace's error shape. All responses are private and not cached.
+200: `{ fetchedAt, since, timeZone, partial, people: { signedIn, applied, hired }, signIns, applications: { total, fromAttendees, otherTickets, noTicket }, stages: [{ stageId, label, count }], offices: [{ key, label }], days: [{ day, offices, signIns, applications }], canImport }`. `canImport` only decides whether the Import button shows; the import route repeats every check. Errors use the recruiting workspace's error shape. All responses are private and not cached.
+
+## Open in HubSpot
+
+Opens HubSpot's ticket list filtered to the Recruiting pipeline and `source_type = FORM`: the tickets the sign-in page, the application page and imported lists create. HubSpot keeps its own pipeline picker per user, so if the list opens on another pipeline, choose Recruiting.
+
+## Export
+
+Export CSV downloads the attendance table as shown (one row per Eastern event day, a column per office, sign-ins and online applications) with a Total row. Counts only. Cells that start with `=`, `+`, `-` or `@` are prefixed so spreadsheets do not run them.
+
+## Import attendees
+
+Shown to accounts that can add recruits (the same editor list, write switch, intake switch and production-only rule as Add Recruits). The browser reads a CSV or `.xlsx` sign-in list with the Add Recruits file checks, using these headers:
+
+- First Name and Last Name, or a single Name column split at its first space.
+- Phone Number.
+- Email (optional).
+- Office: Orlando, Miami or Tampa.
+- Event Date: `11/17/2026`, `2026-11-17` or an Excel date, within the last 12 months and not in the future.
+
+At most 200 rows per file. Rows with problems, and the same person listed twice for one day, are shown and not sent.
+
+Each ready row goes to `POST /api/event-attendance/import` as `{ requestId, firstName, lastName, phone, email, office, eventDate }`, one at a time:
+
+1. `createRecruitIntake` (the Add Recruits intake and its Postgres ledger) finds the contact by phone and email or creates it. It then finds the person's Recruiting ticket or creates one at Hiring Event, path Referrals, with the office and `source_type = FORM`. A contact whose name, phone or email differs is a conflict and is left for review. Nothing existing is changed.
+2. The ticket's notes are read through its associations. If it already has a sign-in note on that Eastern day, the row reports "already signed in" and nothing is written.
+3. Otherwise a note headed "Hiring event sign-in (imported from a sign-in list)" is added to the ticket and contact. Its time is noon Eastern on the event day, and it records the office and who imported it.
+
+Results: `201 { status: "added", ticketCreated, contact, recruit, noteId }`, or `200 { status: "already_recorded", ... }`. If the note's outcome is unconfirmed, the row can be imported again: the same request ID replays the intake, and the same-day check stops a second note.
