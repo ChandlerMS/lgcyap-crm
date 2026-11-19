@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
       beforeFiles: [
         { source: "/", has: [{ type: "host" as const, value: "queue.lgcyap.com" }], destination: "/queue" },
         { source: "/", has: [{ type: "host" as const, value: "leaderboard.lgcyap.com" }], destination: "/leaderboard-tv" },
+        // One board per screen: leaderboard.lgcyap.com/standard and /shopper.
+        ...["standard", "shopper"].map(board => ({ source: `/${board}`, has: [{ type: "host" as const, value: "leaderboard.lgcyap.com" }], destination: `/leaderboard-tv/${board}` })),
       ],
       afterFiles: [{ source: "/api/google/callback", destination: "/api/v2/google/callback" }],
       fallback: [],
@@ -43,7 +45,7 @@ const nextConfig: NextConfig = {
       ...["/", "/queue"].map(source => ({ source, has: [{ type: "host" as const, value: "queue.lgcyap.com" }], headers: [
         { key: "Content-Security-Policy", value: "frame-ancestors 'self' https://crm.lgcyap.com; object-src 'none'; base-uri 'self'; form-action 'self'" },
       ] })),
-      ...["/", "/queue", "/ringcx", "/event-attendance", "/v2/:path*", "/sign-in", "/sign-out", "/queue-access", "/leaderboard-access", "/leaderboard-tv", "/api/:path*"].map(source => ({ source, headers: privatePage })),
+      ...["/", "/queue", "/ringcx", "/event-attendance", "/v2/:path*", "/sign-in", "/sign-out", "/queue-access", "/leaderboard-access", "/leaderboard-tv", "/leaderboard-tv/:board", "/standard", "/shopper", "/api/:path*"].map(source => ({ source, headers: privatePage })),
     ];
   },
 };

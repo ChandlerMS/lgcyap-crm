@@ -19,8 +19,8 @@ const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD
 const PERCENT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 });
 const format = (value: number | null | undefined, kind: Stat['kind']) => typeof value !== 'number' || !Number.isFinite(value) ? '—' : kind === 'money' ? MONEY.format(value) : kind === 'percent' ? PERCENT.format(value) : NUMBER.format(value);
 
-export default function LeaderboardTv({ search }: { search: string }) {
-  const [config] = useState(() => tvConfig(search));
+export default function LeaderboardTv({ search, board = null }: { search: string; board?: string | null }) {
+  const [config] = useState(() => tvConfig(search, board));
   const slides = config.slides as Slide[];
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
