@@ -12,6 +12,7 @@ test('Admin and Agents keep each requested destination and distinguish RingEX fr
     ['Google Admin', 'https://admin.google.com/u/1/ac/home'],
   ]);
   assert.deepEqual(AGENT_PORTAL_PAGES.map(page => [page.label, page.url]), [
+    ['Lead Payments', 'https://trainerleadpayment.lgcyagent.com/'],
     ['PolicyTek Agents', 'https://app.policytek.com/agents'],
     ['PolicyTek Agent Call Plans', 'https://app.policytek.com/lead-distribution/member/agent-plans'],
   ]);

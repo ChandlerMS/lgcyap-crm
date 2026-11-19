@@ -10,6 +10,7 @@ export const ADMIN_PAGES = Object.freeze([
   { id: 'google-admin', label: 'Google Admin', url: 'https://admin.google.com/u/1/ac/home', detail: 'Google Admin Console', group: 'admin' },
 ].map(page => Object.freeze(page)));
 export const AGENT_PORTAL_PAGES = Object.freeze([
+  { id: 'lead-payments', label: 'Lead Payments', url: 'https://trainerleadpayment.lgcyagent.com/', detail: 'trainerleadpayment.lgcyagent.com', group: 'agents' },
   { id: 'policytek-agents', label: 'PolicyTek Agents', url: 'https://app.policytek.com/agents', detail: 'app.policytek.com', group: 'agents' },
   { id: 'policytek-agent-call-plans', label: 'PolicyTek Agent Call Plans', url: 'https://app.policytek.com/lead-distribution/member/agent-plans', detail: 'Agent call plans', group: 'agents' },
 ].map(page => Object.freeze(page)));
