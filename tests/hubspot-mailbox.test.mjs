@@ -67,3 +67,17 @@ test('filtering private rows does not turn a repeated nonempty provider page int
   assert.equal(second.complete, false);
   assert.equal(second.paginationWarning.code, 'CURSOR_REPEATED');
 });
+test('authorized public conversation status updates reach HubSpot rather than returning cached metadata', async () => {
+  const { privateMailboxFetch } = await import('../lib/hubspot-mailbox.mjs');
+  const original = provider(); let patches = 0;
+  const fetchImpl = async (url, init = {}) => {
+    if (new URL(url).pathname.endsWith('/threads/22') && init.method === 'PATCH') { patches++; return Response.json({ ...publicThread, status: 'CLOSED' }); }
+    return original.fetchImpl(url, init);
+  };
+  const guarded = privateMailboxFetch({ viewerEmail: 'other@example.invalid', accessToken: 'synthetic', fetchImpl });
+  const response = await guarded('https://api.hubapi.com/conversations/v3/conversations/threads/22', { method: 'PATCH', body: JSON.stringify({ status: 'CLOSED' }) });
+  assert.equal((await response.json()).status, 'CLOSED');
+  assert.equal(patches, 1);
+  assert.equal((await guarded('https://api.hubapi.com/conversations/v3/conversations/threads/11', { method: 'PATCH', body: '{}' })).status, 403);
+  assert.equal(patches, 1);
+});

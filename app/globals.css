@@ -1125,3 +1125,11 @@ main.content.sales-calls-content { padding-top: 16px; }
 
 /* Lead Payments needs room for the full payment page rather than a dashboard-height viewport. */
 .shopper-embed.lead-payments-embed { height: 2400px; min-height: 1200px; resize: vertical; }
+
+/* Keep the full Inbox composer and message history comfortably scrollable. */
+.inbox-conversation-page { min-height: 620px; }
+.inbox-conversation-page > section { min-height: 600px; }
+.inbox-conversation-page [aria-label="Message history"] { flex: 0 1 auto; max-height: 55vh; min-height: 160px; }
+
+.inbox-thread-controls { flex-shrink: 0; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+.inbox-thread-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

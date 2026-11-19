@@ -45,9 +45,10 @@ test('Email composes through the existing provider and compact Inbox retains ref
     assert.equal(document.querySelector('h1'), null); assert.equal(document.querySelector('h2 a').getAttribute('href'), '#inbox');
     assert.ok(document.querySelector('[data-section-heading]'));
     assert.ok(button('Collapse Inbox'));
-    assert.ok(button('New conversation').classList.contains('summary-add'));
-    await act(async () => button('New conversation').click());
-    assert.equal(document.querySelector('dialog').open, true);
+    const newConversation = document.querySelector('a[aria-label="New message in HubSpot"]');
+    assert.ok(newConversation.classList.contains('summary-add'));
+    assert.equal(newConversation.href, 'https://app.hubspot.com/live-messages/50894788');
+    assert.equal(newConversation.target, '_blank');
     const before = requests.length;
     await act(async () => button('Refresh').click()); assert.ok(requests.length > before);
     await act(async () => button('Collapse Inbox').click());

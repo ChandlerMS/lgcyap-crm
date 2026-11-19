@@ -1,18 +1,20 @@
 "use client";
 import { startTransition, useEffect, useRef, useState } from "react";
-import { useInboxPages } from "./inbox-workspace";
+import { useInboxPages } from "./inbox-pages";
+import InboxThreadControls from "./inbox-thread-controls";
 import styles from "./inbox-conversation.module.css";
 
 export type InboxDraft = { text: string; blocked?: string; pending?: boolean };
 type ReplyContext = { contextToken: string; threadId: string; senderLabel: string; recipientLabel: string; channelLabel: string };
 const formatDate = (value?: string) => value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Date not recorded";
 
-export default function InboxConversation({ threadId, draft, onDraftChange, onBack, onUnauthorized, onSent }: { threadId: string; draft: InboxDraft; onDraftChange: (draft: InboxDraft) => void; onBack: () => void; onUnauthorized: () => void; onSent: () => void }) {
-  const messages = useInboxPages({ archive: "all", threadId }, onUnauthorized);
+export default function InboxConversation({ threadId, draft, onDraftChange, onBack, onUnauthorized, onSent, endpoint = "/api/hubspot-tools/inbox" }: { endpoint?: string; threadId: string; draft: InboxDraft; onDraftChange: (draft: InboxDraft) => void; onBack: () => void; onUnauthorized: () => void; onSent: () => void }) {
+  const messages = useInboxPages({ archive: "all", threadId }, onUnauthorized, endpoint);
   const [context, setContext] = useState<ReplyContext | null>(null);
   const [contextError, setContextError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [sending, setSending] = useState(false);
+  const [threadUpdating, setThreadUpdating] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const sendLock = useRef(false);
@@ -38,7 +40,7 @@ export default function InboxConversation({ threadId, draft, onDraftChange, onBa
     return () => { active = false; controller.abort(); window.clearTimeout(timer); };
   }, [threadId, attempt]);
   const send = async () => {
-    if (sendLock.current || sending || draft.pending || draft.blocked || !draft.text.trim() || !context) return;
+    if (sendLock.current || sending || threadUpdating || draft.pending || draft.blocked || !draft.text.trim() || !context) return;
     sendLock.current = true; onDraftChange({ text: draft.text, pending: true }); setSending(true); setError(""); setNotice("");
     // One explicit Send click is one request. A lost response is never retried automatically.
     try {
@@ -61,6 +63,7 @@ export default function InboxConversation({ threadId, draft, onDraftChange, onBa
   return <section className={styles.conversation} aria-label={`Conversation ${threadId}`}>
     <div className={styles.heading}><button type="button" className="text-link" disabled={sending || draft.pending} onClick={onBack}>← Conversations</button></div>
     <h3>Conversation {threadId}</h3>
+    <InboxThreadControls threadId={threadId} refreshKey={attempt} disabled={sending || Boolean(draft.pending)} onUnauthorized={onUnauthorized} onBusyChange={setThreadUpdating} onUpdated={() => { setAttempt(value => value + 1); void messages.load(true); onSent(); }} />
     <div className={styles.messages} role="region" aria-label="Message history" tabIndex={0}>
       {messages.busy && <p role="status">Loading messages…</p>}
       {messages.error && <p role="alert">{messages.error}</p>}
@@ -74,7 +77,7 @@ export default function InboxConversation({ threadId, draft, onDraftChange, onBa
       <label htmlFor={`inbox-reply-${threadId}`}>Your reply</label><textarea id={`inbox-reply-${threadId}`} value={draft.text} onChange={event => onDraftChange({ text: event.target.value })} maxLength={10000} rows={4} disabled={sending || draft.pending || Boolean(draft.blocked)} placeholder="Write a reply to this conversation…" />
       {(error || draft.blocked) && <p className={styles.error} role="alert">{draft.blocked || error}</p>}
       {notice && <p role="status">{notice}</p>}
-      <div className={styles.actions}><button type="submit" className="btn btn-primary" disabled={sending || draft.pending || Boolean(draft.blocked) || !context || !draft.text.trim()}>{sending || draft.pending ? "Sending…" : "Send reply"}</button><a className="text-link" href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">Open in HubSpot ↗</a></div>
+      <div className={styles.actions}><button type="submit" className="btn btn-primary" disabled={sending || threadUpdating || draft.pending || Boolean(draft.blocked) || !context || !draft.text.trim()}>{sending || draft.pending ? "Sending…" : "Send reply"}</button><a className="text-link" href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">Open in HubSpot ↗</a></div>
     </form>
   </section>;
 }
