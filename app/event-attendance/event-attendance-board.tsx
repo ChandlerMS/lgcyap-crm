@@ -193,22 +193,24 @@ export default function EventAttendanceBoard({ section = false, recruits, canAdd
   const byDate = (rows: Attendee[]) => dateActive ? rows.filter(person => (visitsByTicket.get(person.ticketId)?.map(visit => visit.day) ?? [person.firstDay, person.lastDay]).some(onDate)) : rows;
   const dateNote = !dateActive ? '' : signedOn !== 'range' ? ` on ${dayLabel(signedOn)}` : from && to ? ` from ${dayLabel(from)} to ${dayLabel(to)}` : from ? ` on or after ${dayLabel(from)}` : ` on or before ${dayLabel(to)}`;
   const clearDate = () => { setSignedOn(''); setFrom(''); setTo(''); };
-  const dateFilter = <div className={styles.dateFilter} role="group" aria-label="Filter by sign-in date">
+  const dateControls = <>
     <label><span>Signed in</span><select value={signedOn} onChange={event => setSignedOn(event.target.value)}><option value="">Any date</option>{signInDays.map(day => <option key={day} value={day}>{dayLabel(day)}</option>)}<option value="range">Date range…</option></select></label>
     {signedOn === 'range' && <>
       <label><span>From</span><input type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
       <label><span>To</span><input type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
     </>}
     {dateActive && <button type="button" className={styles.linkButton} onClick={clearDate}>Clear date</button>}
-  </div>;
+  </>;
+  const dateFilter = <div className={styles.dateFilter} role="group" aria-label="Filter by sign-in date">{dateControls}</div>;
   const signedInFilters = { office: signedInOffice, name: signedInName, review: signedInReview, sort: signedInSort };
-  const signedInControls = <>{dateFilter}<div className={styles.dateFilter} role="group" aria-label="Filter and sort signed-in recruits">
+  const signedInControls = <div className={styles.dateFilter} role="group" aria-label="Filter and sort signed-in recruits">
+    {dateControls}
     <label><span>Office</span><select value={signedInOffice} onChange={event => setSignedInOffice(event.target.value)}><option value="all">All offices</option>{Array.from(new Set(attendees.map(person => person.office))).sort().map(office => <option key={office} value={office}>{officeLabel(office)}</option>)}</select></label>
     <label><span>Name</span><input type="search" maxLength={200} placeholder="Search names" value={signedInName} onChange={event => setSignedInName(event.target.value)} /></label>
     <label><span>Approval status</span><select value={signedInReview} onChange={event => setSignedInReview(event.target.value)}><option value="all">All statuses</option><option value="approved">Approved</option><option value="denied">Denied</option><option value="pending">Not reviewed</option></select></label>
     <label><span>Sort by</span><select value={signedInSort} onChange={event => setSignedInSort(event.target.value)}><option value="original">Default order</option><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="office">Office</option></select></label>
     <button type="button" className={styles.linkButton} onClick={() => { clearDate(); setSignedInOffice('all'); setSignedInName(''); setSignedInReview('all'); setSignedInSort('original'); }}>Clear filters</button>
-  </div></>;
+  </div>;
   const dayRows = pageWindow(data?.days.length ?? 0, dayPage, DAYS_PER_PAGE);
   const statusText = error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading';
   const hint = <>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</>;
