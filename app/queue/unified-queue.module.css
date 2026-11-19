@@ -9,15 +9,5 @@
 .actions a:focus-visible, .actions button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
 .group { min-width: 0; border: 1px solid #6d633e; border-radius: 8px; overflow: hidden; }
-/* Each integration retains its own refresh and unavailable state. */
-.group :global(.queue-grouped) { height: auto; min-height: 0; padding: 20px; }
-.group :global(.queue-title) h2 { margin: 0; font-size: 24px; font-weight: 600; color: var(--gold); }
-.group :global(.queue-title) p { font-size: 14px; }
-.group :global(.queue-board), .group :global(.queue-stats) { grid-template-columns: minmax(0, 1fr); }
-.group :global(.queue-stat) h3, .group :global(.queue-col-head) h3 { font-size: 18px; }
-.group :global(.queue-count) { font-size: 38px; }
-.group :global(.queue-name), .group :global(.queue-timer) { font-size: 18px; }
-.group :global(.queue-meta) { font-size: 14px; }
-.group :global(.queue-foot) { font-size: 14px; line-height: 1.6; }
 @media (min-width: 1200px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 600px) { .header { gap: 12px; }.logo { width: 72px; }.actions { margin-left: 0; width: 100%; }.group :global(.queue-grouped) { padding: 14px; } }
+@media (max-width: 600px) { .header { gap: 12px; }.logo { width: 72px; }.actions { margin-left: 0; width: 100%; } }

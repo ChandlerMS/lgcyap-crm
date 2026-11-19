@@ -33,3 +33,5 @@
 
 .grouped .live h3, .grouped .daily h3 { font-size: 18px; font-weight: 500; margin: 0; }
 .grouped .rosterHead h3 { margin: 0; font-size: 20px; font-weight: 600; }
+
+.dimmed { opacity: .45; }

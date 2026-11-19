@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import styles from "../ringcx/ringcx.module.css";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Call = { id: string; name: string; direction: "inbound" | "outbound" | null; source: string | null; since: number };
@@ -49,6 +50,8 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
   const Heading = grouped ? "h2" : "h1";
   const Content = grouped ? "div" : "main";
   const Subheading = grouped ? "h3" : "h2";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [busy, setBusy] = useState(true);
   const [board, setBoard] = useState<Board | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [tick, setTick] = useState<number | null>(null); // this screen's clock, once a second
@@ -59,6 +62,7 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
     let controller: AbortController | undefined;
     let next: ReturnType<typeof setTimeout> | undefined;
     async function poll() {
+      setBusy(true);
       try {
         controller = new AbortController();
         const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) });
@@ -72,6 +76,8 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
       } catch {
         if (stopped) return;
         setProblem("network");
+      } finally {
+        if (!stopped) setBusy(false);
       }
       setTick(Date.now());
       if (!stopped) next = setTimeout(poll, POLL_MS);
@@ -80,7 +86,7 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
     const clock = setInterval(() => setTick(Date.now()), 1000);
     const reload = setTimeout(() => window.location.reload(), RELOAD_MS);
     return () => { stopped = true; controller?.abort(); clearTimeout(next); clearInterval(clock); clearTimeout(reload); };
-  }, [embedded]);
+  }, [embedded, refreshKey]);
 
   // Keep a wall screen from sleeping while the queue is showing.
   useEffect(() => {
@@ -103,6 +109,61 @@ export default function QueueBoard({ embedded = false, grouped = false }: { embe
   // The average of the waits shown in Available.
   const waits = board && now !== null ? board.available.filter(agent => agent.since !== null).map(agent => now - (agent.since as number)) : [];
   const averageWait = waits.length ? waits.reduce((sum, wait) => sum + wait, 0) / waits.length : null;
+
+  if (grouped) {
+    const duration = (ms: number | null) => {
+      if (ms === null) return "—";
+      const seconds = Math.max(0, Math.floor(ms / 1000));
+      return `${two(Math.floor(seconds / 3600))}:${two(Math.floor(seconds / 60) % 60)}:${two(seconds % 60)}`;
+    };
+    const value = (count: number | null | undefined) => count == null ? "—" : count.toLocaleString("en-US");
+    const unavailable = Boolean(problem) || state === "stale";
+    return <div className={`${styles.board} ${styles.grouped}`}>
+      <header className={styles.header}>
+        <div className={styles.identity}><div><h2>Shopper</h2><p className={styles.subtitle}>PolicyTek · Live call queue</p></div></div>
+        <div className={styles.controls}>
+          <span className={`${styles.status} ${unavailable ? styles.warning : ""}`} role="status">{unavailable ? "Update unavailable" : board ? "Live" : "Connecting"}</span>
+          <button type="button" disabled={busy} onClick={() => { setBusy(true); setRefreshKey(key => key + 1); }}>{busy ? "Refreshing…" : "Refresh"}</button>
+        </div>
+      </header>
+      {notice && <p className={styles.alert} role="alert">{notice}{problem === "sign_in" && <> <a href="/sign-in?return_to=%2Fqueue" target="_top">Sign in</a></>}</p>}
+      <section className={styles.live} aria-label="Live agent availability">
+        <article><h3>Agents Available</h3><p className={styles.available}>{value(board?.available.length)}</p><span>Ready to take a call</span></article>
+        <article><h3>On calls</h3><p className={styles.onCalls}>{value(board?.calls.length)}</p><span>Live calls in the Shopper queue</span></article>
+        <article><h3>Average wait</h3><p className={styles.waitValue}>{duration(averageWait)}</p><span>Time available · current agents</span></article>
+        <aside><strong>{callsToday}</strong><span>Calls today</span><p>Sales agents · Eastern</p></aside>
+      </section>
+      <div className={styles.rosterGrid}>
+        <section className={styles.roster} aria-labelledby="shopper-available-title">
+          <div className={styles.rosterHead}><div><h3 id="shopper-available-title">Agents Available</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Ready to take a call · Shopper"}</p></div><span className={styles.rosterCount}>{value(board?.available.length)}</span></div>
+          <ol className={styles.agentList}>{board?.available.map(agent => <li className={`${styles.agentRow} ${styles.timedRow}${agent.dim ? ` ${styles.dimmed}` : ""}`} key={agent.id}>
+            <span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span>
+            <span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>Waiting {now === null || agent.since === null ? "—" : waited(now - agent.since)}</span></span>
+            <span className={styles.callStatus}>{agent.idle ? "Available · idle" : "Available"}</span>
+            <span className={styles.stateTime}>{duration(now === null || agent.since === null ? null : now - agent.since)}<span className="sr-only"> available</span></span>
+          </li>)}</ol>
+          {empty(board?.available, "No agents are currently available.") && <p className={styles.empty}>{empty(board?.available, "No agents are currently available.")}</p>}
+        </section>
+        <section className={styles.roster} aria-labelledby="shopper-on-call-title">
+          <div className={styles.rosterHead}><div><h3 id="shopper-on-call-title">On Live Calls</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Agents on calls · Shopper"}</p></div><span className={styles.rosterCount}>{value(board?.calls.length)}</span></div>
+          <ol className={styles.agentList}>{board?.calls.map(call => <li className={styles.agentRow} key={call.id}>
+            <span className={styles.avatar} aria-hidden="true">{initials(call.name)}</span>
+            <span className={styles.agentName}>{call.name}<span className={styles.agentMetrics}>{[call.source, `${duration(now === null ? null : now - call.since)} on call`].filter(Boolean).join(" · ")}</span></span>
+            <span className={styles.callStatus}>{call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "On call"}</span>
+          </li>)}</ol>
+          {empty(board?.calls, "No agents are currently on a live call.") && <p className={styles.empty}>{empty(board?.calls, "No agents are currently on a live call.")}</p>}
+        </section>
+      </div>
+      <section className={styles.daily} aria-label="Today's calls">
+        <div className={styles.sectionHeading}><h3>Today’s calls</h3><span>Resets at midnight Eastern</span></div>
+        <p className={styles.subtitle}>Shopper · PolicyTek sales agents</p>
+        <div className={styles.totals}><article><h3>Total Calls Today</h3><strong>{callsToday}</strong></article></div>
+        <p className={styles.note}>Counts sales agents’ calls since midnight Eastern and updates every minute. Average wait measures time available across the agents shown above.</p>
+      </section>
+      <p className={styles.note}>Longest wait and longest call first. On DND and Offline are not shown. Dashes mean unavailable, not zero.</p>
+      <footer><span>{board ? `${unavailable ? "Last received" : "Updated"} ${new Date(board.now).toLocaleTimeString("en-US", { timeZone: "America/New_York" })} Eastern` : "Waiting for the first PolicyTek update"}</span><span>Refreshes every 5 seconds</span></footer>
+    </div>;
+  }
 
   return <div className={`queue-page${grouped ? " queue-grouped" : ""}`}>
     <header className="queue-top">
