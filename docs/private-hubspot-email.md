@@ -24,3 +24,9 @@ Official provider references:
 - https://knowledge.hubspot.com/inbox/connect-channels-to-the-conversations-inbox
 - https://knowledge.hubspot.com/connected-email/connect-your-inbox-to-hubspot
 - https://developers.hubspot.com/docs/api-reference/conversations-conversations-v3/guide
+
+## Email layout and connection checks
+
+The dashboard Email section and standalone Email page separate Received email from Recruit recipients. One New Email action opens the existing HubSpot recipient/template handoff. Refresh checks the connection and refreshes received mail plus the recruit dataset. The Email summary links to the Email workspace and does not embed a second full mailbox inside a hover preview. Nested received-mail views hide redundant New message and collapse controls.
+
+Owner-only `GET /api/email?connection=1` reports the authenticated web-app email, whether that exact email matches one active HubSpot owner/user, and a separately verified received-mail channel state. It verifies the production portal/private-app identity before reading metadata. Connected is reported only for one active authorized channel in the explicitly configured Conversations Inbox. Unknown provider access is reported as unavailable, not disconnected or successfully connected. This does not inspect or establish a HubSpot personal sending-mailbox connection. No mailbox contents are read by the connection check.

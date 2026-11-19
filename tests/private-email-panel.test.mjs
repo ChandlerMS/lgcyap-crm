@@ -20,8 +20,8 @@ test('received Email is hidden for other users and shows HubSpot subjects and co
     const Panel = createRequire(import.meta.url)(`${process.cwd()}/${dir}/component.cjs`).default;
     globalThis.fetch = async (url, options = {}) => {
       requests.push({ url, method: options.method });
-      assert.equal(url, '/api/email');
-      if (!options.method) return Response.json({ canRead });
+      assert.ok(url === '/api/email' || url === '/api/email?connection=1');
+      if (!options.method) return Response.json({ canRead, mailbox: 'chandler@lgcyap.com', webAppEmail: 'chandler@lgcyap.com', hubspotIdentity: 'matched', connection: connected ? 'connected' : 'connection-required' });
       const input = JSON.parse(options.body);
       if (!connected) return Response.json({ tool: 'inbox', status: 'connection-required', error: { message: 'Connect Chandler mailbox in HubSpot.' } });
       return Response.json({ tool: 'inbox', status: 'available', archive: input.archive, records: [{ id: '11', title: 'Synthetic incoming email subject', subtitle: 'Synthetic sender' }], complete: true, continuation: null, partial: false });
@@ -34,6 +34,7 @@ test('received Email is hidden for other users and shows HubSpot subjects and co
     await act(async () => root.render(h(Panel, { key: 'owner' })));
     assert.match(document.body.textContent, /Synthetic incoming email subject/);
     assert.ok([...document.querySelectorAll('a')].some(link => link.href.includes('/settings/50894788/inbox/inboxes')));
+    assert.equal(document.querySelector('[aria-label="New message in HubSpot"]'), null, 'received mail does not duplicate compose actions');
     connected = false;
     await act(async () => automaticRefresh());
     assert.match(document.body.textContent, /Synthetic incoming email subject/, 'failed automatic refresh retains previously loaded email');
@@ -41,6 +42,11 @@ test('received Email is hidden for other users and shows HubSpot subjects and co
     await act(async () => refresh.click());
     assert.match(document.body.textContent, /Connect Chandler mailbox in HubSpot/);
     assert.doesNotMatch(document.body.textContent, /No conversations match this view/);
+    const check = [...document.querySelectorAll('button')].find(button => button.textContent === 'Check connection');
+    await act(async () => check.click());
+    assert.match(document.body.textContent, /Mailbox not connected/);
+    assert.match(document.body.textContent, /Email matches your HubSpot user/);
+    assert.equal(document.querySelector('[aria-label="Conversations"]'), null, 'unconnected mailbox does not render a misleading empty inbox');
   } finally {
     if (root) await act(async () => root.unmount()); dom.window.close(); Object.assign(globalThis, { window: previous.window, document: previous.document, fetch: previous.fetch });
     if (previous.act === undefined) delete globalThis.IS_REACT_ACT_ENVIRONMENT; else globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act;

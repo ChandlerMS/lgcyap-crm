@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useInboxPages, type Item } from "./inbox-pages";
 import InboxConversation, { type InboxDraft } from "./inbox-conversation";
 import { SectionToggle } from "./dashboard-section";
@@ -8,7 +8,7 @@ import styles from "./hubspot-workspace.module.css";
 
 const formatDate = (value?: string) => value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Date not recorded";
 
-export default function InboxWorkspace({ onUnauthorized, initialThreadId, compact = false, pageHref, endpoint = "/api/hubspot-tools/inbox", label = "Inbox", headingLevel, showCompose = true }: { onUnauthorized: () => void; initialThreadId?: string; compact?: boolean; pageHref?: string; endpoint?: string; label?: string; headingLevel?: 2 | 3; showCompose?: boolean }) {
+export default function InboxWorkspace({ onUnauthorized, initialThreadId, compact = false, pageHref, endpoint = "/api/hubspot-tools/inbox", label = "Inbox", headingLevel, showCompose = true, showSectionToggle = true, refreshKey = 0 }: { onUnauthorized: () => void; initialThreadId?: string; compact?: boolean; pageHref?: string; endpoint?: string; label?: string; headingLevel?: 2 | 3; showCompose?: boolean; showSectionToggle?: boolean; refreshKey?: number }) {
   const instanceId = useId();
   const [drafts, setDrafts] = useState<Record<string, InboxDraft>>({});
   const [archive, setArchive] = useState("all");
@@ -17,6 +17,11 @@ export default function InboxWorkspace({ onUnauthorized, initialThreadId, compac
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Item | null>(() => initialThreadId && /^[1-9]\d{0,19}$/.test(initialThreadId) ? { id: initialThreadId, title: `Conversation ${initialThreadId}` } : null);
   const threads = useInboxPages({ archive }, onUnauthorized, endpoint);
+  const previousRefresh = useRef(refreshKey);
+  const reloadThreads = threads.load;
+  useEffect(() => {
+    if (previousRefresh.current !== refreshKey) { previousRefresh.current = refreshKey; void reloadThreads(true); }
+  }, [refreshKey, reloadThreads]);
   const rows = threads.state.items.filter(row => `${row.title} ${row.subtitle} ${row.status}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sort === "name" ? (a.title ?? a.id).localeCompare(b.title ?? b.id, undefined, { numeric: true }) : (sort === "oldest" ? 1 : -1) * ((Date.parse(a.updatedAt ?? a.createdAt ?? "") || 0) - (Date.parse(b.updatedAt ?? b.createdAt ?? "") || 0)));
   const pages = Math.max(1, Math.ceil(rows.length / 40)), currentPage = Math.min(page, pages);
   const controls = (collection: ReturnType<typeof useInboxPages>, noun: string) => <>
@@ -28,7 +33,7 @@ export default function InboxWorkspace({ onUnauthorized, initialThreadId, compac
   const Heading = headingLevel === 3 ? "h3" : headingLevel === 2 || compact ? "h2" : "h1";
   const titleId = endpoint === "/api/email" ? `received-email-${instanceId}` : compact ? "today-inbox-title" : "inbox-title";
   return <section className={`${styles.workspace} ${compact ? styles.compact : ""}`} aria-labelledby={titleId}>
-    <div className={styles.heading} data-section-heading><div><div className="section-title-controls"><Heading id={titleId} tabIndex={-1}>{pageHref ? <a className="panel-title-link" href={pageHref}>{label}</a> : label}</Heading><div className="panel-heading-actions">{showCompose && <a className="summary-add" title="New message in HubSpot" aria-label="New message in HubSpot" href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">+</span><span className="sr-only">New message in HubSpot (opens in a new tab)</span></a>}<SectionToggle /></div></div>{!compact && <p>Read and reply to HubSpot conversations, or close and reopen them here.</p>}</div><div className={styles.headingActions}><a className="btn btn-primary" href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">New message in HubSpot ↗</a><a className={styles.nativeLink} href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">Open in HubSpot<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M14 3h7v7M21 3 10 14M10 3H3v18h18v-7" /></svg><span className="sr-only"> (opens in a new tab)</span></a><button className="btn btn-secondary" disabled={threads.busy || Boolean(threads.retryAt)} onClick={() => { setSelected(null); setPage(1); void threads.load(true); }}>Refresh</button></div></div>
+    <div className={styles.heading} data-section-heading><div><div className="section-title-controls"><Heading id={titleId} tabIndex={-1}>{pageHref ? <a className="panel-title-link" href={pageHref}>{label}</a> : label}</Heading><div className="panel-heading-actions">{showCompose && <a className="summary-add" title="New message in HubSpot" aria-label="New message in HubSpot" href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">+</span><span className="sr-only">New message in HubSpot (opens in a new tab)</span></a>}{showSectionToggle && <SectionToggle />}</div></div>{!compact && <p>Read and reply to HubSpot conversations, or close and reopen them here.</p>}</div><div className={styles.headingActions}>{showCompose && <a className="btn btn-primary" href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">New message in HubSpot ↗</a>}<a className={styles.nativeLink} href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">Open in HubSpot<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M14 3h7v7M21 3 10 14M10 3H3v18h18v-7" /></svg><span className="sr-only"> (opens in a new tab)</span></a><button className="btn btn-secondary" disabled={threads.busy || Boolean(threads.retryAt)} onClick={() => { setSelected(null); setPage(1); void threads.load(true); }}>Refresh</button></div></div>
     <div className={styles.toolbar}>
       <label>Conversations <select aria-label="Conversation archive filter" value={archive} onChange={event => { setSelected(null); setPage(1); setArchive(event.target.value); }}><option value="all">All, including archived</option><option value="active">Not archived</option><option value="archived">Archived</option></select></label>
       <label className={styles.search}><span className="sr-only">Filter loaded conversations</span><input type="search" value={query} placeholder="Filter loaded conversations" onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>

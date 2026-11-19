@@ -105,3 +105,19 @@ test('received email preview uses incoming email, excludes outbound-only threads
   assert.equal(result.records[0].title, 'Original incoming subject');
   assert.equal(result.records[0].subtitle, 'Actual sender');
 });
+
+test('a mailbox moved to another inbox cannot activate a historical pinned channel', async () => {
+  const { readEmailInboxPage } = await import('../lib/hubspot-email-inbox.mjs');
+  const original = fake();
+  const fetchImpl = async (url, init) => {
+    if (new URL(url).pathname.endsWith('/channel-accounts')) return Response.json({ results: [
+      { id: '1', inboxId: '10', channelId: '1002', active: false, authorized: true, archived: true, deliveryIdentifier: { type: 'HS_EMAIL_ADDRESS', value: 'chandler@lgcyap.com' } },
+      { id: '2', inboxId: '20', channelId: '1002', active: true, authorized: true, archived: false, deliveryIdentifier: { type: 'HS_EMAIL_ADDRESS', value: 'chandler@lgcyap.com' } },
+    ] });
+    assert.ok(!new URL(url).pathname.endsWith('/threads'), 'must not fetch a falsely activated mailbox');
+    return original.fetchImpl(url, init);
+  };
+  const result = await readEmailInboxPage({}, { ...options, inboxId: '10', fetchImpl });
+  assert.equal(result.status, 'connection-required');
+  assert.equal(result.error.code, 'PRIVATE_INBOX_SETUP_REQUIRED');
+});

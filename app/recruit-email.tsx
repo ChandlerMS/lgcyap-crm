@@ -1,6 +1,5 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import PrivateEmailPanel from "./private-email-panel";
 import SummaryChips from './summary-chips';
 import RecruitCombobox from './recruit-combobox';
 
@@ -79,5 +78,5 @@ export function RecruitEmailSummary({ recruits }: { recruits: Recruit[] }) {
   const newest = [...reachable].sort((a, b) => added(b) - added(a) || a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' })).map(chip);
   const byName = [...reachable].sort((a, b) => a.name.localeCompare(b.name, 'en-US', { sensitivity: 'base' })).map(chip);
   const plus = <button type="button" className="summary-add" title="New Email" disabled={disabled} onClick={() => open()}><span aria-hidden="true">+</span><span className="sr-only">New Email</span></button>;
-  return <SummaryChips id="email-summary" title="Email" preview onTitleClick={disabled ? undefined : () => open()} previewChips={byName} previewExtra={<PrivateEmailPanel disabled={disabled} />} count={disabled ? undefined : String(reachable.length)} note="Newest recruits · compose in HubSpot" chips={newest} empty={disabled ? 'Email is unavailable for demo recruits.' : 'No loaded recruit has an email address yet.'} more={{ label: 'recruits to email' }} lead={plus} previewActions={<div className="summary-preview-new"><button type="button" className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button></div>} />;
+  return <SummaryChips id="email-summary" title="Email" preview href="#email" previewChips={byName} previewExtra={<a className="text-link" href="#email">Open Email workspace</a>} count={disabled ? undefined : String(reachable.length)} note="Newest recruits · compose in HubSpot" chips={newest} empty={disabled ? 'Email is unavailable for demo recruits.' : 'No loaded recruit has an email address yet.'} more={{ label: 'recruits to email' }} lead={plus} previewActions={<div className="summary-preview-new"><button type="button" className="btn btn-quiet email-new-button" disabled={disabled} onClick={() => open()}>New Email</button></div>} />;
 }
