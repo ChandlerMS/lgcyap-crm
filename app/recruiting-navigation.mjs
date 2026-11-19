@@ -84,7 +84,7 @@ export const RECRUITS_SITE_LINKS = Object.freeze([
   Object.freeze({ id: 'sign-in', label: 'Sign-In', href: 'https://signin.lgcyap.com/', embedded: false }),
 ]);
 // Leaderboard and Call Analytics share one sidebar link (the first) and switch with a toggle on the page.
-export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' })]);
+export const WORKSPACE_EXTRA_PAGES = Object.freeze([Object.freeze({ id: 'leaderboard', label: 'Leaderboard', icon: 'chart' }), Object.freeze({ id: 'call-analytics', label: 'Call Analytics', icon: 'chart' }), Object.freeze({ id: 'whatsapp-sales', label: 'WhatsApp Sales', icon: 'chart' })]);
 // Preserve saved source routes; the Queues sidebar link embeds the combined Queue site.
 export const QUEUE_PAGES = Object.freeze([
   { id: 'queue', label: 'Shopper', icon: 'phone', source: 'shopper' },
@@ -100,7 +100,7 @@ export function sidebarViewFor(view) {
   if (['add-recruits', ...DASHBOARD_PAGES].includes(view)) return 'today';
   if (RECRUITS_CHILD_PAGES.some(page => page.id === view)) return 'recruits';
   if (['carrier-appointments', 'carriers'].includes(view)) return 'contract-agents';
-  if (view === 'call-analytics') return 'leaderboard';
+  if (view === 'call-analytics' || view === 'whatsapp-sales') return 'leaderboard';
   return view;
 }
 

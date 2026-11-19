@@ -231,3 +231,10 @@ test('Email has its own dashboard-linked page and keeps Dashboard selected', () 
   assert.deepEqual(resolveWorkspaceRoute('#email'), { view: 'email' });
   assert.equal(sidebarViewFor('email'), 'today');
 });
+
+test('WhatsApp Sales is a third top-level leaderboard view under the existing sidebar area', async () => {
+  const { WORKSPACE_EXTRA_PAGES } = await import('../app/recruiting-navigation.mjs');
+  assert.deepEqual(WORKSPACE_EXTRA_PAGES.map(page => page.label), ['Leaderboard', 'Call Analytics', 'WhatsApp Sales']);
+  assert.deepEqual(resolveWorkspaceRoute('#whatsapp-sales'), { view: 'whatsapp-sales' });
+  assert.equal(sidebarViewFor('whatsapp-sales'), 'leaderboard');
+});

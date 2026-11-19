@@ -26,8 +26,8 @@ const SOURCE_COLUMNS =[{ field: "name", label: "Source" }, { field: "leads", lab
 function number(value: unknown, currency = false) { return typeof value === "number" && Number.isFinite(value) ? (currency ? MONEY : NUMBER).format(value) : "—"; }
 function updated(value: string | undefined) { const stamp = value ? Date.parse(value) : NaN; return Number.isFinite(stamp) ? UPDATED.format(stamp) : null; }
 
-export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthorized: () => void; navigation?: ReactNode }) {
-  const [board, setBoard] = useState<Board>("sp");
+export default function Leaderboard({ onUnauthorized, navigation, initialBoard = "sp" }: { onUnauthorized: () => void; navigation?: ReactNode; initialBoard?: Board }) {
+  const [board, setBoard] = useState<Board>(initialBoard);
   const dates = useLeaderboardDates();
   const { period, range, periodLabel } = dates;
   const [metric, setMetric] = useState<Metric>("ap");
@@ -116,9 +116,9 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
   const max = Math.max(0, ...ranked.map(row => typeof row[selectedField] === "number" ? row[selectedField] as number : 0));
   const missingMetrics = available ? current.rows.filter(row => typeof row[selectedField] !== "number" || !Number.isFinite(row[selectedField])).length : 0;
   const sourceTableRows = available && board === "source" ? filterLeaderboardRows(sourceLeaderboardTableRows(current.rows, sourceSort), query) as Row[] : [];
-  const boardLabel = LEADERBOARD_BOARDS.find(value => value.id === board)?.label ?? "Leaderboard";
+  const boardLabel = initialBoard === "whatsapp" && board === "whatsapp" ? "All WhatsApp Sales" : LEADERBOARD_BOARDS.find(value => value.id === board)?.label ?? "Leaderboard";
   const callsLabel = sortFields.find(option => option.field === "calls")?.label ?? "Calls";
-  const showSales = board === "sp" || board === "shopper";
+  const showSales = board === "sp" || board === "shopper" || board === "whatsapp";
   const callTotals = board === "sp" ? LEADERBOARD_SP_CALL_TOTALS : [];
   // Rank by also re-sorts the list, so medals read in order: premium uses the premium sort, the count uses rank order.
   const rankBy = (value: Metric) => { setMetric(value); setRowSort(value === "ap" ? PREMIUM_SORT : { field: "rank", direction: "desc" }); };
@@ -132,8 +132,8 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
   const salesBoard = board === "sp";
   const whatsappCalls = board === "whatsapp" ? current?.calls : undefined;
   const stats = board === "whatsapp" ? [
-    { label: period === "custom" ? "Sales" : `Sales ${periodLabel.toLowerCase()}`, value: number(totals?.first) },
-    { label: period === "custom" ? "Total production" : `Total production ${periodLabel.toLowerCase()}`, value: number(totals?.second, true) },
+    { label: period === "custom" ? "Policies sold" : `Policies sold ${periodLabel.toLowerCase()}`, value: number(totals?.first) },
+    { label: period === "custom" ? "Annual premium" : `Annual premium ${periodLabel.toLowerCase()}`, value: number(totals?.second, true) },
     { label: "Close", value: whatsappCalls?.closeRate != null ? PERCENT.format(whatsappCalls.closeRate) : "—" },
     { label: "Calls", value: number(whatsappCalls?.connected) },
   ] : board === "source" ? [
@@ -145,9 +145,11 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
     ...(board === "sp" ? [{ label: "Total Calls Connected", value: number(current?.calls?.connected) }, { label: "Total Calls Abandoned", value: number(current?.calls?.abandoned) }] : []),
   ];
   return <section className={styles.leaderboard} aria-labelledby="leaderboard-title" aria-busy={loading}>
-    <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>Agent Leaderboard</h1></header>
+    <header className={styles.hero}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={180} height={117} /><p className={styles.eyebrow}>Sales performance</p><h1 id="leaderboard-title" tabIndex={-1}>{initialBoard === "whatsapp" ? "WhatsApp Sales" : "Agent Leaderboard"}</h1></header>
     {navigation}
-    <div className={styles.boardTabs} role="group" aria-label="Leaderboard">{LEADERBOARD_BOARDS.map(value => <button key={value.id} type="button" aria-pressed={board === value.id} onClick={() => setBoard(value.id as Board)}>{value.label}</button>)}{["shopper", "sp"].includes(board) && <a className={styles.tvLink} href={`https://leaderboard.lgcyap.com/${board === "shopper" ? "shopper" : "standard"}`} target="_blank" rel="noopener noreferrer" aria-label={`${board === "shopper" ? "Shopper" : "Standard vs Preferred"} Leaderboard TV HUD (opens in a new tab)`}>TV HUD</a>}</div>
+    {initialBoard === "whatsapp" && <div className={styles.boardTabs} role="group" aria-label="WhatsApp Sales views"><button type="button" aria-pressed={board === "whatsapp"} onClick={() => setBoard("whatsapp")}>All</button><button type="button" aria-pressed={board === "sp"} onClick={() => setBoard("sp")}>Standard vs Preferred</button></div>}
+    {initialBoard === "whatsapp" && <p className={styles.foot}>All shows the imported WhatsApp daily reports. Standard vs Preferred shows the existing HubSpot leaderboard.</p>}
+    {initialBoard !== "whatsapp" && <div className={styles.boardTabs} role="group" aria-label="Leaderboard">{LEADERBOARD_BOARDS.filter(value => value.id !== "whatsapp").map(value => <button key={value.id} type="button" aria-pressed={board === value.id} onClick={() => setBoard(value.id as Board)}>{value.label}</button>)}{["shopper", "sp"].includes(board) && <a className={styles.tvLink} href={`https://leaderboard.lgcyap.com/${board === "shopper" ? "shopper" : "standard"}`} target="_blank" rel="noopener noreferrer" aria-label={`${board === "shopper" ? "Shopper" : "Standard vs Preferred"} Leaderboard TV HUD (opens in a new tab)`}>TV HUD</a>}</div>}
     <div className={styles.controls}><LeaderboardPeriodTabs dates={dates} label="Leaderboard period" /><div className={styles.segment} role="group" aria-label="Rank by"><button type="button" aria-pressed={metric === "sales"} onClick={() => rankBy("sales")}>{keys.firstLabel}</button><button type="button" aria-pressed={metric === "ap"} onClick={() => rankBy("ap")}>{keys.secondLabel}</button></div><button className="btn btn-secondary" type="button" disabled={loading || (board !== "whatsapp" && Boolean(retryAt))} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div>
     <LeaderboardRangeForm dates={dates} />
     <dl className={`${styles.tiles} ${callTotals.length ? styles.tilesWithCallTotals : ""}`} aria-label={`${boardLabel} totals`}>{stats.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd title={stat.value}>{stat.value}</dd></div>)}</dl>
@@ -177,7 +179,7 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
       {current?.partial && <DismissibleNotice className={styles.alert} role="status">{board === "sp" ? "Incomplete results: totals and rankings shown cover the loaded records only." : board === "whatsapp" ? "Incomplete results: part of this range has not been imported yet, so totals and rankings cover imported days only." : "Incomplete named rows: report totals may include activity not attributed to the names shown."}</DismissibleNotice>}
       {missingMetrics > 0 && <DismissibleNotice className={styles.notice}>{missingMetrics} record{missingMetrics === 1 ? " lacks" : "s lack"} the selected metric and {missingMetrics === 1 ? "is" : "are"} not ranked.</DismissibleNotice>}
       <p className={styles.foot}>{board === "whatsapp" ? "Daily agent reports by sale date" : board === "sp" ? "HubSpot Sold deals by close date" : board === "shopper" ? "PolicyTek Agent Report by submit date" : "PolicyTek Source Performance"}</p>
-      <p className={styles.foot}>{board === "whatsapp" ? `Imported from the LAP Daily Agent Reports${current?.dataThrough ? ` · activity through ${current.dataThrough}` : ""}. Total production is the reports' own figure, not HubSpot annual premium. ${whatsappCalls?.basis === "monthly" ? "Calls are the monthly call totals entered for January–June 2026 and Close is sales ÷ calls." : `Calls are connected (answered) inbound queue calls and Close is queue sold ÷ calls, recorded from ${whatsappCalls?.coverageStart ?? "2026-06-17"}.`} Re-run the import after regenerating the reports.` : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : `PolicyTek browser sync · every 15 minutes, ${POLICYTEK_CAPTURE_HOURS}. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, the Claude app open, and PolicyTek signed in.`}</p>
+      <p className={styles.foot}>{board === "whatsapp" ? `Imported from the LAP Daily Agent Reports${current?.dataThrough ? ` · activity through ${current.dataThrough}` : ""}. The reports’ Total Production is shown as annual premium. ${whatsappCalls?.basis === "monthly" ? "Calls are the monthly call totals entered for January–June 2026 and Close is sales ÷ calls." : `Calls are connected (answered) inbound queue calls and Close is queue sold ÷ calls, recorded from ${whatsappCalls?.coverageStart ?? "2026-06-17"}.`} Re-run the import after regenerating the reports.` : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : `PolicyTek browser sync · every 15 minutes, ${POLICYTEK_CAPTURE_HOURS}. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, the Claude app open, and PolicyTek signed in.`}</p>
     </footer>
   </section>;
 }

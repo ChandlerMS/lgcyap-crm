@@ -58,7 +58,7 @@ test('a covered range ranks agents by sales and production, with queue calls and
     const ranked = rankLeaderboardRows(result.rows, 'whatsapp', 'ap');
     assert.deepEqual(ranked.map(row => row.name), ['Agent One', 'Agent Two']);
     assert.deepEqual(leaderboardTotals(result.rows, 'whatsapp', 'ap'), { ...leaderboardTotals(result.rows, 'whatsapp', 'ap'), first: 5, second: 1350.49 });
-    assert.deepEqual(leaderboardMetrics('whatsapp'), { first: 'sales', second: 'production', firstLabel: 'Sales', secondLabel: 'Total production' });
+    assert.deepEqual(leaderboardMetrics('whatsapp'), { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' });
   } finally { await db.close(); }
 });
 
