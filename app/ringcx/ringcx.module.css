@@ -59,3 +59,5 @@
 :global([data-queue-tv]) .grouped .agentMetrics { line-height: 1.2; }
 :global([data-queue-tv]) .grouped .subtitle { display: none; }
 :global([data-queue-tv]) .grouped .live article > p { line-height: 1.1; }
+
+.tvLink { display: inline-flex; padding: 10px 16px; border: 1px solid #6d633e; border-radius: 6px; background: #1a180f; color: var(--gold); font-size: 14px; text-decoration: none; }.tvLink:hover { background: #282311; }.tvLink:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }

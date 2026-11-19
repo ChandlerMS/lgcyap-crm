@@ -108,3 +108,5 @@
 @media (max-width: 480px) { .chart.leadRows li, .chartHead.leadRows { grid-template-columns: 23px minmax(70px, 38%) minmax(25px, 1fr) auto; gap: 8px; } }
 
 .notes { display: flex; flex-direction: column; gap: 12px; }
+
+.tvLink { display: inline-flex; align-items: center; padding: 9px 16px; border: 1px solid #6d633e; border-radius: 5px; color: var(--gold); text-decoration: none; font-size: 14px; }.tvLink:hover { background: #282311; }.tvLink:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }

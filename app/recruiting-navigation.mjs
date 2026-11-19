@@ -87,6 +87,7 @@ export function sidebarViewFor(view) {
 
 export function resolveWorkspaceRoute(hash) {
   const value = String(hash ?? '').replace(/^#/, '');
+  if (value === 'calls/shopper' || value === 'calls/standard') return { view: 'calls', source: value.slice('calls/'.length) };
   if (/^inbox\/thread\/[1-9]\d{0,19}$/.test(value)) return { view: 'inbox', id: value.slice('inbox/thread/'.length) };
   if (RECRUIT_PATH_PAGES.some(page => page.id === value)) return { view: value };
   if (value === 'queue' || value === 'ringcx' || value === 'event-attendance') return { view: value };

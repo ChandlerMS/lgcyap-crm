@@ -73,8 +73,8 @@ test('Event Attendance is a dashboard section between the pipeline and Meetings,
 
 test('Leaderboard and Call Analytics switch with a toggle at the top of both pages', () => {
   const workspace = readFileSync('app/recruiting-workspace.tsx', 'utf8');
-  assert.match(workspace, /if \(callAnalyticsView\) return <>\{dashboardLink\}\{leaderboardSwitch\}\{leaderboardHud \? <TvHudLinks service="leaderboard" \/> : <LeadData /);
-  assert.match(workspace, /if \(leaderboardView\) return <>\{dashboardLink\}\{leaderboardSwitch\}\{leaderboardHud \? <TvHudLinks service="leaderboard" \/> : <Leaderboard /);
+  assert.match(workspace, /if \(callAnalyticsView\) return <>\{dashboardLink\}\{leaderboardSwitch\}<LeadData /);
+  assert.match(workspace, /if \(leaderboardView\) return <>\{dashboardLink\}\{leaderboardSwitch\}<Leaderboard /);
 });
 
 test('native HubSpot tools use the verified portal and exact requested order', () => {
@@ -179,4 +179,11 @@ test('Recruits path pages include every matching stage without mixing paths or i
     assert.deepEqual(resolveWorkspaceRoute('#'+view),{view});
     assert.equal(sidebarViewFor(view),'recruits');
   }
+});
+
+
+test('HubSpot Calls panels can open the matching Standard source without changing the sidebar default', () => {
+  assert.deepEqual(resolveWorkspaceRoute('#calls/standard'),{view:'calls',source:'standard'});
+  assert.deepEqual(resolveWorkspaceRoute('#calls/shopper'),{view:'calls',source:'shopper'});
+  assert.deepEqual(resolveWorkspaceRoute('#calls'),{view:'calls'});
 });

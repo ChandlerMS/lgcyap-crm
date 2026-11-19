@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import SalesPage from "./sales-page";
-import TvHudLinks from "./tv-hud-links";
+import CallsPage from "./calls-page";
 import SidebarFlyout from "./sidebar-flyout";
 import WorkspaceTitlebar from "./workspace-titlebar";
 
@@ -40,7 +40,7 @@ import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 import { lifecycleStatusLabel } from "../lib/recruit-lifecycle.mjs";
 
 type View = string;
-type Route = { view: View; id?: string };
+type Route = { view: View; id?: string; source?: "shopper" | "standard" };
 type Flag = boolean | null;
 type Recruit = {
   id: string; name: string; office: string; intake: string; stage: string; stageId: string;
@@ -93,6 +93,7 @@ function Icon({ name }: { name: string }) {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></>,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     folder: <path d="M3 7V4h7l2 3h9v14H3V7z" />,
+    money: <><path d="M12 2v20M17 5H9a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8H6" /></>,
     chart: <><path d="M3 3v18h18M7 17v-5M12 17V7M17 17V4" /></>,
     inbox: <><path d="M3 4h18v16H3zM3 13h5l2 3h4l2-3h5" /></>,
     close: <path d="m6 6 12 12M6 18 18 6" />,
@@ -178,7 +179,6 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const [liveLoading, setLoading] = useState(true);
   const [liveError, setError] = useState<ReadError | null>(null);
   const [demoMode, setDemoMode] = useState(false);
-  const [leaderboardHud, setLeaderboardHud] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -283,7 +283,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
         window.history.replaceState(null, "", "#add-recruits");
         setSaveNotice("Submit or clear your recruit entries before leaving Add Recruits."); return;
       }
-      setLeaderboardHud(false); setRoute(getRoute()); setPage(1);
+      setRoute(getRoute()); setPage(1);
     };
     window.addEventListener("hashchange", updateRoute);
     startTransition(() => { void refresh(); });
@@ -419,9 +419,10 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   // Dashboard heads the sidebar; Call Analytics opens from the Leaderboard toggle.
   const navigation = <>
     {SIDEBAR_RECRUITING_PAGES.map(navigationLink)}
-    <a className="nav-link" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} onClick={() => { setLeaderboardHud(false); dismissNav(); navigateFromMenu(); }}><Icon name="chart" /><span>Leaderboard</span></a>
+    <a className="nav-link" href="#leaderboard" aria-current={leaderboardView ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="chart" /><span>Leaderboard</span></a>
     <a className="nav-link" href="#queue" aria-current={queuePage ? "page" : undefined} onClick={() => { dismissNav(); navigateFromMenu(); }}><Icon name="headset" /><span>Queues</span></a>
-    <a className="nav-link" href="#sales" aria-current={route.view === "sales" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "sales"); navigateFromMenu(); }}><Icon name="chart" /><span>Sales</span></a>
+    <a className="nav-link" href="#sales" aria-current={route.view === "sales" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "sales"); navigateFromMenu(); }}><Icon name="money" /><span>Sales</span></a>
+    <a className="nav-link" href="#calls" aria-current={route.view === "calls" ? "page" : undefined} onClick={() => { dismissNav(); if (demoMode) switchDataMode(false, "calls"); navigateFromMenu(); }}><Icon name="phone" /><span>Calls</span></a>
     <div className="pipeline-nav-divider" role="separator" aria-label="HubSpot tools" />
     {SIDEBAR_HUBSPOT_TOOLS.map(tool => tool.id === "contract-agents" ? <div className="nav-group" key={tool.id} onMouseEnter={() => enterNav("agents")} onMouseLeave={leaveNav}>
       <a className="nav-link nav-group-toggle" href="#contract-agents" aria-current={sidebarView === tool.id ? "page" : undefined} aria-expanded={(hoveredNav ?? expandedNav) === "agents"} aria-controls="agent-object-links" onKeyDown={event => focusFlyout(event, "agent-object-links", "agents")} onClick={() => { setHoveredNav(null); setExpandedNav(value => value === "agents" ? null : "agents"); if (demoMode) switchDataMode(false, tool.id); }}><Icon name="people" /><span>Agents</span><Icon name="chevron" /></a>
@@ -431,7 +432,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       <SidebarFlyout onEnter={() => enterNav("recruits")} onLeave={leaveNav} id="recruit-path-links" hidden={(hoveredNav ?? expandedNav) !== "recruits"} layoutKey={`${menuOpen}:${sidebarCollapsed}`} onDismiss={dismissNav}>{RECRUITS_CHILD_PAGES.map(item => <a className="nav-link" key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined} onClick={navigateFromMenu}>{item.label}</a>)}</SidebarFlyout>
     </div> : <a key={tool.id} className="nav-link nav-hubspot-tool" href={`#${tool.id}`} aria-current={activeView === tool.id ? "page" : undefined} onClick={() => { if (demoMode && tool.id !== "recruits") switchDataMode(false, tool.id); navigateFromMenu(); }}><Icon name={tool.icon} /><span>{tool.label}</span></a>)}
   </>;
-  const leaderboardSwitch = <nav className="page-switch" aria-label="Leaderboard and Call Analytics">{WORKSPACE_EXTRA_PAGES.map(item => <a key={item.id} href={`#${item.id}`} onClick={() => setLeaderboardHud(false)} aria-current={!leaderboardHud && route.view === item.id ? "page" : undefined}>{item.label}</a>)}<button type="button" aria-pressed={leaderboardHud} onClick={() => setLeaderboardHud(true)}>TV HUD</button></nav>;
+  const leaderboardSwitch = <nav className="page-switch" aria-label="Leaderboard and Call Analytics">{WORKSPACE_EXTRA_PAGES.map(item => <a key={item.id} href={`#${item.id}`} aria-current={route.view === item.id ? "page" : undefined}>{item.label}</a>)}</nav>;
 
   function savedRecruit(recruit: Recruit, replayed: boolean) {
     setData(value => value ? { ...value, recruits: value.recruits.map(item => item.id === recruit.id ? preserveRecruiter(item, recruit) : item) } : null);
@@ -498,7 +499,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   function recruitsPagePanel(id: string) {
     const tool = id === "tasks" ? { id: "tasks", label: "Tasks" } : RECRUITS_PAGE_TOOLS.find(item => item.id === id);
     if (!tool) return null;
-    const pageHref = HUBSPOT_TOOLS.some(item => item.id === id) || DASHBOARD_PAGES.includes(id) ? `#${id}` : undefined;
+    const pageHref = id === "calls" ? "#calls/standard" : HUBSPOT_TOOLS.some(item => item.id === id) || DASHBOARD_PAGES.includes(id) ? `#${id}` : undefined;
     if (demoMode) return <section className="today-panel" aria-labelledby={`today-${id}-title`}><div className="follow-up-heading"><h2 id={`today-${id}-title`}>{pageHref ? <a className="panel-title-link" href={pageHref}>{tool.label}</a> : tool.label}</h2></div><p className="helper">This panel shows live HubSpot records. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section>;
     // Meetings shows five rows a page (up to 25 by choice); Calls shows ten; Tasks shows five with numbered pages and Add Task.
     // Tasks and Meetings rows, and Calendar weeks, stay collapsed until the pointer is over them.
@@ -510,17 +511,18 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   function content() {
     // Calls and Recruits open from their panel titles on the Recruits page, so their pages lead back there.
     // Add Recruits opens from its button on the dashboard, so it leads back there too.
-    const dashboardLink = route.view !== "today" || route.id ? <a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a> : null;
+    const dashboardLink = route.view !== "today" || route.id ? <div className="dashboard-back-row"><a className="text-link back-link" href="#today"><Icon name="back" />{NAV[0].label}</a></div> : null;
     if (queuePage) return <>{dashboardLink}<iframe key={queuePage.id} className="queue-workspace-frame" src="https://queue.lgcyap.com/embed" title="Shopper and Standard vs Preferred live queues" allow="fullscreen; screen-wake-lock" /></>;
     if (eventAttendanceView) return <>{dashboardLink}<iframe className="queue-workspace-frame" src="/event-attendance?embedded=1" title="Hiring event attendance" /></>;
+    if (route.view === "calls" && !demoMode) return <>{dashboardLink}<CallsPage view={route.source ?? "shopper"} onSourceChange={source => { window.location.hash = `calls/${source}`; }} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (route.view === "sales" && !demoMode) return <>{dashboardLink}<SalesPage onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (demoMode && hubspotTool) return <>{dashboardLink}{heading(hubspotTool.label, "This workspace uses live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, hubspotTool.id)}>Open live {hubspotTool.label}</button></>;
     // Tasks opens from the dashboard's Tasks summary: HubSpot tasks assigned to you, with the same view and edits as other HubSpot pages.
     if (activityPage && demoMode) return <>{dashboardLink}{heading(activityPage.label, "This page shows live HubSpot records.", null)}<p className="helper">Demo recruits stay separate from these records.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, activityPage.id)}>Open live {activityPage.label}</button></>;
     if (activityPage) return <>{dashboardLink}<HubSpotWorkspace key={activityPage.id} tool={activityPage.id} label={activityPage.label} description={activityPage.description} headerAction={activityPage.id === "tasks" && canAddActivity && data ? <RecruitQuickActions kinds={["task"]} recruits={activityRecruits(all)} trigger="button" /> : meetingAction(activityPage.id, "button")} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (pathPage) return <>{dashboardLink}<RecruitPathPage key={`${pathPage.id}:${demoMode}`} view={pathPage.id} label={pathPage.label} demoRecords={demoMode ? recordsForStagePage(demoRecords, pathPage.id) as Recruit[] : undefined} onUnauthorized={expiredSignIn} /></>;
-    if (callAnalyticsView) return <>{dashboardLink}{leaderboardSwitch}{leaderboardHud ? <TvHudLinks service="leaderboard" /> : <LeadData onUnauthorized={expiredSignIn} />}</>;
-    if (leaderboardView) return <>{dashboardLink}{leaderboardSwitch}{leaderboardHud ? <TvHudLinks service="leaderboard" /> : <Leaderboard onUnauthorized={expiredSignIn} />}</>;
+    if (callAnalyticsView) return <>{dashboardLink}{leaderboardSwitch}<LeadData onUnauthorized={expiredSignIn} /></>;
+    if (leaderboardView) return <>{dashboardLink}{leaderboardSwitch}<Leaderboard onUnauthorized={expiredSignIn} /></>;
     if (hubspotTool && (!route.id || hubspotTool.id === "inbox")) return <>{dashboardLink}<HubSpotWorkspace key={`${hubspotTool.id}:${route.id ?? ""}`} tool={hubspotTool.id} initialThreadId={hubspotTool.id === "inbox" ? route.id : undefined} label={hubspotTool.label} description={hubspotTool.id === "help-desk" ? "Live support tickets from HubSpot’s Support Pipeline." : undefined} onUnauthorized={expiredSignIn} onDirtyChange={updateToolDirty} onBusyChange={updateToolBusy} /></>;
     if (route.view === "add-recruits" && demoMode) return <>{dashboardLink}{heading("Add Recruits", "Switch to live data to add real recruits to HubSpot.", null)}<p className="helper">Demo records are separate from HubSpot.</p><button className="btn btn-primary" onClick={() => switchDataMode(false, "add-recruits")}>Use live data</button></>;
     if (route.view === "add-recruits") return <>{dashboardLink}<AddRecruits canCreate={data?.capabilities?.canCreateRecruit === true && !error}

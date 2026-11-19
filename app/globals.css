@@ -834,9 +834,11 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
 :root body .recruit-communications .communication-label { display: none; }
 .sales-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 24px; }
 .sales-heading h1 { margin-bottom: 0; }
-.shopper-sales-frame { display: block; width: 100%; min-height: 620px; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 210px); border: 0; border-radius: 8px; background: #fff; }
+.shopper-sales-frame, .policytek-frame { display: block; width: 100%; min-height: 620px; height: calc(100dvh - var(--crm-titlebar-height, 56px) - 210px); border: 0; border-radius: 8px; background: #fff; }
 
 .sales-records { min-width: 0; contain: layout paint; }
 
 .today-summaries .summary-chips-heading h2 { font-size: clamp(20px, 1.7vw, 24px); column-gap: 10px; }
 .today-summaries .summary-chips-heading h2 > span { margin-left: 0; }
+
+.dashboard-back-row { display: flow-root; width: 100%; clear: both; margin: 0 0 20px; }.dashboard-back-row .back-link { margin: 0; }

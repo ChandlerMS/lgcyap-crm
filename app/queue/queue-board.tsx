@@ -127,6 +127,7 @@ export default function QueueBoard({ embedded = false, grouped = false, tv = fal
       <header className={styles.header}>
         <div className={styles.identity}><div><h2>Shopper</h2><p className={styles.subtitle}>PolicyTek · Live call queue</p></div></div>
         <div className={styles.controls}>
+          {!tv && <a className={styles.tvLink} href="https://queue.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer" aria-label="Shopper Queue TV HUD (opens in a new tab)">TV HUD</a>}
           <span className={`${styles.status} ${unavailable ? styles.warning : ""}`} role="status">{unavailable ? "Update unavailable" : board ? "Live" : "Connecting"}</span>
           <button type="button" disabled={busy} onClick={() => { setBusy(true); setRefreshKey(key => key + 1); }}>{busy ? "Refreshing…" : "Refresh"}</button>
         </div>
