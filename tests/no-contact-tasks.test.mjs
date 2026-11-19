@@ -67,3 +67,9 @@ test('a definite rate-limit rejection retries after backoff without treating it 
  assert.equal((await reconcileNoContact(recruit, { now: now + 61000, store, provider })).status, 'created');
  assert.equal(calls, 2);
 }));
+
+test('queue validation accepts external queue options without requiring embedded enum values', async () => {
+ const { noContactProvider } = await import('../lib/no-contact-provider.mjs');
+ const provider = noContactProvider({ accessToken: 'synthetic', deadline: now + 10000, clock: () => now, fetchImpl: async () => Response.json({ name: 'hs_queue_membership_ids', type: 'enumeration', externalOptions: true, options: [] }) });
+ await provider.verifyQueue();
+});
