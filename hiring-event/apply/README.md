@@ -1,6 +1,7 @@
 # Agent Application (lgcyap-apply)
 
-The public Legacy Agent Application at `lgcyap-apply.vercel.app`. It asks exactly the questions of the
+The public Legacy Agent Application at `apply.lgcyap.com` (the older `lgcyap-apply.vercel.app` address
+redirects there, so printed QR codes keep working). It asks exactly the questions of the
 LGCY Onboard `/apply` page (Agent Application v3.1, copied into `public/form.js`), in the same black
 and gold look as the hiring-event sign-in, and writes each application to HubSpot.
 

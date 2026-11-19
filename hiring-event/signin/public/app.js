@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APPLY_URL = 'https://lgcyap-apply.vercel.app/';
+  const APPLY_URL = 'https://apply.lgcyap.com/';
   const OFFICES = { orlando: 'Orlando', miami: 'Miami' };
   // Every question, in page order. Hidden ones are skipped when checking.
   const FIELDS = ['firstName', 'lastName', 'email', 'phone', 'office', 'heardAbout', 'referredBy', 'heardAboutDetail', 'jobDetail',
