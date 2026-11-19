@@ -230,11 +230,11 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 24px 28px; border-bottom: 1px solid var(--line); }
 .dialog-header h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
 .dialog-header .btn { min-width: 44px; padding: 10px; }
-/* The pop-up close X: large and gold. */
-.dialog-header .btn.dialog-close { display: inline-grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; min-width: 52px; padding: 0; border: 1px solid transparent; border-radius: 50%; color: var(--gold); font-size: 40px; font-weight: 300; line-height: 1; }
-.dialog-header .btn.dialog-close span { display: block; margin-top: -4px; }
-.dialog-header .btn.dialog-close:hover:not(:disabled) { border-color: #6d633e; background: #2b2718; color: #f0d078; }
-.dialog-header .btn.dialog-close:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+/* The pop-up and editor close X: large and gold. */
+.btn.dialog-close { display: inline-grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; min-width: 52px; padding: 0; border: 1px solid transparent; border-radius: 50%; color: var(--gold); font-size: 40px; font-weight: 300; line-height: 1; }
+.btn.dialog-close span { display: block; margin-top: -4px; }
+.btn.dialog-close:hover:not(:disabled) { border-color: #6d633e; background: #2b2718; color: #f0d078; }
+.btn.dialog-close:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .dialog-body { padding: 26px 28px; }
 .dialog-actions { padding: 20px 28px 24px; border-top: 1px solid var(--line); justify-content: flex-end; }
 .dialog-body + .dialog-actions { margin-top: 0; }
@@ -428,7 +428,7 @@ a.communication-button:hover { background: #211d10; border-color: var(--gold); }
 .recruit-editor .dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .recruit-editor .dialog-header h2 { font-size: 25px; }
 .editor-recruit-name { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
-.recruit-editor .dialog-header > .btn { font-size: 25px; padding: 4px 12px; line-height: 1; }
+.recruit-editor .dialog-header > .btn:not(.dialog-close) { font-size: 25px; padding: 4px 12px; line-height: 1; }
 .editor-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .editor-phase-heading { color: var(--text); font-size: 19px; line-height: 1.5; margin: 8px 0 20px; outline-offset: 5px; }
 .editor-permission { margin: 0 0 24px; padding: 14px 16px; border-left: 2px solid var(--gold); background: #19160f; color: #d7c687; font-size: 13px; line-height: 1.7; }
