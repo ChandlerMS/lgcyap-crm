@@ -120,7 +120,7 @@ global search and in-app detail views. Contacts, tickets, tasks, companies and
 meetings offer Edit → Review → Save for their fixed supported fields when the
 server verifies the required write grants. No generic creation, deletion or
 messaging is added. Calendar represents CRM meetings, not Google Calendar.
-Inbox reads plain-text messages without sending or attachments. See
+The full Inbox page reads plain-text messages. Its dashboard hover preview can reply to supported conversations using the existing production HubSpot connection; see [Inbox replies](docs/inbox-replies.md). Attachments remain in HubSpot. See
 [the API contract and scope requirements](HUBSPOT-TOOLS-API.md).
 
 ## Leaderboard and Inbox pagination

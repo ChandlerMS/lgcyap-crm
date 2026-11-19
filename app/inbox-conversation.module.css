@@ -1,0 +1,13 @@
+.conversation { display: grid; gap: 12px; color: var(--text); }
+.heading, .actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.conversation h3, .conversation h4, .conversation p { margin: 0; }
+.messages { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; padding: 12px; overscroll-behavior: contain; }
+.messages ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.messages li { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.messages li > div { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+.messages li p { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; font-size: 13px; line-height: 1.6; }
+.conversation form { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.conversation label, .recipient { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.conversation textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 100px; border: 1px solid var(--line); border-radius: 6px; background: #111; color: var(--text); padding: 10px; font: inherit; }
+.conversation textarea:focus-visible, .messages:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.conversation .error { padding: 10px; background: #281d13; border-left: 3px solid #d4ac59; font-size: 13px; }

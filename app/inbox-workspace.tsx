@@ -9,7 +9,7 @@ type Pages = { items: Item[]; continuation: string | null; complete: boolean; no
 type Input = { archive: string; threadId?: string };
 const formatDate = (value?: string) => value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Date not recorded";
 
-function useInboxPages(input: Input | null, onUnauthorized: () => void) {
+export function useInboxPages(input: Input | null, onUnauthorized: () => void) {
   const [state, setState] = useState<Pages>(emptyInboxPages);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const stateRef = useRef<Pages>(state);

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import InboxConversation, { type InboxDraft } from "./inbox-conversation";
 import SummaryChips, { type SummaryChip } from "./summary-chips";
 
 type Tool = "inbox" | "help-desk" | "tickets";
@@ -9,6 +10,8 @@ const NOTES = { inbox: "Recent HubSpot conversations", "help-desk": "HubSpot Sup
 
 export default function SupportSummary({ tool, live, onUnauthorized }: { tool: Tool; live: boolean; onUnauthorized: () => void }) {
   const [state, setState] = useState<{ result?: Result; error?: string }>({});
+  const [selectedThread, setSelectedThread] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, InboxDraft>>({});
   const [attempt, setAttempt] = useState(0);
   const unauthorized = useRef(onUnauthorized);
   useEffect(() => { unauthorized.current = onUnauthorized; }, [onUnauthorized]);
@@ -33,7 +36,7 @@ export default function SupportSummary({ tool, live, onUnauthorized }: { tool: T
     return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
   }, [tool, live, attempt]);
   const result = live ? state.result : undefined;
-  const chips: SummaryChip[] = (result?.records ?? []).map(record => ({ id: record.id, name: record.title, href: tool === "inbox" ? `#inbox/${record.id}` : `#${tool}`, badge: record.status ?? undefined, detail: record.preview ?? record.subtitle ?? record.status ?? TITLES[tool] }));
+  const chips: SummaryChip[] = (result?.records ?? []).map(record => ({ id: record.id, name: record.title, href: tool === "inbox" ? `#inbox/thread/${record.id}` : `#${tool}`, badge: record.status ?? undefined, detail: record.preview ?? record.subtitle ?? record.status ?? TITLES[tool], ...(tool === "inbox" ? { previewOnSelect: () => setSelectedThread(record.id), actions: <><button type="button" className="text-link" onClick={() => setSelectedThread(record.id)}>Open<span className="sr-only"> conversation {record.id}</span></button><a className="text-link" href={`#inbox/thread/${record.id}`}>Full Inbox</a></> } : {}) }));
   const empty = !live ? `Switch to live data to see ${TITLES[tool]}.` : state.error ? <>{state.error} <button className="text-link" onClick={() => { setState({}); setAttempt(value => value + 1); }}>Try again</button></> : !result ? `Loading ${TITLES[tool]} from HubSpot…` : `No ${tool === "inbox" ? "active conversations" : "tickets"} found.`;
-  return <SummaryChips id={`${tool}-summary`} title={TITLES[tool]} href={`#${tool}`} note={NOTES[tool]} chips={chips} count={result ? `${chips.length}${result.partial ? "+" : ""}` : undefined} empty={empty} more={{ label: TITLES[tool] }} />;
+  return <SummaryChips id={`${tool}-summary`} title={TITLES[tool]} href={`#${tool}`} note={NOTES[tool]} chips={chips} count={result ? `${chips.length}${result.partial ? "+" : ""}` : undefined} empty={empty} more={{ label: TITLES[tool] }} previewWidth={tool === "inbox" ? 640 : undefined} previewPersist={tool === "inbox"} previewKeepOpen={live && tool === "inbox" && Boolean(selectedThread)} previewBody={live && tool === "inbox" && selectedThread ? <InboxConversation key={selectedThread} threadId={selectedThread} draft={drafts[selectedThread] ?? { text: "" }} onDraftChange={draft => setDrafts(current => ({ ...current, [selectedThread]: draft }))} onBack={() => setSelectedThread(null)} onUnauthorized={onUnauthorized} onSent={() => setAttempt(value => value + 1)} /> : undefined} />;
 }
