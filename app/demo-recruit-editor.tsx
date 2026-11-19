@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { applyDemoDetails, DemoRecruitError, isDemoRecruit } from "./recruit-demo.mjs";
+import { useOutsideClose } from "./use-outside-close";
 import styles from "./demo-recruit-editor.module.css";
 
 type DemoEditableRecruit = { id: string; name: string; isDemo?: boolean; firstName?: string | null; lastName?: string | null; phone?: string | null; email?: string | null; recruiter?: string | null };
@@ -19,6 +20,9 @@ export default function DemoRecruitEditor<T extends DemoEditableRecruit>({ recru
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
   const allowed = isDemoRecruit(recruit);
+  // A click outside the editor closes it like the × does; demo changes are local, so nothing is asked first.
+  const sectionRef = useRef<HTMLElement>(null);
+  useOutsideClose(sectionRef, onClose);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!allowed) return;
@@ -30,8 +34,8 @@ export default function DemoRecruitEditor<T extends DemoEditableRecruit>({ recru
       setNotice(error instanceof Error ? error.message : "The sample could not be updated.");
     }
   }
-  return <section className={styles.editor} aria-labelledby={`${id}-title`}>
-    <div className={styles.heading}><h2 id={`${id}-title`}>Edit demo recruit</h2><button type="button" className="btn btn-quiet" onClick={onClose} aria-label="Close demo editor">×</button></div>
+  return <section ref={sectionRef} className={styles.editor} aria-labelledby={`${id}-title`}>
+    <div className={styles.heading}><h2 id={`${id}-title`}>Edit demo recruit</h2><button type="button" className="btn btn-quiet dialog-close" onClick={onClose} aria-label="Close demo editor"><span aria-hidden="true">×</span></button></div>
     <p className={styles.banner}>Demo changes stay in this app. They never sync to HubSpot.</p>
     {!allowed && <p role="alert" className={styles.error}>This record is outside the isolated demo. Close this editor.</p>}
     {notice && <p role="alert" className={styles.error}>{notice}</p>}
