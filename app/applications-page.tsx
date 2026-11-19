@@ -2,7 +2,6 @@
 import DismissibleNotice from './dismissible-notice';
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
-import ApplicationSheetsPanel from "./application-sheets-panel";
 import PhotoIdViewer, { type PhotoNote } from "./photo-id-viewer";
 import { useEventReviews, type EventReviews, type Review } from "./event-review";
 import { useExpandCollapse } from "./expand-collapse";
@@ -142,7 +141,6 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
         {board ? loading && report && <span className={styles.updated} role="status">Loading…</span> : <button type="button" className="btn btn-secondary" disabled={loading} onClick={refresh}>{loading ? "Loading…" : "Refresh"}</button>}
       </div>
     </div>
-    {!board && <ApplicationSheetsPanel />}
     <div className={styles.dateFilters} aria-label="Application date filters">
       <div className={styles.datePresets} role="group" aria-label="Application date period">
         {[['all', 'All dates'], ['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([value, label]) => <button key={value} type="button" className="btn btn-secondary" aria-pressed={datePreset === value} onClick={() => { setDatePreset(value); setPage(1); }}>{label}</button>)}
