@@ -43,7 +43,7 @@ test('Event Attendance renders as its own page and as a section of the Recruitin
     // On the dashboard: no second main landmark or h1, no logo, and the section is named by its heading.
     const section = renderToStaticMarkup(createElement(Board, { section: true }));
     assert.match(section, /^<section [^>]*aria-labelledby="event-attendance-title"/);
-    assert.match(section, /<h2 id="event-attendance-title">Event Attendance<\/h2>/);
+    assert.match(section, /<h2 id="event-attendance-title"><a class="panel-title-link" href="#event-attendance">Event Attendance<\/a><\/h2>/);
     assert.doesNotMatch(section, /<main\b|<h1\b|legacy-logo\.png|>Legacy Agency Partners</);
     assert.match(section, /Loading hiring event attendance from HubSpot/);
   } finally { await rm(directory, { recursive: true, force: true }); }

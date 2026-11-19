@@ -152,7 +152,7 @@ test('a meeting saves its exact UTC time, owner and recruit associations once', 
   assert.equal(created.body.properties.hs_meeting_location, 'Office');
   assert.equal(created.body.properties.hubspot_owner_id, '77');
   assert.match(created.body.properties.hs_meeting_body, /&lt;Notes&gt;/);
-  assert.deepEqual(created.body.associations.map(item => [item.to.id, item.types[0].associationTypeId]), [['456',216],['501',200]]);
+  assert.deepEqual(created.body.associations.map(item => [item.to.id, item.types[0].associationTypeId]), [['456',226],['501',200]]);
   assert.equal((await createQuickAction('456', input, settings)).replayed, true);
   assert.equal(posts(provider.calls).length,1);
   await assert.rejects(createQuickAction('456', {...input, location:'Changed'}, settings), {code:'REQUEST_ID_REUSED'});
