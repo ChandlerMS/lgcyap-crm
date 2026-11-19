@@ -2,6 +2,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import styles from './event-attendance.module.css';
+import AttendeeImport, { type AttendeeValues } from './attendee-import';
+import { ATTENDEE_TEMPLATE_CSV, HUBSPOT_SOURCE_URL, attendanceCsv, attendanceCsvFilename, parseAttendeeFile } from './attendance-files.mjs';
+
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url; link.download = name; document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 type Office = { key: string; label: string };
 type Day = { day: string; offices: Record<string, number>; signIns: number; applications: number };
@@ -12,6 +21,7 @@ type Report = {
   signIns: number;
   applications: { total: number; fromAttendees: number; otherTickets: number; noTicket: number };
   stages: Stage[]; offices: Office[]; days: Day[];
+  canImport?: boolean;
 };
 
 const ZONE = 'America/New_York';
@@ -41,7 +51,19 @@ export default function EventAttendanceBoard() {
   const [signInNeeded, setSignInNeeded] = useState(false);
   const [busy, setBusy] = useState(true);
   const [todayKey, setTodayKey] = useState('');
+  const [importFile, setImportFile] = useState<{ name: string; attendees: AttendeeValues[]; id: number } | null>(null);
+  const [importError, setImportError] = useState('');
+  const [reading, setReading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const active = useRef<AbortController | null>(null);
+  async function chooseFile(file: File | undefined) {
+    if (fileRef.current) fileRef.current.value = '';
+    if (!file) return;
+    setReading(true); setImportError('');
+    try { setImportFile({ name: file.name, attendees: await parseAttendeeFile(file) as AttendeeValues[], id: Date.now() }); }
+    catch (failure) { setImportError(failure instanceof Error ? failure.message : 'This file could not be read.'); }
+    finally { setReading(false); }
+  }
   const refresh = useCallback(async () => {
     if (active.current) return;
     const controller = new AbortController(); active.current = controller; setBusy(true);
@@ -79,14 +101,24 @@ export default function EventAttendanceBoard() {
 
   return <main className={styles.board}>
     <header className={styles.header}>
-      <div className={styles.identity}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} /><div><p className={styles.brand}>Legacy Agency Partners</p><h1>Event Attendance</h1><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}</p></div></div>
-      <div className={styles.controls}><span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span><button type="button" disabled={busy} onClick={() => void refresh()}>{busy ? 'Refreshing…' : 'Refresh'}</button></div>
+      <div className={styles.identity}><Image unoptimized src="/legacy-logo.png" alt="Legacy Agency Partners" width={164} height={107} priority className={styles.logo} /><div><p className={styles.brand}>Legacy Agency Partners</p><h1>Event Attendance</h1><p className={styles.subtitle}>Hiring event sign-ins and online applications since {since}, plus imported sign-in lists</p></div></div>
+      <div className={styles.controls}>
+        <span className={`${styles.status} ${error ? styles.warning : ''}`} role="status">{error ? 'Update unavailable' : data ? `Updated ${UPDATED.format(Date.parse(data.fetchedAt))}` : 'Loading'}</span>
+        <a className={styles.action} href={HUBSPOT_SOURCE_URL} target="_blank" rel="noopener noreferrer" title="Opens the Recruiting tickets from the sign-in page, the application page and imported lists. If HubSpot shows another pipeline, choose Recruiting.">Open in HubSpot <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>
+        <button type="button" disabled={!data} onClick={() => data && download(attendanceCsvFilename(data.fetchedAt), attendanceCsv(data))}>Export CSV</button>
+        {data?.canImport && <><input ref={fileRef} type="file" accept=".csv,.xlsx" className="sr-only" tabIndex={-1} aria-label="Choose a sign-in list to import (CSV or Excel)" onChange={event => void chooseFile(event.target.files?.[0])} /><button type="button" disabled={reading || Boolean(importFile)} onClick={() => fileRef.current?.click()}>{reading ? 'Reading file…' : 'Import attendees'}</button></>}
+        <button type="button" disabled={busy} onClick={() => void refresh()}>{busy ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
     </header>
+    <p className={styles.hint}>Open in HubSpot shows the Recruiting tickets these numbers come from. If HubSpot opens another pipeline, choose Recruiting at the top right.{data?.canImport && <> Import a sign-in list as CSV or Excel with First Name, Last Name (or Name), Phone Number, Email, Office and Event Date columns. <button type="button" className={styles.linkButton} onClick={() => download('sign-in-list-template.csv', ATTENDEE_TEMPLATE_CSV)}>Download the template</button>.</>}</p>
 
-    {error && <div role="alert" className={styles.alert}><p>{error}{data ? ' The last numbers received are shown below.' : ''}</p>{signInNeeded && <a href="/sign-in?return_to=%2F%23event-attendance" target="_top">Sign in</a>}</div>}
+    {importError && <p role="alert" className={styles.alert}>{importError}</p>}
+    {importFile && <AttendeeImport key={importFile.id} fileName={importFile.name} attendees={importFile.attendees} onClose={() => setImportFile(null)} onImported={() => void refresh()} />}
+
+    {error &&<div role="alert" className={styles.alert}><p>{error}{data ? ' The last numbers received are shown below.' : ''}</p>{signInNeeded && <a href="/sign-in?return_to=%2F%23event-attendance" target="_top">Sign in</a>}</div>}
     {data?.partial && <p role="status" className={styles.alert}>HubSpot returned more notes than this page reads at once, so the oldest sign-ins and applications may be missing from these counts.</p>}
 
-    <p className={styles.lede}>{data ? <>Since {since}, <strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>
+    <p className={styles.lede}>{data ? <><strong>{count(people?.signedIn)}</strong> {people?.signedIn === 1 ? 'person has' : 'people have'} signed in at a hiring event. <strong>{count(people?.applied)}</strong> of them applied online and <strong>{count(people?.hired)}</strong> reached Completed.</> : busy ? 'Loading hiring event attendance from HubSpot…' : 'Attendance is unavailable right now.'}</p>
 
     <section className={styles.tiles} aria-label="Totals">
       <article><h2>Signed in</h2><p className={styles.big}>{count(people?.signedIn)}</p><span>People · {count(data?.signIns)} sign-ins in all</span></article>
@@ -134,7 +166,8 @@ export default function EventAttendanceBoard() {
     <details className={styles.card}>
       <summary>How each number is counted</summary>
       <ul className={styles.definitions}>
-        <li><strong>Signed in</strong>: people with a sign-in from the hiring event sign-in page. Each person counts once, by their recruiting ticket. The attendance table counts every sign-in, so someone who comes to two events is in both days.</li>
+        <li><strong>Signed in</strong>: people with a sign-in from the hiring event sign-in page (live since {since}) or from an imported sign-in list. Each person counts once, by their recruiting ticket. The attendance table counts every sign-in, so someone who comes to two events is in both days.</li>
+        <li><strong>Imported lists</strong>: each person is matched to HubSpot by phone and email. A new person gets a contact and a Recruiting ticket at Hiring Event; everyone gets a sign-in on the event day, unless they already have one for that day. Nothing in HubSpot is overwritten.</li>
         <li><strong>Applied</strong>: people who signed in and also sent the online application, before or after signing in.</li>
         <li><strong>Hired</strong>: people who signed in whose recruiting ticket is now at Completed. Withdrawn tickets are not hires.</li>
         <li><strong>Office</strong>: the office the person picked when signing in.</li>

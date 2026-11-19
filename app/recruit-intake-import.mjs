@@ -235,7 +235,8 @@ function inspectWorkbookXml(name, text, limits) {
   if (result instanceof Error || depth !== 0) throw invalidWorkbook();
 }
 
-export async function parseRecruitImport(file, { readWorkbook } = {}) {
+/** The file checks are shared; `rowsFromCells` maps the table's headers (recruits by default). */
+export async function parseRecruitImport(file, { readWorkbook, rowsFromCells = recruitRowsFromCells } = {}) {
   if (!file || typeof file.name !== 'string' || typeof file.arrayBuffer !== 'function' || file.size > MAX_IMPORT_BYTES) throw new RecruitImportError('Choose a CSV or .xlsx file no larger than 2 MB.');
   const extension = file.name.toLowerCase().split('.').at(-1);
   if (!['csv', 'xlsx'].includes(extension)) throw new RecruitImportError('Choose a .csv or .xlsx file. For older Excel files, use Save As .xlsx first.');
@@ -244,7 +245,7 @@ export async function parseRecruitImport(file, { readWorkbook } = {}) {
   if (extension === 'csv') {
     let text;
     try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new RecruitImportError('Save the CSV with UTF-8 encoding and try again.'); }
-    return recruitRowsFromCells(parseRecruitCsv(text));
+    return rowsFromCells(parseRecruitCsv(text));
   }
   const entries = inspectRecruitWorkbook(bytes);
   let contents;
@@ -262,7 +263,7 @@ export async function parseRecruitImport(file, { readWorkbook } = {}) {
   const reader = readWorkbook ?? (await import('read-excel-file/browser')).readSheet;
   let rows;
   try { rows = await reader(sanitized.buffer.slice(sanitized.byteOffset, sanitized.byteOffset + sanitized.byteLength), 1, { parseNumber: value => value }); } catch { throw invalidWorkbook(); }
-  return recruitRowsFromCells(rows);
+  return rowsFromCells(rows);
 }
 
 /** Validation is shared with the server; duplicate identities are marked on both rows. */

@@ -38,6 +38,22 @@
 .appTotals h3{font-size:14px;font-weight:400;color:var(--muted);margin:0}.appTotals strong{font-size:38px;color:var(--gold);font-weight:400;font-variant-numeric:tabular-nums}.appTotals span{color:var(--muted);font-size:12px}
 .card summary{cursor:pointer;font-weight:600;color:var(--gold)}
 .definitions{margin:14px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6}.definitions strong{color:var(--text)}
+/* Header actions, the HubSpot hint and the import panel. */
+.controls .action{display:inline-flex;align-items:center;gap:6px;background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;text-decoration:none;font-size:14px}
+.controls .action:hover{background:#282311}.controls .action:focus-visible,.linkButton:focus-visible,.importActions button:focus-visible,.result a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.controls button:disabled{cursor:not-allowed}
+.hint{color:var(--muted);font-size:12px;line-height:1.6;margin:12px 0 0}
+.linkButton{background:none;border:0;padding:0;color:var(--gold);text-decoration:underline;cursor:pointer;font:inherit}
+.importPanel{margin-top:20px;border-color:var(--gold)}
+.importSummary{margin:14px 0 0;font-size:14px;color:var(--text)}
+.importTable th,.importTable td{text-align:left;white-space:normal;font-size:14px;vertical-align:top}
+.importTable td:nth-child(2),.importTable td:nth-child(5){white-space:nowrap}
+.result{min-width:220px}.result a{color:var(--gold)}
+.rowProblem .result{color:#f1c678}.rowDone .result{color:#9fd6a2}
+.importActions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.importActions button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}
+.importActions button:hover{background:#282311}.importActions button:disabled{opacity:.6;cursor:not-allowed}
+.importActions .primary{background:var(--gold);border-color:var(--gold);color:#111;font-weight:600}.importActions .primary:hover{background:#e2c25a}
 @media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles article:nth-child(3){border-left:0;padding-left:0}.appTotals{grid-template-columns:repeat(2,minmax(0,1fr))}.appTotals article:nth-child(3){border-left:0;padding-left:0}}
 @media(max-width:800px){.pair{grid-template-columns:1fr;gap:0}}
 @media(max-width:640px){.header{align-items:flex-start;flex-direction:column;gap:16px}.identity{gap:14px}.logo{width:72px}.brand{font-size:10px}.header h1{font-size:21px}.subtitle{font-size:12px}
