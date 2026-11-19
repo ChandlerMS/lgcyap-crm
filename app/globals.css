@@ -796,3 +796,6 @@ body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-mes
   .sidebar .nav-group-toggle > span { min-width: 0; }
   .sidebar-flyout .nav-link { padding: 10px 8px; font-size: 14px; }
 }
+/* Recruits panel: Note, Add Task, Follow up and Add Meeting are plain white icons with no border or box. */
+.recruits-panel .quick-action-button { border-color: transparent; background: transparent; color: #fff; }
+.recruits-panel .quick-action-button:hover { border-color: transparent; background: #ffffff17; color: #fff; }
