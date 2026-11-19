@@ -1122,3 +1122,6 @@ main.content.sales-calls-content { padding-top: 16px; }
     max-width: calc(100vw - var(--sidebar-width) - 32px);
   }
 }
+
+/* Lead Payments needs room for the full payment page rather than a dashboard-height viewport. */
+.shopper-embed.lead-payments-embed { height: 2400px; min-height: 1200px; resize: vertical; }

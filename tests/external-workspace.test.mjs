@@ -43,7 +43,8 @@ test('each console renders its exact iframe and a working external fallback', as
       assert.ok(html.includes(`src="${page.url}"`));
       assert.ok(html.includes(`href="${page.url}" target="_blank" rel="noopener noreferrer"`));
       assert.ok(html.includes(`title="${page.label} · ${page.detail}"`));
-      if (["contracting-portal", "lead-payments"].includes(page.id)) assert.match(html, /<div class="shopper-embed"><iframe[^>]*class="shopper-embed-frame"/);
+      if (page.id === "lead-payments") assert.match(html, /<div class="shopper-embed lead-payments-embed"><iframe[^>]*class="shopper-embed-frame"/);
+      else if (page.id === "contracting-portal") assert.match(html, /<div class="shopper-embed"><iframe[^>]*class="shopper-embed-frame"/);
       else assert.match(html, /class="policytek-frame"/);
     }
     assert.equal(renderToStaticMarkup(createElement(Page, { view: 'https://evil.example' })), '');
