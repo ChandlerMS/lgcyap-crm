@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import AiProviderLaunchers from "./ai-provider-launchers";
 import { legacyBotPosition } from "./legacy-bot-position.mjs";
 
 type ChatApi = {
@@ -13,7 +14,10 @@ type ChatWindow = Window & { HubSpotConversations?: ChatApi; hsConversationsOnRe
 
 export default function LegacyBotLauncher() {
   const [dock, setDock] = useState<HTMLElement | null>(null);
-  useEffect(() => { setDock(document.getElementById("legacy-bot-dock")); }, []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setDock(document.getElementById("legacy-bot-dock")));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -89,7 +93,7 @@ export default function LegacyBotLauncher() {
     };
   }, [open, dock]);
 
-  const control = <div className="legacy-bot-control" data-ready={ready} data-open={open}>
+  const control = <><div className="legacy-bot-control" data-ready={ready} data-open={open}>
     <button ref={button} className="legacy-bot-launcher" type="button" disabled={!ready} aria-label={ready ? "Open Legacy Bot" : "Legacy Bot is loading"} aria-expanded={open} aria-controls="hubspot-messages-iframe-container" onClick={() => {
       const api = (window as ChatWindow).HubSpotConversations;
       if (api) { openedByUser.current = true; setOpen(true); api.widget.open(); }
@@ -97,6 +101,6 @@ export default function LegacyBotLauncher() {
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z" /><path d="M7 9h10M7 13h6" /></svg>
       <span>Legacy Bot</span>
     </button>
-  </div>;
+  </div><AiProviderLaunchers /></>;
   return dock ? createPortal(control, dock) : control;
 }
