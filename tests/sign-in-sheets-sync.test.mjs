@@ -49,7 +49,7 @@ test('Sign-Ins reuses Chandler OAuth but keeps files and job leases independent 
     assert.equal(JSON.stringify(status).includes('synthetic-refresh'), false);
   } finally { await db.close(); }
 });
-test('new sign-ins replace rows once, daily repair is Eastern, and partial data cannot overwrite', async () => {
+test('new sign-ins replace rows once, unchanged mornings write nothing, and partial data cannot overwrite', async () => {
   const { syncSignInSheets } = await import('../lib/sign-in-sheets-sync.mjs');
   const db = await database(), provider = google(); let visits = [visit('1')];
   try {
@@ -63,11 +63,10 @@ test('new sign-ins replace rows once, daily repair is Eastern, and partial data 
     assert.equal(provider.writes.length, 2);
     const cells = provider.writes[1].body.requests.flatMap(request => request.updateCells?.rows ?? []);
     assert.equal(cells.filter(row => row.values[0]?.userEnteredValue?.stringValue === '2').length, 1);
-    await syncSignInSheets({ ...deps, now: new Date('2026-11-19T14:00:00Z') });
-    await syncSignInSheets({ ...deps, now: new Date('2026-11-19T14:01:00Z') });
-    assert.equal(provider.writes.length, 3);
+    await syncSignInSheets({ ...deps, now: new Date('2026-11-20T14:00:00Z') });
+    assert.equal(provider.writes.length, 2, 'an unchanged month is not rewritten in the morning');
     await assert.rejects(syncSignInSheets({ ...deps, readReport: async () => ({ partial: true, visits: [] }) }), /partial/i);
-    assert.equal(provider.writes.length, 3);
+    assert.equal(provider.writes.length, 2);
     assert.equal((await db.query('SELECT last_error FROM sign_in_sheets_state')).rows[0].last_error, 'LAYOUT:PARTIAL');
   } finally { await db.close(); }
 });

@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/application-sheets",
-      "schedule": "* * * * *"
+      "schedule": "*/15 13-15 * * *"
     },
     {
       "path": "/api/cron/custom-recruits",
@@ -30,7 +30,7 @@
     },
     {
       "path": "/api/cron/sign-in-sheets",
-      "schedule": "* * * * *"
+      "schedule": "*/15 13-15 * * *"
     }
   ]
 }

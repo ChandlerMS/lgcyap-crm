@@ -1,6 +1,6 @@
 # Monthly Recruits Google Sheets (signed-in recruits)
 
-Open **Event Attendance** and expand **Signed in**. The **Monthly Recruits Sheets** panel at the top of that list links to the current month's Sheet. It uses the same chandler@lgcyap.com offline Google connection as Applications. If that connection exists, the Recruits sync starts on the first cron run after deployment. Otherwise Chandler chooses **Connect Google Sheets** once and approves file access. A connection started here returns to Event Attendance and starts the first Recruits sync.
+The monthly Recruits Sheets cover everyone who signed in at a hiring event (Event Attendance → **Signed in**). They use the same chandler@lgcyap.com offline Google connection as Applications, connected from the Applications page panel. The CRM no longer shows a Recruits panel (removed in 5698fda), so open the Sheets from Chandler's Drive or from Google's share email.
 
 Every Eastern calendar month has its own `MM-YY Recruits` file in Chandler's My Drive, also visible in Google Sheets. It has Monday–Sunday weekly tabs clipped to the month. Every sign-in note gets a row, including repeat visits and imported event lists, and imported records use the original event date. Source note IDs make retries replace rows deterministically instead of appending duplicates.
 
@@ -16,7 +16,7 @@ The sign-in answers keep what the person entered. The `CRM:` columns follow late
 
 ## Automatic updates
 
-`/api/cron/sign-in-sheets` runs every minute. A new sign-in, a stage change, an Approve/Deny decision or an edit to any recruit field changes the month's data, and the next run rewrites that month. Unchanged months are skipped. Starting at **9 am America/New_York** every morning, it rewrites every managed month in full, even with no changes, which repairs accidental cell edits. The Eastern clock follows daylight saving time, and a failed morning run retries later that day. HubSpot indexing latency applies, and no browser needs to stay open.
+The Recruits Sheets update **once each morning at 9 am America/New_York**, on the same schedule as Applications: `/api/cron/sign-in-sheets` is called every 15 minutes from 13:00 to 15:45 UTC, and only the first call at or after 9 am Eastern does any work. That run writes only the months with new or changed information since the last update: a new sign-in, a stage change, an Approve/Deny decision or an edit to any recruit field. Unchanged months are left alone. Changes made during the day appear the next morning. A failed morning run retries at the next 15-minute call, and no browser needs to stay open.
 
 Applications and Recruits use different monthly tables, Drive markers and job leases, so one cannot overwrite the other's file or block the other's schedule. They share only Chandler's Google token and the common writer. Migration `0016_sign_in_sheets.sql` (with `0018_monthly_sheets_sharing.sql`) initializes on authorized use and stores report state, not attendee records.
 
@@ -24,11 +24,11 @@ The strict attendance source walks ID-keyset pages beyond the dashboard's displa
 
 ## Sharing
 
-Each month's Sheet is shared as an editor with sarah@lgcyap.com and carlos@fam1life.net (`SHEETS_SHARE_WITH` in `lib/application-sheets-oauth.mjs`). Google emails each of them a link when a new month's Sheet is shared. A share is made once per file and recorded, so it is never repeated. If Google refuses a share (for example, Workspace policy blocking an outside address), the rows keep syncing, the panel says who is still missing, and the share is retried each morning after 9 am or with **Sync now**. Sarah and Carlos also see the panel's link and status in the CRM, but only Chandler can connect or sync.
+Each month's Sheet is shared as an editor with sarah@lgcyap.com and carlos@fam1life.net (`SHEETS_SHARE_WITH` in `lib/application-sheets-oauth.mjs`). Google emails each of them a link when a new month's Sheet is shared. A share is made once per file and recorded, so it is never repeated. If Google refuses a share (for example, Workspace policy blocking an outside address), the rows keep syncing, and the share is retried each morning at 9 am. On the Applications page, its panel says who is still missing, and **Sync now** retries at once. Sarah and Carlos also see that panel's link and status, but only Chandler can connect or sync.
 
 ## Optional immediate notification
 
-The external sign-in site can POST `/api/event-attendance/sheets/notify` after writing its HubSpot note, authorized with a separate 32+ character `SIGN_IN_SHEETS_NOTIFY_SECRET` configured in both servers. No attendee body is needed. This hook is not installed in the sign-in site; the minutely checks work without it.
+The external sign-in site can POST `/api/event-attendance/sheets/notify` after writing its HubSpot note, authorized with a separate 32+ character `SIGN_IN_SHEETS_NOTIFY_SECRET` configured in both servers. No attendee body is needed. It follows the same once-a-morning rule as the cron and is not installed in the sign-in site.
 
 Google setup, offline permission, Drive/Sheets API enablement and token rotation follow [Applications Sheets setup](application-sheets.md). Do not edit the managed table columns directly, because the sync replaces them. Put your own notes in columns to the right of the table or on a separate tab. The current-month link appears only after a successful write. Missing Google authorization and provider failures stay visible in the panel.
 

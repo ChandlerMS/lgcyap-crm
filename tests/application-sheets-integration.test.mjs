@@ -69,7 +69,7 @@ test('rejects Google consent for a different account without saving any connecti
     assert.equal((await db.query('SELECT * FROM application_sheets_connection')).rows.length, 0);
   } finally { await db.close(); }
 });
-test('sync creates one monthly file, writes literal cells, skips unchanged data and repairs once at 9 am Eastern', async () => {
+test('sync creates one monthly file, writes literal cells, and the next morning writes only new information', async () => {
   const { syncApplicationSheets, applicationSheetsStatus } = await import('../lib/application-sheets-sync.mjs');
   const db = await database(), google = provider();
   try {
@@ -85,7 +85,9 @@ test('sync creates one monthly file, writes literal cells, skips unchanged data 
     await syncApplicationSheets({ ...options, now: new Date('2026-11-19T14:01:00Z') });
     assert.equal(writes().length, 1);
     await syncApplicationSheets({ ...options, now: new Date('2026-11-20T14:00:00Z') });
-    assert.equal(writes().length, 2);
+    assert.equal(writes().length, 1, 'the morning run leaves an unchanged month alone');
+    await syncApplicationSheets({ ...options, now: new Date('2026-11-21T14:00:00Z'), readReport: async () => ({ ...report, applications: [...report.applications, { ...report.applications[0], id: '2', at: '2026-11-20T15:00:00Z' }] }) });
+    assert.equal(writes().length, 2, 'a new submission is written the next morning');
     const status = await applicationSheetsStatus({ db, user, now: now() });
     assert.equal(status.current.url, 'https://docs.google.com/spreadsheets/d/synthetic-file/edit');
     assert.equal(status.connected, true);
@@ -123,17 +125,25 @@ test('overlapping jobs skip without calling the source and preview deployments c
     assert.equal((await syncApplicationSheets({ db, env: { ...env, VERCEL_ENV: 'preview' }, now: now(), readReport })).status, 'disabled');
   } finally { await db.close(); }
 });
-test('failed daily repair stays pending on unchanged data and retries the same day', async () => {
+test('scheduled runs happen once each morning from 9 am Eastern and retry only until one succeeds', async () => {
   const { syncApplicationSheets } = await import('../lib/application-sheets-sync.mjs');
   const db = await database(), google = provider();
   try {
     await connect(db, google.fetchImpl);
-    const options = { db, env, fetchImpl: google.fetchImpl, readReport: async () => report };
-    await syncApplicationSheets({ ...options, now: now() });
-    await assert.rejects(syncApplicationSheets({ ...options, fetchImpl: provider({ failWrite: true }).fetchImpl, now: new Date('2026-11-20T14:00:00Z') }));
-    await syncApplicationSheets({ ...options, now: new Date('2026-11-20T16:00:00Z') });
-    assert.equal(google.calls.filter(call => call.url.endsWith(':batchUpdate')).length, 2, 'failed repairs retry after the 9 am hour');
-    assert.equal((await db.query('SELECT repaired_day FROM application_sheets_months')).rows[0].repaired_day, '2026-11-20');
+    let reads = 0;
+    const options = { db, env, fetchImpl: google.fetchImpl, scheduled: true, readReport: async () => { reads++; return report; } };
+    const at = (iso, extra = {}) => syncApplicationSheets({ ...options, now: new Date(iso), ...extra });
+    assert.deepEqual(await at('2026-11-19T13:45:00Z'), { status: 'waiting', nextRun: 'today at 9 am Eastern' }, '8:45 am EST waits');
+    assert.equal(reads, 0, 'a waiting call does not read HubSpot');
+    await assert.rejects(at('2026-11-19T14:00:00Z', { fetchImpl: provider({ failWrite: true }).fetchImpl }));
+    assert.equal((await at('2026-11-19T14:15:00Z')).status, 'synced', 'a failed morning run is retried at the next call');
+    assert.deepEqual(await at('2026-11-19T14:30:00Z'), { status: 'waiting', nextRun: 'tomorrow at 9 am Eastern' });
+    assert.deepEqual(await at('2026-11-19T22:00:00Z'), { status: 'waiting', nextRun: 'tomorrow at 9 am Eastern' });
+    assert.equal(reads, 2);
+    assert.equal((await at('2026-11-20T14:00:00Z')).status, 'synced', 'the next morning runs again');
+    const { easternSyncTime } = await import('../lib/application-sheets-layout.mjs');
+    assert.deepEqual([easternSyncTime(new Date('2027-06-01T12:59:00Z')).daily, easternSyncTime(new Date('2027-06-01T13:00:00Z')).daily], [false, true], '9 am EDT is 13:00 UTC in summer');
+    assert.equal((await syncApplicationSheets({ ...options, scheduled: false, force: true, now: new Date('2026-11-20T20:00:00Z') })).status, 'synced', 'Sync now still runs at any time');
   } finally { await db.close(); }
 });
 test('failed forced repair retries unchanged files and unpublished workbooks have no status link', async () => {
