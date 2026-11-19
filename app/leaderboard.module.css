@@ -133,3 +133,9 @@
   .withSales .medal { grid-row: span 2; }
   .withSales .name { grid-column: 2 / -1; }
 }
+
+.shopperPagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.shopperPagination > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.shopperPagination label { display: flex; align-items: center; gap: 8px; }
+.shopperPagination select { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: #141414; color: var(--text); font: inherit; }
+.shopperPagination select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
