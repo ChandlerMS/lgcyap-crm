@@ -6,7 +6,7 @@ import { LEADERBOARD_BOARDS, LEADERBOARD_SP_CALL_TOTALS, leaderboardBarWidth, le
 import { hubspotRetryDeadline } from "./hubspot-workspace-view.mjs";
 import { leaderboardPeriod } from "../lib/leaderboard-period.mjs";
 import { LeaderboardPeriodTabs, LeaderboardRangeForm, useLeaderboardDates, type LeaderboardPeriodId as Period } from "./leaderboard-date-range";
-import { policytekRefreshActive, policytekNextRefreshDelay } from "../lib/policytek-schedule.mjs";
+import { policytekCaptureActive, policytekRefreshActive, policytekNextRefreshDelay, POLICYTEK_CAPTURE_HOURS } from "../lib/policytek-schedule.mjs";
 import styles from "./leaderboard.module.css";
 
 type Board = "sp" | "shopper" | "source" | "whatsapp";
@@ -73,7 +73,8 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
 
   useEffect(() => {
     if (board !== "shopper" && board !== "source") return;
-    const refresh = () => { if (policytekRefreshActive() && !document.hidden && !requestRef.current) void load(); };
+    // Captures land every 15 minutes; checking the saved snapshot every five shows each one soon after it is published.
+    const refresh = () => { if (policytekCaptureActive() && !document.hidden && !requestRef.current) void load(); };
     let timer: number;
     const tick = () => { refresh(); timer = window.setTimeout(tick, policytekNextRefreshDelay()); };
     timer = window.setTimeout(tick, policytekNextRefreshDelay());
@@ -162,7 +163,7 @@ export default function Leaderboard({ onUnauthorized, navigation }: { onUnauthor
       {current?.partial && <p className={styles.alert} role="status">{board === "sp" ? "Incomplete results: totals and rankings shown cover the loaded records only." : board === "whatsapp" ? "Incomplete results: part of this range has not been imported yet, so totals and rankings cover imported days only." : "Incomplete named rows: report totals may include activity not attributed to the names shown."}</p>}
       {missingMetrics > 0 && <p className={styles.notice}>{missingMetrics} record{missingMetrics === 1 ? " lacks" : "s lack"} the selected metric and {missingMetrics === 1 ? "is" : "are"} not ranked.</p>}
       <p className={styles.foot}>{board === "whatsapp" ? "Daily agent reports by sale date" : board === "sp" ? "HubSpot Sold deals by close date" : board === "shopper" ? "PolicyTek Agent Report by submit date" : "PolicyTek Source Performance"}</p>
-      <p className={styles.foot}>{board === "whatsapp" ? `Imported from the LAP Daily Agent Reports${current?.dataThrough ? ` · activity through ${current.dataThrough}` : ""}. Total production is the reports' own figure, not HubSpot annual premium. ${whatsappCalls?.basis === "monthly" ? "Calls are the monthly call totals entered for January–June 2026 and Close is sales ÷ calls." : `Calls are connected (answered) inbound queue calls and Close is queue sold ÷ calls, recorded from ${whatsappCalls?.coverageStart ?? "2026-06-17"}.`} Re-run the import after regenerating the reports.` : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : "PolicyTek browser sync · every five minutes, 9 AM–9 PM Eastern daily. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, Codex running, and PolicyTek signed in."}</p>
+      <p className={styles.foot}>{board === "whatsapp" ? `Imported from the LAP Daily Agent Reports${current?.dataThrough ? ` · activity through ${current.dataThrough}` : ""}. Total production is the reports' own figure, not HubSpot annual premium. ${whatsappCalls?.basis === "monthly" ? "Calls are the monthly call totals entered for January–June 2026 and Close is sales ÷ calls." : `Calls are connected (answered) inbound queue calls and Close is queue sold ÷ calls, recorded from ${whatsappCalls?.coverageStart ?? "2026-06-17"}.`} Re-run the import after regenerating the reports.` : board === "sp" ? "Standard and Preferred are combined here. These are HubSpot Sold deals; PolicyTek remains a separate source." : `PolicyTek browser sync · every 15 minutes, ${POLICYTEK_CAPTURE_HOURS}. Exact Custom ranges are queued for both boards. Outside these hours, saved reports remain available. Captures require this computer on, the Claude app open, and PolicyTek signed in.`}</p>
     </footer>
   </section>;
 }

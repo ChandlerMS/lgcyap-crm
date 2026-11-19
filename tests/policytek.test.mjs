@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { parsePolicytekCapture, policytekReportUrl, savePolicytekSnapshot, readPolicytekLeaderboard, policytekSyncPlan } from '../lib/policytek.mjs';
 import { handlePolicytekSync } from '../lib/policytek-sync-handler.mjs';
 import { rankLeaderboardRows } from '../app/leaderboard-data.mjs';
-import { policytekRefreshActive, policytekSnapshotStale, policytekNextRefreshDelay } from '../lib/policytek-schedule.mjs';
+import { policytekRefreshActive, policytekSnapshotStale, policytekNextRefreshDelay, policytekCaptureActive, policytekCaptureStale, policytekCaptureResumes, policytekRequestLookbackMs } from '../lib/policytek-schedule.mjs';
 
 const now = Date.parse('2026-11-03T15:00:00Z'), secret = 'a'.repeat(64);
 const schema = await readFile(new URL('../migrations/0005_policytek_snapshots.sql', import.meta.url), 'utf8');
@@ -54,7 +54,10 @@ test('durable snapshots resist replay, retain good data, label staleness and que
     assert.equal(await savePolicytekSnapshot(db, { ...parsed, rows: [], capturedAt: new Date(now - 1000).toISOString() }), false);
     let read = await readPolicytekLeaderboard({ board: 'shopper', period: 'day' }, { db, now });
     assert.equal(read.status, 'available'); assert.equal(read.rows.length, 1); assert.equal(read.stale, false);
+    assert.equal(read.refreshSeconds, 900); assert.match(read.notice, /every 15 minutes during 9 AM–9 PM Eastern, Monday–Friday/);
     read = await readPolicytekLeaderboard({ board: 'shopper', period: 'day' }, { db, now: now + 900001 });
+    assert.equal(read.stale, false);
+    read = await readPolicytekLeaderboard({ board: 'shopper', period: 'day' }, { db, now: now + 2100001 });
     assert.equal(read.stale, true); assert.equal(read.fetchedAt, parsed.capturedAt);
     read = await readPolicytekLeaderboard({ board: 'source', period: 'custom', from: '2026-10-01', to: '2026-10-02' }, { db, now });
     assert.equal(read.status, 'unavailable'); assert.equal(read.error.code, 'POLICYTEK_PENDING'); assert.equal(read.reportTotals, undefined);
@@ -92,7 +95,34 @@ test('off-hours plans and publications cannot reach the database', async () => {
   assert.equal(publish.status, 409);
   assert.equal((await publish.json()).code, 'POLICYTEK_OUTSIDE_REFRESH_WINDOW');
   assert.deepEqual(await policytekSyncPlan({ query: getDb }, closed), []);
+  const saturday = Date.parse('2026-11-07T12:00:00-05:00');
+  assert.deepEqual((await (await handlePolicytekSync(planRequest, { secret, getDb, now: saturday })).json()).jobs, []);
+  const weekendPublish = await handlePolicytekSync(request(capture()), { secret, getDb, now: saturday });
+  assert.equal(weekendPublish.status, 409);
+  assert.match((await weekendPublish.json()).error, /Monday–Friday/);
   assert.equal(calls, 0);
+});
+
+test('PolicyTek captures run every 15 minutes on weekdays only, across both DST changes', () => {
+  for (const [day, offset] of [['2026-11-02', '-05:00'], ['2026-11-03', '-05:00'], ['2026-07-15', '-04:00'], ['2026-03-09', '-04:00'], ['2026-11-06', '-05:00']]) {
+    for (const [time, active] of [['08:59:59', false], ['09:00:00', true], ['20:59:59', true], ['21:00:00', false]]) {
+      assert.equal(policytekCaptureActive(Date.parse(`${day}T${time}${offset}`)), active, `${day} ${time}`);
+    }
+  }
+  for (const [day, offset] of [['2026-11-07', '-05:00'], ['2026-11-08', '-05:00'], ['2026-03-08', '-04:00'], ['2026-11-01', '-05:00']]) {
+    for (const time of ['09:00:00', '12:00:00', '20:59:59']) assert.equal(policytekCaptureActive(Date.parse(`${day}T${time}${offset}`)), false, `${day} ${time}`);
+  }
+  // The RingCX and Lead Data syncs keep their daily window.
+  assert.equal(policytekRefreshActive(Date.parse('2026-11-07T12:00:00-05:00')), true);
+  const friday = '2026-11-06T20:50:00-05:00';
+  assert.equal(policytekCaptureStale(friday, Date.parse('2026-11-07T12:00:00-05:00')), false);
+  assert.equal(policytekCaptureStale(friday, Date.parse('2026-11-09T09:34:59-05:00')), false);
+  assert.equal(policytekCaptureStale(friday, Date.parse('2026-11-09T09:35:01-05:00')), true);
+  assert.equal(policytekCaptureStale('2026-11-09T10:00:00-05:00', Date.parse('2026-11-09T10:30:00-05:00')), false);
+  assert.equal(policytekCaptureStale('2026-11-09T10:00:00-05:00', Date.parse('2026-11-09T10:35:01-05:00')), true);
+  for (const [time, label] of [['2026-11-03T08:00:00-05:00', '9 AM Eastern'], ['2026-11-03T21:30:00-05:00', '9 AM Eastern'], ['2026-11-06T21:00:00-05:00', 'Monday at 9 AM Eastern'], ['2026-11-07T12:00:00-05:00', 'Monday at 9 AM Eastern'], ['2026-11-08T23:00:00-05:00', 'Monday at 9 AM Eastern']]) {
+    assert.equal(policytekCaptureResumes(Date.parse(time)), label, time);
+  }
 });
 
 test('the latest Custom range queues both boards ahead of old failures and repeats next tick', async () => {
@@ -111,11 +141,11 @@ test('the latest Custom range queues both boards ahead of old failures and repea
     assert.equal(plan.length, 8);
     assert.deepEqual(plan.slice(0, 2).map(j => [j.board, j.startDate, j.endDate]), [['shopper', '2026-10-01', '2026-10-31'], ['source', '2026-10-01', '2026-10-31']]);
     // A capture completing three minutes into a run must still be refreshed on
-    // the next five-minute tick, rather than being skipped for another cycle.
+    // the next 15-minute tick, rather than being skipped for another cycle.
     for (const job of plan.slice(0, 2)) {
       await savePolicytekSnapshot(db, { ...job, capturedAt: new Date(now + 180000).toISOString(), rows: [], reportTotals: { leads: 0, quoted: 0, submitted: 0, premium: 0, spend: 0 }, partial: false });
     }
-    const nextPlan = await policytekSyncPlan(db, now + 300000);
+    const nextPlan = await policytekSyncPlan(db, now + 900000);
     assert.deepEqual(nextPlan.slice(0, 2), plan.slice(0, 2));
     assert.equal(new Set(nextPlan.map(j => `${j.board}:${j.startDate}:${j.endDate}`)).size, nextPlan.length);
   } finally { await db.close(); }
@@ -141,6 +171,9 @@ test('Custom reads isolate both board and dates, retain timestamps overnight and
     assert.equal(missing.status, 'unavailable'); assert.equal(missing.reportTotals, undefined);
     assert.match(missing.error.message, /paused until 9 AM Eastern/);
     assert.deepEqual(await policytekSyncPlan(db, closed), []);
+    const weekend = await readPolicytekLeaderboard({ board: 'shopper', period: 'custom', from: '2026-10-01', to: '2026-10-31' }, { db, now: Date.parse('2026-11-07T12:00:00-05:00') });
+    assert.equal(weekend.refreshActive, false); assert.equal(weekend.stale, false); assert.equal(weekend.reportTotals.submitted, 12);
+    assert.match(weekend.notice, /paused until Monday at 9 AM Eastern/);
   } finally { await db.close(); }
 });
 
@@ -167,3 +200,24 @@ test('same-name source rows retain independent metrics and totals without mergin
   assert.throws(() => parsePolicytekCapture(shopper, now));
 });
 
+test('Custom ranges picked Friday night or over the weekend are still captured on Monday', async () => {
+  const db = new PGlite();
+  const at = text => Date.parse(text);
+  const custom = plan => plan.filter(job => job.startDate.startsWith('2026-10')).map(job => `${job.board}:${job.startDate}`).sort();
+  const pick = (from, when) => readPolicytekLeaderboard({ board: 'shopper', period: 'custom', from, to: from }, { db, now: at(when) });
+  try {
+    await db.exec(schema);
+    await pick('2026-10-06', '2026-11-06T22:00:00-05:00');
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-09T09:30:00-05:00'))), ['shopper:2026-10-06', 'source:2026-10-06']);
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-10T09:30:00-05:00'))), []);
+    await db.query('DELETE FROM policytek_report_requests');
+    await pick('2026-10-07', '2026-11-08T15:00:00-05:00');
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-09T09:30:00-05:00'))), ['shopper:2026-10-07', 'source:2026-10-07']);
+    await db.query('DELETE FROM policytek_report_requests');
+    // A Thursday-morning pick had its full 24 weekday hours by Friday morning.
+    await pick('2026-10-05', '2026-11-05T09:00:00-05:00');
+    assert.deepEqual(custom(await policytekSyncPlan(db, at('2026-11-09T09:30:00-05:00'))), []);
+    assert.equal(policytekRequestLookbackMs(at('2026-11-09T09:30:00-05:00')), 72 * 3600000);
+    assert.equal(policytekRequestLookbackMs(at('2026-11-10T09:30:00-05:00')), 24 * 3600000);
+  } finally { await db.close(); }
+});

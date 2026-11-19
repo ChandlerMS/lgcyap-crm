@@ -285,7 +285,9 @@ test('outside 9 AM–9 PM Eastern the cron stops before RingCX or the database, 
   const route = readFileSync('app/api/cron/svp-ringcx-calls/route.ts', 'utf8');
   const auth = route.indexOf('cronAuthorized(request'), hours = route.indexOf('if (!policytekRefreshActive())'), reads = route.indexOf('await getSvpCallsDb()');
   assert.ok(auth >= 0 && auth < hours && hours < reads);
-  assert.equal(readFileSync('app/leaderboard.tsx', 'utf8').match(/policytekRefreshActive\(\) && !document\.hidden/g)?.length, 2, 'the Standard vs. Preferred reload pauses like Shopper and Source');
+  const page = readFileSync('app/leaderboard.tsx', 'utf8');
+  assert.equal(page.match(/policytekRefreshActive\(\) && !document\.hidden/g)?.length, 1, 'the Standard vs. Preferred reload pauses outside its daily sync hours');
+  assert.equal(page.match(/policytekCaptureActive\(\) && !document\.hidden/g)?.length, 1, 'Shopper and Source reloads pause outside the weekday capture hours');
 });
 
 test('the overnight pause is not called late, and today stays on the report until the 9 AM read', async () => {
