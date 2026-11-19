@@ -214,3 +214,12 @@ test('Training Classes is a Recruits flyout destination with its own route', asy
   assert.deepEqual(resolveWorkspaceRoute('#training-classes'), { view: 'training-classes' });
   assert.equal(sidebarViewFor('training-classes'), 'recruits');
 });
+
+test('dashboard communication sections follow Calendar in the requested order before Recruits and Calls', async () => {
+  const { DASHBOARD_COMMUNICATION_TOOLS } = await import('../app/recruiting-navigation.mjs');
+  assert.deepEqual(DASHBOARD_COMMUNICATION_TOOLS.map(tool => tool.id), ['inbox', 'help-desk', 'tickets']);
+  const workspace = readFileSync(new URL('../app/recruiting-workspace.tsx', import.meta.url), 'utf8');
+  const order = ['calendar', 'email', 'inbox', 'help-desk', 'tickets', 'recruits', 'calls'];
+  const positions = order.map(id => workspace.indexOf(`<DashboardSection id="${id}"`));
+  assert.ok(positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1])));
+});

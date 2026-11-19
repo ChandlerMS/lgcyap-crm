@@ -58,6 +58,12 @@ export const RECRUITS_PAGE_TOOLS = Object.freeze([
   { id: 'calendar', label: 'Calendar' },
   { id: 'calls', label: 'Calls' },
 ].map(tool => Object.freeze(tool)));
+// Existing HubSpot communication views embedded in the dashboard.
+export const DASHBOARD_COMMUNICATION_TOOLS = Object.freeze(['inbox', 'help-desk', 'tickets'].map(id => {
+  const tool = HUBSPOT_TOOLS.find(candidate => candidate.id === id);
+  if (!tool) throw new Error(`Unknown dashboard tool: ${id}`);
+  return tool;
+}));
 // Full recruiting paths include every stage, including completed and withdrawn records.
 export const RECRUIT_PATH_PAGES = Object.freeze([
   Object.freeze({ id: 'referrals', label: 'Referrals', recruitingPath: 'genpop' }),

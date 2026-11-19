@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { emptyInboxPages, walkInboxPages } from "./inbox-pagination.mjs";
+import { SectionToggle } from "./dashboard-section";
 import styles from "./hubspot-workspace.module.css";
 
 type Item = { id: string; title?: string; subtitle?: string; status?: string; archived?: boolean; updatedAt?: string; createdAt?: string; text?: string | null; direction?: string; type?: string; truncated?: boolean };
@@ -68,7 +69,7 @@ export function useInboxPages(input: Input | null, onUnauthorized: () => void) {
   return { state: loadedScope === currentScope ? state : emptyInboxPages() as Pages, busy: loadedScope === currentScope && busy, error: loadedScope === currentScope ? error : null, retryAt, load, pause };
 }
 
-export default function InboxWorkspace({ onUnauthorized, initialThreadId }: { onUnauthorized: () => void; initialThreadId?: string }) {
+export default function InboxWorkspace({ onUnauthorized, initialThreadId, compact = false, pageHref }: { onUnauthorized: () => void; initialThreadId?: string; compact?: boolean; pageHref?: string }) {
   const [archive, setArchive] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
@@ -84,8 +85,10 @@ export default function InboxWorkspace({ onUnauthorized, initialThreadId }: { on
     {collection.retryAt > 0 && <p className={styles.notice}>HubSpot is limiting requests. Continue after {formatDate(new Date(collection.retryAt).toISOString())}.</p>}
     {collection.busy ? <button className="btn btn-secondary" onClick={collection.pause}>Pause {noun}</button> : !collection.state.complete && (collection.state.pages === 0 || collection.state.continuation) ? <button className="btn btn-secondary" disabled={Boolean(collection.retryAt)} onClick={() => void collection.load(false)}>Continue loading {noun}</button> : !collection.state.complete && <p className={styles.notice}>No usable continuation is available. Use Refresh to restart this read.</p>}
   </>;
-  return <section className={styles.workspace} aria-labelledby="inbox-title">
-    <div className={styles.heading}><div><h1 id="inbox-title" tabIndex={-1}>Inbox</h1><p>HubSpot conversations and their message histories. Messaging stays in HubSpot.</p></div><div className={styles.headingActions}><span className={styles.readOnly}>Read-only</span><a className={styles.nativeLink} href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">Open in HubSpot ↗</a><button className="btn btn-secondary" disabled={threads.busy || Boolean(threads.retryAt)} onClick={() => { setSelected(null); setPage(1); void threads.load(true); }}>Refresh</button></div></div>
+  const Heading = compact ? "h2" : "h1";
+  const titleId = compact ? "today-inbox-title" : "inbox-title";
+  return <section className={`${styles.workspace} ${compact ? styles.compact : ""}`} aria-labelledby={titleId}>
+    <div className={styles.heading} data-section-heading><div><div className="section-title-controls"><Heading id={titleId} tabIndex={-1}>{pageHref ? <a className="panel-title-link" href={pageHref}>Inbox</a> : "Inbox"}</Heading><div className="panel-heading-actions"><SectionToggle /></div></div>{!compact && <p>HubSpot conversations and their message histories. Messaging stays in HubSpot.</p>}</div><div className={styles.headingActions}>{!compact && <span className={styles.readOnly}>Read-only</span>}<a className={styles.nativeLink} href="https://app.hubspot.com/live-messages/50894788" target="_blank" rel="noopener noreferrer">Open in HubSpot<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M14 3h7v7M21 3 10 14M10 3H3v18h18v-7" /></svg><span className="sr-only"> (opens in a new tab)</span></a><button className="btn btn-secondary" disabled={threads.busy || Boolean(threads.retryAt)} onClick={() => { setSelected(null); setPage(1); void threads.load(true); }}>Refresh</button></div></div>
     <div className={styles.toolbar}>
       <label>Conversations <select aria-label="Conversation archive filter" value={archive} onChange={event => { setSelected(null); setPage(1); setArchive(event.target.value); }}><option value="all">All, including archived</option><option value="active">Not archived</option><option value="archived">Archived</option></select></label>
       <label className={styles.search}><span className="sr-only">Filter loaded conversations</span><input type="search" value={query} placeholder="Filter loaded conversations" onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>

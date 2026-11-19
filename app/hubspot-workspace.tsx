@@ -68,7 +68,7 @@ function NativeLink({ href, label = "Open in HubSpot" }: { href: unknown; label?
 }
 
 export default function HubSpotWorkspace(props: Props) {
-  return props.tool === "inbox" ? <InboxWorkspace key={props.initialThreadId ?? "inbox"} initialThreadId={props.initialThreadId} onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
+  return props.tool === "inbox" ? <InboxWorkspace compact={props.compact} pageHref={props.pageHref} key={props.initialThreadId ?? "inbox"} initialThreadId={props.initialThreadId} onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
 }
 
 function CrmWorkspace({ tool, label, description, compact = false, pageHref, pageSize: initialPageSize, pageSizes, hoverRows = false, pageNumbers = false, headerAction, onUnauthorized, onDirtyChange, onBusyChange }: Props) {

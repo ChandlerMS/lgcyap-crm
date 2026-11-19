@@ -17,6 +17,7 @@ import RecruitCommunications from "./recruit-communications";
 import RecruitPathPage from "./recruit-path-page";
 import RecruitQuickActions, { AddActivityButtons } from "./recruit-quick-actions";
 import RingCentralPanel from "./ringcentral-panel";
+import RecruitEmailPanel from "./recruit-email-panel";
 import { RecruitEmailProvider, RecruitEmailSummary } from "./recruit-email";
 import RecruitStageControls, { type StageFlowChanges } from "./recruit-stage-controls";
 import RecruitPipeline from "./recruit-pipeline";
@@ -45,7 +46,7 @@ import { resolveRecruitingPeriod, recordsInRecruitingPeriod } from "./recruiting
 import { saveRecruitStageWithRefresh, StageSaveError } from "./recruit-stage-save.mjs";
 import { sortRecruitRows } from "./recruit-list-view.mjs";
 import { STAGE_PAGES, TERMINAL_STAGE_IDS } from "../lib/recruiting-config.mjs";
-import { WORKSPACE_NAV, RECRUIT_PATH_PAGES, RECRUITS_CHILD_PAGES, RECRUITS_SITE_LINKS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, DASHBOARD_PAGES, WORKSPACE_EXTRA_PAGES, QUEUE_PAGES, sidebarViewFor, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
+import { WORKSPACE_NAV, DASHBOARD_COMMUNICATION_TOOLS, RECRUIT_PATH_PAGES, RECRUITS_CHILD_PAGES, RECRUITS_SITE_LINKS, HUBSPOT_TOOLS, SIDEBAR_HUBSPOT_TOOLS, SIDEBAR_RECRUITING_PAGES, RECRUITS_PAGE_TOOLS, DASHBOARD_PAGES, WORKSPACE_EXTRA_PAGES, QUEUE_PAGES, sidebarViewFor, resolveWorkspaceRoute, stagePageForRecord, stagePageForView, recordsForStagePage, unmappedStageRecords } from "./recruiting-navigation.mjs";
 import { RECRUITING_PATHS, LICENSE_ROUTES } from "../lib/recruiting-flow.mjs";
 
 import { lifecycleStatusLabel } from "../lib/recruit-lifecycle.mjs";
@@ -231,7 +232,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
   const panelReports = useMemo(() => {
     const dirty = new Set<string>(), busy = new Set<string>();
     const reports: Record<string, { onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }> = {};
-    for (const id of [...RECRUITS_PAGE_TOOLS.map(tool => tool.id), "tasks"]) reports[id] = {
+    for (const id of [...RECRUITS_PAGE_TOOLS.map(tool => tool.id), ...DASHBOARD_COMMUNICATION_TOOLS.map(tool => tool.id), "tasks"]) reports[id] = {
       onDirtyChange: value => { if (value) dirty.add(id); else dirty.delete(id); updateToolDirty(dirty.size > 0); },
       onBusyChange: value => { if (value) busy.add(id); else busy.delete(id); updateToolBusy(busy.size > 0); },
     };
@@ -534,7 +535,7 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
 
   // Live HubSpot panels under the pipeline. Demo data leaves them unloaded so fictional recruits never sit beside live records.
   function recruitsPagePanel(id: string) {
-    const tool = id === "tasks" ? { id: "tasks", label: "Tasks" } : RECRUITS_PAGE_TOOLS.find(item => item.id === id);
+    const tool = id === "tasks" ? { id: "tasks", label: "Tasks" } : [...RECRUITS_PAGE_TOOLS, ...DASHBOARD_COMMUNICATION_TOOLS].find(item => item.id === id);
     if (!tool) return null;
     const pageHref = id === "calls" ? "#calls/standard" : HUBSPOT_TOOLS.some(item => item.id === id) || DASHBOARD_PAGES.includes(id) ? `#${id}` : undefined;
     if (demoMode) return <section className="today-panel" aria-labelledby={`today-${id}-title`}><div className="follow-up-heading" data-section-heading><h2 id={`today-${id}-title`}>{pageHref ? <a className="panel-title-link" href={pageHref}>{tool.label}</a> : tool.label}</h2><div className="panel-heading-actions"><SectionToggle /></div></div><p className="helper">This panel shows live HubSpot records. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section>;
@@ -603,12 +604,16 @@ export default function RecruitingWorkspace({ ringCentralClientId = "" }: { ring
       </div></CollapsibleCards>
       {/* Live hiring-event counts, like the HubSpot panels below: Demo data leaves them unloaded. */}
       <DashboardSection id="event-attendance" label="Event Attendance" className="today-attendance">{demoMode ? <section className="today-panel" aria-labelledby="today-event-attendance-title"><div className="follow-up-heading" data-section-heading><h2 id="today-event-attendance-title"><a className="panel-title-link" href="#event-attendance">Event Attendance</a></h2><div className="panel-heading-actions"><SectionToggle /></div></div><p className="helper">This section shows live HubSpot counts. Demo recruits stay separate.</p><button className="btn btn-secondary" disabled={Boolean(editingId || stageSavingId)} onClick={() => switchDataMode(false)}>Use live data</button></section> : <EventAttendanceBoard section recruits={all} canAddActivity={canAddActivity} now={timestamp} />}</DashboardSection>
-      {/* Stacked, one per row: Tasks, Follow up, Meetings, Calendar, Recruits, then Calls. */}
+      {/* Stacked, one per row: Tasks, Follow up, Meetings, Calendar, Email, Inbox, Help Desk, Tickets, Recruits, then Calls. */}
       <div className="today-overview">
         <DashboardSection id="tasks" label="Tasks">{recruitsPagePanel("tasks")}</DashboardSection>
         <DashboardSection id="follow-up" label="Follow up"><FollowUpPanel records={all} now={timestamp} partial={data.partial} canAddActivity={canAddActivity} recruits={followUpChoices} /></DashboardSection>
         <DashboardSection id="meetings" label="Meetings">{recruitsPagePanel("meetings")}</DashboardSection>
         <DashboardSection id="calendar" label="Calendar">{recruitsPagePanel("calendar")}</DashboardSection>
+        <DashboardSection id="email" label="Email"><RecruitEmailPanel recruits={all} onRefresh={demoMode ? undefined : () => { void refresh(); }} refreshing={loading} refreshDisabled={Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty || toolBusy || toolDirty)} /></DashboardSection>
+        <DashboardSection id="inbox" label="Inbox">{recruitsPagePanel("inbox")}</DashboardSection>
+        <DashboardSection id="help-desk" label="Help Desk">{recruitsPagePanel("help-desk")}</DashboardSection>
+        <DashboardSection id="tickets" label="Tickets">{recruitsPagePanel("tickets")}</DashboardSection>
         <DashboardSection id="recruits" label="Recruits"><RecruitsPanel onRefresh={demoMode ? undefined : () => { void refresh(); }} refreshing={loading} refreshDisabled={Boolean(error?.retryAt || stageSavingId || stageSaveError?.retryAt || editingId || intakeBusy || intakeDirty || toolBusy || toolDirty)} showHubSpotLink={!demoMode} records={all} partial={data.partial} canAddActivity={canAddActivity} now={timestamp} canEdit={canEdit} disabled={stageControlsDisabled} blockedIds={stageBlockedIds} onStageChange={(recruit, stageId, flowChanges) => { const current = all.find(item => item.id === recruit.id); if (current) void changeStage(current, stageId, flowChanges); }} /></DashboardSection>
         <DashboardSection id="calls" label="Calls">{recruitsPagePanel("calls")}</DashboardSection>
       </div>
