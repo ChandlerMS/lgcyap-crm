@@ -82,3 +82,16 @@ test('failed syncs record which step failed as a fixed code, without provider te
   assert.equal(failureCode('HUBSPOT', new Error('anything'), { aborted: true }), 'HUBSPOT:TIMEOUT');
   assert.equal(failureCode('DATABASE', Object.assign(new Error('x'), { code: '23505' })), 'DATABASE:FAILED');
 });
+
+test('Google failures keep only the fixed reason word, never the message', async () => {
+  const { googleJson } = await import('../lib/application-sheets-oauth.mjs');
+  const { failureCode } = await import('../lib/monthly-sheets-sync.mjs');
+  const reject = body => googleJson('https://sheets.googleapis.com/v4/x', {}, async () => Response.json(body, { status: 403 })).catch(error => error);
+  const disabled = await reject({ error: { code: 403, message: 'Google Sheets API has not been used in project 123 secret text', status: 'PERMISSION_DENIED', details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'SERVICE_DISABLED' }] } });
+  assert.equal(failureCode('GOOGLE_SHEETS', disabled), 'GOOGLE_SHEETS:GOOGLE_PERMISSION_REQUIRED:SERVICE_DISABLED');
+  assert.equal(JSON.stringify({ ...disabled, message: undefined }).includes('secret'), false);
+  assert.equal((await reject({ error: 'invalid_grant', error_description: 'Token has been expired or revoked.' })).reason, 'invalid_grant');
+  assert.equal((await reject({ error: { errors: [{ reason: 'insufficientPermissions', message: 'x' }] } })).reason, 'insufficientPermissions');
+  assert.equal((await reject({ error: { status: 'has spaces and secrets' } })).reason, undefined);
+  assert.equal((await googleJson('https://x.invalid', {}, async () => new Response('not json', { status: 500 })).catch(error => error)).reason, undefined);
+});

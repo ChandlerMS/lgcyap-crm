@@ -5,7 +5,9 @@ import styles from "./applications-page.module.css";
 type Connection = { owner: string; canConnect: boolean; connected: boolean; available: boolean; lastSuccessAt: string | null; error: string | null; current: { title: string; url: string; syncedAt: string | null; sharedWith?: string[]; sharePending?: string[]; shareFailed?: boolean } | null };
 // Plain words for the failed step the sync records (for example HUBSPOT:HUBSPOT_RATE_LIMITED).
 function failureReason(code: string) {
-  const [stage, detail = ""] = code.split(":");
+  const [stage, detail = "", reason = ""] = code.split(":");
+  if (reason === "SERVICE_DISABLED" || reason === "accessNotConfigured") return `the Google ${stage === "GOOGLE_DRIVE" ? "Drive" : "Sheets"} API is turned off for the CRM's Google Cloud project`;
+  if (reason === "invalid_grant") return "Google's saved permission expired or was revoked; reconnect Google Sheets";
   if (detail === "TIMEOUT") return "the check ran out of time";
   if (stage === "HUBSPOT") return detail === "HUBSPOT_RATE_LIMITED" ? "HubSpot was limiting requests" : "HubSpot could not be read completely";
   if (stage === "GOOGLE_AUTH") return "Google did not accept the saved connection; reconnect Google Sheets";
