@@ -299,6 +299,11 @@ Production uses the existing approved writer app `Legacy Recruiting Command Cent
 are server-only secrets scoped to the intended environment. Use a stable Preview host
 for exact OAuth redirects. Do not trust wildcard *.vercel.app origins or redirects.
 
+Applicant photo IDs on the Applications page are private HubSpot files. The writer app
+has no file access, so Production reads them with `HUBSPOT_FILES_ACCESS_TOKEN`: a HubSpot
+service key with only the files permission, marked Sensitive. It is used for the file
+alone; notes and records still use `HUBSPOT_ACCESS_TOKEN`. Leave it unset in Preview.
+
 Run npm run preflight after configuration. It checks formats and required settings
 without printing values. It does not verify live connectivity or permissions.
 

@@ -58,8 +58,21 @@ test('only application and sign-in notes with that attachment are read, includin
 });
 
 test('a connection without the files permission says what the owner must add', async () => {
-  await assert.rejects(read(hubspot({ signedStatus: 403 })), { code: 'HUBSPOT_FILES_ACCESS_REQUIRED', message: /"files" permission/ });
+  await assert.rejects(read(hubspot({ signedStatus: 403 })), { code: 'HUBSPOT_FILES_ACCESS_REQUIRED', message: /HUBSPOT_FILES_ACCESS_TOKEN.*"files" permission/ });
   await assert.rejects(read(hubspot({ signedStatus: 404 })), { code: 'PHOTO_ID_NOT_FOUND' });
+});
+
+test('a files-only key, when set, is used for the file alone and the main connection reads the note', async () => {
+  const fake = hubspot();
+  await readNotePhoto('555', 0, { accessToken: 'main-token', filesAccessToken: 'files-token', fetchImpl: fake.fetchImpl });
+  assert.deepEqual(fake.calls.map(call => [new URL(call.url).pathname, call.auth]), [
+    ['/crm/v3/objects/notes/555', 'Bearer main-token'], ['/files/v3/files/777/signed-url', 'Bearer files-token'],
+    ['/hubfs/50894788/Agent%20Applications/photo.jpg', null],
+  ]);
+  const fallback = hubspot();
+  await readNotePhoto('555', 0, { accessToken: 'main-token', filesAccessToken: '', fetchImpl: fallback.fetchImpl });
+  assert.equal(fallback.calls[1].auth, 'Bearer main-token');
+  await assert.rejects(readNotePhoto('555', 0, { accessToken: 'main-token', filesAccessToken: 'bad\ntoken', fetchImpl: hubspot().fetchImpl }), { code: 'CONNECTION_NOT_CONFIGURED' });
 });
 
 test('files are fetched only from HubSpot hosts over HTTPS, including after a redirect', async () => {
