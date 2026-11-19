@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADMIN_PAGES, AGENT_PORTAL_PAGES, GOOGLE_WORKSPACE_PAGES, RECRUIT_PORTAL_PAGES, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
+import { ADMIN_PAGES, AGENT_PORTAL_PAGES, GOOGLE_WORKSPACE_PAGES, RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE, externalWorkspacePage } from '../app/external-workspace-pages.mjs';
 import { resolveWorkspaceRoute, sidebarViewFor } from '../app/recruiting-navigation.mjs';
 
 test('Admin and Agents keep each requested destination and distinguish RingEX from RingCX', () => {
@@ -19,7 +19,7 @@ test('Admin and Agents keep each requested destination and distinguish RingEX fr
   assert.notEqual(ADMIN_PAGES[1].detail, ADMIN_PAGES[2].detail);
 });
 test('every embedded route resolves independently and highlights its parent menu', () => {
-  for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES]) {
+  for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE]) {
     assert.equal(resolveWorkspaceRoute(`#${page.id}`).view, page.id);
     assert.equal(externalWorkspacePage(page.id), page);
     assert.equal(sidebarViewFor(page.id), page.group === 'agents' ? 'contract-agents' : page.group);
@@ -38,7 +38,7 @@ test('each console renders its exact iframe and a working external fallback', as
   try {
     await build({ entryPoints: ['app/external-workspace.tsx'], outfile: `${dir}/page.cjs`, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*'], logLevel: 'silent' });
     const Page = createRequire(import.meta.url)(`${process.cwd()}/${dir}/page.cjs`).default;
-    for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES]) {
+    for (const page of [...ADMIN_PAGES, ...AGENT_PORTAL_PAGES, ...GOOGLE_WORKSPACE_PAGES, ...RECRUIT_PORTAL_PAGES, KNOWLEDGE_CENTER_PAGE]) {
       const html = renderToStaticMarkup(createElement(Page, { view: page.id }));
       assert.ok(html.includes(`src="${page.url}"`));
       assert.ok(html.includes(`href="${page.url}" target="_blank" rel="noopener noreferrer"`));
@@ -59,4 +59,15 @@ test('Recruits Contracting opens the fixed portal without replacing the recruiti
   assert.equal(externalWorkspacePage('contracting-portal')?.url, 'https://contracting.lgcyagent.com/');
   assert.deepEqual(resolveWorkspaceRoute('#contracting'), { view: 'contracting' });
   assert.equal(externalWorkspacePage('contracting'), undefined);
+});
+
+
+test('Knowledge Center is its own sidebar destination directly below Admin', async () => {
+  assert.deepEqual(resolveWorkspaceRoute('#knowledge-center'), { view: 'knowledge-center' });
+  assert.equal(sidebarViewFor('knowledge-center'), 'knowledge-center');
+  assert.equal(externalWorkspacePage('knowledge-center')?.url, 'https://50894788.hs-sites.com/legacy-partners-knowledge');
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile('app/recruiting-workspace.tsx', 'utf8');
+  assert.ok(source.indexOf('href="#knowledge-center"') > source.indexOf('<SidebarFlyout id="admin-links"'));
+  assert.ok(source.indexOf('href="#knowledge-center"') < source.indexOf('className="signout-link"'));
 });
