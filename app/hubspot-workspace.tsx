@@ -7,11 +7,8 @@ import ContractAgentCreate from "./contract-agent-create";
 import SupportTicketCreate from "./support-ticket-create";
 import { hubspotRecordSnapshotAvailable } from "./hubspot-record-edit.mjs";
 import { currentHubspotMonth, filterHubspotRows, hubspotDateKey, hubspotMonthDays, hubspotRetryDeadline, hubspotSearchResponseMatches, normalizeHubspotSearchQuery, safeHubspotViewLink, shiftHubspotMonth, sortHubspotRows } from "./hubspot-workspace-view.mjs";
-import { watchRowLimit } from "./row-limit.mjs";
+import PanelPager from "./panel-pager";
 import styles from "./hubspot-workspace.module.css";
-
-// Dashboard panels show ten rows before their list scrolls, however tall each row is.
-const fitTenRows = (wrap: HTMLDivElement | null) => wrap ? watchRowLimit(wrap, 10) : undefined;
 
 type ToolRecord = {
   id: string; title: string; subtitle?: string | null; status?: string | null; owner?: string | null; ownerId?: string | null;
@@ -29,7 +26,8 @@ type ToolResult = {
 };
 type ReadFailure = { message: string; retryAt?: number };
 // compact renders a half-width panel on the Recruits page instead of a full page; pageHref links its title to the full page.
-type Props = { tool: string; initialThreadId?: string; label?: string; description?: string; compact?: boolean; pageHref?: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
+// pageSize sets a compact panel's rows per page, and pageSizes lets the viewer choose among them (Meetings: 5–25).
+type Props = { tool: string; initialThreadId?: string; label?: string; description?: string; compact?: boolean; pageHref?: string; pageSize?: number; pageSizes?: readonly number[]; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
 type Column = { field: keyof ToolRecord; label: string; date?: boolean; dateOnly?: boolean; fullPageOnly?: boolean };
 type Definition = { label: string; description: string; singular: string; columns: Column[] };
 const DEFINITIONS: Record<string, Definition> = {
@@ -66,7 +64,7 @@ export default function HubSpotWorkspace(props: Props) {
   return props.tool === "inbox" ? <InboxWorkspace key={props.initialThreadId ?? "inbox"} initialThreadId={props.initialThreadId} onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
 }
 
-function CrmWorkspace({ tool, label, description, compact = false, pageHref, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
+function CrmWorkspace({ tool, label, description, compact = false, pageHref, pageSize: initialPageSize, pageSizes, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
   const definition = { ...DEFINITIONS[tool === "help-desk" ? "tickets" : tool], ...(label ? { label } : {}), ...(description ? { description } : {}) };
   const [data, setData] = useState<ToolResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +75,7 @@ function CrmWorkspace({ tool, label, description, compact = false, pageHref, onU
   const [searchError, setSearchError] = useState<string | null>(null);
   const activeSearchRef = useRef<string | null>(null);
   const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(initialPageSize ?? (compact ? COMPACT_PAGE_SIZE : PAGE_SIZE));
   const [sort, setSort] = useState<{ field: string; direction: "asc" | "desc" } | null>(null);
   const [detailRecord, setDetailRecord] = useState<ToolRecord | null>(null);
   const [detailFields, setDetailFields] = useState<HubspotEditField[]>([]);
@@ -229,7 +228,7 @@ function CrmWorkspace({ tool, label, description, compact = false, pageHref, onU
   const filtered = filterHubspotRows(current?.records ?? [], query) as ToolRecord[];
   const monthRecords = tool === "calendar" && month ? filtered.filter(record => hubspotDateKey(record.scheduledAt)?.startsWith(month)) : filtered;
   const rows = sortHubspotRows(tool === "calendar" ? monthRecords : filtered, sort) as ToolRecord[];
-  const pageSize = compact ? COMPACT_PAGE_SIZE : PAGE_SIZE;
+  const pageSize = rowsPerPage;
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, pages);
   const shown = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -240,7 +239,7 @@ function CrmWorkspace({ tool, label, description, compact = false, pageHref, onU
   // The month grid is the compact Calendar; the Meetings panel beside it carries the list.
   const showTable = !(compact && tool === "calendar");
   const tableColumns = compact ? definition.columns.filter(column => !column.fullPageOnly) : definition.columns;
-  const table = <div className={styles.tableWrap} ref={compact ? fitTenRows : undefined}><table className={styles.table}><thead><tr>{tableColumns.map(column => <th key={column.field} scope="col" aria-sort={sort?.field === column.field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className={styles.sortButton} type="button" onClick={() => { setSort(value => ({ field: column.field, direction: value?.field === column.field && value.direction === "asc" ? "desc" : "asc" })); setPage(1); }} aria-label={`Sort by ${column.label}`}><span>{column.label}</span><span aria-hidden="true">{sort?.field === column.field ? sort.direction === "asc" ? "↑" : "↓" : "↕"}</span></button></th>)}<th scope="col"><span className="sr-only">HubSpot record</span></th></tr></thead><tbody>{shown.map(record => <tr key={record.id}>{tableColumns.map(column => <td key={column.field}>{column.field === "title" ? <><button type="button" className={styles.recordName} onClick={() => openRecord(record)}>{record.title || `Untitled ${definition.singular}`}</button>{record.subtitle && <span className={styles.secondary}>{record.subtitle}</span>}</> : column.dateOnly ? calendarDateLabel(record[column.field]) : column.date ? dateLabel(record[column.field]) : <span className={column.field === "status" || column.field === "health" ? styles.status : undefined}>{textLabel(record[column.field])}</span>}</td>)}<td><NativeLink href={record.hubspotUrl} label="View" /></td></tr>)}</tbody></table></div>;
+  const table = <div className={styles.tableWrap}><table className={styles.table}><thead><tr>{tableColumns.map(column => <th key={column.field} scope="col" aria-sort={sort?.field === column.field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className={styles.sortButton} type="button" onClick={() => { setSort(value => ({ field: column.field, direction: value?.field === column.field && value.direction === "asc" ? "desc" : "asc" })); setPage(1); }} aria-label={`Sort by ${column.label}`}><span>{column.label}</span><span aria-hidden="true">{sort?.field === column.field ? sort.direction === "asc" ? "↑" : "↓" : "↕"}</span></button></th>)}<th scope="col"><span className="sr-only">HubSpot record</span></th></tr></thead><tbody>{shown.map(record => <tr key={record.id}>{tableColumns.map(column => <td key={column.field}>{column.field === "title" ? <><button type="button" className={styles.recordName} onClick={() => openRecord(record)}>{record.title || `Untitled ${definition.singular}`}</button>{record.subtitle && <span className={styles.secondary}>{record.subtitle}</span>}</> : column.dateOnly ? calendarDateLabel(record[column.field]) : column.date ? dateLabel(record[column.field]) : <span className={column.field === "status" || column.field === "health" ? styles.status : undefined}>{textLabel(record[column.field])}</span>}</td>)}<td><NativeLink href={record.hubspotUrl} label="View" /></td></tr>)}</tbody></table></div>;
   if (createOpen && tool === "contract-agents") return <ContractAgentCreate onUnauthorized={onUnauthorized} onBusyChange={reportEditorBusy} onClose={() => { setCreateOpen(false); onDirtyChange?.(false); }} onCreated={replayed => { setCreateOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "This agent was already saved to HubSpot. Refresh or search to find it." : "Contract Agent created and confirmed in HubSpot."); setQuery(""); setSearchDraft(""); void load(null); }} />;
   if (createOpen && tool === "help-desk") return <SupportTicketCreate onUnauthorized={onUnauthorized} onBusyChange={reportEditorBusy} onClose={() => { setCreateOpen(false); onDirtyChange?.(false); }} onCreated={replayed => { setCreateOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "This support ticket was already saved to HubSpot. Refresh the list to find it." : "Support ticket created and confirmed in HubSpot."); setQuery(""); setSearchDraft(""); void load(null); }} />;
 
@@ -288,7 +287,9 @@ function CrmWorkspace({ tool, label, description, compact = false, pageHref, onU
       {!filtered.length ? <div className={styles.empty}><h2>{query ? "No matching records" : current.assignedToViewer ? `No ${definition.singular}s assigned to you` : `No ${definition.singular === "company" ? "companies" : definition.singular + "s"} returned`}</h2><p>{query ? "Try a different search." : current.assignedToViewer ? `HubSpot returned no ${definition.singular}s assigned to you for this view.` : "HubSpot returned no records for this view."}</p>{query && <button className="text-link" onClick={() => { setQuery(""); setPage(1); }}>Clear search</button>}</div>
         : tool === "inbox" ? <div className={styles.inbox}><div className={styles.threadList} aria-label="Conversations">{shown.map(record => <button type="button" className={`${styles.thread} ${selectedThread === record.id ? styles.selectedThread : ""}`} key={record.id} disabled={Boolean(retryAt)} onClick={() => void openThread(record)} aria-pressed={selectedThread === record.id}><strong>{record.title || "Conversation"}</strong><span>{record.preview || record.subtitle || "No preview available"}</span><small>{record.status ? `${record.status} · ` : ""}{dateLabel(record.updatedAt)}</small></button>)}</div><section className={styles.messages} aria-label="Conversation messages">{selected ? <><div className={styles.messageHeader}><h2>{selected.title || "Conversation"}</h2><NativeLink href={selected.hubspotUrl} label="Reply in HubSpot" /></div>{threadLoading && <p role="status">Loading messages…</p>}{threadError && <p role="alert" className={styles.messageError}>{threadError}</p>}{threadNotice && <p className={styles.notice} role="status">{threadNotice}</p>}{messages && (messages.length ? <ol className={styles.messageList}>{messages.map(message => <li key={message.id}><div><span>{message.direction || message.type || "Message"}</span><time>{dateLabel(message.createdAt)}</time></div><p>{message.text || "This message has no text preview. Open HubSpot to view its attachments or rich content."}</p>{message.truncated && <small className={styles.notice}>Message preview shortened. Open HubSpot to read the complete message.</small>}</li>)}</ol> : <p className={styles.messageEmpty}>No messages were returned for this conversation.</p>)}</> : <div className={styles.messageEmpty}>Select a conversation to read its messages.</div>}</section></div>
           : tool === "calendar" && !monthRecords.length ? <p className={styles.messageEmpty}>No loaded meetings are scheduled for this month.</p> : showTable && table}
-      {showTable && rows.length > pageSize && <div className={styles.pagination}><span>Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, rows.length)} of {rows.length}</span><div><button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button className="btn btn-secondary" disabled={currentPage === pages} onClick={() => setPage(value => value + 1)}>Next</button></div></div>}
+      {/* Dashboard panels always show their page number, Previous and Next. */}
+      {showTable && compact && <PanelPager count={rows.length} page={currentPage} size={pageSize} label={definition.label} onPage={setPage} sizes={pageSizes} onSize={setRowsPerPage} totalNote={current.total != null && current.total > rows.length ? `loaded · ${current.total.toLocaleString("en-US")} in HubSpot` : current.partial ? "loaded" : undefined} />}
+      {showTable && !compact && rows.length > pageSize && <div className={styles.pagination}><span>Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, rows.length)} of {rows.length}</span><div><button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button className="btn btn-secondary" disabled={currentPage === pages} onClick={() => setPage(value => value + 1)}>Next</button></div></div>}
       {!compact && <p className={styles.footer}>Records refresh from HubSpot when you open this page or select Refresh. Changes and other actions are available in HubSpot.</p>}
     </>}
   </section>;

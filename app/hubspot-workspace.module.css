@@ -99,7 +99,8 @@
 .compact .providerSearch input { min-height: 40px; }
 .compact .toolbar { margin-bottom: 12px; }
 .compact .toolbar p { text-align: left; }
-.compact .tableWrap { max-height: 350px; overflow: auto; }
+/* Panels page their rows (Meetings 5–25, Calls 10), so the table shows the whole page without its own scroll. */
+.compact .tableWrap { overflow-x: auto; }
 .compact .table { min-width: 520px; }
 .compact .table th { padding-top: 12px; padding-bottom: 12px; }
 .compact .table td { padding-top: 14px; padding-bottom: 14px; }
