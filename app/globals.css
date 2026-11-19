@@ -659,6 +659,16 @@ a.summary-chip:hover { border-color: var(--gold); }
 .legacy-bot-launcher:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 .legacy-bot-launcher:disabled { opacity: .6; cursor: wait; }
 .legacy-bot-control[data-open="true"] .legacy-bot-launcher { visibility: hidden; }
+/* Override HubSpot's corner placement only while our launcher has opened the chat. */
+body:has(.legacy-bot-control[data-open="true"]) #hubspot-messages-iframe-container {
+  position: fixed !important;
+  left: var(--legacy-bot-left, 12px) !important;
+  top: var(--legacy-bot-top, 12px) !important;
+  right: auto !important;
+  bottom: auto !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+}
 body:has(.legacy-bot-control[data-ready="true"][data-open="false"]) #hubspot-messages-iframe-container { visibility: hidden; pointer-events: none; }
 
 /* Labeled quick actions (recruit hover card and stage pop-out). */

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { legacyBotPosition } from "./legacy-bot-position.mjs";
 
 type ChatApi = {
   widget: { open(): void; close(): void; status(): { loaded: boolean } };
@@ -49,6 +50,44 @@ export default function LegacyBotLauncher() {
       chatWindow.hsConversationsOnReady = chatWindow.hsConversationsOnReady?.filter(callback => callback !== initialize);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    let container: HTMLElement | null = null;
+    let frame = 0;
+    const place = () => {
+      const launcher = button.current;
+      if (!container || !launcher) return;
+      const viewport = { width: document.documentElement.clientWidth, height: window.innerHeight };
+      const position = legacyBotPosition(launcher.getBoundingClientRect(), { width: container.offsetWidth, height: container.offsetHeight }, viewport);
+      container.style.setProperty("--legacy-bot-left", `${position.left}px`);
+      container.style.setProperty("--legacy-bot-top", `${position.top}px`);
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(place); };
+    const sizes = new ResizeObserver(schedule);
+    const attach = () => {
+      const next = document.getElementById("hubspot-messages-iframe-container");
+      if (next === container) return;
+      if (container) sizes.unobserve(container);
+      container = next;
+      if (container) { sizes.observe(container); place(); }
+    };
+    // HubSpot can insert or replace its container after widget.open().
+    const changes = new MutationObserver(attach);
+    changes.observe(document.body, { childList: true, subtree: true });
+    attach();
+    if (button.current) sizes.observe(button.current);
+    if (dock?.parentElement) sizes.observe(dock.parentElement);
+    window.addEventListener("resize", schedule);
+    window.addEventListener("scroll", schedule, true);
+    return () => {
+      cancelAnimationFrame(frame); sizes.disconnect(); changes.disconnect();
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", schedule, true);
+      container?.style.removeProperty("--legacy-bot-left");
+      container?.style.removeProperty("--legacy-bot-top");
+    };
+  }, [open, dock]);
 
   const control = <div className="legacy-bot-control" data-ready={ready} data-open={open}>
     <button ref={button} className="legacy-bot-launcher" type="button" disabled={!ready} aria-label={ready ? "Open Legacy Bot" : "Legacy Bot is loading"} aria-expanded={open} aria-controls="hubspot-messages-iframe-container" onClick={() => {
