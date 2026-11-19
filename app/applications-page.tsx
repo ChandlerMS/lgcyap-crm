@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
+import PhotoIdViewer from "./photo-id-viewer";
 
 type Row = { label: string; value: string };
 type Application = {
@@ -33,6 +34,8 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
   const [status, setStatus] = useState<Status>("all");
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [attempt, setAttempt] = useState(0);
+  // The applicant whose photo ID is open, if any.
+  const [photoFor, setPhotoFor] = useState<Application | null>(null);
   const unauthorized = useRef(onUnauthorized);
   useEffect(() => { unauthorized.current = onUnauthorized; }, [onUnauthorized]);
   // Each Refresh starts a new read; state changes only once HubSpot answers.
@@ -119,10 +122,11 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
               <div><dt>Location</dt><dd>{location || "Not recorded"}</dd></div>
               <div><dt>Earliest start</dt><dd>{item.startDate || "Not answered"}</dd></div>
               <div><dt>Recruiting record</dt><dd>{item.ticket ? item.ticket.stage : item.outcome === "contact-only" ? "Contact only" : "Not linked"}</dd></div>
-              <div><dt>Photo ID</dt><dd>{item.photoId ? "Attached (private, in HubSpot)" : "Not attached"}</dd></div>
+              <div><dt>Photo ID</dt><dd>{item.photoId ? <>Attached · <button type="button" className={styles.linkButton} onClick={() => setPhotoFor(item)}>View<span className="sr-only"> photo ID for {item.name || "this applicant"}</span></button></> : "Not attached"}</dd></div>
             </dl>
             <div className={styles.actions}>
               <button type="button" className="btn btn-secondary" aria-expanded={expanded} aria-controls={`application-${item.id}`} onClick={() => toggle(item.id)}>{expanded ? "Hide answers" : "View all answers"}</button>
+              {item.photoId && <button type="button" className="btn btn-secondary" onClick={() => setPhotoFor(item)}>View photo ID</button>}
               {item.ticket && <a className="btn btn-quiet" href={`#recruit/${encodeURIComponent(item.ticket.id)}`}>Open recruit</a>}
               {item.ticket && <a className="btn btn-quiet" href={item.ticket.url} target="_blank" rel="noopener noreferrer">HubSpot ticket<span className="sr-only"> (opens in a new tab)</span></a>}
               {item.contact && <a className="btn btn-quiet" href={item.contact.url} target="_blank" rel="noopener noreferrer">HubSpot contact<span className="sr-only"> (opens in a new tab)</span></a>}
@@ -142,5 +146,6 @@ export default function ApplicationsPage({ onUnauthorized }: { onUnauthorized: (
         })}
       </ol>}
     </>}
+    {photoFor && <PhotoIdViewer key={photoFor.id} noteId={photoFor.id} name={photoFor.name || "this applicant"} onClose={() => setPhotoFor(null)} />}
   </section>;
 }

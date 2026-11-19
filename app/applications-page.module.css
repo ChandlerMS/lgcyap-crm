@@ -65,3 +65,13 @@
   .tiles, .filters, .actions, .headActions, .callout { display: none; }
   .card { break-inside: avoid; border-color: #999; background: none; color: #000; }
 }
+
+/* Photo ID viewer: wide enough to read a license, never taller than the window. */
+dialog.photoDialog { width: min(980px, calc(100vw - 40px)); }
+.photoBody { display: grid; gap: 14px; justify-items: center; }
+.photo { display: block; max-width: 100%; max-height: calc(100dvh - 250px); width: auto; height: auto; object-fit: contain; border-radius: 6px; background: #0b0b0a; }
+.photoPdf { width: 100%; height: calc(100dvh - 270px); min-height: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.photoNote { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
+.photoNote a { color: var(--gold); }
+.linkButton { padding: 0; border: 0; background: none; color: var(--gold); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.linkButton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
