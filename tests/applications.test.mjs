@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { htmlText, parseApplicationNote, readApplications, summarizeApplications } from '../lib/applications.mjs';
+import { eventReviewHtml } from '../lib/event-review.mjs';
 
 // Synthetic notes in the apply site's format. No real applicant data.
 const li = (label, value) => `<li><strong>${label}</strong><br>${value}</li>`;
@@ -97,4 +98,43 @@ test('the read searches only form notes, then links tickets and contacts', async
   assert.deepEqual(report.applications[0].photos.map(photo => [photo.noteId, photo.source]), [['21', 'application'], ['31', 'sign-in']]);
   assert.deepEqual(calls, ['/crm/v3/objects/notes/search', '/crm/v3/objects/notes/search', '/crm/v4/associations/notes/tickets/batch/read', '/crm/v4/associations/notes/contacts/batch/read', '/crm/v3/objects/tickets/batch/read']);
   await assert.rejects(readApplications({ accessToken: '' }), /not been configured/);
+});
+
+test('asked for reviews, the read adds each recruiting ticket\'s latest Approved or Denied decision', async () => {
+  const secret = 'applications-review-test-secret-32-chars';
+  const decision = (id, ticketId, status, at) => ({ id, properties: { hs_note_body: eventReviewHtml({ ticketId, status, requestId: `00000000-0000-4000-8000-${id.padStart(12, '0')}`, reviewedAt: new Date(at).toISOString(), secret }), hs_timestamp: at } });
+  // 77 was approved and then denied; 78 is in another pipeline, so its decision is left out.
+  const decisions = [decision('41', '77', 'approved', '2026-11-18T16:00:00Z'), decision('42', '77', 'denied', '2026-11-18T17:00:00Z'), decision('43', '78', 'approved', '2026-11-18T17:00:00Z')];
+  const links = new Map([['21', ['77']], ['22', ['78']], ['41', ['77']], ['42', ['77']], ['43', ['78']]]);
+  let reviewsFail = false;
+  const fetchImpl = async (url, init) => {
+    const path = new URL(url).pathname, body = init.body ? JSON.parse(init.body) : null;
+    const json = value => new Response(JSON.stringify(value));
+    if (path === '/crm/v3/objects/notes/search') {
+      const token = body.filterGroups[0].filters.find(filter => filter.propertyName === 'hs_note_body' && filter.operator === 'CONTAINS_TOKEN')?.value;
+      if (token === 'LGCYEventReview') return reviewsFail ? new Response('{}', { status: 500 }) : json({ total: decisions.length, results: decisions });
+      if (token === 'submitted') return json({ total: 2, results: [{ id: '21', properties: { hs_note_body: note(), hs_timestamp: '2026-11-18T15:00:00Z' } }, { id: '22', properties: { hs_note_body: note({ name: 'Other QA' }), hs_timestamp: '2026-11-18T15:30:00Z' } }] });
+      return json({ total: 0, results: [] });
+    }
+    if (path === '/crm/v4/associations/notes/tickets/batch/read') return json({ status: 'COMPLETE', results: body.inputs.map(({ id }) => ({ from: { id }, to: (links.get(id) ?? []).map(ticket => ({ toObjectId: Number(ticket) })) })) });
+    if (path === '/crm/v4/associations/notes/contacts/batch/read') return json({ results: [] });
+    if (path === '/crm/v3/objects/tickets/batch/read') return json({ results: body.inputs.map(({ id }) => ({ id, properties: { hs_pipeline: id === '77' ? '924992938' : 'other', hs_pipeline_stage: '1473318769' } })) });
+    throw new Error(`unexpected ${path}`);
+  };
+  const now = () => Date.parse('2026-11-19T00:00:00Z');
+  const report = await readApplications({ accessToken: 'synthetic-token', fetchImpl, now, includeReviews: true, reviewSecrets: [secret] });
+  assert.equal(report.reviews['77'].status, 'denied');
+  assert.equal(report.reviews['77'].noteId, '42');
+  assert.equal(report.reviews['78'], undefined);
+  assert.equal(report.reviewComplete, true);
+  assert.equal(report.summary.total, 2, 'decision notes are not applications');
+  // Without the request, the read stays as it was.
+  assert.equal((await readApplications({ accessToken: 'synthetic-token', fetchImpl, now })).reviews, undefined);
+  // A failed decision read still returns the applications.
+  reviewsFail = true;
+  const failed = await readApplications({ accessToken: 'synthetic-token', fetchImpl, now, includeReviews: true, reviewSecrets: [secret] });
+  assert.equal(failed.applications.length, 2);
+  assert.deepEqual(failed.reviews, {});
+  assert.equal(failed.reviewComplete, false);
+  assert.match(failed.reviewNotice, /applications are still shown/);
 });

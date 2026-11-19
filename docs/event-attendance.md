@@ -9,11 +9,10 @@ The hiring-event sign-in and application pages add one note to the person's recr
 - **Signed in**: people (recruiting tickets) with at least one sign-in note. The day table counts every sign-in, so a person who attends twice appears on both days.
 - **Applied**: of those people, the ones whose ticket also has an online application note, sent before or after signing in.
 - **Hired**: of those people, the ones whose ticket is now at Completed.
-- **Where sign-ins are now**: the current Recruiting stage of each person who signed in.
 - **Office**: the office in the sign-in note, or the ticket's office if the note has none.
-- **Online applications**: every application note, split into people who signed in, other recruiting tickets, and no ticket (a required item was not met).
+- **Online applications**: every application note, per event day in the table. The Applications section below lists them.
 
-Days are Eastern calendar days. Tickets outside the Recruiting pipeline are left out of people and stages.
+Days are Eastern calendar days. Tickets outside the Recruiting pipeline are left out of people.
 
 ## Reads
 
@@ -25,13 +24,21 @@ Notes are classified by their fixed opening heading. The page refreshes every mi
 
 ## People lists
 
-Select a tile (Signed in, Applied, Hired, Today), an event day, or an office count on an event day to open the people behind that number. One list is open at a time. Each name opens the recruit in the CRM, and each row links to the ticket in HubSpot.
+Select a tile (Signed in, Applied, Hired, Today), an event day, or an office count on an event day to open the people behind that number. One list is open at a time. Each name opens the recruit in the CRM. The lists leave out stage, location and a HubSpot link; the recruit and the Applications section have them.
 
-- **Signed in:** one row per person, with sign-in count, stage and first online application.
+- **Signed in:** one row per person, with sign-in count and first online application.
 - **Applied** and **Hired:** the same people, filtered.
 - **Today**, an **event day** or an **office on a day:** one row per sign-in, with the answers from that sign-in. Today and a whole day also list that day's online applications.
 
 Details come from the note itself: name, email, phone, office, how they heard about us, license and source for a sign-in; name, email, phone, office and whether required items were met for an application. The ticket fills in a missing name, email or phone. These are shown only to recruiting editors, the same people who see recruits in the workspace. Other application answers, and which required item was missed, are not sent to the browser. Every office count matches the sign-ins listed for that day and office. Orlando, Miami and Tampa always have a column.
+
+## Applications
+
+The Applications section is the Applications page's list (`app/applications-page.tsx`, read from `POST /api/applications`): the same counts (Applications, Did not meet a required item, Need a private conversation, Still at Hiring Event), Hiring Event reminder, search, office and status filters, and one card per application with its answers, photo ID and links. It shows ten cards a page. Its title opens the full page. It reads again when the board's Refresh is used, and when the board's minute refresh finds a different number of applications.
+
+## Approve and Deny
+
+Every people list and every application card has Approve (✓) and Deny (×), the decision, and Add Note. A decision is a signed note on the recruiting ticket (`POST /api/recruits/{id}/actions` with `kind: "event-review"`). The board and its Applications section share one review state. The Applications page reads the same decisions from `POST /api/applications`, which adds `reviews`, `reviewComplete`, `reviewNotice` and `canReview` the way this page's read does. If the decisions cannot be read, the applications still load with a notice.
 
 ## Response
 

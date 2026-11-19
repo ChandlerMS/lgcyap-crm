@@ -1,0 +1,6 @@
+/* Approve and Deny for a recruiting ticket, shared by Event Attendance and the Applications page. */
+.reviewActions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 240px; }
+.reviewButton { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid currentColor; border-radius: 5px; background: transparent; font: inherit; font-size: 24px; cursor: pointer; opacity: .6; }
+.approve { color: #79d69a; }.deny { color: #f08080; }.reviewButton[aria-pressed="true"] { opacity: 1; background: #ffffff12; box-shadow: 0 0 0 1px currentColor; }.reviewButton:hover { opacity: 1; }.reviewButton:disabled { cursor: default; }.reviewButton:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.reviewStatus { min-width: 82px; color: #d5cdbb; font-size: 13px; }
+.muted { color: var(--muted); font-size: 13px; margin: 0; }

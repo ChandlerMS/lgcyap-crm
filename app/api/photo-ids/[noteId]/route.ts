@@ -15,6 +15,8 @@ export async function POST(request: Request, context: { params: Promise<{ noteId
     getUser: getAppUser,
     authorizeUser: visitor => editorAllowed(visitor, process.env.RECRUITING_EDITOR_EMAILS),
     allowedOrigin: process.env.BETTER_AUTH_URL,
-    readData: async () => photoResponse(await readNotePhoto(noteId, /^\d$/.test(file) ? Number(file) : -1, { accessToken: process.env.HUBSPOT_ACCESS_TOKEN })),
+    readData: async () => photoResponse(await readNotePhoto(noteId, /^\d$/.test(file) ? Number(file) : -1, {
+      accessToken: process.env.HUBSPOT_ACCESS_TOKEN, filesAccessToken: process.env.HUBSPOT_FILES_ACCESS_TOKEN,
+    })),
   });
 }
