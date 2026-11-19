@@ -1,4 +1,5 @@
 "use client";
+import { useRecruitEmail } from './recruit-email';
 import DismissibleNotice from './dismissible-notice';
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./applications-page.module.css";
@@ -10,6 +11,12 @@ import ApplicationExportButton from "./application-export-button";
 import { recruitingCalendarDate, resolveRecruitingPeriod } from "./recruiting-period.mjs";
 import { filterApplications } from "../lib/application-filters.mjs";
 import { pageWindow } from "./panel-pager.mjs";
+
+function ApplicationEmail({ item }: { item: Application }) {
+  const email = useRecruitEmail();
+  if (!item.email) return <>Not recorded</>;
+  return !email.disabled ? <button type="button" className={styles.linkButton} onClick={() => email.open(item.ticket?.id || '', item.name)}>{item.email}</button> : <a href={`mailto:${item.email}`}>{item.email}</a>;
+}
 
 type Row = { label: string; value: string };
 export type Application = {
@@ -193,7 +200,7 @@ export default function ApplicationsPage({ onUnauthorized, board }: { onUnauthor
             <dl className={styles.facts}>
               <div><dt>Office</dt><dd>{item.office || "Not recorded"}</dd></div>
               <div><dt>License</dt><dd>{item.license || "Not recorded"}</dd></div>
-              <div><dt>Email</dt><dd>{item.email ? <a href={`mailto:${item.email}`}>{item.email}</a> : "Not recorded"}</dd></div>
+              <div><dt>Email</dt><dd><ApplicationEmail item={item} /></dd></div>
               <div><dt>Phone</dt><dd>{item.phone ? <a href={`tel:${item.phone.replace(/[^\d+]/g, "")}`}>{item.phone}</a> : "Not recorded"}</dd></div>
               <div><dt>Location</dt><dd>{location || "Not recorded"}</dd></div>
               <div><dt>Earliest start</dt><dd>{item.startDate || "Not answered"}</dd></div>

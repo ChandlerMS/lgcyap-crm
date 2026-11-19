@@ -112,10 +112,10 @@ test('Event Attendance emails open New Email with the templates, names take a ho
     const noTicket = { ...row, ticketId: null, email: 'sam@example.com', name: 'Sam Example QA' };
     const table = props => createElement(PeopleTable, { title: 'Everyone who signed in', rows: [row, noTicket], columns: attendeeColumns, empty: 'None', ...props });
 
-    // In the workspace, a recruit's email is a button that opens New Email; someone without a ticket keeps a mail link.
+    // Every live email opens the shared template composer; unlinked attendees must select a verified recruit.
     const inWorkspace = renderToStaticMarkup(createElement(RecruitEmailProvider, { recruits: [], disabled: false }, table()));
     assert.match(inWorkspace, /<button type="button" class="[^"]*" title="Write an email to Pat Example QA with your templates">pat@example\.com<span class="sr-only"> \(opens New Email\)<\/span><\/button>/);
-    assert.match(inWorkspace, /<a href="mailto:sam@example\.com">sam@example\.com<\/a>/);
+    assert.match(inWorkspace, /title="Write an email to Sam Example QA with your templates">sam@example\.com/);
     assert.match(inWorkspace, /<dialog class="email-dialog(?: [^"]*)?"/);
     // Without the workspace's email (demo data), every address stays a mail link.
     assert.match(renderToStaticMarkup(table()), /<a href="mailto:pat@example\.com">pat@example\.com<\/a>/);

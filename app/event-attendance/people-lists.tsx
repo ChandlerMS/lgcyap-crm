@@ -27,13 +27,12 @@ export function phoneText(value: string) {
 // The recruit opens in the workspace around this frame.
 const nameCell = (row: Person) => row.ticketId ? <a href={`/#recruit/${row.ticketId}`} target="_top" title="Open this recruit in the CRM">{row.name}</a> : row.name;
 const phoneCell = (row: Person) => row.phone ? <a href={`tel:${row.phone.replace(/[^\d+]/g, '')}`}>{phoneText(row.phone)}</a> : '—';
-// The address opens the CRM's New Email pop-up, with the offer templates, for anyone with a recruiting ticket. Without
-// a ticket, or outside the workspace's email (demo data, sign-in expired), it stays a plain mail link.
+// All live email actions use the shared composer. Unlinked attendees must select a verified recruit before sending.
 function EmailCell({ row }: { row: Person }) {
   const email = useRecruitEmail();
   if (!row.email) return '—';
-  if (!row.ticketId || email.disabled) return <a href={`mailto:${row.email}`}>{row.email}</a>;
-  const ticketId = row.ticketId;
+  if (email.disabled) return <a href={`mailto:${row.email}`}>{row.email}</a>;
+  const ticketId = row.ticketId || '';
   return <button type="button" className={styles.emailButton} title={`Write an email to ${row.name} with your templates`} onClick={() => email.open(ticketId, row.name)}>{row.email}<span className="sr-only"> (opens New Email)</span></button>;
 }
 const emailCell = (row: Person) => <EmailCell row={row} />;

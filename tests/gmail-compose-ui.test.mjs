@@ -196,7 +196,7 @@ test('Reply uses the server-verified message recipient and sends the reviewed re
     await ui.click('Reply to original');
     assert.match(document.body.textContent, /sender@example.test/);
     assert.equal(document.querySelector('[role="combobox"]'), null);
-    assert.equal(document.querySelector('select'), null);
+    assert.ok(document.querySelector('select'), 'reply also offers the shared template selector');
     assert.equal(document.querySelector('input[type="text"]').value, 'Re: Original subject');
     assert.equal(document.querySelector('input[type="text"]').readOnly, true);
     assert.equal(document.querySelector('input[type="text"]').maxLength, 1000);

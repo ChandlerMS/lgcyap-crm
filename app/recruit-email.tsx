@@ -14,7 +14,7 @@ type Preview = { recipient: Recipient; subject: string; html: string; previewTok
 type Receipt = { kind: 'sent' | 'uncertain'; notice: string; requestId?: string };
 const EmailContext = createContext<{ open: (id?: string, name?: string) => void; openReply: (messageId: string) => void; showSent: () => void; sentView: number; mailboxRefresh: number; disabled: boolean }>({ open: () => {}, openReply: () => {}, showSent: () => {}, sentView: 0, mailboxRefresh: 0, disabled: true });
 export const useRecruitEmail = () => useContext(EmailContext);
-const fieldLabels: Record<string, string> = { acceptBy: 'Accept by', contractingDate: 'Contracting date', contractingTime: 'Contracting time (Eastern)', trainingDate: 'Training start date' };
+const fieldLabels: Record<string, string> = { eventDate: 'Hiring event date', applicationDeadline: 'Application deadline', acceptBy: 'Accept by', contractingDate: 'Contracting date', contractingTime: 'Contracting time (Eastern)', trainingDate: 'Training start date' };
 async function mailRequest(url: string, input?: object, signal?: AbortSignal) {
   const response = await fetch(url, { ...(input ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) } : {}), credentials: 'same-origin', cache: 'no-store', signal });
   const data = await response.json();
@@ -215,7 +215,7 @@ export function RecruitEmailProvider({ recruits, disabled, children }: { recruit
                 onSelect={recruit => { setQuery(recruit.name); if (recruit.id !== target) { setTarget(recruit.id); setPrepared(null); setTemplateId(''); setFields({}); invalidate(); } }} />}
               {preparing && <p role="status">{replyMessageId ? 'Checking reply details…' : 'Checking recruit details…'}</p>}
               {prepared && <p>To: <strong>{prepared.recipient.name} &lt;{prepared.recipient.email}&gt;</strong></p>}
-              {!replyMessageId && <label>Template<select value={templateId} disabled={!prepared} onChange={event => { const next = event.target.value; setTemplateId(next); setFields({}); setSubject(prepared?.templates.find(item => item.id === next)?.subject || ''); setBody(''); invalidate(); }}><option value="">Compose a new message</option>{prepared?.templates.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+              <label>Template<select value={templateId} disabled={!prepared} onChange={event => { const next = event.target.value; setTemplateId(next); setFields({}); if (!replyMessageId) setSubject(prepared?.templates.find(item => item.id === next)?.subject || ''); setBody(''); invalidate(); }}><option value="">Compose a new message</option>{prepared?.templates.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
               {prepared && <>
                 {!replyMessageId && !prepared.templates.length && <p className="helper">No offer template is available for this recruit’s current licensing status. You can compose a custom message.</p>}
                 <div className="gmail-offer-fields">{template?.fields.map(key => <label key={key}>{fieldLabels[key] || key.replace(/([A-Z])/g, ' $1')}<input type={key === 'contractingTime' ? 'time' : 'date'} required value={fields[key] || ''} onChange={event => { setFields(current => ({ ...current, [key]: event.target.value })); invalidate(); }} /></label>)}</div>
