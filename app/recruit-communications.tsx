@@ -1,5 +1,6 @@
 "use client";
 
+import { useRecruitEmail } from "./recruit-email";
 import { useId } from "react";
 import { communicationAction } from "./recruit-communication-links.mjs";
 import { communicationPhone } from "./ringcentral-bridge.mjs";
@@ -18,6 +19,7 @@ const ACTION_LABELS = { call: "Call", text: "Text", email: "Email" } as const;
 export default function RecruitCommunications({ recruitName, recruitId, hubspotUrl, phone, isDemo = false, labeled = false }: { recruitName: string; recruitId: string; hubspotUrl: string; phone?: string | null; isDemo?: boolean; labeled?: boolean }) {
   const id = useId();
   const ringCentral = useRingCentral();
+  const email = useRecruitEmail();
   const number = communicationPhone(phone);
   const buttonClass = labeled ? "communication-button communication-button-labeled" : "communication-button";
   return <div className={labeled ? "recruit-communications recruit-communications-labeled" : "recruit-communications"} role="group" aria-label={`Contact tools for ${recruitName}`}>
@@ -26,12 +28,12 @@ export default function RecruitCommunications({ recruitName, recruitId, hubspotU
       const result = communicationAction(recruitId, hubspotUrl, action, isDemo);
       const ringAction = action !== "email";
       const available = action === "call" && !isDemo && ringCentral.configured && Boolean(number);
-      const reason = action === "text" ? "Texting is paused while messaging approval is pending." : !ringAction ? result.reason : isDemo ? "Demo contacts cannot call or text." : !ringCentral.configured ? "RingCentral is not configured." : !number ? "Add a valid phone number to use RingCentral." : "Prepare a call in RingCentral. You choose when to dial.";
-      const label = action === "email" ? `Email ${recruitName} in HubSpot` : `${action === "call" ? "Call" : "Text"} ${recruitName} with RingCentral`;
+      const reason = action === "text" ? "Texting is paused while messaging approval is pending." : !ringAction ? "Choose an offer template or compose a new email." : isDemo ? "Demo contacts cannot call or text." : !ringCentral.configured ? "RingCentral is not configured." : !number ? "Add a valid phone number to use RingCentral." : "Prepare a call in RingCentral. You choose when to dial.";
+      const label = action === "email" ? `Email ${recruitName}` : `${action === "call" ? "Call" : "Text"} ${recruitName} with RingCentral`;
       const descriptionId = `${id}-${action}`;
       return <span className="communication-item" key={action}>
         {ringAction ? <button className={buttonClass} type="button" disabled={!available} aria-label={label} aria-describedby={descriptionId} title={reason} onClick={() => { if (available && number) ringCentral.open({ action, phone: number, name: recruitName }); }}>{content}</button>
-          : result.href ? <a className={buttonClass} href={result.href} target="_blank" rel="noopener noreferrer" aria-label={label} aria-describedby={descriptionId} title={reason}>{content}</a>
+          : result.href ? <button className={buttonClass} type="button" disabled={isDemo || email.disabled} onClick={() => email.open(recruitId)} aria-label={label} aria-describedby={descriptionId} title={reason}>{content}</button>
           : <button className={buttonClass} type="button" disabled aria-label={label} aria-describedby={descriptionId} title={reason}>{content}</button>}
         <span className="communication-tooltip" role="tooltip" id={descriptionId}>{reason}</span>
       </span>;

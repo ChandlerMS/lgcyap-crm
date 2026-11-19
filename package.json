@@ -36,6 +36,7 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "read-excel-file": "9.3.14",
+    "sanitize-html": "^2.18.2",
     "saxen": "11.1.0",
     "server-only": "0.0.1"
   },
@@ -45,6 +46,7 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/sanitize-html": "^2.16.2",
     "esbuild": "0.28.2",
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.3",
