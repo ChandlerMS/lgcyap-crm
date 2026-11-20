@@ -1,10 +1,11 @@
+import { redirect } from "next/navigation";
 import { requireAppUser } from "../app-auth";
-import VersionSwitch from "../version-switch";
-import SourceFrame from "./source-frame";
 
 export const dynamic = "force-dynamic";
 
 export default async function VersionTwo() {
   await requireAppUser("/v2");
-  return <><VersionSwitch version={2} /><SourceFrame /></>;
+  // Use a top-level navigation: the external site's embedding policy and
+  // SameSite sign-in cookie cannot be changed by this CRM's iframe.
+  redirect("https://lgcy-onboard.carlos-831.workers.dev/");
 }

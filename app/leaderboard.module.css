@@ -5,6 +5,7 @@
 .hero p { margin: 0; color: var(--muted); font-size: 16px; }
 .boardTabs, .segment { display: inline-flex; flex-wrap: wrap; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 4px; background: #141414; }
 .boardTabs { align-self: center; justify-content: center; }
+.boardTabs.centeredBoardTabs { display: flex; width: fit-content; max-width: 100%; margin-inline: auto; }
 .boardTabs button, .segment button { font: inherit; font-size: 14px; font-weight: 500; border: 0; background: transparent; color: var(--muted); padding: 9px 16px; border-radius: 5px; cursor: pointer; }
 .boardTabs button:hover, .segment button:hover { color: var(--text); }
 .boardTabs [aria-pressed="true"], .segment [aria-pressed="true"] { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); color: #0a0905; font-weight: 600; }
@@ -25,7 +26,12 @@
 .empty h3 { margin: 0 0 12px; color: var(--text); font-size: 20px; font-weight: 500; }
 .empty p { margin: 0; max-width: 65ch; font-size: 13px; line-height: 1.7; }
 .chart { padding: 0; margin: 0; list-style: none; display: grid; gap: 15px; }
-.chart li { display: grid; grid-template-columns: 27px minmax(100px, 24%) minmax(30px, 1fr) minmax(48px, auto); align-items: center; gap: 12px; min-height: 35px; position: relative; }
+/* Rank, name, calls, close rate, bar, value. The header shares the grid so its labels sit over the calls and close columns. */
+.chart li, .chartHead { display: grid; grid-template-columns: 27px minmax(100px, 22%) 52px 64px minmax(30px, 1fr) minmax(48px, auto); align-items: center; gap: 12px; }
+.chart li { min-height: 35px; position: relative; }
+.chartHead { align-items: end; margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.3; }
+.chartHead > span:nth-child(n+3) { text-align: right; }
+.metric { font-size: 13px; color: #f4f1e8; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .medal { display: flex; align-items: center; justify-content: center; width: 25px; height: 25px; border: 1px solid #454033; border-radius: 50%; color: var(--muted); font-size: 11px; font-weight: 600; }
 .medal1 { background: linear-gradient(130deg, #e9cf7a, #b8862f); color: #0a0905; border: 0; }
 .medal2 { background: #a7a9ac; color: #0a0905; border: 0; }
@@ -72,10 +78,84 @@
 .weeks [aria-pressed="true"] { background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); color: #0a0905; font-weight: 600; }
 .weeks button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 @media (forced-colors: active) { .wheelOption[aria-selected="true"] { color: Highlight; } .wheel::before { border-color: Highlight; } }
-.callMetrics { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 11px; line-height: 1.6; color: var(--muted); margin-top: 3px; white-space: normal; }
-.chart li { min-height: 48px; }
 .chart li:focus-visible, .range input:focus-visible, .boardTabs button:focus-visible, .segment button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .rowDetails { max-width: min(330px, 100%); white-space: normal; }
 @media (forced-colors: active) { .hero .eyebrow, .tiles dd { color: CanvasText; background: none; } }
-@media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart li { grid-template-columns: 25px minmax(75px, 30%) minmax(20px, 1fr) auto; gap: 8px; } .card { padding: 19px 15px; } }
-@media (max-width: 480px) { .boardTabs button { font-size: 12px; padding: 9px; } .tiles dd { font-size: 24px; } .chart li { grid-template-columns: 23px minmax(50px, 1fr) minmax(25px, 1fr) auto; } }
+@media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart li, .chartHead { grid-template-columns: 25px minmax(75px, 24%) 44px 52px minmax(20px, 1fr) auto; gap: 8px; } .card { padding: 19px 15px; } }
+@media (max-width: 480px) { .boardTabs button { font-size: 12px; padding: 9px; } .tiles dd { font-size: 24px; } .chart li, .chartHead { grid-template-columns: 23px minmax(50px, 1fr) 34px 44px minmax(25px, 1fr) auto; } .metric { font-size: 12px; } }
+/* Standard vs. Preferred adds Total Calls Connected and Total Calls Abandoned after close rate. On a phone they take the bar's space and the name gets its own line. */
+.tilesWithCallTotals { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.tilesWithCallTotals dd { font-size: 24px; }
+.chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 27px minmax(100px, 22%) 52px 64px 72px 72px minmax(30px, 1fr) minmax(48px, auto); }
+@media (max-width: 1100px) { .tilesWithCallTotals { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 25px minmax(75px, 24%) 44px 52px 60px 60px minmax(20px, 1fr) auto; } }
+@media (max-width: 560px) { .tilesWithCallTotals { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart.withCallTotals li, .chartHead.withCallTotals { grid-template-columns: 23px repeat(4, minmax(0, 1fr)) auto; gap: 4px 6px; } .chartHead.withCallTotals { font-size: 10px; } .withCallTotals .barTrack, .chartHead.withCallTotals > span:nth-child(2), .chartHead.withCallTotals > span:nth-last-child(2) { display: none; } .withCallTotals .medal { grid-row: span 2; } .withCallTotals .name { grid-column: 2 / -1; } }
+.rowTools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; margin: -8px 0 20px; }
+.rowTools > p { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.rowTools .export { margin-left: auto; }
+.search { display: grid; gap: 6px; flex: 1 1 220px; max-width: 320px; color: var(--muted); font-size: 12px; }
+.search input { font: inherit; font-size: 14px; color: var(--text); background: #141414; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+.search input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (max-width: 640px) { .search { max-width: none; } .rowTools .segment { width: 100%; } }
+/* Lead Data: rank, name, bar, count, with no calls or close columns. Compare stacks its two cards on narrow screens. */
+.chart.leadRows li, .chartHead.leadRows { grid-template-columns: 27px minmax(140px, 28%) minmax(30px, 1fr) minmax(48px, auto); }
+.compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.compareTiles { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 0; }
+.compare .tableWrap { margin-top: 18px; }
+.compareTable { min-width: 0; }
+.compareTable tfoot th, .compareTable tfoot td { color: var(--muted); }
+.compareTable tfoot tr:last-child th, .compareTable tfoot tr:last-child td { color: var(--text); font-weight: 600; border-bottom: 0; }
+@media (max-width: 1100px) { .compare { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .chart.leadRows li, .chartHead.leadRows { grid-template-columns: 23px minmax(70px, 38%) minmax(25px, 1fr) auto; gap: 8px; } }
+
+.notes { display: flex; flex-direction: column; gap: 12px; }
+
+.tvLink { display: inline-flex; align-items: center; padding: 9px 16px; border: 1px solid #6d633e; border-radius: 5px; color: var(--gold); text-decoration: none; font-size: 14px; }.tvLink:hover { background: #282311; }.tvLink:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* Sales precedes Calls on the Shopper and Standard vs Preferred agent boards. */
+.chart.withSales li, .chartHead.withSales { grid-template-columns: 27px minmax(100px, 22%) 48px 52px 64px minmax(30px, 1fr) minmax(48px, auto); }
+.chart.withSales.withCallTotals li, .chartHead.withSales.withCallTotals { grid-template-columns: 27px minmax(100px, 20%) 48px 52px 64px 72px 72px minmax(30px, 1fr) minmax(48px, auto); }
+@media (max-width: 1100px) {
+  .chart.withSales.withCallTotals li, .chartHead.withSales.withCallTotals { grid-template-columns: 23px repeat(5, minmax(0, 1fr)) auto; gap: 4px 6px; }
+  .chartHead.withSales.withCallTotals { font-size: 10px; }
+  .withSales.withCallTotals .barTrack, .chartHead.withSales.withCallTotals > span:nth-child(2), .chartHead.withSales.withCallTotals > span:nth-last-child(2) { display: none; }
+  .withSales.withCallTotals .medal { grid-row: span 2; }
+  .withSales.withCallTotals .name { grid-column: 2 / -1; }
+}
+@media (max-width: 800px) {
+  .chart.withSales li, .chartHead.withSales { grid-template-columns: 25px minmax(75px, 22%) 40px 44px 52px minmax(20px, 1fr) auto; }
+}
+@media (max-width: 560px) {
+  .chart.withSales li, .chartHead.withSales { grid-template-columns: 23px repeat(3, minmax(0, 1fr)) auto; gap: 4px 6px; }
+  .chart.withSales.withCallTotals li, .chartHead.withSales.withCallTotals { grid-template-columns: 23px repeat(5, minmax(0, 1fr)) auto; }
+  .chartHead.withSales { font-size: 10px; }
+  .withSales .barTrack, .chartHead.withSales > span:nth-child(2), .chartHead.withSales > span:nth-last-child(2) { display: none; }
+  .withSales .medal { grid-row: span 2; }
+  .withSales .name { grid-column: 2 / -1; }
+}
+
+.shopperPagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.shopperPagination > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.shopperPagination label { display: flex; align-items: center; gap: 8px; }
+.shopperPagination select { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: #141414; color: var(--text); font: inherit; }
+.shopperPagination select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.comparisonSources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.comparisonSource { min-width: 0; }
+.comparisonSource .cardHeading { margin-bottom: 16px; }
+.comparisonSource .cardHeading h2 { font-size: 18px; }
+.comparisonStatus { font-size: 12px; color: #bfb08a; }
+.comparisonSourceNotes { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.comparisonSourceNotes p { margin: 0; }
+.comparisonTableWrap { max-width: 100%; overflow-x: auto; margin-top: 18px; }
+.comparisonTable { min-width: 710px; table-layout: fixed; }
+.comparisonTable th:first-child { width: 22%; }
+.comparisonTable thead tr:first-child th:not(:first-child) { text-align: center; white-space: normal; color: #d8c99c; }
+.comparisonTable th:nth-child(2), .comparisonTable td:nth-child(2), .comparisonTable th:nth-child(4), .comparisonTable td:nth-child(4) { border-left: 1px solid var(--line); }
+.comparisonTable tbody th { overflow-wrap: anywhere; }
+.comparisonValue { position: relative; vertical-align: top; }
+.comparisonBarTrack { display: block; height: 9px; margin-top: 9px; background: #242119; border-radius: 3px; }
+.comparisonBarRight { background: linear-gradient(100deg, #77726b, #c1b9a5); }
+.comparisonLegend { margin-top: 18px; text-align: left; }
+@media (max-width: 760px) { .comparisonSources { grid-template-columns: minmax(0, 1fr); } .comparisonTable { min-width: 650px; } }
+@media (forced-colors: active) { .comparisonBarTrack { border: 1px solid CanvasText; } .comparisonBarTrack .bar { background: Highlight; } }

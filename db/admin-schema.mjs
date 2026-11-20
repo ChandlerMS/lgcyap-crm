@@ -1,0 +1,2 @@
+// Bundled SQL avoids runtime filesystem URLs in Next server-rendered authentication checks.
+export const ADMIN_ACCESS_SCHEMA = "CREATE TABLE IF NOT EXISTS crm_access_overrides (\n  email text PRIMARY KEY,\n  allowed boolean NOT NULL,\n  updated_by text NOT NULL,\n  updated_at timestamptz NOT NULL DEFAULT now()\n);\nCREATE TABLE IF NOT EXISTS crm_admin_audit (\n  id bigserial PRIMARY KEY,\n  actor text NOT NULL,\n  action text NOT NULL,\n  target text NOT NULL,\n  created_at timestamptz NOT NULL DEFAULT now()\n);\n";

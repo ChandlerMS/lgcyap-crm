@@ -51,7 +51,7 @@ before that. Unmapped dialer seats count only in `calls` totals. `partial` is tr
 imported or the range runs past the latest imported activity. Before any import the board returns `unavailable`
 with error `WHATSAPP_NOT_IMPORTED`.
 
-Shopper and Source read stored PolicyTek browser captures. See `POLICYTEK-SYNC.md` for the five-minute local bridge, publisher contract, date semantics and freshness limits. Report totals and incomplete named rankings remain distinct. Missing date ranges are queued; no financial values are fabricated.
+Shopper and Source read stored PolicyTek browser captures. See `POLICYTEK-SYNC.md` for the 15-minute weekday browser bridge, publisher contract, date semantics and freshness limits. Report totals and incomplete named rankings remain distinct. Missing date ranges are queued; no financial values are fabricated.
 
 Validation: 12 mocked tests cover exact schema/grants, aggregation, unknowns,
 pagination, rate limits, privacy, auth/origin/body limits, and Eastern/DST dates.

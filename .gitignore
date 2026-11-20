@@ -32,6 +32,7 @@ yarn-error.log*
 *.pem
 
 # Checkout-local tool state
+/CLAUDE.local.md
 /.wrangler/
 /.sites-runtime/
 
@@ -43,6 +44,8 @@ yarn-error.log*
 
 # OS metadata
 .DS_Store
+__pycache__/
+*.py[cod]
 
 /.vercel/
 /.serena/
@@ -52,3 +55,6 @@ yarn-error.log*
 /lib/generated/onboard-runtime.mjs
 !.env.example
 .vercel
+
+# HubSpot knowledge base snippet built by scripts/hubspot-kb-theme.mjs
+/kb-theme-snippet.html

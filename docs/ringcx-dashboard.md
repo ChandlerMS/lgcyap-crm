@@ -38,3 +38,15 @@ This supersedes the earlier pending status for answered and timezone. Remaining:
 ## Live roster contract
 
 Authenticated `GET /api/ringcx` also returns `onCallAgents: [{id, name, status}]`, alphabetically sorted and deduplicated by agent ID, restricted to group 2498 and ENGAGED/ON_CALL. Status is On call or On hold. The list and headline use the same snapshot and state rules. Only agent display names, IDs and status are exposed; upstream caller numbers, call identifiers, emails and credentials are excluded. Missing names fall back to Agent plus ID. No duration is inferred from state time. The UI matches the CRM queue page's black/gold tokens, logo and initial avatars; it labels stale rosters and clears names when authentication expires.
+
+Available roster: availableAgents uses the same restricted {id,name,status} contract as onCallAgents, exact AVAILABLE state only. Historical Analytics rechecked November 3 and still reports temporarily unavailable; Connected Today remains unvalidated. Dashboard renamed Standard vs Preferred.
+
+Agent metrics: sessionCalls = callsHandled (all session calls, reset on logout); stateSeconds = stateTime seconds (underlying RingCX state, includes hold while ENGAGED). Nullable if missing/invalid; refreshed every15s without extrapolating stale timers. averageWaitSeconds = sum(totalAnswerTime)/sum(accepted) for group1973, today's answered inbound wait; null for zero answers or missing counters. Source: https://developers.ringcentral.com/engage/voice/guide/analytics/reports/realtime-supervisor-view .
+
+Busy roster includes every logged-in non-AVAILABLE agent in group2498, preserving the separate active-call count. Per-agent todayCalls/todaySales and dailyPerformance.sales/closeRate are nullable pending daily source reconciliation and user sales-disposition mapping. Session counts are no longer displayed as the requested daily counts. Historical Analytics still unavailable on recheck.
+
+User confirmed sale disposition: exact label Sold. Close rate = Sold / answered inbound calls for Standard vs Preferred for the Eastern calendar day. Historical daily source remains unvalidated; never substitute successDispositions without proving its mapping.
+
+## Daily calls per agent
+
+The Standard vs. Preferred leaderboard's daily per-agent counts come from a saved RingCX Historical report, not these real-time counters. See `SVP-CALLS-IMPORT.md`, section RingCX sync. The `/ringcx` dashboard's Connected Today stays unavailable.

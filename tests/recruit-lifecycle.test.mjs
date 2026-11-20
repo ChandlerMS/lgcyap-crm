@@ -17,10 +17,10 @@ function harness(pair = initial(), baseline = { ...initial(), status: 'synced' }
   return { provider, store, set: next => { current = next; }, state: () => state, writes: () => writes };
 }
 
-test('the nine visible stages are bijective; branches and Withdrawn are excluded', () => {
-  assert.equal(LIFECYCLE_STAGES.length, 9);
+test('all eleven recruiting stages are bijective, including Rejected and Withdrawn', () => {
+  assert.equal(LIFECYCLE_STAGES.length, 11);
   for (const entry of LIFECYCLE_STAGES) assert.equal(contactStageForTicket(stage(entry.value)), entry.value);
-  for (const value of ['withdrawn', 'licensed', 'genpop', 'mass_recruiting']) assert.equal(stage(value), null);
+  for (const value of ['licensed', 'genpop', 'mass_recruiting']) assert.equal(stage(value), null);
 });
 test('blank new Contact initializes from ticket without altering its stage', async () => {
   const h = harness({ ...initial(), contactStage: '' }, null);
@@ -161,4 +161,19 @@ test('provider only PATCHes the allowlisted stage field, never sales lifecycle o
   const write = calls.find(call => call.init.method === 'PATCH');
   assert.deepEqual(JSON.parse(write.init.body), { properties: { recruiting_lifecycle_stage: 'application' } });
   await assert.rejects(provider.write(pair, { status: 'write', target: 'contact', value: 'customer' }));
+});
+
+test('Contact-driven outcome reopening holds invalid destinations without writing', async () => {
+  for (const outcome of ['rejected', 'withdrawn']) {
+    for (const target of ['application', 'contracting', 'licensing_reminders']) {
+      const baseline = { ...initial(), ticketStage: stage(outcome), contactStage: outcome, path: '', licenseRoute: '' };
+      const h = harness({ ...baseline, contactStage: target }, { ...baseline, status: 'synced' });
+      assert.equal((await reconcileLifecycle('101', h)).status, 'conflict');
+      assert.equal(h.writes(), 0);
+    }
+    const baseline = { ...initial(), ticketStage: stage(outcome), contactStage: outcome, licenseRoute: 'not_licensed' };
+    const h = harness({ ...baseline, contactStage: 'contracting' }, { ...baseline, status: 'synced' });
+    assert.equal((await reconcileLifecycle('101', h)).direction, 'contact_to_ticket');
+    assert.equal(h.writes(), 1);
+  }
 });

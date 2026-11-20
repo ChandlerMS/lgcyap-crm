@@ -1,12 +1,16 @@
 "use client";
+import DismissibleNotice from '../dismissible-notice';
 
 import Image from "next/image";
 import Link from "next/link";
+import styles from "../ringcx/ringcx.module.css";
+import { useTvPage } from "./use-tv-page";
+import { queueTvPage } from "./tv-model.mjs";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Call = { id: string; name: string; direction: "inbound" | "outbound" | null; source: string | null; since: number };
 type Agent = { id: string; name: string; since: number | null; idle: boolean; dim?: boolean };
-type Board = { ok: true; now: number; calls: Call[]; available: Agent[] };
+type Board = { ok: true; now: number; calls: Call[]; available: Agent[]; callsToday?: { count: number; capped: boolean } | null };
 type Problem = "sign_in" | "not_configured" | "policytek_sign_in" | "policytek_down" | "denied" | "server" | "network";
 
 const POLL_MS = 5000; // how often this screen asks for the queue
@@ -36,15 +40,22 @@ function waited(ms: number) {
   return m < 1 ? "just now" : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${two(m % 60)}m`;
 }
 
-function Column({ kind, title, count, empty, children }: { kind: "calls" | "available"; title: string; count: number | null; empty: string | null; children: ReactNode }) {
-  return <section className={`queue-col is-${kind}`} aria-labelledby={`queue-${kind}-title`}><div className="queue-col-head"><h2 id={`queue-${kind}-title`}>{title}</h2><span className="queue-count" aria-label={title}>{count ?? "–"}</span></div><ol className="queue-list">{children}</ol>{empty && <p className="queue-empty">{empty}</p>}</section>;
+function Column({ kind, title, count, empty, children, grouped = false }: { grouped?: boolean; kind: "calls" | "available"; title: string; count: number | null; empty: string | null; children: ReactNode }) {
+  const Heading = grouped ? "h3" : "h2";
+  return <section className={`queue-col is-${kind}`} aria-labelledby={`queue-${kind}-title`}><div className="queue-col-head"><Heading id={`queue-${kind}-title`}>{title}</Heading><span className="queue-count" aria-label={title}>{count ?? "–"}</span></div><ol className="queue-list">{children}</ol>{empty && <p className="queue-empty">{empty}</p>}</section>;
 }
 
 function Row({ kind, name, meta, timer, dim }: { kind: "call" | "ready"; name: string; meta: string; timer: string; dim?: boolean }) {
   return <li className={`queue-row is-${kind}${dim ? " is-dim" : ""}`}><span className="queue-avatar" aria-hidden="true">{initials(name)}</span><span className="queue-who"><span className="queue-name">{name}</span><span className="queue-meta">{meta}</span></span><span className="queue-timer">{timer}</span></li>;
 }
 
-export default function QueueBoard({ embedded = false }: { embedded?: boolean }) {
+export default function QueueBoard({ embedded = false, grouped = false, tv = false }: { embedded?: boolean; grouped?: boolean; tv?: boolean }) {
+  const turn = useTvPage(tv);
+  const Heading = grouped ? "h2" : "h1";
+  const Content = grouped ? "div" : "main";
+  const Subheading = grouped ? "h3" : "h2";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [busy, setBusy] = useState(true);
   const [board, setBoard] = useState<Board | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [tick, setTick] = useState<number | null>(null); // this screen's clock, once a second
@@ -55,12 +66,13 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
     let controller: AbortController | undefined;
     let next: ReturnType<typeof setTimeout> | undefined;
     async function poll() {
+      setBusy(true);
       try {
         controller = new AbortController();
         const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) });
         const body = await response.json().catch(() => ({}));
         if (stopped) return;
-        if (response.status === 401) { if (embedded) { setBoard(null); setProblem("sign_in"); return; } window.location.assign(typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
+        if (response.status === 401) { if (embedded) { setBoard(null); setProblem("sign_in"); return; } window.location.assign(tv ? "/sign-in?return_to=%2Fshopper" : typeof body.signInPath === "string" ? body.signInPath : "/sign-in?return_to=%2Fqueue"); return; }
         if (typeof body.served === "number") setOffset(body.served - Date.now());
         if (response.status === 403) setProblem("denied");
         else if (body.ok === true) { setBoard(body); setProblem(null); }
@@ -68,6 +80,8 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
       } catch {
         if (stopped) return;
         setProblem("network");
+      } finally {
+        if (!stopped) setBusy(false);
       }
       setTick(Date.now());
       if (!stopped) next = setTimeout(poll, POLL_MS);
@@ -76,7 +90,7 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
     const clock = setInterval(() => setTick(Date.now()), 1000);
     const reload = setTimeout(() => window.location.reload(), RELOAD_MS);
     return () => { stopped = true; controller?.abort(); clearTimeout(next); clearInterval(clock); clearTimeout(reload); };
-  }, [embedded]);
+  }, [embedded, refreshKey, tv]);
 
   // Keep a wall screen from sleeping while the queue is showing.
   useEffect(() => {
@@ -95,34 +109,94 @@ export default function QueueBoard({ embedded = false }: { embedded?: boolean })
   const stateText = state === "live" ? "Live" : state === "stale" ? `Last update ${age < 60000 ? `${Math.floor(age / 1000)}s` : waited(age)} ago` : "Connecting…";
   const notice = problem && !(problem === "policytek_down" && !board) ? NOTICES[problem] : null;
   const empty = (rows: unknown[] | undefined, none: string) => board ? (rows?.length ? null : none) : problem === "policytek_down" ? NOTICES.policytek_down : "Connecting to PolicyTek…";
+  const callsToday = board?.callsToday ? `${board.callsToday.count.toLocaleString("en-US")}${board.callsToday.capped ? "+" : ""}` : "–";
+  // The average of the waits shown in Available.
+  const waits = board && now !== null ? board.available.filter(agent => agent.since !== null).map(agent => now - (agent.since as number)) : [];
+  const averageWait = waits.length ? waits.reduce((sum, wait) => sum + wait, 0) / waits.length : null;
 
-  return <div className="queue-page">
+  if (grouped) {
+    const duration = (ms: number | null) => {
+      if (ms === null) return "—";
+      const seconds = Math.max(0, Math.floor(ms / 1000));
+      return `${two(Math.floor(seconds / 3600))}:${two(Math.floor(seconds / 60) % 60)}:${two(seconds % 60)}`;
+    };
+    const value = (count: number | null | undefined) => count == null ? "—" : count.toLocaleString("en-US");
+    const unavailable = Boolean(problem) || state === "stale";
+    const availablePage = queueTvPage(board?.available ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, board?.available.length ?? 1));
+    const callsPage = queueTvPage(board?.calls ?? [], tv ? turn : 0, tv ? 6 : Math.max(1, board?.calls.length ?? 1));
+    return <div className={`${styles.board} ${styles.grouped}`}>
+      <header className={styles.header}>
+        <div className={styles.identity}><div><h2>Shopper</h2><p className={styles.subtitle}>PolicyTek · Live call queue</p></div></div>
+        <div className={styles.controls}>
+          <span className={`${styles.status} ${unavailable ? styles.warning : ""}`} role="status">{unavailable ? "Update unavailable" : board ? "Live" : "Connecting"}</span>
+          <button type="button" disabled={busy} onClick={() => { setBusy(true); setRefreshKey(key => key + 1); }}>{busy ? "Refreshing…" : "Refresh"}</button>
+          {/* TV HUD sits to the right of Refresh. */}
+          {!tv && <a className={styles.tvLink} href="https://queue.lgcyap.com/shopper" target="_blank" rel="noopener noreferrer" aria-label="Shopper Queue TV HUD (opens in a new tab)">TV HUD</a>}
+        </div>
+      </header>
+      {notice && <DismissibleNotice className={styles.alert} role="alert">{notice}{problem === "sign_in" && <> <a href={tv ? "/sign-in?return_to=%2Fshopper" : "/sign-in?return_to=%2Fqueue"} target="_top">Sign in</a></>}</DismissibleNotice>}
+      <section className={styles.live} aria-label="Live agent availability">
+        <article><h3>Agents Available</h3><p className={styles.available}>{value(board?.available.length)}</p><span>Ready to take a call</span></article>
+        <article><h3>On calls</h3><p className={styles.onCalls}>{value(board?.calls.length)}</p><span>Live calls in the Shopper queue</span></article>
+        <article><h3>Average wait</h3><p className={styles.waitValue}>{duration(averageWait)}</p><span>Time available · current agents</span></article>
+        <article><h3>Total Calls</h3><p className={styles.onCalls}>{callsToday}</p><span>Today · sales agents · Eastern</span></article>
+      </section>
+      <div className={styles.rosterGrid}>
+        <section className={styles.roster} aria-labelledby="shopper-available-title">
+          <div className={styles.rosterHead}><div><h3 id="shopper-available-title">Agents Available</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Ready to take a call · Shopper"}{tv && availablePage.pages > 1 && ` · Page ${availablePage.page} of ${availablePage.pages}`}</p></div><span className={styles.rosterCount}>{value(board?.available.length)}</span></div>
+          <ol className={styles.agentList}>{(availablePage.rows as Agent[]).map(agent => <li className={`${styles.agentRow} ${styles.timedRow}${agent.dim ? ` ${styles.dimmed}` : ""}`} key={agent.id}>
+            <span className={styles.avatar} aria-hidden="true">{initials(agent.name)}</span>
+            <span className={styles.agentName}>{agent.name}<span className={styles.agentMetrics}>Waiting {now === null || agent.since === null ? "—" : waited(now - agent.since)}</span></span>
+            <span className={styles.callStatus}>{agent.idle ? "Available · idle" : "Available"}</span>
+            <span className={styles.stateTime}>{duration(now === null || agent.since === null ? null : now - agent.since)}<span className="sr-only"> available</span></span>
+          </li>)}</ol>
+          {empty(board?.available, "No agents are currently available.") && <p className={styles.empty}>{empty(board?.available, "No agents are currently available.")}</p>}
+        </section>
+        <section className={styles.roster} aria-labelledby="shopper-on-call-title">
+          <div className={styles.rosterHead}><div><h3 id="shopper-on-call-title">On Live Calls</h3><p>{unavailable ? "Last received roster · updates unavailable" : "Agents on calls · Shopper"}{tv && callsPage.pages > 1 && ` · Page ${callsPage.page} of ${callsPage.pages}`}</p></div><span className={styles.rosterCount}>{value(board?.calls.length)}</span></div>
+          <ol className={styles.agentList}>{(callsPage.rows as Call[]).map(call => <li className={styles.agentRow} key={call.id}>
+            <span className={styles.avatar} aria-hidden="true">{initials(call.name)}</span>
+            <span className={styles.agentName}>{call.name}<span className={styles.agentMetrics}>{[call.source, `${duration(now === null ? null : now - call.since)} on call`].filter(Boolean).join(" · ")}</span></span>
+            <span className={styles.callStatus}>{call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "On call"}</span>
+          </li>)}</ol>
+          {empty(board?.calls, "No agents are currently on a live call.") && <p className={styles.empty}>{empty(board?.calls, "No agents are currently on a live call.")}</p>}
+        </section>
+      </div>
+    </div>;
+  }
+
+  return <div className={`queue-page${grouped ? " queue-grouped" : ""}`}>
     <header className="queue-top">
-      <Image unoptimized className="queue-logo" src="/legacy-logo.png" alt="Legacy Agency Partners" width="164" height="107" priority />
-      <div className="queue-title"><h1>Queue</h1><p>Legacy Agency Partners</p></div>
+      {!grouped && <Image unoptimized className="queue-logo" src="/legacy-logo.png" alt="Legacy Agency Partners" width="164" height="107" priority />}
+      <div className="queue-title"><Heading>Shopper</Heading><p>{grouped ? "PolicyTek · Live call queue" : "Legacy Agency Partners"}</p></div>
       <div className="queue-top-right">
         <span className="queue-state" data-state={state} role="status"><span className="queue-pulse" aria-hidden="true" />{stateText}</span>
         <time className="queue-clock">{tick === null ? "" : new Date(tick).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
-        {!embedded && <Link className="queue-icon-btn" href="/" aria-label="Back to the recruiting workspace" title="Recruiting workspace"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" /></svg></Link>}
-        <button className="queue-icon-btn" type="button" aria-label="Full screen" title="Full screen" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
+        {!embedded && !grouped && <Link className="queue-icon-btn" href="/" aria-label="Back to the recruiting workspace" title="Recruiting workspace"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z" /></svg></Link>}
+        {!grouped && <button className="queue-icon-btn" type="button" aria-label="Full screen" title="Full screen" onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {})}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>}
       </div>
     </header>
 
     {notice && <p className="queue-notice" role="alert">{notice}{problem === "sign_in" && <> <a href="/sign-in?return_to=%2F%23queue" target="_top">Sign in</a></>}</p>}
 
-    <main className="queue-board">
-      <Column kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>
-        {board?.calls.map(call => <Row key={call.id} kind="call" name={call.name}
-          meta={[call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "Call", call.source].filter(Boolean).join(" · ")}
-          timer={now === null ? "" : stopwatch(now - call.since)} />)}
-      </Column>
-      <Column kind="available" title="Available" count={board ? board.available.length : null} empty={empty(board?.available, "No one is available.")}>
+    <section className="queue-stats" aria-label="Today">
+      <div className="queue-stat"><Subheading>Total Calls Today</Subheading><span className="queue-count">{callsToday}</span></div>
+      <div className="queue-stat"><Subheading>Average Wait Time</Subheading><span className="queue-count">{averageWait === null ? "–" : averageWait < 60000 ? "<1m" : waited(averageWait)}</span></div>
+    </section>
+
+    <Content className="queue-board">
+      <Column grouped={grouped} kind="available" title="Available" count={board ? board.available.length : null} empty={empty(board?.available, "No one is available.")}>
         {board?.available.map(agent => <Row key={agent.id} kind="ready" name={agent.name} dim={agent.dim}
           meta={agent.idle ? "Available · idle" : "Available"}
           timer={now === null || agent.since === null ? "" : waited(now - agent.since)} />)}
       </Column>
-    </main>
+      <Column grouped={grouped} kind="calls" title="On Live Calls" count={board ? board.calls.length : null} empty={empty(board?.calls, "No one is on a live call.")}>
+        {board?.calls.map(call => <Row key={call.id} kind="call" name={call.name}
+          meta={[call.direction === "inbound" ? "Inbound" : call.direction === "outbound" ? "Outbound" : "Call", call.source].filter(Boolean).join(" · ")}
+          timer={now === null ? "" : stopwatch(now - call.since)} />)}
+      </Column>
+    </Content>
 
-    <p className="queue-foot">Live from PolicyTek, updated every 5 seconds. Longest call and longest wait first. On DND and Offline are not shown.</p>
+    <p className="queue-foot">Live from PolicyTek, updated every 5 seconds. Longest wait and longest call first. Total calls today counts sales agents’ calls since midnight Eastern and updates every minute; average wait is across the agents in Available. On DND and Offline are not shown.</p>
   </div>;
 }

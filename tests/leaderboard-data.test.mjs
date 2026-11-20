@@ -1,7 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { leaderboardBarWidth, leaderboardTotals, rankLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from '../app/leaderboard-data.mjs';
+import { leaderboardBarWidth, leaderboardCallsRefreshActive, leaderboardCallsRefreshDelay, leaderboardSpCallLabel, leaderboardTotals, rankLeaderboardRows, sourceLeaderboardTableRows, sourceLeaderboardValue } from '../app/leaderboard-data.mjs';
 import { WORKSPACE_EXTRA_PAGES, resolveWorkspaceRoute } from '../app/recruiting-navigation.mjs';
+
+test('Standard vs. Preferred reloads a minute after each sync, and only while its range can still gain calls', () => {
+  assert.equal(leaderboardCallsRefreshActive('day', '', '2026-11-03'), true);
+  assert.equal(leaderboardCallsRefreshActive('month', '', '2026-11-03'), true);
+  assert.equal(leaderboardCallsRefreshActive('custom', '2026-11-03', '2026-11-03'), true);
+  assert.equal(leaderboardCallsRefreshActive('custom', '2026-11-02', '2026-11-03'), false);
+  const at = value => Date.parse(`2026-11-03T14:${value}Z`);
+  assert.equal(leaderboardCallsRefreshDelay(at('05:30')), 30000);
+  assert.equal(leaderboardCallsRefreshDelay(at('06:00')), 300000);
+  assert.equal(leaderboardCallsRefreshDelay(at('06:30')), 270000);
+});
+
+test('Standard vs. Preferred row label names the call source', () => {
+  assert.equal(leaderboardSpCallLabel('ringcx'), 'Calls (RingCX report)');
+  assert.equal(leaderboardSpCallLabel('spreadsheet'), 'Calls (answered, Agent Daily Calls reports)');
+  assert.equal(leaderboardSpCallLabel(undefined), 'Calls (inbound logs attributed through deal owner)');
+});
 
 test('agent rankings use selected metric, secondary metric and stable names without mutating source rows', () => {
   const rows = [{ name: 'Zed', sales: 3, annualPremium: 200 }, { name: 'Alex', sales: 3, annualPremium: 500 }, { name: 'Blair', sales: 1, annualPremium: 700 }];
@@ -79,4 +96,71 @@ test('unattributed policies count in totals without inventing an agent or awardi
   assert.deepEqual(rankLeaderboardRows(rows, 'sp', 'sales').map(row => row.name), ['Known agent', 'Writing agent not recorded']);
   assert.equal(leaderboardTotals(rows.slice(0, 1), 'sp').top, null);
   assert.equal(leaderboardTotals(rows.slice(0, 1), 'sp').activeAgents, 0);
+});
+
+import { filterLeaderboardRows, leaderboardSortFields, sortLeaderboardRows } from '../app/leaderboard-data.mjs';
+test('ranked rows re-sort by name, calls, close rate and production per board, keeping ranks and unattributed rows last', () => {
+  const ranked = [
+    { name: 'Bravo Agent', sales: 9, annualPremium: 900, inboundCalls: 30, soldPerInboundLog: .3, connectedCalls: 31, abandonedCalls: 1 },
+    { name: 'alpha agent', sales: 5, annualPremium: 1200, inboundCalls: null, soldPerInboundLog: null },
+    { name: 'Charlie Agent', sales: 2, annualPremium: 100, inboundCalls: 4, soldPerInboundLog: .5, connectedCalls: 9, abandonedCalls: 5 },
+    { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 50, inboundCalls: null, soldPerInboundLog: null },
+  ];
+  const order = (field, direction) => sortLeaderboardRows(ranked, 'sp', { field, direction }).map(row => `${row.rank}:${row.name.split(' ')[0]}`);
+  assert.deepEqual(order('rank', 'desc'), ['1:Bravo', '2:alpha', '3:Charlie', '4:Writing']);
+  assert.deepEqual(order('name', 'asc'), ['2:alpha', '1:Bravo', '3:Charlie', '4:Writing']);
+  assert.deepEqual(order('calls', 'desc'), ['1:Bravo', '3:Charlie', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('calls', 'asc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('closeRate', 'desc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('production', 'desc'), ['2:alpha', '1:Bravo', '3:Charlie', '4:Writing']);
+  assert.deepEqual(order('connected', 'desc'), ['1:Bravo', '3:Charlie', '2:alpha', '4:Writing']);
+  assert.deepEqual(order('abandoned', 'desc'), ['3:Charlie', '1:Bravo', '2:alpha', '4:Writing']);
+  const whatsapp = sortLeaderboardRows([{ name: 'A', production: 5, queueConnected: 1, closeRate: .1 }, { name: 'B', production: 9, queueConnected: 7, closeRate: 0 }], 'whatsapp', { field: 'calls', direction: 'desc' });
+  assert.deepEqual(whatsapp.map(row => row.name), ['B', 'A']);
+  const shopper = sortLeaderboardRows([{ name: 'A', submitted: 1, premium: 10, leads: 10 }, { name: 'B', submitted: 3, premium: 5, leads: 6 }], 'shopper', { field: 'closeRate', direction: 'desc' });
+  assert.deepEqual(shopper.map(row => row.name), ['B', 'A']);
+  assert.deepEqual(leaderboardSortFields('sp').map(option => option.label), ['Annual premium', 'Sales', 'Calls', 'Close rate', 'Total Calls Connected', 'Total Calls Abandoned', 'Alphabetical']);
+  assert.deepEqual(leaderboardSortFields('source').map(option => option.label), ['Submitted premium', 'Leads', 'Close rate', 'Alphabetical']);
+  assert.deepEqual(leaderboardSortFields('whatsapp').map(option => option.field), ['production', 'sales', 'calls', 'closeRate', 'name']);
+  assert.equal(leaderboardSortFields('whatsapp')[0].label, 'Annual premium');
+});
+
+import { LEADERBOARD_BOARDS, leaderboardCsv, leaderboardCsvFilename } from '../app/leaderboard-data.mjs';
+test('Standard vs. Preferred sits right of Shopper in the board tabs', () => {
+  assert.deepEqual(LEADERBOARD_BOARDS.map(value => value.label), ['All', 'Shopper', 'Standard vs. Preferred', 'Source Performance', 'WhatsApp Sales']);
+});
+test('the export is the rows as shown, with raw numbers, blanks for missing values and safe text', () => {
+  const rows = sortLeaderboardRows([
+    { name: 'Bravo, Jr. "BJ"', sales: 3, annualPremium: 1234.567, inboundCalls: 12, soldPerInboundLog: .25, connectedCalls: 15, abandonedCalls: 3 },
+    { name: '=HYPERLINK("x")', sales: 1, annualPremium: 50, inboundCalls: null, soldPerInboundLog: null },
+    { name: 'Writing agent not recorded', attributed: false, sales: 1, annualPremium: 10 },
+  ], 'sp', { field: 'production', direction: 'desc' });
+  assert.equal(leaderboardCsv(rows, 'sp'), [
+    'Rank,Agent,Sales,Calls,Close rate,Total Calls Connected,Total Calls Abandoned,Annual premium',
+    '1,"Bravo, Jr. ""BJ""",3,12,25%,15,3,1234.57',
+    `2,"'=HYPERLINK(""x"")",1,,,,,50`,
+    ',Writing agent not recorded,1,,,,,10',
+  ].join('\r\n') + '\r\n');
+  const source = leaderboardCsv([{ name: 'Web', rank: 1, leads: 8, submitted: 2, premium: 900, spend: 300 }], 'source').split('\r\n');
+  assert.equal(source[0], 'Rank,Source,Leads,Close rate,Submitted,Submitted premium,Spend,ROAS');
+  assert.equal(source[1], '1,Web,8,25%,2,900,300,3');
+  assert.equal(leaderboardCsvFilename('Standard vs. Preferred', '2026-11-03', '2026-11-03'), 'leaderboard-standard-vs-preferred-2026-11-03.csv');
+  assert.equal(leaderboardCsvFilename('WhatsApp Sales', '2026-11-01', '2026-11-03'), 'leaderboard-whatsapp-sales-2026-11-01-to-2026-11-03.csv');
+  assert.equal(leaderboardCsvFilename('Shopper'), 'leaderboard-shopper.csv');
+});
+test('agent search ignores case, accents and word order', () => {
+  const rows = [{ name: 'José Álvarez' }, { name: 'Joseph King' }, { name: 'Ann Lee' }];
+  assert.deepEqual(filterLeaderboardRows(rows, '  ALVAREZ ').map(row => row.name), ['José Álvarez']);
+  assert.deepEqual(filterLeaderboardRows(rows, 'alvarez jos').map(row => row.name), ['José Álvarez']);
+  assert.deepEqual(filterLeaderboardRows(rows, 'jos').length, 2);
+  assert.equal(filterLeaderboardRows(rows, '').length, 3);
+});
+
+test('Sales sorting uses each agent board’s existing count and preserves missing values', () => {
+  const shopper = [{ name: 'A', submitted: 2 }, { name: 'B', submitted: 8 }, { name: 'C', submitted: null }];
+  assert.deepEqual(sortLeaderboardRows(shopper, 'shopper', { field: 'sales', direction: 'desc' }).map(row => row.name), ['B', 'A', 'C']);
+  assert.deepEqual(sortLeaderboardRows([{ name: 'A', sales: 3 }, { name: 'B', sales: 7 }], 'sp', { field: 'sales', direction: 'desc' }).map(row => row.name), ['B', 'A']);
+  const csv = leaderboardCsv([{ name: 'A', rank: 1, submitted: 2, leads: 10, premium: 500 }], 'shopper').split('\r\n');
+  assert.equal(csv[0], 'Rank,Agent,Sales,Calls,Close rate,Submitted premium');
+  assert.equal(csv[1], '1,A,2,10,20%,500');
 });

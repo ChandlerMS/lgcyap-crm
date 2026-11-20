@@ -1,7 +1,11 @@
 import "server-only";
+import { currentAccessPolicy } from "@/lib/admin-access.mjs";
+import { CRM_AUTHORIZED } from "@/lib/admin-policy.mjs";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionCookie } from "better-auth/cookies";
+import { queueSessionHeaders } from "@/lib/queue-host.mjs";
+import { leaderboardSessionHeaders } from "@/lib/leaderboard-host.mjs";
 import { getAuth } from "@/lib/auth";
 import { safeReturnPath, sessionUser } from "@/lib/auth-policy.mjs";
 
@@ -12,15 +16,24 @@ export class AuthUnavailableError extends Error {
 }
 
 export async function getAppUser(): Promise<AppUser | null> {
-  const requestHeaders = await headers();
+  // Each adapter acts only on its own host (queue. or leaderboard.lgcyap.com); elsewhere headers pass through unchanged.
+  const requestHeaders = leaderboardSessionHeaders(queueSessionHeaders(await headers(), process.env.BETTER_AUTH_URL), process.env.BETTER_AUTH_URL);
   // This is only an optimization; Better Auth verifies the actual session below.
   if (!getSessionCookie(requestHeaders)) return null;
   const auth = getAuth();
   if (!auth) return null;
+  let stage = "session";
   try {
     const session = await auth.api.getSession({ headers: requestHeaders });
-    return sessionUser(session, process.env.RECRUITING_EDITOR_EMAILS, Date.now(), process.env.GOOGLE_PERSONAL_EMAILS, process.env.GOOGLE_EXTERNAL_EMAILS, process.env.GOOGLE_WORKSPACE_DOMAIN);
-  } catch { throw new AuthUnavailableError(); }
+    stage = "access-policy";
+    const policy = await currentAccessPolicy();
+    const user = sessionUser(session, policy.RECRUITING_EDITOR_EMAILS, Date.now(), policy.GOOGLE_PERSONAL_EMAILS, policy.GOOGLE_EXTERNAL_EMAILS, policy.GOOGLE_WORKSPACE_DOMAIN);
+    return user ? Object.assign(user, { [CRM_AUTHORIZED]: true }) : null;
+  } catch (error) {
+    const code = (error as { code?: unknown })?.code;
+    console.error('crm-auth-unavailable', { stage, code: typeof code === 'string' && /^[A-Z0-9_]{1,40}$/.test(code) ? code : 'UNEXPECTED' });
+    throw new AuthUnavailableError();
+  }
 }
 
 export async function requireAppUser(returnTo = "/"): Promise<AppUser> {

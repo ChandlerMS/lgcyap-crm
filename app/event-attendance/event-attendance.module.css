@@ -1,0 +1,163 @@
+/* Black and gold, matching the Standard vs Preferred board and the workspace tokens in globals.css. */
+.board{min-height:100vh;background:var(--canvas);color:var(--text);padding:clamp(16px,3vw,40px);color-scheme:dark}
+/* A section of the Recruiting Dashboard: no page padding, and a title sized like the dashboard's other panels. */
+.section{min-height:0;padding:0;background:none}
+.section .header h2{margin:0 0 6px;font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.header{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid #6d633e;padding-bottom:24px}
+.identity{display:flex;align-items:center;gap:24px;min-width:0}.logo{width:120px;height:auto;object-fit:contain}
+.brand{color:var(--muted);margin:0 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+.header h1{font-size:clamp(22px,2.4vw,34px);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0 0 8px;font-weight:600}
+.subtitle{color:var(--muted);font-size:14px;margin:0}
+/* The header's buttons stay small enough to share one row beside the title. */
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex:none}
+/* The update time sits alone in the page's top-right corner, above the logo row and its buttons. */
+.topRow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin:-6px 0 10px}.topRow :global(.expand-collapse-controls){margin:0}
+.status{white-space:nowrap;font-size:13px;color:var(--gold);border:1px solid #6d633e;border-radius:999px;padding:6px 12px}.status:before{content:'●';margin-right:7px}.warning{color:#f1c678}
+.controls button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 11px;cursor:pointer;font:inherit;font-size:13px;line-height:1.3;white-space:nowrap}
+/* The dashboard's collapse chevron keeps its own look among the buttons. */
+.controls :global(.section-toggle){padding:0;border:0;background:none}
+.controls button:hover{background:#282311}.controls button:focus-visible,.alert a:focus-visible,.card summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.controls button:disabled{opacity:.6;cursor:wait}
+.alert{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:20px 0 0;padding:15px;background:#1a180f;border:1px solid #6d633e;color:#f1d29c;border-radius:6px;font-size:14px}.alert p{margin:0}
+.alert a{color:#111;background:var(--gold);border-radius:6px;padding:8px 14px;text-decoration:none;font-weight:600}
+.lede{font-size:clamp(16px,1.4vw,19px);line-height:1.6;margin:24px 0 0;max-width:70ch}.lede strong{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+/* Signed in, Applied, Hired and Today always share one row, shrinking to fit. */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:22px 0}
+.big{font-size:clamp(30px,3.4vw,52px);font-weight:400;line-height:1.1;margin:8px 0;font-variant-numeric:tabular-nums;letter-spacing:-1.5px;color:var(--gold)}
+.card{background:var(--panel);border:1px solid #6d633e;border-radius:6px;padding:24px;margin-bottom:20px;min-width:0}
+.card h2{margin:0 0 6px;font-size:20px;font-weight:600}.card h2:before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--gold);margin-right:12px;vertical-align:3px}
+/* Pop-ups opened from a card (a note, a photo ID) keep their own heading. */
+.card dialog h2:before{content:none}
+.muted{color:var(--muted);font-size:13px;margin:0}
+.empty{color:var(--muted);text-align:center;padding:20px;margin:0;font-size:14px}
+.sectionHeading{display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap}.sectionHeading span{font-size:12px;color:var(--muted)}
+/* Positioned so screen-reader-only text inside scrolls with the table instead of widening the page. */
+.tableWrap{overflow-x:auto;margin-top:14px;position:relative}
+.table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px}
+.table th,.table td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.table th:first-child{text-align:left}.table thead th{color:var(--muted);font-weight:500;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.table tbody th{font-weight:500}.table tbody tr:last-child>*{border-bottom:0}.total{color:var(--gold);font-weight:600}
+.card summary{cursor:pointer;font-weight:600;color:var(--gold)}
+.definitions{margin:14px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6}.definitions strong{color:var(--text)}
+/* Expandable tiles, event days and office counts, and the people lists they open. */
+.tiles .tile{display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;background:none;border:1px solid transparent;border-left:1px solid var(--line);border-radius:6px;padding:10px 12px 12px 18px;margin:-10px 0;color:inherit;font:inherit;cursor:pointer;min-width:0}
+.tiles .tile:first-child{border-left-color:transparent;padding-left:14px}
+.tiles .tile:hover:not(:disabled),.tiles .tileOpen{background:#14130d;border-color:#6d633e}
+.tiles .tile:focus-visible,.dayButton:focus-visible,.countButton:focus-visible,.peopleHead button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.tiles .tile:disabled{cursor:default}
+.tileLabel{font-size:16px;font-weight:500}
+.tileNote{color:var(--muted);font-size:12px;line-height:1.4}
+.tileMore{margin-top:10px;color:var(--gold);font-size:12px;letter-spacing:.04em}
+.todayTile .big{color:var(--text)}
+.peoplePanel{border-color:var(--gold);margin-top:4px}
+.peopleHead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.peopleHead button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit;font-size:13px}
+.peopleBlock{margin-top:16px}.peopleBlock+.peopleBlock{margin-top:24px}
+.peopleListHead{display:grid;grid-template-columns:minmax(0,1fr) minmax(440px,600px);align-items:start;gap:16px;margin-bottom:14px}
+.peopleListHead h3{padding-top:12px}
+.peopleExport{width:100%;min-width:0}
+.peopleExportButtons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:start}
+.peopleExport button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 10px;width:100%;height:44px;min-height:44px;box-sizing:border-box;cursor:pointer;font:inherit;font-size:13px;line-height:1.25}
+.peopleExport button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.peopleExport button:disabled{opacity:.5;cursor:not-allowed}
+.peopleBlock h3{margin:0;font-size:16px;font-weight:600}.peopleBlock h3 span{color:var(--gold);font-variant-numeric:tabular-nums;margin-left:6px}
+.peopleTable th,.peopleTable td{text-align:left;white-space:normal;font-size:14px;vertical-align:top;min-width:90px}
+.peopleTable th:first-child{min-width:150px}
+.peopleTable a{color:var(--gold);text-decoration:none}.peopleTable a:hover{text-decoration:underline}
+.peopleTable a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dayButton{background:none;border:0;padding:0;color:var(--text);font:inherit;font-weight:500;cursor:pointer;text-align:left}
+.dayButton:hover{color:var(--gold)}.dayButton span{color:var(--gold);font-size:11px}
+.countButton{background:#1a180f;border:1px solid #6d633e;border-radius:999px;color:var(--gold);font:inherit;font-variant-numeric:tabular-nums;min-width:38px;padding:3px 10px;cursor:pointer}
+.countButton:hover,.countOpen{background:var(--gold);color:#111;border-color:var(--gold)}
+.rowOpen>*{background:#14130d}
+.detailRow>td{text-align:left;white-space:normal;background:#100f0b;border-bottom:1px solid #6d633e;padding:16px 18px}
+@media(max-width:640px){.tiles .tile{padding:8px 6px 10px 8px}.tiles .tile:first-child{padding-left:6px}.tileLabel{font-size:13px}.tileNote{font-size:11px}.tileMore{font-size:11px}.detailRow>td{padding:12px 8px}}
+/* Header actions, the HubSpot hint and the import panel. */
+.controls .action{display:inline-flex;align-items:center;gap:5px;background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:6px 11px;text-decoration:none;font-size:13px;line-height:1.3;white-space:nowrap}
+.controls .action:hover{background:#282311}.controls .action:focus-visible,.linkButton:focus-visible,.importActions button:focus-visible,.result a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.controls button:disabled{cursor:not-allowed}
+.hint{color:var(--muted);font-size:12px;line-height:1.6;margin:12px 0 0}
+.linkButton{background:none;border:0;padding:0;color:var(--gold);text-decoration:underline;cursor:pointer;font:inherit}
+.importPanel{margin-top:20px;border-color:var(--gold)}
+.importSummary{margin:14px 0 0;font-size:14px;color:var(--text)}
+.importTable th,.importTable td{text-align:left;white-space:normal;font-size:14px;vertical-align:top}
+.importTable td:nth-child(2),.importTable td:nth-child(5){white-space:nowrap}
+.result{min-width:220px}.result a{color:var(--gold)}
+.rowProblem .result{color:#f1c678}.rowDone .result{color:#9fd6a2}
+.importActions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.importActions button{background:#1a180f;border:1px solid #6d633e;color:var(--gold);border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}
+.importActions button:hover{background:#282311}.importActions button:disabled{opacity:.6;cursor:not-allowed}
+.importActions .primary{background:var(--gold);border-color:var(--gold);color:#111;font-weight:600}.importActions .primary:hover{background:#e2c25a}
+@media(max-width:640px){.header{align-items:flex-start;flex-direction:column;gap:16px}.identity{gap:14px}.logo{width:72px}.brand{font-size:10px}.header h1{font-size:21px}.subtitle{font-size:12px}
+.controls{flex-wrap:wrap}
+.tiles{gap:6px}.big{font-size:26px;letter-spacing:-1px}.card{padding:18px}.card h2{font-size:18px}
+.table th,.table td{padding:10px 8px;font-size:14px}}
+
+.tableWrap { max-width: 100%; contain: layout paint; }
+
+/* Names and emails in the people lists. A name opens its hover card; an email opens New Email with the templates. */
+.hoverName{display:inline}
+.emailButton{padding:0;border:0;background:none;color:var(--gold);font:inherit;text-align:left;overflow-wrap:break-word;cursor:pointer}
+.emailButton:hover{text-decoration:underline}
+.emailButton:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* The sign-in date filter above Signed in, Applied and Hired. */
+.dateFilter{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;margin:10px 0 0}
+.dateFilter label{display:grid;gap:4px;color:var(--muted);font-size:12px}
+.dateFilter select,.dateFilter input{min-height:34px;padding:5px 9px;border:1px solid #6d633e;border-radius:6px;background:#100f0b;color:var(--text);font:inherit;font-size:13px;color-scheme:dark}
+.dateFilter select:focus-visible,.dateFilter input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dateFilter .linkButton{min-height:34px;font-size:13px}
+/* The hover card's sign-ins and application answers, below the recruit's CRM details. */
+.hoverExtra{margin-top:12px;padding-top:10px;border-top:1px solid #ffffff14}
+.hoverHeading{margin:0 0 8px;color:var(--gold);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.hoverExtra .hoverHeading:not(:first-child){margin-top:14px;padding-top:10px;border-top:1px solid #ffffff14}
+.hoverSubheading{margin:12px 0 6px;color:#f4f1e8;font-size:13px;font-weight:600}
+.hoverFacts{display:grid;gap:5px;margin:0}
+.hoverFacts>div{display:grid;grid-template-columns:132px minmax(0,1fr);gap:8px;align-items:baseline}
+.hoverFacts dt{color:#aaa699;font-size:12px;line-height:1.45}
+.hoverFacts dd{margin:0;color:#e8e2d3;font-size:13px;line-height:1.45;overflow-wrap:anywhere;white-space:pre-line}
+.hoverUnanswered dd{color:#7d786b}
+.hoverNote{margin:0 0 8px;color:#cfc9b8;font-size:12px;line-height:1.5}
+.hoverBadges{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px;padding:0;list-style:none}
+.hoverBadges li{padding:2px 8px;border-radius:999px;background:#2a2416;color:#e1c66f;font-size:12px;line-height:1.6}
+.hoverBadges .hoverBad{background:#3a1d14;color:#f0a58a}
+.hoverBadges .hoverWarn{background:#3a2a14;color:#f0b866}
+.hoverList{margin:0;padding-left:18px;color:#e8e2d3;font-size:13px;line-height:1.5}
+
+/* On the dashboard: a quieter header with the update time in the subtitle, and inner cards in the dashboard's card colors. */
+.section .header{padding-bottom:18px;border-bottom-color:#2c2818}
+.section .card{background:#13120e;border-color:#2c2818;padding:20px 22px}
+.section .tiles{padding:22px 0 24px}
+.updated{color:var(--muted);white-space:nowrap}
+.updatedWarning{color:#f1c678;white-space:nowrap}
+:global(.is-collapsed)>.section .header{padding-bottom:0;border-bottom:0}
+/* The day-by-day table folds from the chevron at the right of its title. */
+.sectionHeading>span{margin-left:auto}
+.sectionHeading :global(.section-toggle){margin-left:-8px}
+
+.countPreview { position: fixed; z-index: 110; width: min(640px, calc(100vw - 16px)); max-height: min(65vh, 600px); overflow: auto; padding: 18px; background: #171610; color: #ede9dd; border: 1px solid #bfa34c; border-radius: 12px; box-shadow: 0 18px 60px #0009; text-align: left; }
+.countPreview a { color: #dfbf62; }
+.countDetails { display: grid; gap: 16px; }
+.countDetails article { border: 1px solid #55492b; border-radius: 10px; padding: 16px; }
+.countDetails h3 { margin: 0 0 12px; }
+.countDetails dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.countDetails dt { color: #aaa594; font-size: 12px; }
+.countDetails dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.countDetails :global(.add-activity-buttons) { margin-top: 10px; }
+.unlinkedActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.unlinkedActions a, .unlinkedActions button { color: #dfbf62; border: 1px solid #79662f; border-radius: 6px; padding: 7px 10px; background: #211d10; }
+.countDetails :global(.add-activity-button), .countDetails :global(.communication-button) { color: #dfbf62; border-color: #79662f; background: #211d10; }
+.peopleHead button:global(.gold-close){width:30px;height:30px;min-height:30px;padding:0;border:0;background:transparent;color:var(--gold);font-size:24px}
+
+/* Reserve feedback space so export progress and confirmations never rearrange controls. */
+.exportFeedback{height:64px;overflow:auto;margin-top:8px;overflow-wrap:anywhere;font-size:13px;line-height:1.5}
+.exportFeedback p{margin:0 0 6px}
+.exportFeedback a{color:var(--gold);text-decoration:underline}
+.dateRangeFields{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.dateFilter.peopleFilters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 140px;gap:12px;margin:10px 0 16px;align-items:end}
+.peopleFilters>.dateRangeFields{grid-row:2;grid-column:1/-1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 140px;gap:12px;min-height:66px;align-items:end}
+.peopleFilters>.dateRangeFields>button{grid-column:6}
+.peopleFilters label{min-width:0;gap:6px}
+.peopleFilters input,.peopleFilters select{width:100%;min-width:0;height:44px;box-sizing:border-box;padding:8px 10px}
+.peopleFilters button{height:44px;min-height:44px;padding:6px 10px;border:1px solid #6d633e;border-radius:6px;background:#1a180f;color:var(--gold);font:inherit;font-size:13px;text-decoration:none;box-sizing:border-box}
+@media(max-width:900px){.peopleListHead{grid-template-columns:1fr}.peopleListHead h3{padding-top:0}.peopleExport{max-width:600px}.dateFilter.peopleFilters{grid-template-columns:repeat(2,minmax(0,1fr))}.peopleFilters>.dateRangeFields{grid-row:auto;grid-template-columns:repeat(2,minmax(0,1fr))}.peopleFilters>.dateRangeFields>button{grid-column:auto}}
+@media(max-width:480px){.peopleExportButtons{grid-template-columns:1fr;gap:8px}.peopleExport button{padding:6px;font-size:12px}.dateFilter.peopleFilters,.peopleFilters>.dateRangeFields{grid-template-columns:1fr}}
+
+.peopleFilters input:disabled{opacity:.5;cursor:not-allowed}

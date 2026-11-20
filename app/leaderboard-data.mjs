@@ -1,7 +1,8 @@
 const collator = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true });
 export const LEADERBOARD_BOARDS = Object.freeze([
-  { id: 'sp', label: 'Standard vs. Preferred' },
+  { id: 'all', label: 'All' },
   { id: 'shopper', label: 'Shopper' },
+  { id: 'sp', label: 'Standard vs. Preferred' },
   { id: 'source', label: 'Source Performance' },
   { id: 'whatsapp', label: 'WhatsApp Sales' },
 ]);
@@ -10,11 +11,29 @@ const nonnegative = value => typeof value === 'number' && Number.isFinite(value)
 const signedNumber = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const metricNumber = (value, key) => ['annualPremium', 'premium', 'production', 'roas'].includes(key) ? signedNumber(value) : nonnegative(value);
 const descending = (first, second) => first === null || second === null ? first === null && second === null ? 0 : first === null ? 1 : -1 : second - first;
+/** Standard vs. Preferred's columns after Close rate, from the RingCX report. */
+export const LEADERBOARD_SP_CALL_TOTALS = Object.freeze([{ field: 'connected', label: 'Total Calls Connected' }, { field: 'abandoned', label: 'Total Calls Abandoned' }]);
+const SP_CALL_LABELS = Object.freeze({ ringcx: 'Calls (RingCX report)', spreadsheet: 'Calls (answered, Agent Daily Calls reports)' });
+const CALLS_SYNC_MS = 300000, CALLS_REFRESH_LAG_MS = 60000;
+
+export function leaderboardSpCallLabel(basis) {
+  return SP_CALL_LABELS[basis] ?? 'Calls (inbound logs attributed through deal owner)';
+}
+
+/** Standard vs. Preferred reloads only while its range can still gain calls. */
+export function leaderboardCallsRefreshActive(period, to, today) {
+  return period !== 'custom' || to >= today;
+}
+
+/** Reload a minute after each five-minute RingCX sync, so the page reads what that run just saved. */
+export function leaderboardCallsRefreshDelay(now = Date.now()) {
+  return CALLS_SYNC_MS - ((now - CALLS_REFRESH_LAG_MS) % CALLS_SYNC_MS);
+}
 
 export function leaderboardMetrics(board) {
-  return board === 'sp' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
-    // The imported daily reports record "Number of Sales" and "Total Production", not annual premium.
-    : board === 'whatsapp' ? { first: 'sales', second: 'production', firstLabel: 'Sales', secondLabel: 'Total production' }
+  return board === 'sp' || board === 'all' ? { first: 'sales', second: 'annualPremium', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
+    // Total Production in the imported reports is annual premium, confirmed by the report owner.
+    : ['whatsapp', 'whatsapp-sp'].includes(board) ? { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' }
     : { first: 'submitted', second: 'premium', firstLabel: 'Submitted', secondLabel: 'Submitted premium' };
 }
 
@@ -58,4 +77,125 @@ export function sourceLeaderboardValue(row, field) {
   if (field === 'roas' && signedNumber(row.premium) !== null && nonnegative(row.spend) !== null && row.spend > 0) return row.premium / row.spend;
   if (field === 'closeRate' && nonnegative(row.submitted) !== null && nonnegative(row.leads) !== null && row.leads > 0) return row.submitted / row.leads;
   return null;
+}
+
+/** Columns the ranked list can be re-sorted by, premium first (the default). Labels follow each board's own metric names. */
+export function leaderboardSortFields(board) {
+  const keys = leaderboardMetrics(board), calls = board === 'source' ? 'Leads' : board === 'all' ? 'Calls / leads' : 'Calls';
+  return [{ field: 'production', label: keys.secondLabel }, ...(['all', 'shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board) ? [{ field: 'sales', label: 'Sales' }] : []), { field: 'calls', label: calls }, { field: 'closeRate', label: board === 'all' ? 'Sales / activity' : 'Close rate' }, ...(board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : []), { field: 'name', label: 'Alphabetical' }];
+}
+
+/** The value behind a sort field: calls are dialer/report calls on agent boards and PolicyTek leads on Shopper and Source. */
+export function leaderboardSortValue(row, board, field) {
+  if (field === 'name') return typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null;
+  if (field === 'sales') return nonnegative(row[leaderboardMetrics(board).first]);
+  if (field === 'production') return signedNumber(row[leaderboardMetrics(board).second]);
+  if (board === 'sp' || board === 'all') return nonnegative({ calls: row.inboundCalls, closeRate: row.soldPerInboundLog, connected: row.connectedCalls, abandoned: row.abandonedCalls }[field]);
+  if (['whatsapp', 'whatsapp-sp'].includes(board)) return nonnegative(field === 'calls' ? row.queueConnected : field === 'closeRate' ? row.closeRate : null);
+  return field === 'calls' ? nonnegative(row.leads) : field === 'closeRate' ? sourceLeaderboardValue(row, 'closeRate') : null;
+}
+
+/**
+ * Re-orders already ranked rows. "rank" keeps the ranking order; missing values and unattributed rows always sort last.
+ * Each row keeps its ranked position as `rank` so medals and numbers never change with the sort.
+ */
+export function sortLeaderboardRows(rankedRows, board, sort = { field: 'rank', direction: 'desc' }) {
+  const rows = rankedRows.map((row, index) => ({ ...row, rank: index + 1 }));
+  if (!['name', 'sales', 'calls', 'closeRate', 'connected', 'abandoned', 'production'].includes(sort.field)) return rows;
+  const direction = sort.direction === 'asc' ? 1 : -1;
+  return rows.sort((a, b) => {
+    const unattributed = Number(a.attributed === false) - Number(b.attributed === false);
+    if (unattributed) return unattributed;
+    const first = leaderboardSortValue(a, board, sort.field), second = leaderboardSortValue(b, board, sort.field);
+    if (first === null || second === null) return first === null && second === null ? a.rank - b.rank : first === null ? 1 : -1;
+    const result = typeof first === 'number' && typeof second === 'number' ? first - second : collator.compare(first, second);
+    return result ? result * direction : a.rank - b.rank;
+  });
+}
+
+/** A CSV cell. Names that start like a formula are prefixed with ' so they open as text. */
+export function leaderboardCsvCell(value) {
+  const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+/**
+ * The rows as shown (sorted and searched) as CSV. Numbers stay unformatted so spreadsheets can total them;
+ * missing values are blank, never zero.
+ */
+export function leaderboardCsv(rows, board) {
+  const keys = leaderboardMetrics(board), source = board === 'source', callTotals = board === 'sp' ? LEADERBOARD_SP_CALL_TOTALS : [];
+  const sales = ['all', 'shopper', 'sp', 'whatsapp', 'whatsapp-sp'].includes(board);
+  const fixed = (value, places) => value === null ? '' : Math.round(value * 10 ** places) / 10 ** places;
+  const percent = value => value === null ? '' : `${fixed(value * 100, 1)}%`;
+  const header = ['Rank', source ? 'Source' : 'Agent', ...(sales ? ['Sales'] : []), source ? 'Leads' : board === 'all' ? 'Calls / leads' : 'Calls', board === 'all' ? 'Sales / activity' : 'Close rate', ...callTotals.map(column => column.label), ...(sales ? [] : [keys.firstLabel]), keys.secondLabel, ...(source ? ['Spend', 'ROAS'] : [])];
+  const lines = rows.map(row => [
+    row.attributed === false ? '' : row.rank ?? '',
+    typeof row.name === 'string' ? row.name : '',
+    ...(sales ? [fixed(leaderboardSortValue(row, board, 'sales'), 0)] : []),
+    fixed(leaderboardSortValue(row, board, 'calls'), 0),
+    percent(leaderboardSortValue(row, board, 'closeRate')),
+    ...callTotals.map(column => fixed(leaderboardSortValue(row, board, column.field), 0)),
+    ...(sales ? [] : [fixed(nonnegative(row[keys.first]), 0)]),
+    fixed(signedNumber(row[keys.second]), 2),
+    ...(source ? [fixed(nonnegative(row.spend), 2), fixed(sourceLeaderboardValue(row, 'roas'), 2)] : []),
+  ]);
+  return [header, ...lines].map(line => line.map(leaderboardCsvCell).join(',')).join('\r\n') + '\r\n';
+}
+
+/** e.g. leaderboard-standard-vs-preferred-2026-11-01-to-2026-11-03.csv */
+export function leaderboardCsvFilename(boardLabel, startDate, endDate) {
+  const slug = String(boardLabel).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'leaderboard';
+  const dates = startDate ? endDate && endDate !== startDate ? `-${startDate}-to-${endDate}` : `-${startDate}` : '';
+  return `leaderboard-${slug}${dates}.csv`;
+}
+
+/** Case- and accent-insensitive name search; every word typed must appear in the name. */
+export function filterLeaderboardRows(rows, query) {
+  const fold = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  return words.length ? rows.filter(row => { const name = fold(row.name); return words.every(word => name.includes(word)); }) : rows;
+}
+
+/** Align named agents across two source snapshots without inventing activity for an absent source/row.
+ * @param {{field:string,direction:'asc'|'desc'}|undefined} [sort]
+ */
+export function leaderboardComparisonRows(left, right, metric = 'ap', query = '', sort = undefined) {
+  const agents = new Map();
+  for (const [side, result] of [['left', left], ['right', right]]) {
+    if (result?.status !== 'available' || !Array.isArray(result.rows)) continue;
+    const keys = leaderboardMetrics(result.board);
+    result.rows.forEach((row, index) => {
+      const name = typeof row.name === 'string' ? row.name.normalize('NFC').trim().replace(/\s+/g, ' ') : '';
+      const key = row.attributed === false || !name ? `${side}:unattributed:${index}` : `named:${name.toLowerCase()}`;
+      const entry = agents.get(key) ?? { id: key, name: name || 'Name not recorded', left: null, right: null };
+      const counts = nonnegative(row[keys.first]), amount = signedNumber(row[keys.second]);
+      const previous = entry[side];
+      entry[side] = previous ? {
+        sales: previous.sales === null || counts === null ? null : previous.sales + counts,
+        premium: previous.premium === null || amount === null ? null : (Math.round(previous.premium * 100) + Math.round(amount * 100)) / 100,
+      } : { sales: counts, premium: amount === null ? null : Math.round(amount * 100) / 100 };
+      agents.set(key, entry);
+    });
+  }
+  const field = sort?.field === 'name' ? 'name' : sort?.field === 'sales' ? 'sales' : sort?.field === 'production' || sort?.field === 'premium' ? 'premium' : metric === 'ap' ? 'premium' : 'sales';
+  const direction = sort?.direction === 'asc' ? 1 : -1;
+  const value = row => {
+    const values = [row.left?.[field], row.right?.[field]].filter(value => typeof value === 'number' && Number.isFinite(value));
+    return values.length ? Math.max(...values) : null;
+  };
+  return filterLeaderboardRows([...agents.values()], query).sort((a, b) => {
+    if (field === 'name') return collator.compare(a.name, b.name) * direction;
+    const first = value(a), second = value(b);
+    if (first === null || second === null) return first === null && second === null ? collator.compare(a.name, b.name) : first === null ? 1 : -1;
+    return (first - second) * direction || collator.compare(a.name, b.name);
+  });
+}
+
+/** Export the same paired rows shown in the comparison, with no replacement of missing values by zero. */
+export function leaderboardComparisonCsv(rows, leftLabel, rightLabel) {
+  const value = (row, side, key) => typeof row[side]?.[key] === 'number' && Number.isFinite(row[side][key]) ? row[side][key] : '';
+  const header = ['Agent', `${leftLabel} policies sold`, `${leftLabel} annual premium`, `${rightLabel} policies sold`, `${rightLabel} annual premium`];
+  return [header, ...rows.map(row => [row.name, value(row, 'left', 'sales'), value(row, 'left', 'premium'), value(row, 'right', 'sales'), value(row, 'right', 'premium')])]
+    .map(line => line.map(leaderboardCsvCell).join(',')).join('\r\n') + '\r\n';
 }

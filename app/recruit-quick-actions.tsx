@@ -1,0 +1,185 @@
+"use client";
+import { useId, useRef, useState, type FormEvent } from "react";
+
+type Kind = "note" | "task" | "follow-up" | "meeting";
+type Done = { message: string; url?: string };
+export type ActivityRecruit = { id: string; name: string; detail?: string };
+type Props = {
+  recruitId?: string; recruitName?: string;
+  meetingLabel?: "Add Meeting" | "Add to Calendar";
+  // The actions offered, in order. A recruit's row offers all four.
+  kinds?: readonly Kind[];
+  // Without a recruitId the dialog first asks which recruit, from this list (Add Task and Add Follow-Up on the dashboard).
+  recruits?: readonly ActivityRecruit[];
+  // icons: a recruit row's icon buttons; plus: a gold plus beside a dashboard summary title; button: a labeled panel button;
+  // labeled: compact icon-and-name buttons, as in the hover pop-ups; mini: the smaller quick links of a recruit hover card.
+  trigger?: "icons" | "plus" | "button" | "labeled" | "mini";
+  // Told when a pop-up opens and closes, so a hover pop-up holding these buttons can stay open meanwhile.
+  onOpenChange?: (open: boolean) => void;
+};
+// Tasks and Follow up listen for this to reload after a task or follow-up is added.
+export const TASKS_CHANGED_EVENT = "crm:tasks-changed";
+export const MEETINGS_CHANGED_EVENT = "crm:meetings-changed";
+const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+const LONG = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+const addDays = (day: string, days: number) => { const time = Date.parse(`${day}T12:00:00Z`); return Number.isFinite(time) ? new Date(time + days * 86_400_000).toISOString().slice(0, 10) : ""; };
+const dayLabel = (day: string) => { const time = Date.parse(`${day}T12:00:00Z`); return Number.isFinite(time) ? LONG.format(time) : ""; };
+const PRESETS = [{ id: "1", label: "Tomorrow", days: 1 }, { id: "3", label: "In 3 days", days: 3 }, { id: "7", label: "Next week", days: 7 }, { id: "date", label: "Pick a date", days: 0 }] as const;
+const TITLES: Record<Kind, string> = { note: "Quick note", task: "Add task", "follow-up": "Follow up", meeting: "Add Meeting" };
+const LABELS: Record<Kind, string> = { note: "Add Note", task: "Add Task", "follow-up": "Add Follow-Up", meeting: "Add Meeting" };
+const ALL_KINDS: readonly Kind[] = ["note", "task", "follow-up", "meeting"];
+const PICKER_LIMIT = 100;
+const newId = () => crypto.randomUUID();
+
+// calendar draws Add to Calendar's plain calendar instead of the meeting's calendar with a plus.
+function Glyph({ kind, calendar = false }: { kind: Kind; calendar?: boolean }) {
+  if (calendar) return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2" /></svg>;
+  return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{kind === "note"
+    ? <><path d="M4 4h12l4 4v12H4z" /><path d="M8 10h8M8 14h8M8 18h5" /></>
+    : kind === "task" ? <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="m8 12 3 3 5-6" /></>
+    : kind === "meeting" ? <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 11h18M12 14v4M10 16h4" /></> : <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2M9 2h6" /></>}</svg>;
+}
+
+// Note, Task, Follow up and Meeting for one recruit. Each saves a HubSpot note, task or meeting assigned to you on that recruit.
+export default function RecruitQuickActions({ recruitId, recruitName = "", kinds = ALL_KINDS, recruits, trigger = "icons", meetingLabel = "Add Meeting", onOpenChange }: Props) {
+  const uid = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [kind, setKind] = useState<Kind | null>(null);
+  const [target, setTarget] = useState<ActivityRecruit | null>(null);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [requestId, setRequestId] = useState("");
+  const [today, setToday] = useState("");
+  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [location, setLocation] = useState("");
+  const [preset, setPreset] = useState<string>("1");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState<Done | null>(null);
+  const picking = !recruitId;
+  const search = pickerQuery.trim().toLowerCase();
+  const matches = picking ? (recruits ?? []).filter(item => !search || item.name.toLowerCase().includes(search)).slice(0, PICKER_LIMIT) : [];
+  // A choice the search has since hidden no longer counts, so a save always goes to the recruit shown as chosen.
+  const chosen = picking ? (target && matches.some(item => item.id === target.id) ? target : null) : target;
+  const name = chosen?.name || recruitName;
+
+  const open = (next: Kind) => {
+    const day = TODAY.format(new Date());
+    setStartsAt(""); setEndsAt(""); setLocation("");
+    setTarget(recruitId ? { id: recruitId, name: recruitName } : null); setPickerQuery("");
+    setKind(next); setRequestId(newId()); setToday(day); setBody(""); setSubject(""); setDueDate(addDays(day, 1)); setPreset("1"); setError(""); setDone(null);
+    dialogRef.current?.showModal();
+    onOpenChange?.(true);
+  };
+  const close = () => { if (busy) return; dialogRef.current?.close(); setKind(null); onOpenChange?.(false); };
+  // A mouse click outside the pop-up (on the dimmed backdrop) closes it, unless it is saving. The press must start
+  // outside too, so dragging a text selection out of a field never closes it.
+  const pressedOutsideRef = useRef(false);
+  const onBackdrop = (event: { target: EventTarget; currentTarget: HTMLDialogElement; clientX: number; clientY: number }) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return event.target === event.currentTarget && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom);
+  };
+  const choose = (id: string) => {
+    const next = (recruits ?? []).find(item => item.id === id) ?? null;
+    // A different recruit is a different request.
+    if (next?.id !== target?.id) setRequestId(newId());
+    setTarget(next); setError("");
+  };
+  // Only meaningful once a dialog is open and has set today.
+  const followUpDate = !today ? "" : preset === "date" ? dueDate : addDays(today, PRESETS.find(item => item.id === preset)?.days ?? 1);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!kind || busy) return;
+    const id = picking ? chosen?.id : recruitId;
+    if (!id) { setError("Choose a recruit."); return; }
+    setBusy(true); setError("");
+    try {
+      const payload = { requestId, kind, ...(body.trim() ? { body } : {}), ...(kind === "meeting" ? { subject, startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(), location } : kind === "task" ? { subject, dueDate } : kind === "follow-up" ? { dueDate: followUpDate } : {}) };
+      const response = await fetch(`/api/recruits/${encodeURIComponent(id)}/actions`, { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const result = await response.json().catch(() => null);
+      if (response.ok && result?.status === "saved") {
+        if (kind === "task" || kind === "follow-up") window.dispatchEvent(new Event(TASKS_CHANGED_EVENT));
+        if (kind === "meeting") window.dispatchEvent(new Event(MEETINGS_CHANGED_EVENT));
+        setDone({ message: kind === "meeting" ? "Meeting saved to HubSpot, assigned to you." : kind === "note" ? "Note saved to HubSpot." : kind === "task" ? `Task saved, due ${dayLabel(dueDate)}, assigned to you.` : `Follow-up set for ${dayLabel(followUpDate)}, assigned to you.`, url: result.hubspotUrl });
+        return;
+      }
+      setError(result?.error?.message ?? "This could not be saved. Try again.");
+      // A definite rejection gets a fresh request; an unconfirmed outcome keeps it, so trying again cannot save twice.
+      if (response.status >= 400 && response.status < 500 && response.status !== 409) setRequestId(newId());
+    } catch {
+      setError("The connection dropped. Try again: it will not be saved twice.");
+    } finally { setBusy(false); }
+  }
+
+  const buttons = kinds.map(item => trigger === "plus"
+    ? <button key={item} type="button" className="summary-add" onClick={() => open(item)} title={(item === "meeting" ? meetingLabel : LABELS[item])}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
+    : trigger === "button"
+      ? <button key={item} type="button" className="summary-add panel-add-button" title={(item === "meeting" ? meetingLabel : LABELS[item])} onClick={() => open(item)}><span aria-hidden="true">+</span><span className="sr-only">{(item === "meeting" ? meetingLabel : LABELS[item])}</span></button>
+      : trigger === "labeled"
+        ? <button key={item} type="button" className="add-activity-button" title={item === "meeting" ? meetingLabel : LABELS[item]} onClick={() => open(item)}><Glyph kind={item} calendar={item === "meeting" && meetingLabel === "Add to Calendar"} /><span className="sr-only">{item === "meeting" ? meetingLabel : LABELS[item]}</span>{recruitName && <span className="sr-only"> for {recruitName}</span>}</button>
+      : trigger === "mini"
+        ? <button key={item} type="button" className="mini-action-button" onClick={() => open(item)} title={`${item === "meeting" ? meetingLabel : LABELS[item]}${recruitName ? ` for ${recruitName}` : ""}`}><Glyph kind={item} calendar={item === "meeting" && meetingLabel === "Add to Calendar"} /><span className="sr-only">{item === "meeting" ? meetingLabel : LABELS[item]}{recruitName && ` for ${recruitName}`}</span></button>
+      : <button key={item} type="button" className="quick-action-button" onClick={() => open(item)} title={`${TITLES[item]} for ${recruitName}`}><Glyph kind={item} /><span className="sr-only">{TITLES[item]} for {recruitName}</span></button>);
+  return <>
+    {trigger === "icons" ? <div className="recruit-quick-actions" role="group" aria-label={`Recruit actions for ${recruitName}`}>{buttons}</div> : buttons}
+    {/* Escape is handled here only, so it never also closes a hover pop-up the buttons sit in while a save is running. */}
+    <dialog ref={dialogRef} className="modal quick-action-dialog" aria-labelledby={`${uid}-title`} onCancel={event => { event.preventDefault(); close(); }} onKeyDown={event => { if (event.key === "Escape") event.stopPropagation(); }}
+      onPointerDown={event => { pressedOutsideRef.current = onBackdrop(event); }}
+      onClick={event => { const outside = pressedOutsideRef.current && onBackdrop(event); pressedOutsideRef.current = false; if (outside) close(); }}>
+      {kind && <form onSubmit={event => void submit(event)} noValidate={false}>
+        <div className="dialog-header"><h2 id={`${uid}-title`}>{kind === "meeting" ? meetingLabel : TITLES[kind]}{name && <span className="muted"> · {name}</span>}</h2><button type="button" className="btn btn-quiet dialog-close" aria-label="Close" disabled={busy} onClick={close}><span aria-hidden="true">×</span></button></div>
+        <div className="dialog-body form-grid">
+          {done ? <p className="quick-action-done" role="status">{done.message}{done.url && <> <a className="text-link" href={done.url} target="_blank" rel="noopener noreferrer">Open the recruit in HubSpot<span className="sr-only"> (opens in a new tab)</span></a></>}</p> : <>
+            {picking && <div className="field quick-action-recruit">
+              <label htmlFor={`${uid}-search`}>Recruit *</label>
+              <input id={`${uid}-search`} type="search" autoComplete="off" autoFocus placeholder="Search loaded recruits" value={pickerQuery} disabled={busy} onChange={event => setPickerQuery(event.target.value)} />
+              {/* The hidden empty option keeps the list unselected until a recruit is chosen. */}
+              <select id={`${uid}-recruit`} size={6} required aria-label="Recruit" value={chosen?.id ?? ""} disabled={busy} onChange={event => choose(event.target.value)}>
+                <option value="" hidden>Choose a recruit</option>
+                {matches.map(item => <option key={item.id} value={item.id}>{item.name}{item.detail ? ` · ${item.detail}` : ""}</option>)}
+              </select>
+              {!matches.length && <p className="helper">{search ? `No loaded recruit matches “${pickerQuery.trim()}”.` : "No recruits are loaded."}</p>}
+            </div>}
+            {kind === "meeting" && <>
+              <label className="field"><span>Meeting title *</span><input required maxLength={200} autoFocus={!picking} value={subject} disabled={busy} onChange={event => setSubject(event.target.value)} /></label>
+              <label className="field"><span>Location (optional)</span><input maxLength={500} value={location} disabled={busy} onChange={event => setLocation(event.target.value)} /></label>
+              <label className="field"><span>Starts *</span><input type="datetime-local" required value={startsAt} disabled={busy} onChange={event => setStartsAt(event.target.value)} /></label>
+              <label className="field"><span>Ends *</span><input type="datetime-local" required min={startsAt || undefined} value={endsAt} disabled={busy} onChange={event => setEndsAt(event.target.value)} /></label>
+              <p className="helper">Times use your device’s time zone ({Intl.DateTimeFormat().resolvedOptions().timeZone}). Saves a HubSpot meeting assigned to you.</p>
+            </>}
+            {kind === "task" && <>
+              <label className="field"><span>Task title *</span><input required maxLength={200} autoFocus={!picking} value={subject} disabled={busy} onChange={event => setSubject(event.target.value)} placeholder={name ? `Call ${name.split(" ")[0]}` : "Call the recruit"} /></label>
+              <label className="field"><span>Due date *</span><input type="date" required min={today} value={dueDate} disabled={busy} onChange={event => setDueDate(event.target.value)} /></label>
+            </>}
+            {kind === "follow-up" && <fieldset className="field quick-action-when" disabled={busy}><legend>When *</legend>
+              <div className="quick-action-presets">{PRESETS.map(item => <label key={item.id}><input type="radio" name={`${uid}-when`} value={item.id} checked={preset === item.id} onChange={() => setPreset(item.id)} />{item.label}{item.days ? <span className="muted"> · {dayLabel(addDays(today, item.days))}</span> : null}</label>)}</div>
+              {preset === "date" && <input type="date" required min={today} value={dueDate} aria-label="Follow-up date" onChange={event => setDueDate(event.target.value)} />}
+              <p className="helper">Creates the task “Follow up with {name || "the recruit"}”, assigned to you.</p>
+            </fieldset>}
+            <label className="field"><span>{kind === "note" ? "Note *" : "Notes (optional)"}</span><textarea required={kind === "note"} maxLength={5000} rows={kind === "note" ? 6 : 3} autoFocus={kind === "note" && !picking} value={body} disabled={busy} onChange={event => setBody(event.target.value)} /></label>
+          </>}
+          {error && <p className="quick-action-error" role="alert">{error}</p>}
+        </div>
+        <div className="dialog-actions">{done ? <button type="button" className="btn btn-primary" onClick={close}>Done</button> : <>
+          <button type="button" className="btn btn-secondary" disabled={busy} onClick={close}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : kind === "meeting" ? "Save meeting" : kind === "note" ? "Save note" : kind === "task" ? "Save task" : "Set follow-up"}</button>
+        </>}</div>
+      </form>}
+    </dialog>
+  </>;
+}
+
+/**
+ * Add Note, Add Task, Add Follow-Up, Add Meeting and Add to Calendar together, as in the hover pop-ups: for one recruit,
+ * or, without a recruitId, for a recruit chosen from recruits in each pop-up.
+ */
+export function AddActivityButtons({ recruitId, recruitName, recruits, onOpenChange, className }: { recruitId?: string; recruitName?: string; recruits?: readonly ActivityRecruit[]; onOpenChange?: (open: boolean) => void; className?: string }) {
+  return <div className={`add-activity-buttons${className ? ` ${className}` : ""}`} role="group" aria-label={recruitName ? `Add for ${recruitName}` : "Add for a recruit"}>
+    <RecruitQuickActions recruitId={recruitId} recruitName={recruitName} recruits={recruits} kinds={["note", "task", "follow-up", "meeting"]} trigger="labeled" onOpenChange={onOpenChange} />
+    <RecruitQuickActions recruitId={recruitId} recruitName={recruitName} recruits={recruits} kinds={["meeting"]} meetingLabel="Add to Calendar" trigger="labeled" onOpenChange={onOpenChange} />
+  </div>;
+}

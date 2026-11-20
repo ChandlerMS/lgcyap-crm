@@ -89,3 +89,40 @@
 @media (max-width: 950px) { .inbox { grid-template-columns: minmax(210px, 38%) minmax(0, 1fr); } .messages { padding: 22px 18px; } }
 @media (max-width: 620px) { .heading { gap: 18px; margin-bottom: 27px; } .headingActions { width: 100%; } .toolbar { align-items: flex-start; } .toolbar p { text-align: left; } .inbox { grid-template-columns: 1fr; } .threadList { max-height: 320px; border-right: 0; border-bottom: 1px solid #51472d; } .thread { padding: 18px 12px; } .messages { padding: 25px 10px; } .monthHeading h2 { font-size: 20px; } }
 @media (max-width: 950px) { .detailGrid { grid-template-columns: 1fr; } }
+/* Recruits-page panels keep the full view's data and actions, sized for a half-width column. */
+.compact .heading { align-items: baseline; gap: 12px 16px; margin-bottom: 18px; }
+.compact .heading h2 { margin: 0; font-size: clamp(28px, 3vw, 34px); font-weight: 600; line-height: 1.2; letter-spacing: -.025em; }
+.compact .heading .detailTitle { font-size: 22px; overflow-wrap: anywhere; }
+.headingCount { margin-left: 10px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.compact .headingActions { padding-top: 0; gap: 12px; }
+.compact .providerSearch { padding: 0; margin: 0 0 14px; border-bottom: 0; }
+.compact .providerSearch input { min-height: 40px; }
+.compact .toolbar { margin-bottom: 12px; }
+.compact .toolbar p { text-align: left; }
+/* Panels page their rows (Meetings 5–25, Calls 10), so the table shows the whole page without its own scroll. */
+.compact .tableWrap { overflow-x: auto; }
+.compact .table { min-width: 520px; }
+.compact .table th { padding-top: 12px; padding-bottom: 12px; }
+.compact .table td { padding-top: 14px; padding-bottom: 14px; }
+.compact .table td:last-child { white-space: nowrap; }
+.compact .empty, .compact .loading { padding: 32px 16px; }
+.compact .detailGrid { grid-template-columns: 1fr; }
+.compact .monthHeading h3 { margin: 0; font-size: 19px; font-weight: 500; letter-spacing: -.02em; }
+.compact .calendar { margin-bottom: 0; }
+/* The dashboard Calendar spans the page, so every day shows its meetings without pointing at it. */
+.compact .weekdays, .compact .days { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 640px; }
+.compact .day, .compact .paddingDay { min-height: 128px; padding: 10px 9px; }
+.compact .day > time { font-size: 13px; }
+.compact .day .event > span { font-size: 11px; }
+.compact .day .calendarRecord { font-size: 13px; }
+
+/* Dashboard Calendar: each week is a collapsed row of day numbers and meeting counts that opens its meetings under the pointer. */
+.weekRow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 476px; transition: background-color .15s; }
+.compact .weekRow .paddingDay { min-height: 0; }
+.weekDay { min-width: 0; padding: 9px 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.weekDayHead { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 20px; }
+.weekDayHead time { color: #c8c2b2; font-size: 12px; }
+.weekCount { min-width: 20px; padding: 0 6px; border-radius: 999px; background: #3a3018; color: #f0d078; font-size: 11px; font-weight: 600; line-height: 20px; text-align: center; }
+.weekWithMeetings:hover, .weekWithMeetings:focus-visible, .weekWithMeetings:has(:focus-visible) { background: #14130e; }
+.weekRow:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.weekDay .event:first-child { margin-top: 8px; }

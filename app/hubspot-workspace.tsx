@@ -1,11 +1,16 @@
 "use client";
+import DismissibleNotice from './dismissible-notice';
+import { MEETINGS_CHANGED_EVENT, TASKS_CHANGED_EVENT } from "./recruit-quick-actions";
+import { SectionToggle } from "./dashboard-section";
 
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import HubSpotRecordEditor, { type HubspotEditField } from "./hubspot-record-editor";
 import InboxWorkspace from "./inbox-workspace";
+import ContractAgentCreate from "./contract-agent-create";
 import SupportTicketCreate from "./support-ticket-create";
 import { hubspotRecordSnapshotAvailable } from "./hubspot-record-edit.mjs";
 import { currentHubspotMonth, filterHubspotRows, hubspotDateKey, hubspotMonthDays, hubspotRetryDeadline, hubspotSearchResponseMatches, normalizeHubspotSearchQuery, safeHubspotViewLink, shiftHubspotMonth, sortHubspotRows } from "./hubspot-workspace-view.mjs";
+import PanelPager from "./panel-pager";
 import styles from "./hubspot-workspace.module.css";
 
 type ToolRecord = {
@@ -20,23 +25,32 @@ type ToolResult = {
   records: ToolRecord[]; total: number | null; loadedCount: number; partial: boolean;
   fetchedAt: string; hubspotUrl: string; requiredScopes: string[]; notice?: string;
   error?: { code: string; message: string }; messages?: ToolMessage[]; selectedThreadId?: string; retryAfterSeconds?: number; query?: string | null;
-  selectedRecordId?: string; fields?: HubspotEditField[]; capabilities?: { canEdit: boolean };
+  selectedRecordId?: string; fields?: HubspotEditField[]; capabilities?: { canEdit: boolean }; assignedToViewer?: boolean;
 };
 type ReadFailure = { message: string; retryAt?: number };
-type Props = { tool: string; label?: string; description?: string; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
-type Column = { field: keyof ToolRecord; label: string; date?: boolean; dateOnly?: boolean };
+// compact renders a half-width panel on the Recruits page instead of a full page; pageHref links its title to the full page.
+// pageSize sets a compact panel's rows per page, and pageSizes lets the viewer choose among them (Meetings: 5–25).
+// hoverRows shows each compact row collapsed to its key facts and opens the rest while the pointer is over it (Calendar:
+// each week). pageNumbers adds numbered page buttons. headerAction is an extra heading control, e.g. Add Task.
+type Props = { tool: string; initialThreadId?: string; label?: string; description?: string; compact?: boolean; pageHref?: string; pageSize?: number; pageSizes?: readonly number[]; hoverRows?: boolean; pageNumbers?: boolean; headerAction?: ReactNode; onUnauthorized: () => void; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void };
+type Column = { field: keyof ToolRecord; label: string; date?: boolean; dateOnly?: boolean; fullPageOnly?: boolean };
 type Definition = { label: string; description: string; singular: string; columns: Column[] };
 const DEFINITIONS: Record<string, Definition> = {
   "customer-success": { label: "Customer Success", description: "Customer companies and CSM sentiment recorded in HubSpot.", singular: "customer", columns: [{ field: "title", label: "Company" }, { field: "health", label: "CSM sentiment" }, { field: "owner", label: "Owner" }, { field: "scheduledAt", label: "Renewal date", dateOnly: true }, { field: "updatedAt", label: "Updated", date: true }] },
-  inbox: { label: "Inbox", description: "Read your HubSpot conversations and their messages.", singular: "conversation", columns: [] },
+  sales: { label: "Sales", description: "Deals from your HubSpot account.", singular: "deal", columns: [{ field: "title", label: "Deal" }, { field: "status", label: "Stage" }, { field: "subtitle", label: "Amount" }, { field: "owner", label: "Owner" }, { field: "scheduledAt", label: "Close date", date: true }] },
+  inbox: { label: "Inbox", description: "Read, reply to, and manage your HubSpot conversations.", singular: "conversation", columns: [] },
   tickets: { label: "Tickets", description: "Tickets from your HubSpot account.", singular: "ticket", columns: [{ field: "title", label: "Ticket" }, { field: "status", label: "Stage" }, { field: "owner", label: "Owner" }, { field: "createdAt", label: "Created", date: true }, { field: "updatedAt", label: "Updated", date: true }] },
-  calls: { label: "Calls", description: "Call activities logged in HubSpot.", singular: "call", columns: [{ field: "title", label: "Call" }, { field: "phone", label: "Phone" }, { field: "status", label: "Status" }, { field: "owner", label: "Owner" }, { field: "scheduledAt", label: "Call date", date: true }] },
+  calls: { label: "Calls", description: "Call activities assigned to you in HubSpot.", singular: "call", columns: [{ field: "title", label: "Call" }, { field: "phone", label: "Phone" }, { field: "status", label: "Status" }, { field: "owner", label: "Owner", fullPageOnly: true }, { field: "scheduledAt", label: "Call date", date: true }] },
+  "contract-agents": { label: "Contract Agents", description: "Contract agents connected to HubSpot.", singular: "contract agent", columns: [{ field: "title", label: "Agent" }, { field: "email", label: "Email" }, { field: "phone", label: "Phone" }, { field: "status", label: "Agent status" }, { field: "owner", label: "Owner" }] },
+  "carrier-appointments": { label: "Carrier Appointments", description: "Carrier appointments from HubSpot.", singular: "carrier appointment", columns: [{ field: "title", label: "Appointment" }, { field: "subtitle", label: "Writing number" }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true }] },
+  carriers: { label: "Carriers", description: "Carriers from HubSpot.", singular: "carrier", columns: [{ field: "title", label: "Carrier" }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true }] },
   contacts: { label: "Contacts", description: "Contacts from your HubSpot account.", singular: "contact", columns: [{ field: "title", label: "Contact" }, { field: "email", label: "Email" }, { field: "phone", label: "Phone" }, { field: "company", label: "Company" }, { field: "status", label: "Lifecycle stage" }, { field: "owner", label: "Owner" }] },
-  tasks: { label: "Tasks", description: "Tasks and due dates recorded in HubSpot.", singular: "task", columns: [{ field: "title", label: "Task" }, { field: "status", label: "Status" }, { field: "scheduledAt", label: "Due", date: true }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true }] },
-  calendar: { label: "Calendar", description: "Scheduled meetings recorded in HubSpot. All times are Eastern.", singular: "meeting", columns: [{ field: "title", label: "Meeting" }, { field: "scheduledAt", label: "Starts", date: true }, { field: "endedAt", label: "Ends", date: true }, { field: "status", label: "Outcome" }, { field: "owner", label: "Owner" }] },
-  meetings: { label: "Meetings", description: "Meeting activities recorded in HubSpot.", singular: "meeting", columns: [{ field: "title", label: "Meeting" }, { field: "scheduledAt", label: "Starts", date: true }, { field: "endedAt", label: "Ends", date: true }, { field: "status", label: "Outcome" }, { field: "owner", label: "Owner" }] },
+  tasks: { label: "Tasks", description: "Tasks and due dates assigned to you in HubSpot.", singular: "task", columns: [{ field: "title", label: "Task" }, { field: "status", label: "Status" }, { field: "scheduledAt", label: "Due", date: true }, { field: "owner", label: "Owner" }, { field: "updatedAt", label: "Updated", date: true, fullPageOnly: true }] },
+  calendar: { label: "Calendar", description: "Scheduled meetings assigned to you in HubSpot. All times are Eastern.", singular: "meeting", columns: [{ field: "title", label: "Meeting" }, { field: "scheduledAt", label: "Starts", date: true }, { field: "endedAt", label: "Ends", date: true }, { field: "status", label: "Outcome" }, { field: "owner", label: "Owner" }] },
+  meetings: { label: "Meetings", description: "Meeting activities assigned to you in HubSpot.", singular: "meeting", columns: [{ field: "title", label: "Meeting" }, { field: "scheduledAt", label: "Starts", date: true }, { field: "endedAt", label: "Ends", date: true, fullPageOnly: true },{ field: "status", label: "Outcome" }, { field: "owner", label: "Owner", fullPageOnly: true }] },
 };
 const PAGE_SIZE = 40;
+const COMPACT_PAGE_SIZE = 20;
 const DATE_FORMAT = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const TIME_FORMAT = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
 const MONTH_FORMAT = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
@@ -55,10 +69,10 @@ function NativeLink({ href, label = "Open in HubSpot" }: { href: unknown; label?
 }
 
 export default function HubSpotWorkspace(props: Props) {
-  return props.tool === "inbox" ? <InboxWorkspace onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
+  return props.tool === "inbox" ? <InboxWorkspace compact={props.compact} pageHref={props.pageHref} key={props.initialThreadId ?? "inbox"} initialThreadId={props.initialThreadId} onUnauthorized={props.onUnauthorized} /> : <CrmWorkspace {...props} />;
 }
 
-function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
+function CrmWorkspace({ tool, label, description, compact = false, pageHref, pageSize: initialPageSize, pageSizes, hoverRows = false, pageNumbers = false, headerAction, onUnauthorized, onDirtyChange, onBusyChange }: Props) {
   const definition = { ...DEFINITIONS[tool === "help-desk" ? "tickets" : tool], ...(label ? { label } : {}), ...(description ? { description } : {}) };
   const [data, setData] = useState<ToolResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +83,7 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   const [searchError, setSearchError] = useState<string | null>(null);
   const activeSearchRef = useRef<string | null>(null);
   const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(initialPageSize ?? (compact ? COMPACT_PAGE_SIZE : PAGE_SIZE));
   const [sort, setSort] = useState<{ field: string; direction: "asc" | "desc" } | null>(null);
   const [detailRecord, setDetailRecord] = useState<ToolRecord | null>(null);
   const [detailFields, setDetailFields] = useState<HubspotEditField[]>([]);
@@ -94,8 +109,16 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   const requestRef = useRef<AbortController | null>(null);
   const threadRequestRef = useRef<AbortController | null>(null);
   const unauthorizedRef = useRef(onUnauthorized);
+  const shownDetailRef = useRef<ToolRecord | null>(null);
+  const uid = useId();
+  const titleId = `${uid}-title`, searchId = `${uid}-search`;
   useEffect(() => { unauthorizedRef.current = onUnauthorized; }, [onUnauthorized]);
-  useEffect(() => { (detailRecord ? detailHeadingRef : listHeadingRef).current?.focus(); }, [detailRecord]);
+  useEffect(() => {
+    // Panels share the Recruits page, so loading one must not pull focus away from the pipeline.
+    const changed = shownDetailRef.current !== detailRecord; shownDetailRef.current = detailRecord;
+    if (compact && !changed) return;
+    (detailRecord ? detailHeadingRef : listHeadingRef).current?.focus();
+  }, [detailRecord, compact]);
   useEffect(() => { onDirtyChange?.(editorOpen || createOpen); return () => onDirtyChange?.(false); }, [editorOpen, createOpen, onDirtyChange]);
   const reportEditorBusy = useCallback((busy: boolean) => { setEditorBusy(busy); onBusyChange?.(busy); }, [onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
@@ -107,7 +130,7 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
 
   const readRecordDetail = useCallback(async (record: ToolRecord): Promise<ToolRecord | null> => {
     const sourceTool = tool === "calendar" ? "meetings" : tool === "help-desk" ? "tickets" : tool;
-    if (!["contacts", "tickets", "tasks", "customer-success", "meetings"].includes(sourceTool) || retryAtRef.current > Date.now()) return null;
+    if (!["contract-agents", "contacts", "tickets", "tasks", "customer-success", "meetings"].includes(sourceTool) || retryAtRef.current > Date.now()) return null;
     detailRequestRef.current?.abort();
     const controller = new AbortController(); detailRequestRef.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), 30_000);
@@ -175,6 +198,15 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
     return () => { requestRef.current?.abort(); requestRef.current = null; threadRequestRef.current?.abort(); threadRequestRef.current = null; detailRequestRef.current?.abort(); detailRequestRef.current = null; detailRecordIdRef.current = null; };
   }, [load]);
   useEffect(() => {
+    // A meeting, task or follow-up added from the dashboard reloads the matching panel.
+    const event = ["meetings", "calendar"].includes(tool) ? MEETINGS_CHANGED_EVENT : tool === "tasks" ? TASKS_CHANGED_EVENT : null;
+    if (!event) return;
+    const reload = () => { if (!editorOpen) void load(null); };
+    window.addEventListener(event, reload);
+    const timer = tool === "tasks" ? window.setInterval(() => { if (!document.hidden) reload(); }, 60000) : null;
+    return () => { window.removeEventListener(event, reload); if (timer) window.clearInterval(timer); };
+  }, [tool, load, editorOpen]);
+  useEffect(() => {
     if (!failure?.retryAt) return;
     const timer = window.setTimeout(() => setFailure(value => value ? { ...value, retryAt: undefined } : null), Math.max(0, failure.retryAt - Date.now()));
     return () => window.clearTimeout(timer);
@@ -213,59 +245,95 @@ function CrmWorkspace({ tool, label, description, onUnauthorized, onDirtyChange,
   const filtered = filterHubspotRows(current?.records ?? [], query) as ToolRecord[];
   const monthRecords = tool === "calendar" && month ? filtered.filter(record => hubspotDateKey(record.scheduledAt)?.startsWith(month)) : filtered;
   const rows = sortHubspotRows(tool === "calendar" ? monthRecords : filtered, sort) as ToolRecord[];
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageSize = rowsPerPage;
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, pages);
-  const shown = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const shown = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const selected = current?.records.find(record => record.id === selectedThread);
   const available = current?.status === "available";
-  const table = <div className={styles.tableWrap}><table className={styles.table}><thead><tr>{definition.columns.map(column => <th key={column.field} scope="col" aria-sort={sort?.field === column.field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className={styles.sortButton} type="button" onClick={() => { setSort(value => ({ field: column.field, direction: value?.field === column.field && value.direction === "asc" ? "desc" : "asc" })); setPage(1); }} aria-label={`Sort by ${column.label}`}><span>{column.label}</span><span aria-hidden="true">{sort?.field === column.field ? sort.direction === "asc" ? "↑" : "↓" : "↕"}</span></button></th>)}<th scope="col"><span className="sr-only">HubSpot record</span></th></tr></thead><tbody>{shown.map(record => <tr key={record.id}>{definition.columns.map(column => <td key={column.field}>{column.field === "title" ? <><button type="button" className={styles.recordName} onClick={() => openRecord(record)}>{record.title || `Untitled ${definition.singular}`}</button>{record.subtitle && <span className={styles.secondary}>{record.subtitle}</span>}</> : column.dateOnly ? calendarDateLabel(record[column.field]) : column.date ? dateLabel(record[column.field]) : <span className={column.field === "status" || column.field === "health" ? styles.status : undefined}>{textLabel(record[column.field])}</span>}</td>)}<td><NativeLink href={record.hubspotUrl} label="View" /></td></tr>)}</tbody></table></div>;
-  if (createOpen && tool === "help-desk") return <SupportTicketCreate onUnauthorized={onUnauthorized} onBusyChange={reportEditorBusy} onClose={() => { setCreateOpen(false); onDirtyChange?.(false); }} onCreated={replayed => { setCreateOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "This support ticket was already saved to HubSpot. Refresh the list to find it." : "Support ticket created and confirmed in HubSpot."); setQuery(""); setSearchDraft(""); void load(null); }} />;
+  const Heading = compact ? "h2" : "h1";
+  const sectionClass = compact ? `${styles.workspace} ${styles.compact}` : styles.workspace;
+  // The month grid is the compact Calendar; the Meetings panel above it carries the list.
+  const showTable = !(compact && tool === "calendar");
+  // Collapsed rows keep the key facts; the owner and full-page fields open beneath while the pointer is over the row.
+  const collapsing = compact && hoverRows;
+  const tableColumns = compact ? definition.columns.filter(column => !column.fullPageOnly && !(collapsing && column.field === "owner")) : definition.columns;
+  const detailColumns = definition.columns.filter(column => !tableColumns.includes(column));
+  const cellValue = (column: Column, record: ToolRecord) => column.dateOnly ? calendarDateLabel(record[column.field]) : column.date ? dateLabel(record[column.field]) : textLabel(record[column.field]);
+  const headerRow = <tr>{tableColumns.map(column => <th key={column.field} scope="col" aria-sort={sort?.field === column.field ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className={styles.sortButton} type="button" onClick={() => { setSort(value => ({ field: column.field, direction: value?.field === column.field && value.direction === "asc" ? "desc" : "asc" })); setPage(1); }} aria-label={`Sort by ${column.label}`}><span>{column.label}</span><span aria-hidden="true">{sort?.field === column.field ? sort.direction === "asc" ? "↑" : "↓" : "↕"}</span></button></th>)}<th scope="col"><span className="sr-only">HubSpot record</span></th></tr>;
+  const summaryCells = (record: ToolRecord) => <>{tableColumns.map(column => <td key={column.field}>{column.field === "title" ? <><button type="button" className={styles.recordName} onClick={() => openRecord(record)}>{record.title || `Untitled ${definition.singular}`}</button>{record.subtitle && !collapsing && <span className={styles.secondary}>{record.subtitle}</span>}</> : column.dateOnly || column.date ? cellValue(column, record) : <span className={column.field === "status" || column.field === "health" ? styles.status : undefined}>{textLabel(record[column.field])}</span>}</td>)}<td><NativeLink href={record.hubspotUrl} label="View" /></td></>;
+  const table = collapsing
+    ? <div className={styles.tableWrap}><table className={`${styles.table} hover-rows`}><thead>{headerRow}</thead>{shown.map(record => <tbody key={record.id} className="hover-row"><tr>{summaryCells(record)}</tr>
+      <tr className="hover-row-details"><td colSpan={tableColumns.length + 1}><div className="hover-row-reveal"><div>
+        <dl className="hover-row-facts">{detailColumns.map(column => <div key={column.field}><dt>{column.label}</dt><dd>{cellValue(column, record)}</dd></div>)}{record.subtitle && <div><dt>Details</dt><dd>{record.subtitle}</dd></div>}</dl>
+        {record.preview && <p className="hover-row-preview">{record.preview}</p>}
+        <div className="hover-row-actions"><button type="button" className="text-link" onClick={() => openRecord(record)}>Open {definition.singular}</button><NativeLink href={record.hubspotUrl} /></div>
+      </div></div></td></tr></tbody>)}</table></div>
+    : <div className={styles.tableWrap}><table className={styles.table}><thead>{headerRow}</thead><tbody>{shown.map(record => <tr key={record.id}>{summaryCells(record)}</tr>)}</tbody></table></div>;
+  const monthDays = tool === "calendar" && month ? hubspotMonthDays(month, filtered) as ({ key: string; day: number; records: ToolRecord[] } | null)[] : [];
+  const weeks = Array.from({ length: Math.ceil(monthDays.length / 7) }, (_, index) => monthDays.slice(index * 7, index * 7 + 7));
+  const eventItem = (record: ToolRecord) => <div className={styles.event} key={record.id}><span>{dateLabel(record.scheduledAt, true)}</span><button type="button" className={styles.calendarRecord} onClick={() => openRecord(record)}>{record.title || "Meeting"}</button></div>;
+  if (createOpen && tool === "contract-agents") return <ContractAgentCreate onUnauthorized={onUnauthorized} onBusyChange={reportEditorBusy} onClose={() => { setCreateOpen(false); onDirtyChange?.(false); }} onCreated={replayed => { setCreateOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "This agent was already saved to HubSpot. Refresh or search to find it." : "Contract Agent created and confirmed in HubSpot."); setQuery(""); setSearchDraft(""); void load(null); }} />;
+  if (createOpen && (tool === "help-desk" || tool === "tickets")) return <SupportTicketCreate onUnauthorized={onUnauthorized} onBusyChange={reportEditorBusy} onClose={() => { setCreateOpen(false); onDirtyChange?.(false); }} onCreated={replayed => { setCreateOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "This support ticket was already saved to HubSpot. Refresh the list to find it." : "Support ticket created and confirmed in HubSpot."); setQuery(""); setSearchDraft(""); void load(null); }} />;
 
   const detailed = detailRecord ? current?.records.find(record => record.id === detailRecord.id) ?? detailRecord : null;
   if (detailed && available) {
     const recordInfoFields: Column[] = [...definition.columns, ...(detailed.subtitle ? [{ field: "subtitle" as const, label: "Details" }] : []), ...(["createdAt", "updatedAt"] as const).filter(field => !definition.columns.some(column => column.field === field)).map(field => ({ field, label: field === "createdAt" ? "Created" : "Updated", date: true }))];
-    return <section className={styles.workspace} aria-labelledby="hubspot-record-title" aria-busy={loading}>
+    return <section className={sectionClass} aria-labelledby={titleId} aria-busy={loading}>
       <button type="button" className={`text-link ${styles.detailBack}`} disabled={editorOpen || editorBusy} onClick={() => { detailRequestRef.current?.abort(); detailRequestRef.current = null; detailRecordIdRef.current = null; setDetailRecord(null); setDetailLoading(false); }}>← Back to {definition.label}</button>
-      <div className={styles.heading}><div><h1 id="hubspot-record-title" tabIndex={-1} ref={detailHeadingRef}>{detailed.title || `Untitled ${definition.singular}`}</h1><p>{definition.singular === "contact" ? "Contact information" : `${definition.label} record details`}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>{detailCanEdit ? "Editing enabled" : "Read-only"}</span>{!editorOpen && <NativeLink href={detailed.hubspotUrl} />}{detailCanEdit && !editorOpen && <button className="btn btn-primary" disabled={detailLoading || Boolean(retryAt) || !hubspotRecordSnapshotAvailable(detailed, detailFields)} onClick={() => { onDirtyChange?.(true); setSaveNotice(null); setEditorOpen(true); }}>Edit record</button>}<button className="btn btn-secondary" disabled={loading || detailLoading || editorOpen || Boolean(failure?.retryAt || retryAt)} onClick={() => { if (["contacts", "tickets", "help-desk", "tasks", "customer-success", "meetings", "calendar"].includes(tool)) void readRecordDetail(detailed); else void load(); }}>{loading || detailLoading ? "Loading…" : "Refresh"}</button></div></div>
-      {failure && <div className={styles.alert} role="alert"><strong>Showing the last loaded record</strong><p>{failure.message}</p></div>}
-      {retryAt && <p className={styles.notice} role="status">HubSpot reads are available after {dateLabel(new Date(retryAt).toISOString())}.</p>}
-      {!current?.records.some(record => record.id === detailed.id) && <p className={styles.notice} role="status">This record is outside the latest loaded results. These details are from the snapshot you opened.</p>}
+      <div className={styles.heading} data-section-heading><div><Heading id={titleId} className={compact ? styles.detailTitle : undefined} tabIndex={-1} ref={detailHeadingRef}>{detailed.title || `Untitled ${definition.singular}`}</Heading><p>{definition.singular === "contact" ? "Contact information" : `${definition.label} record details`}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>{detailCanEdit ? "Editing enabled" : "Read-only"}</span>{!editorOpen && <NativeLink href={detailed.hubspotUrl} />}{detailCanEdit && !editorOpen && <button className="btn btn-primary" disabled={detailLoading || Boolean(retryAt) || !hubspotRecordSnapshotAvailable(detailed, detailFields)} onClick={() => { onDirtyChange?.(true); setSaveNotice(null); setEditorOpen(true); }}>Edit record</button>}<button className="btn btn-secondary" disabled={loading || detailLoading || editorOpen || Boolean(failure?.retryAt || retryAt)} onClick={() => { if (["contract-agents", "contacts", "tickets", "help-desk", "tasks", "customer-success", "meetings", "calendar"].includes(tool)) void readRecordDetail(detailed); else void load(); }}>{loading || detailLoading ? "Loading…" : "Refresh"}</button></div></div>
+      {failure && <DismissibleNotice className={styles.alert} role="alert"><strong>Showing the last loaded record</strong><p>{failure.message}</p></DismissibleNotice>}
+      {retryAt && <DismissibleNotice className={styles.notice} role="status">HubSpot reads are available after {dateLabel(new Date(retryAt).toISOString())}.</DismissibleNotice>}
+      {!current?.records.some(record => record.id === detailed.id) && <DismissibleNotice className={styles.notice} role="status">This record is outside the latest loaded results. These details are from the snapshot you opened.</DismissibleNotice>}
       {detailError && <p className={styles.messageError} role="alert">{detailError}</p>}
-      {detailLoading && <p className={styles.notice} role="status">Loading the latest record details…</p>}
+      {detailLoading && <DismissibleNotice className={styles.notice} role="status">Loading the latest record details…</DismissibleNotice>}
       {saveNotice && <p className={styles.searchSummary} role="status">{saveNotice}</p>}
-      {editorOpen && <HubSpotRecordEditor record={detailed} fields={detailFields} endpoint={`/api/hubspot-tools/${tool === "calendar" ? "meetings" : tool === "help-desk" ? "tickets" : tool}/${detailed.id}`} canEdit={detailCanEdit} onClose={() => { setEditorOpen(false); onDirtyChange?.(false); }} onSaved={(saved, replayed) => { setDetailRecord(saved); setData(value => value ? { ...value, records: value.records.map(item => item.id === saved.id ? saved : item) } : value); setEditorOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "Save already completed. Record refreshed from HubSpot." : "Saved to HubSpot."); }} onReload={() => readRecordDetail(detailed)} onUnauthorized={() => { setData(null); setDetailRecord(null); setEditorOpen(false); onDirtyChange?.(false); unauthorizedRef.current(); }} onBusyChange={reportEditorBusy} />}
+      {editorOpen && <HubSpotRecordEditor record={detailed} fields={detailFields} endpoint={`/api/hubspot-tools/${tool === "calendar" ? "meetings" : tool === "help-desk" ? "tickets" : tool}/${detailed.id}`} canEdit={detailCanEdit} onClose={() => { setEditorOpen(false); onDirtyChange?.(false); }} onSaved={(saved, replayed) => { setDetailRecord(saved); setData(value => value ? { ...value, records: value.records.map(item => item.id === saved.id ? saved : item) } : value); setEditorOpen(false); onDirtyChange?.(false); setSaveNotice(replayed ? "Save already completed. Record refreshed from HubSpot." : "Saved to HubSpot."); if (current?.assignedToViewer && saved.ownerId !== detailed.ownerId) void load(); }} onReload={() => readRecordDetail(detailed)} onUnauthorized={() => { setData(null); setDetailRecord(null); setEditorOpen(false); onDirtyChange?.(false); unauthorizedRef.current(); }} onBusyChange={reportEditorBusy} />}
       <dl className={styles.detailGrid}>{recordInfoFields.map(column => <div key={column.field}><dt>{column.label}</dt><dd>{column.dateOnly ? calendarDateLabel(detailed[column.field]) : column.date ? dateLabel(detailed[column.field]) : textLabel(detailed[column.field])}</dd></div>)}<div><dt>HubSpot record ID</dt><dd>{detailed.id}</dd></div></dl>
       {detailed.preview && <p className={styles.detailPreview}>{detailed.preview}</p>}
       <p className={styles.footer}>These details come from the loaded HubSpot record. Additional record activity is available in HubSpot.</p>
     </section>;
   }
-  return <section className={styles.workspace} aria-labelledby="hubspot-view-title" aria-busy={loading}>
-    <div className={styles.heading}><div><h1 id="hubspot-view-title" tabIndex={-1} ref={listHeadingRef}>{definition.label}</h1><p>{definition.description}</p></div><div className={styles.headingActions}><span className={styles.readOnly}>Read-only</span>{tool === "help-desk" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>New Support Ticket</button>}<NativeLink href={current?.hubspotUrl} /><button className="btn btn-secondary" disabled={loading || Boolean(failure?.retryAt || retryAt)} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div></div>
-    {tool !== "inbox" && <form className={styles.providerSearch} onSubmit={event => { event.preventDefault(); const normalized = normalizeHubspotSearchQuery(searchDraft); setSearchError(normalized.error); if (!normalized.error) { setQuery(""); void load(normalized.query); } }}>
-      <label htmlFor="hubspot-global-search">{tool === "customer-success" ? "Search customer companies in HubSpot" : `Search ${definition.label.toLowerCase()} in HubSpot`}</label>
-      <div><input id="hubspot-global-search" type="search" autoComplete="off" maxLength={200} value={searchDraft} placeholder="Enter a search phrase" aria-invalid={Boolean(searchError)} aria-describedby={searchError ? "hubspot-global-search-error" : "hubspot-global-search-hint"} onChange={event => { setSearchDraft(event.target.value); setSearchError(null); }} /><button className="btn btn-primary" type="submit" disabled={loading || Boolean(retryAt)}>Search HubSpot</button><button className="btn btn-secondary" type="button" disabled={loading || Boolean(retryAt)} onClick={() => { setSearchDraft(""); setSearchError(null); setQuery(""); void load(null); }}>Reset search</button></div>
-      <p id="hubspot-global-search-hint">Search runs when you select Search HubSpot or press Enter. Reset returns to recent records.</p>{searchError && <p id="hubspot-global-search-error" className={styles.messageError} role="alert">{searchError}</p>}
+  const headingCount = compact && available && tool !== "calendar" ? `${(current.total ?? current.loadedCount).toLocaleString("en-US")}${current.total == null && current.partial ? "+" : ""}` : null;
+  return <section className={sectionClass} aria-labelledby={titleId} aria-busy={loading}>
+    <div className={styles.heading} data-section-heading><div><div className="section-title-controls"><Heading id={titleId} tabIndex={-1} ref={listHeadingRef}>{pageHref ? <a className="panel-title-link" href={pageHref}>{definition.label}</a> : definition.label}{headingCount && <span className={styles.headingCount}>{headingCount}</span>}</Heading><div className="panel-heading-actions">{headerAction}{compact && (tool === "help-desk" || tool === "tickets") && <button type="button" className="summary-add" title="New support ticket" aria-label="New support ticket" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}><span aria-hidden="true">+</span><span className="sr-only">New support ticket</span></button>}<SectionToggle /></div></div>{!compact && <p>{definition.description}</p>}</div><div className={styles.headingActions}>{!compact && tool !== "contract-agents" && !headerAction && <span className={styles.readOnly}>Read-only</span>}{tool === "contract-agents" && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>Add Contract Agent</button>}{tool === "help-desk" && !compact && <button className="btn btn-primary" disabled={loading || Boolean(retryAt)} onClick={() => { setSaveNotice(null); setCreateOpen(true); onDirtyChange?.(true); }}>New Support Ticket</button>}<NativeLink href={current?.hubspotUrl} /><button className="btn btn-secondary" disabled={loading || Boolean(failure?.retryAt || retryAt)} onClick={() => void load()}>{loading ? "Loading…" : "Refresh"}</button></div></div>
+    {tool !== "inbox" && showTable && <form className={styles.providerSearch} onSubmit={event => { event.preventDefault(); const normalized = normalizeHubspotSearchQuery(searchDraft); setSearchError(normalized.error); if (!normalized.error) { setQuery(""); void load(normalized.query); } }}>
+      <label htmlFor={searchId} className={compact ? "sr-only" : undefined}>{tool === "customer-success" ? "Search customer companies in HubSpot" : `Search ${definition.label.toLowerCase()} in HubSpot`}</label>
+      <div><input id={searchId} type="search" autoComplete="off" maxLength={200} value={searchDraft} placeholder={compact ? `Search ${definition.label.toLowerCase()} in HubSpot` : "Enter a search phrase"} aria-invalid={Boolean(searchError)} aria-describedby={searchError ? `${searchId}-error` : `${searchId}-hint`} onChange={event => { setSearchDraft(event.target.value); setSearchError(null); }} /><button className="btn btn-primary" type="submit" disabled={loading || Boolean(retryAt)}>Search HubSpot</button>{(!compact || activeSearch) && <button className="btn btn-secondary" type="button" disabled={loading || Boolean(retryAt)} onClick={() => { setSearchDraft(""); setSearchError(null); setQuery(""); void load(null); }}>Reset search</button>}</div>
+      <p id={`${searchId}-hint`} className={compact ? "sr-only" : undefined}>Search runs when you select Search HubSpot or press Enter. Reset returns to recent records.</p>{searchError && <p id={`${searchId}-error`} className={styles.messageError} role="alert">{searchError}</p>}
     </form>}
     {saveNotice && <p className={styles.searchSummary} role="status">{saveNotice}</p>}
-    {failure && <div className={styles.alert} role="alert"><strong>{current?.status === "available" ? "Showing the last loaded records" : "View unavailable"}</strong><p>{failure.message}</p>{failure.retryAt && <p>Try again after {dateLabel(new Date(failure.retryAt).toISOString())}.</p>}</div>}
-    {retryAt && <p className={styles.notice} role="status">HubSpot is limiting requests. Refresh and conversation reads are available after {dateLabel(new Date(retryAt).toISOString())}.</p>}
+    {failure && <DismissibleNotice className={styles.alert} role="alert"><strong>{current?.status === "available" ? "Showing the last loaded records" : "View unavailable"}</strong><p>{failure.message}</p>{failure.retryAt && <p>Try again after {dateLabel(new Date(failure.retryAt).toISOString())}.</p>}</DismissibleNotice>}
+    {retryAt && <DismissibleNotice className={styles.notice} role="status">HubSpot is limiting requests. Refresh and conversation reads are available after {dateLabel(new Date(retryAt).toISOString())}.</DismissibleNotice>}
     {!current && loading && <div className={styles.loading} role="status">Loading {definition.label.toLowerCase()} from HubSpot…</div>}
     {current && !available && <div className={styles.empty} role="status"><h2>{current.status === "permission-required" ? "HubSpot permission required" : "This HubSpot view is unavailable"}</h2><p>{current.error?.message ?? current.notice ?? (current.status === "permission-required" ? "The app needs additional read access before these records can appear." : "Refresh to try again, or open the tool in HubSpot.")}</p>{current.error?.message && current.notice && <p>{current.notice}</p>}<NativeLink href={current.hubspotUrl} /></div>}
     {available && <>
       {activeSearch && <p className={styles.searchSummary}>HubSpot search results for “{activeSearch}”{current.total != null ? ` · ${current.total.toLocaleString("en-US")} matches` : ""}</p>}
-      <div className={styles.toolbar}><label className={styles.search}><span className="sr-only">Filter loaded records</span><input type="search" placeholder="Filter loaded records" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label><p>{query ? `${filtered.length} matching · ` : ""}{current.loadedCount} loaded{current.total != null ? ` of ${current.total}` : ""}{current.partial ? " · Partial results" : ""}<span>Updated {dateLabel(current.fetchedAt)}</span></p></div>
-      {current.notice && <p className={styles.notice} role="status">{current.notice}</p>}
-      {current.partial && <p className={styles.notice}>Sorting, local filtering, and calendar views use the loaded records.</p>}
+      <div className={styles.toolbar}>{!compact && <label className={styles.search}><span className="sr-only">Filter loaded records</span><input type="search" placeholder="Filter loaded records" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>}<p>{query ? `${filtered.length} matching · ` : ""}{current.loadedCount} loaded{current.total != null ? ` of ${current.total}` : ""}{current.partial ? " · Partial results" : ""}<span>Updated {dateLabel(current.fetchedAt)}</span></p></div>
+      {current.notice && <DismissibleNotice className={styles.notice} role="status">{current.notice}</DismissibleNotice>}
+      {current.partial && <DismissibleNotice className={styles.notice}>Sorting, local filtering, and calendar views use the loaded records.</DismissibleNotice>}
       {tool === "calendar" && month && <>
-        <div className={styles.monthHeading}><h2>{MONTH_FORMAT.format(new Date(`${month}-01T12:00:00Z`))}</h2><div><button className="btn btn-quiet" aria-label="Previous month" onClick={() => { setMonth(shiftHubspotMonth(month, -1)); setPage(1); }}>←</button><button className="btn btn-quiet" onClick={() => { setMonth(currentHubspotMonth()); setPage(1); }}>This month</button><button className="btn btn-quiet" aria-label="Next month" onClick={() => { setMonth(shiftHubspotMonth(month, 1)); setPage(1); }}>→</button></div></div>
-        <div className={styles.calendar} role="region" aria-label="Scheduled HubSpot meetings by day"><div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => <span key={day}>{day}</span>)}</div><div className={styles.days}>{hubspotMonthDays(month, filtered).map((day: {key:string;day:number;records:ToolRecord[]} | null, index: number) => day ? <div className={styles.day} key={day.key}><time dateTime={day.key}>{day.day}</time>{day.records.map(record => <div className={styles.event} key={record.id}><span>{dateLabel(record.scheduledAt, true)}</span><button type="button" className={styles.calendarRecord} onClick={() => openRecord(record)}>{record.title || "Meeting"}</button></div>)}</div> : <div className={styles.paddingDay} key={`padding-${index}`} aria-hidden="true" />)}</div></div>
-        <h2 className={styles.agendaTitle}>Meeting agenda <span>{monthRecords.length}</span></h2>
+        <div className={styles.monthHeading}>{compact ? <h3>{MONTH_FORMAT.format(new Date(`${month}-01T12:00:00Z`))}</h3> : <h2>{MONTH_FORMAT.format(new Date(`${month}-01T12:00:00Z`))}</h2>}<div><button className="btn btn-quiet" aria-label="Previous month" onClick={() => { setMonth(shiftHubspotMonth(month, -1)); setPage(1); }}>←</button><button className="btn btn-quiet" onClick={() => { setMonth(currentHubspotMonth()); setPage(1); }}>This month</button><button className="btn btn-quiet" aria-label="Next month" onClick={() => { setMonth(shiftHubspotMonth(month, 1)); setPage(1); }}>→</button></div></div>
+        {collapsing
+          // Each week is a collapsed row of day numbers and meeting counts that opens its meetings under the pointer.
+          ? <div className={styles.calendar} role="region" aria-label="Scheduled HubSpot meetings by week"><div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => <span key={day}>{day}</span>)}</div>
+            {weeks.map((week, index) => {
+              const total = week.reduce((sum, day) => sum + (day?.records.length ?? 0), 0);
+              const first = week.find(day => day)?.day, last = [...week].reverse().find(day => day)?.day;
+              return <div key={`week-${index}`} className={`hover-week ${styles.weekRow} ${total ? styles.weekWithMeetings : ""}`} tabIndex={total ? 0 : undefined} aria-label={`${MONTH_FORMAT.format(new Date(`${month}-01T12:00:00Z`)).split(" ")[0]} ${first}–${last}: ${total} meeting${total === 1 ? "" : "s"}`}>
+                {week.map((day, slot) => day ? <div className={styles.weekDay} key={day.key}><div className={styles.weekDayHead}><time dateTime={day.key}>{day.day}</time>{day.records.length > 0 && <span className={styles.weekCount}>{day.records.length}</span>}</div><div className="hover-row-reveal"><div>{day.records.map(eventItem)}</div></div></div> : <div className={styles.paddingDay} key={`padding-${index}-${slot}`} aria-hidden="true" />)}
+              </div>;
+            })}</div>
+          : <div className={styles.calendar} role="region" aria-label="Scheduled HubSpot meetings by day"><div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => <span key={day}>{day}</span>)}</div><div className={styles.days}>{monthDays.map((day, index) => day ? <div className={styles.day} key={day.key}><time dateTime={day.key}>{day.day}</time>{day.records.map(eventItem)}</div> : <div className={styles.paddingDay} key={`padding-${index}`} aria-hidden="true" />)}</div></div>}
+        {showTable && <h2 className={styles.agendaTitle}>Meeting agenda <span>{monthRecords.length}</span></h2>}
       </>}
-      {!filtered.length ? <div className={styles.empty}><h2>{query ? "No matching records" : `No ${definition.singular === "company" ? "companies" : definition.singular + "s"} returned`}</h2><p>{query ? "Try a different search." : "HubSpot returned no records for this view."}</p>{query && <button className="text-link" onClick={() => { setQuery(""); setPage(1); }}>Clear search</button>}</div>
-        : tool === "inbox" ? <div className={styles.inbox}><div className={styles.threadList} aria-label="Conversations">{shown.map(record => <button type="button" className={`${styles.thread} ${selectedThread === record.id ? styles.selectedThread : ""}`} key={record.id} disabled={Boolean(retryAt)} onClick={() => void openThread(record)} aria-pressed={selectedThread === record.id}><strong>{record.title || "Conversation"}</strong><span>{record.preview || record.subtitle || "No preview available"}</span><small>{record.status ? `${record.status} · ` : ""}{dateLabel(record.updatedAt)}</small></button>)}</div><section className={styles.messages} aria-label="Conversation messages">{selected ? <><div className={styles.messageHeader}><h2>{selected.title || "Conversation"}</h2><NativeLink href={selected.hubspotUrl} label="Reply in HubSpot" /></div>{threadLoading && <p role="status">Loading messages…</p>}{threadError && <p role="alert" className={styles.messageError}>{threadError}</p>}{threadNotice && <p className={styles.notice} role="status">{threadNotice}</p>}{messages && (messages.length ? <ol className={styles.messageList}>{messages.map(message => <li key={message.id}><div><span>{message.direction || message.type || "Message"}</span><time>{dateLabel(message.createdAt)}</time></div><p>{message.text || "This message has no text preview. Open HubSpot to view its attachments or rich content."}</p>{message.truncated && <small className={styles.notice}>Message preview shortened. Open HubSpot to read the complete message.</small>}</li>)}</ol> : <p className={styles.messageEmpty}>No messages were returned for this conversation.</p>)}</> : <div className={styles.messageEmpty}>Select a conversation to read its messages.</div>}</section></div>
-          : tool === "calendar" && !monthRecords.length ? <p className={styles.messageEmpty}>No loaded meetings are scheduled for this month.</p> : table}
-      {rows.length > PAGE_SIZE && <div className={styles.pagination}><span>Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, rows.length)} of {rows.length}</span><div><button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button className="btn btn-secondary" disabled={currentPage === pages} onClick={() => setPage(value => value + 1)}>Next</button></div></div>}
-      <p className={styles.footer}>Records refresh from HubSpot when you open this page or select Refresh. Changes and other actions are available in HubSpot.</p>
+      {!filtered.length ? <div className={styles.empty}><h2>{query ? "No matching records" : current.assignedToViewer ? `No ${definition.singular}s assigned to you` : `No ${definition.singular === "company" ? "companies" : definition.singular + "s"} returned`}</h2><p>{query ? "Try a different search." : current.assignedToViewer ? `HubSpot returned no ${definition.singular}s assigned to you for this view.` : "HubSpot returned no records for this view."}</p>{query && <button className="text-link" onClick={() => { setQuery(""); setPage(1); }}>Clear search</button>}</div>
+        : tool === "inbox" ? <div className={styles.inbox}><div className={styles.threadList} aria-label="Conversations">{shown.map(record => <button type="button" className={`${styles.thread} ${selectedThread === record.id ? styles.selectedThread : ""}`} key={record.id} disabled={Boolean(retryAt)} onClick={() => void openThread(record)} aria-pressed={selectedThread === record.id}><strong>{record.title || "Conversation"}</strong><span>{record.preview || record.subtitle || "No preview available"}</span><small>{record.status ? `${record.status} · ` : ""}{dateLabel(record.updatedAt)}</small></button>)}</div><section className={styles.messages} aria-label="Conversation messages">{selected ? <><div className={styles.messageHeader}><h2>{selected.title || "Conversation"}</h2><NativeLink href={selected.hubspotUrl} label="Reply in HubSpot" /></div>{threadLoading && <p role="status">Loading messages…</p>}{threadError && <p role="alert" className={styles.messageError}>{threadError}</p>}{threadNotice && <DismissibleNotice className={styles.notice} role="status">{threadNotice}</DismissibleNotice>}{messages && (messages.length ? <ol className={styles.messageList}>{messages.map(message => <li key={message.id}><div><span>{message.direction || message.type || "Message"}</span><time>{dateLabel(message.createdAt)}</time></div><p>{message.text || "This message has no text preview. Open HubSpot to view its attachments or rich content."}</p>{message.truncated && <small className={styles.notice}>Message preview shortened. Open HubSpot to read the complete message.</small>}</li>)}</ol> : <p className={styles.messageEmpty}>No messages were returned for this conversation.</p>)}</> : <div className={styles.messageEmpty}>Select a conversation to read its messages.</div>}</section></div>
+          : tool === "calendar" && !monthRecords.length ? <p className={styles.messageEmpty}>No loaded meetings are scheduled for this month.</p> : showTable && table}
+      {/* Dashboard panels always show their page number, Previous and Next. */}
+      {showTable && compact && <PanelPager count={rows.length} page={currentPage} size={pageSize} label={definition.label} onPage={setPage} numbers={pageNumbers} sizes={pageSizes} onSize={setRowsPerPage} totalNote={current.total != null && current.total > rows.length ? `loaded · ${current.total.toLocaleString("en-US")} in HubSpot` : current.partial ? "loaded" : undefined} />}
+      {showTable && !compact && rows.length > pageSize && <div className={styles.pagination}><span>Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, rows.length)} of {rows.length}</span><div><button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button className="btn btn-secondary" disabled={currentPage === pages} onClick={() => setPage(value => value + 1)}>Next</button></div></div>}
+      {!compact && <p className={styles.footer}>Records refresh from HubSpot when you open this page or select Refresh. Changes and other actions are available in HubSpot.</p>}
     </>}
   </section>;
 }

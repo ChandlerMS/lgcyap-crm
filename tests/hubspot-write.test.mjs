@@ -64,7 +64,7 @@ test('validation allows exactly the editable properties and preserves independen
 });
 
 test('stage edits accept the migrated pipeline and reject retired or foreign stages', () => {
-  const ids = ['1473318768', '1473318769', '1473225368', '1473318770', '1473318771', '1473318772', '1416243216', '1416243217', '1416243218', '1473318773'];
+  const ids = ['1473318768', '1473318769', '1473225368', '1473318770', '1473318771', '1473318772', '1416243216', '1416243217', '1416243218', '1493400173', '1473318773'];
   assert.deepEqual(EDIT_FIELDS.find(field => field.property === 'hs_pipeline_stage').options.map(option => option.value), ids);
   for (const stageId of ids) assert.equal(input({ hs_pipeline_stage: stageId }).changes.hs_pipeline_stage, stageId);
   for (const stageId of ['1473225367', '1416243212', '1416243213', '1416243214', '1416243215', '1416243219', '4', 'Recruits']) assert.throws(() => input({ hs_pipeline_stage: stageId }));

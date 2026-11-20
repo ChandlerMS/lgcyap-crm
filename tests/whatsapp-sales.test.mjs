@@ -58,7 +58,7 @@ test('a covered range ranks agents by sales and production, with queue calls and
     const ranked = rankLeaderboardRows(result.rows, 'whatsapp', 'ap');
     assert.deepEqual(ranked.map(row => row.name), ['Agent One', 'Agent Two']);
     assert.deepEqual(leaderboardTotals(result.rows, 'whatsapp', 'ap'), { ...leaderboardTotals(result.rows, 'whatsapp', 'ap'), first: 5, second: 1350.49 });
-    assert.deepEqual(leaderboardMetrics('whatsapp'), { first: 'sales', second: 'production', firstLabel: 'Sales', secondLabel: 'Total production' });
+    assert.deepEqual(leaderboardMetrics('whatsapp'), { first: 'sales', second: 'production', firstLabel: 'Policies sold', secondLabel: 'Annual premium' });
   } finally { await db.close(); }
 });
 
@@ -113,4 +113,16 @@ test('the API accepts the whatsapp board and reports a clear unavailable state b
     assert.equal(result.status, 'unavailable'); assert.equal(result.error.code, 'WHATSAPP_NOT_IMPORTED'); assert.deepEqual(result.rows, []);
     await assert.rejects(readWhatsappLeaderboard({ board: 'sp', period: 'day' }, { db, now: NOW }), TypeError);
   } finally { await db.close(); }
+});
+
+
+test('Standard vs Preferred WhatsApp dataset awaits its own reports, never substitutes HubSpot or All rows', async () => {
+  const { readPendingWhatsappStandardPreferred } = await import('../lib/whatsapp-sales.mjs');
+  for (const period of ['day', 'week', 'month', 'custom']) {
+    const input = { board: 'whatsapp-sp', period, ...(period === 'custom' ? { from: '2026-07-01', to: '2026-07-03' } : {}) };
+    const result = readPendingWhatsappStandardPreferred(input, NOW);
+    assert.equal(result.board, 'whatsapp-sp'); assert.equal(result.status, 'unavailable');
+    assert.deepEqual(result.rows, []); assert.match(result.notice, /separate Standard vs Preferred WhatsApp spreadsheets/);
+    assert.ok(result.startDate); assert.ok(result.endDate);
+  }
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useOutsideClose } from "./use-outside-close";
 import { EDIT_FIELDS } from "@/lib/recruit-edit-config.mjs";
 import { STAGES, stageIdForKey, stageKeyForStageId } from "@/lib/recruiting-config.mjs";
 import { LICENSE_ROUTES, forwardStageChoices, backwardStageChoices, validateFlowTransition } from "@/lib/recruiting-flow.mjs";
@@ -137,6 +138,8 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
     if (dirty) setPhase("discard");
     else onClose();
   }
+  // A click outside the editor closes it like the × does: unsaved edits first ask to be discarded.
+  useOutsideClose(embedded ? sectionRef : dialogRef, requestClose);
   function review(event: FormEvent) {
     event.preventDefault();
     const issue = validateDraft(changes, baseline);
@@ -189,7 +192,7 @@ export default function RecruitEditor<T extends EditableRecruit>({ recruit, canE
   const permissionNote = !canEdit ? writeAccessPending ? "This workspace is read-only. Saving has not been enabled." : "Editing is unavailable for this account." : null;
   const reviewedFields = fields.filter(field => Object.hasOwn(changes, field.property));
   const content = <>
-    <div className="dialog-header"><div><h2 id="edit-title" tabIndex={-1}>{phase === "review" ? "Review your changes" : phase === "discard" ? "Discard this draft?" : phase === "reload" ? "Reload the latest record?" : "Edit recruit"}</h2><p className="editor-recruit-name">{base.name}</p></div><button className="btn btn-quiet" type="button" aria-label="Close editor" disabled={busy} onClick={requestClose}>×</button></div>
+    <div className="dialog-header"><div><h2 id="edit-title" tabIndex={-1}>{phase === "review" ? "Review your changes" : phase === "discard" ? "Discard this draft?" : phase === "reload" ? "Reload the latest record?" : "Edit recruit"}</h2><p className="editor-recruit-name">{base.name}</p></div><button className="btn btn-quiet dialog-close" type="button" aria-label="Close editor" disabled={busy} onClick={requestClose}><span aria-hidden="true">×</span></button></div>
     <div className="dialog-body">
       <p id="edit-description" className="helper">Changes are sent to HubSpot only when you choose Save to HubSpot.</p>
       {embedded && <p className="helper">Save or cancel editing before opening another profile or stage page.</p>}

@@ -21,7 +21,9 @@ Contacts, Tickets, Tasks, Customer Success and Meetings additionally accept `{ "
 | `calendar` | Meetings search | Existing `crm.objects.contacts.read` | HubSpot CRM meeting records arranged by date |
 | `meetings` | Meetings search | Existing `crm.objects.contacts.read` | HubSpot CRM meeting records |
 
-Optional `crm.objects.owners.read` resolves the actual HubSpot owner ID to first and last name. Owner emails and teams are discarded. Missing owner permission leaves the main dataset readable with nullable owner labels.
+`crm.objects.owners.read` resolves the actual HubSpot owner ID to first and last name. Owner teams are discarded, and owner emails stay in the server cache to match the signed-in user. Without owner permission the other tools stay readable with nullable owner labels.
+
+`tasks`, `calls`, `meetings` and `calendar` return only records assigned to the signed-in user: the search adds `hubspot_owner_id IN` every owner record whose email exactly matches the session email, active or deactivated, and a `recordId` read of someone else's Task or Meeting returns `RECORD_NOT_ASSIGNED`. These responses carry `assignedToViewer: true`. Records with no owner match nobody. There is no name matching and no fallback to all records: an email with no owner returns `status: "unavailable"` with `HUBSPOT_OWNER_NOT_FOUND`, and an owner read that cannot finish returns `HUBSPOT_OWNER_UNCONFIRMED`. A recruit's activity history is the exception: it shows everyone's activity linked to that recruit, whoever owns it, and each entry names its owner.
 
 CRM requests use fixed `POST https://api.hubapi.com/crm/v3/objects/{configured-object}/search` endpoints, fixed property lists, limit 100 and descending object ID. Meetings use descending `hs_meeting_start_time`. Conversations use fixed `GET https://api.hubapi.com/conversations/v3/conversations/threads` and `.../{numeric-thread-id}/messages` endpoints. Bearer credentials never leave the server and redirects are not followed.
 
@@ -73,7 +75,7 @@ HTTP boundary failures remain 401 (no session), 403 (allowlist/origin), 404 (unk
 
 ## Deliberate product limits
 
-These are connected views built inside the app. Customer Success health-score calculation, plays, automation and native workspace seat behavior are not recreated. Inbox cannot send replies or attachments. Calls display logged records; calling stays with the approved recruit HubSpot calling buttons. Calendar is a view of CRM meetings, not HubSpot's marketing campaign calendar or a complete connected Google calendar. Scheduling links and meeting availability remain in HubSpot. Supported existing-record edits are listed below.
+These are connected views built inside the app. Customer Success health-score calculation, plays, automation and native workspace seat behavior are not recreated. The full Inbox page and dashboard Inbox hover preview support plain-text replies through the guarded `/api/inbox-reply` endpoint and close/reopen/restore through `/api/inbox-thread`. New-conversation actions open HubSpot’s native Inbox; see [Inbox replies](docs/inbox-replies.md). Attachments remain in HubSpot. Calls display logged records; calling stays with the approved recruit HubSpot calling buttons. Calendar is a view of CRM meetings, not HubSpot's marketing campaign calendar or a complete connected Google calendar. Scheduling links and meeting availability remain in HubSpot. Supported existing-record edits are listed below.
 
 ## Reviewed existing-record edits
 

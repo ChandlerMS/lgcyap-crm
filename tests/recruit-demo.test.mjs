@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createDemoRecruits, applyDemoStage, applyDemoDetails, isDemoRecruit, validateDemoDetails } from '../app/recruit-demo.mjs';
+import { DEMO_RECRUIT_COUNT, createDemoRecruits, applyDemoStage, applyDemoDetails, isDemoRecruit, validateDemoDetails } from '../app/recruit-demo.mjs';
 import { STAGE_PAGES, stageIdForKey } from '../lib/recruiting-config.mjs';
 import { EDIT_FIELDS } from '../lib/recruit-edit-config.mjs';
 import { stageSnapshotAvailable } from '../app/recruit-stage-save.mjs';
@@ -12,9 +12,9 @@ const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', yea
 
 test('demo factory creates exactly six isolated fictional recruits in every canonical stage', () => {
   const records = createDemoRecruits(NOW);
-  assert.equal(records.length, 60);
-  for (const field of ['id', 'phone', 'email', 'firstName']) assert.equal(new Set(records.map(record => record[field])).size, 60, field);
-  assert.equal(records[0].id, '900000000000001'); assert.equal(records.at(-1).id, '900000000000060');
+  assert.equal(records.length, DEMO_RECRUIT_COUNT);
+  for (const field of ['id', 'phone', 'email', 'firstName']) assert.equal(new Set(records.map(record => record[field])).size, DEMO_RECRUIT_COUNT, field);
+  assert.equal(records[0].id, '900000000000001'); assert.equal(records.at(-1).id, String(900000000000000 + DEMO_RECRUIT_COUNT));
   for (const stage of STAGE_PAGES) assert.equal(records.filter(record => record.stageId === stage.stageId).length, 6);
   for (const record of records) {
     assert.equal(record.lastName, 'Test'); assert.equal(record.name, `${record.firstName} Test`);
@@ -23,7 +23,7 @@ test('demo factory creates exactly six isolated fictional recruits in every cano
     assert.deepEqual(Object.keys(record.editValues), EDIT_FIELDS.map(field => field.property));
     assert.equal(Object.keys(record.editValues).length, 14);
   }
-  assert.equal(records.filter(record => record.lastContactedAt).length, 30);
+  assert.equal(records.filter(record => record.lastContactedAt).length, DEMO_RECRUIT_COUNT / 2);
   assert.deepEqual(createDemoRecruits(NOW), records);
 });
 
@@ -53,6 +53,20 @@ test('demo stage changes use the real graph and preserve the input snapshot', ()
   assert.throws(() => applyDemoStage({ ...source, isDemo: false }, stageIdForKey('phone-interview'), {}, NOW + 1000), /isolated/);
   assert.throws(() => applyDemoStage({ ...source, id: '123' }, stageIdForKey('phone-interview'), {}, NOW + 1000), /isolated/);
   assert.throws(() => applyDemoStage(source, stageIdForKey('phone-interview'), { recruiting_path: 'mass_recruiting' }, NOW + 1000), /different connected/);
+});
+
+test('a demo recruit without a path can record one on its stage or with a move, but a recorded path stays fixed', () => {
+  const pathed = createDemoRecruits(NOW).find(record => record.stageKey === 'application');
+  const source = { ...pathed, recruitingPath: '', editValues: { ...pathed.editValues, recruiting_path: '' } };
+  const recorded = applyDemoStage(source, source.stageId, { recruiting_path: 'mass_recruiting' }, NOW + 1000);
+  assert.equal(recorded.recruitingPath, 'mass_recruiting'); assert.equal(recorded.editValues.recruiting_path, 'mass_recruiting');
+  assert.equal(recorded.stageKey, 'application'); assert.equal(recorded.enteredStageAt, source.enteredStageAt);
+  assert.equal(stageSnapshotAvailable(recorded), true);
+  const moved = applyDemoStage(source, stageIdForKey('hiring-event'), { recruiting_path: 'genpop' }, NOW + 1000);
+  assert.equal(moved.stageKey, 'hiring-event'); assert.equal(moved.recruitingPath, 'genpop');
+  assert.throws(() => applyDemoStage(source, source.stageId, {}, NOW + 1000), /different connected/);
+  assert.throws(() => applyDemoStage(source, stageIdForKey('offer'), {}, NOW + 1000), /path/);
+  assert.throws(() => applyDemoStage(recorded, recorded.stageId, { recruiting_path: 'genpop' }, NOW + 1000), /different connected/);
 });
 
 test('demo Offer requires an explicit licensing branch and terminal stages support direct reversals', () => {

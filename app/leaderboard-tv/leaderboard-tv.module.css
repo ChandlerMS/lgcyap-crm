@@ -1,0 +1,62 @@
+/* Office TV leaderboard: one full screen, no scrolling, sized from the screen so 1080p and 4K read the same. */
+.tv { position: fixed; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 2.2vh; padding: 3vh 3.2vw 2.4vh; overflow: hidden; background: radial-gradient(120% 80% at 50% -10%, #1d1a10 0%, #0a0a0a 55%) #0a0a0a; color: var(--text, #f4f1e8); color-scheme: dark; font-size: 1.9vh; }
+.idle { cursor: none; }
+.header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 2.4vw; padding-bottom: 2vh; border-bottom: 2px solid #6d633e; }
+.logo { width: auto; height: 10vh; object-fit: contain; }
+.titles { min-width: 0; }
+.eyebrow { margin: 0 0 .6vh; color: var(--muted, #b6b2a8); font-size: 1.7vh; letter-spacing: .18em; text-transform: uppercase; }
+.titles h1 { margin: 0; color: var(--gold, #d4af37); font-size: 5.4vh; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subtitle { margin: .9vh 0 0; color: var(--muted, #b6b2a8); font-size: 2vh; }
+.subtitle strong { color: var(--text, #f4f1e8); font-weight: 600; }
+.clock { display: flex; flex-direction: column; align-items: flex-end; gap: .4vh; text-align: right; }
+.clock strong { font-size: 5vh; font-weight: 400; font-variant-numeric: tabular-nums; line-height: 1; }
+.clock span { color: var(--muted, #b6b2a8); font-size: 1.8vh; }
+.clock .updated { color: var(--gold, #d4af37); font-size: 1.6vh; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.4vw; margin: 0; }
+.stats div { min-width: 0; padding: 1.6vh 1.4vw; border: 1px solid #3a3526; border-radius: 1vh; background: #13120d; }
+.stats dt { color: var(--muted, #b6b2a8); font-size: 1.7vh; letter-spacing: .06em; text-transform: uppercase; }
+.stats dd { margin: .6vh 0 0; color: var(--gold, #d4af37); font-size: 5vh; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.board { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; padding: 1.4vh 1.6vw; border: 1px solid #6d633e; border-radius: 1.2vh; background: #111; }
+.columns, .rows li { display: grid; grid-template-columns: 6vh minmax(0, 1.6fr) 9vw minmax(0, 1.3fr) 13vw; align-items: center; gap: 1.6vw; }
+.columns { padding: 0 1vw 1vh; color: var(--muted, #b6b2a8); font-size: 1.5vh; letter-spacing: .08em; text-transform: uppercase; }
+.columns span:nth-child(3), .columns span:last-child { text-align: right; }
+.rows { display: grid; min-height: 0; margin: 0; padding: 0; list-style: none; }
+.rows li { min-height: 0; padding: 0 1vw; border-top: 1px solid #24221c; }
+.medal { display: inline-flex; align-items: center; justify-content: center; width: 5.2vh; height: 5.2vh; border: 1px solid #6d633e; border-radius: 50%; background: #1a180f; color: var(--gold, #d4af37); font-size: 2.4vh; font-weight: 600; font-variant-numeric: tabular-nums; }
+.top1 .medal { background: linear-gradient(130deg, #e9cf7a, #b8862f); color: #0a0905; border: 0; }
+.top2 .medal { background: #a7a9ac; color: #0a0905; border: 0; }
+.top3 .medal { background: #b07a47; color: #0a0905; border: 0; }
+.name { font-size: 3vh; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top1 .name { color: var(--gold, #d4af37); font-weight: 600; }
+.count { color: var(--muted, #b6b2a8); font-size: 2.6vh; font-variant-numeric: tabular-nums; text-align: right; }
+.track { height: 2.2vh; border-radius: 1vh; background: #1d1b14; overflow: hidden; }
+.bar { display: block; height: 100%; border-radius: 1vh; background: linear-gradient(100deg, #b8862f, #e9cf7a 45%, #d4af37 70%, #a9782a); opacity: .72; }
+.top1 .bar { opacity: 1; }
+.value { color: var(--text, #f4f1e8); font-size: 3.1vh; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.top1 .value { color: var(--gold, #d4af37); }
+.note { margin: 1vh 0 0; color: var(--muted, #b6b2a8); font-size: 1.6vh; text-align: right; }
+.empty { align-self: center; margin: 0; color: var(--muted, #b6b2a8); font-size: 3vh; text-align: center; }
+
+.message { grid-row: 2 / 4; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 2vh; text-align: center; }
+.message h1, .message h2 { margin: 0; color: var(--gold, #d4af37); font-size: 4.4vh; font-weight: 600; }
+.message p { margin: 0; color: var(--muted, #b6b2a8); font-size: 2.4vh; max-width: 60vw; }
+.signIn { padding: 1.6vh 3vw; border-radius: 1vh; background: var(--gold, #d4af37); color: #0a0905; font-size: 2.6vh; font-weight: 600; text-decoration: none; }
+.signIn:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+
+.footer { position: relative; display: flex; align-items: center; justify-content: center; padding-top: 1.2vh; }
+.dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2vw; margin: 0; padding: 0; list-style: none; color: #6f6a5d; font-size: 1.6vh; letter-spacing: .06em; text-transform: uppercase; }
+.dots li::before { content: '●'; margin-right: .5vw; }
+.dots .current { color: var(--gold, #d4af37); }
+.progress { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; transform-origin: left; background: var(--gold, #d4af37); opacity: .55; animation-name: slide-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes slide-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .progress { display: none; } }
+/* Portrait or narrow screens: keep everything readable by stacking the header. */
+@media (max-aspect-ratio: 1/1) {
+  .header { grid-template-columns: auto minmax(0, 1fr); }
+  .clock { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: baseline; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .columns, .rows li { grid-template-columns: 4.6vh minmax(0, 1fr) 14vw 18vw; }
+  .columns span:nth-child(4), .rows .track { display: none; }
+}

@@ -140,3 +140,162 @@
 @container (max-width: 899px) {
   .flow { width: 900px; zoom: calc(100cqw / 900px); }
 }
+
+/* Recruit details shown beside a name on hover or keyboard focus. Rendered in document.body so stage scrolling never clips it. */
+.hoverCard { position: fixed; z-index: 9000; width: 330px; max-width: calc(100vw - 24px); padding: 14px 16px 12px; border: 1px solid #685a34; border-radius: 9px; background: #19170f; color: #ede5cf; box-shadow: 0 14px 34px #000b; animation: hoverCardIn .12s ease-out; }
+.hoverName { margin: 0; color: #f4f1e8; font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.hoverStage { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.hoverStage span { padding: 2px 8px; border-radius: 999px; background: #2a2416; color: #e1c66f; font-size: 12px; line-height: 1.6; }
+.hoverStage .hoverWarning { background: #3a2a14; color: #f0b866; }
+.hoverDetails { display: grid; gap: 6px; margin: 0; padding-top: 10px; border-top: 1px solid #ffffff14; }
+.hoverDetails > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.hoverDetails dt { color: #aaa699; font-size: 12px; line-height: 1.5; }
+.hoverDetails dd { margin: 0; color: #e8e2d3; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.hoverHint { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid #ffffff14; color: #d7bd73; font-size: 12px; line-height: 1.5; }
+.pathHint { margin: -6px 0 12px; color: #c9b77a; font-size: 12px; line-height: 1.45; }
+@keyframes hoverCardIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hoverCard { animation: none; } }
+.hoverActions { margin: 0 0 12px; }
+/* A card with more below the details (Event Attendance's sign-ins and application answers) is wider and scrolls within the window. */
+.hoverCardWide { width: 480px; max-height: calc(100vh - 24px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.hoverAdd { margin: 0 0 12px; }
+
+/* Stage pop-out: a floating panel with the stage's recruits in a large grid. Rendered in document.body. */
+.popout { position: fixed; z-index: 8500; display: flex; flex-direction: column; max-height: calc(100vh - 32px); border: 1px solid #685a34; border-radius: 12px; background: #17150f; color: #ede5cf; box-shadow: 0 24px 60px #000c; outline: none; animation: hoverCardIn .14s ease-out; }
+.popout:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 2px; }
+.popoutHeader { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 18px 22px; border-bottom: 1px solid #ffffff14; }
+.popoutHeading { flex: 1 1 200px; min-width: 0; }
+.popoutHeading h2 { margin: 0; color: #f4f1e8; font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
+.popoutHeading p { margin: 3px 0 0; color: #d7bd73; font-size: 15px; }
+.popoutCount { color: var(--gold, #d4af37); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.popoutTools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.popoutSort { display: flex; align-items: center; gap: 8px; color: #b6b2a8; font-size: 14px; }
+.popoutSort select { min-height: 40px; padding: 6px 10px; border: 1px solid #4a4028; border-radius: 6px; background: #11110e; color: #ede5cf; font: inherit; font-size: 15px; }
+.popoutButton { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid #4a4028; border-radius: 6px; background: transparent; color: #e1c66f; font: inherit; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.popoutButton:hover { border-color: #d4af37; background: #211d10; }
+.popoutClose { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 6px; background: #211d13; color: #f0e6c9; font-size: 26px; line-height: 1; cursor: pointer; }
+.popoutClose:hover { background: #2e2716; }
+.popoutSort select:focus-visible, .popoutButton:focus-visible, .popoutClose:focus-visible, .popoutName:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 2px; }
+.popoutBody { overflow-x: hidden; overflow-y: auto; padding: 20px 22px 24px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #887237 #11110f; }
+.popoutGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 16px; }
+.popoutRecruit { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 16px; border: 1px solid #ffffff14; border-radius: 10px; background: #1f1c13; }
+.popoutSaving { opacity: .6; }
+.popoutRecruitHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.popoutName { color: #f4f1e8; font-size: 19px; font-weight: 600; line-height: 1.3; text-decoration: none; overflow-wrap: anywhere; }
+.popoutName:hover { color: #e9cf7a; text-decoration: underline; }
+.popoutChip { padding: 2px 9px; border-radius: 999px; background: #2a2416; color: #e1c66f; font-size: 13px; line-height: 1.6; }
+.popoutWarning { background: #3a2a14; color: #f0b866; }
+.popoutDetails { display: grid; gap: 10px; margin: 0; }
+.popoutDetails > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.popoutDetails dt { color: #aaa699; font-size: 14px; line-height: 1.45; }
+.popoutDetails dd { margin: 0; color: #ece6d6; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
+.popoutDetails > .popoutStage { grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 2px; }
+.popoutStage :global(.stage-select) { width: 100%; min-width: 0; max-width: 100%; min-height: 40px; font-size: 15px; }
+.popoutEmpty { margin: 8px 0; color: #aaa699; font-size: 16px; }
+.popoutOpen .stageHeading { box-shadow: inset 0 0 0 2px #d4af37; }
+.popout :global(.communication-tooltip), .hoverCard :global(.communication-tooltip) { top: calc(100% + 8px); bottom: auto; z-index: 30; }
+@media (max-width: 600px) { .popoutHeader { padding: 14px 16px; } .popoutBody { padding: 14px 16px 18px; } .popoutDetails > div { grid-template-columns: 96px minmax(0, 1fr); } }
+
+/* View switch: the one-page board of every stage, or the 3D pipeline that turns through three steps. */
+.viewBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 18px; margin: 0 0 16px; }
+.faceSteps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.faceSteps button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 8px; border: 1px solid #3c3930; border-radius: 999px; background: transparent; color: #c7c0ae; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.faceSteps button span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #211d13; color: #d7bd73; font-size: 12px; font-variant-numeric: tabular-nums; }
+.faceSteps button:hover { border-color: #8d7535; color: #f0e6c9; }
+.faceSteps button[aria-current="step"] { border-color: #d4af37; background: #2b2718; color: var(--gold, #d4af37); }
+.faceSteps button[aria-current="step"] span { background: var(--gold, #d4af37); color: #17150f; }
+.faceSteps button:focus-visible, .turnRail:focus-visible, .scene:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 3px; }
+.turnHint { margin: -6px 0 14px; color: #aaa699; font-size: 13px; line-height: 1.5; }
+
+/* The 3D pipeline is a three-sided prism turned on its vertical axis. Faces share one grid cell, so the
+   prism is as tall as its tallest face, and each face is pushed out to the prism's edge: the apothem of a
+   triangle as wide as the face is width / (2 × tan 60°), about 28.87% of it. */
+.view3d { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 10px; align-items: stretch; overflow-x: clip; }
+/* A flex rail starts its arrow at the top (a plain button centers it), so the arrow can stick in view down a tall face. */
+.turnRail { position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; border: 1px solid #3a321d; border-radius: 10px; background: #14130f; color: #e1c66f; font: inherit; cursor: pointer; }
+.turnRail span { position: sticky; top: calc(50vh - 33px); display: block; padding: 18px 0; font-size: 30px; line-height: 1; text-align: center; }
+.turnRail:hover:not(:disabled) { border-color: #8d7535; background: #211d13; }
+.turnRail:disabled { opacity: .3; cursor: default; }
+.view3d:has(.dragging) .turnRail:not(:disabled) { border-color: #cead50; box-shadow: inset 0 0 0 1px #cead50; }
+.scene { container-type: inline-size; min-width: 0; perspective: max(1600px, 190cqw); perspective-origin: 50% 35%; cursor: grab; touch-action: pan-y; outline-offset: 5px; }
+.scene.dragging { cursor: grabbing; user-select: none; }
+.prism { display: grid; transform-style: preserve-3d; transform: translateZ(-28.8675cqw) rotateY(calc(-1 * var(--rotation, 0deg))); transition: transform .75s cubic-bezier(.2, .85, .25, 1); }
+.face { grid-area: 1 / 1; position: relative; min-width: 0; padding: 16px 18px 22px; border: 1px solid #3a321d; border-radius: 14px; background: linear-gradient(160deg, #1b1810 0%, #13120e 55%, #0f0e0b 100%); box-shadow: inset 0 1px 0 #ffffff0d; backface-visibility: hidden; transform: rotateY(calc(var(--face, 0) * 120deg)) translateZ(28.8675cqw); }
+.frontFace { border-color: #5a4a26; }
+.faceHeading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 18px; }
+.faceHeading span { color: #a79b76; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.faceHeading h3 { margin: 0; color: #f0e6c9; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.faceFlow { position: relative; isolation: isolate; display: grid; align-items: center; gap: 28px; min-width: 0; }
+.faceStart { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); }
+.faceLicensing { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+.faceFinish { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@container (max-width: 720px) {
+  .faceStart, .faceLicensing, .faceFinish { grid-template-columns: minmax(0, 1fr); }
+  .faceFlow .connectors { display: none; }
+}
+/* 3D faces use larger type than the one-page board, and each stage has its own grey-to-gold tone that warms
+   along the pipeline, from cool silver at the first stages to rich gold at Completed. */
+.face .faceHeading span { font-size: 13px; }
+.face .faceHeading h3 { font-size: 25px; }
+.face .entryPath h3, .face .licensingRoute h3 { margin-bottom: 10px; font-size: 18px; letter-spacing: -.01em; }
+.face .stage { --tone-from: #2c2e33; --tone-to: #3a3c40; --tone-accent: #a4a8af; min-height: 120px; border-radius: 11px; background: linear-gradient(180deg, color-mix(in srgb, var(--tone-to) 30%, transparent) 0%, transparent 75%); }
+.face .stage .stageHeading { padding: 14px 12px 12px 18px; border-radius: 11px; background: linear-gradient(135deg, var(--tone-from) 0%, var(--tone-to) 100%); box-shadow: inset 5px 0 0 var(--tone-accent); }
+.face .stageToggle { grid-template-columns: minmax(0, 1fr) 38px; gap: 6px; min-height: 100px; font-size: 19px; }
+.face .stageTitle { color: #f6f1e4; line-height: 1.3; }
+.face .stageToggle small { margin-top: 3px; color: #d9d2bf; font-size: 14px; }
+.face .count { color: #f3d27a; font-size: 26px; font-weight: 600; }
+.face .expandButton { width: 38px; height: 42px; color: #f0d48a; font-size: 24px; }
+.face .stage .stageContent { padding: 2px 8px 0; }
+.face .stage .recruit { padding: 12px 0; }
+.face .stage .recruit:has(.grip) { padding-top: 36px; }
+.face .stage .grip { width: 30px; height: 30px; font-size: 22px; }
+.face .stage .recruitSummary > a { color: #f6f2e8; font-size: 16px; font-weight: 500; line-height: 1.4; }
+.face .stage.dropAvailable .stageHeading { box-shadow: inset 5px 0 0 var(--tone-accent), inset 0 0 0 1px #cead50; }
+.face .stage.dropHover { background: #3a2f17; }
+.face .stage.dropHover .stageHeading, .face .stage.popoutOpen .stageHeading { box-shadow: inset 5px 0 0 var(--tone-accent), inset 0 0 0 2px #e1c66f; }
+.face .dropHint { top: -22px; font-size: 15px; }
+.face .stage[data-tone="hiring-event"] { --tone-from: #2b2d32; --tone-to: #3b3e44; --tone-accent: #a4a8b0; }
+.face .stage[data-tone="application"] { --tone-from: #2d2e31; --tone-to: #45443e; --tone-accent: #b3b1a6; }
+.face .stage[data-tone="phone-interview"] { --tone-from: #2f2f2f; --tone-to: #4d4736; --tone-accent: #bfb596; }
+.face .stage[data-tone="offer"] { --tone-from: #31302b; --tone-to: #574b2d; --tone-accent: #c9b682; }
+.face .stage[data-tone="licensed-branch"] { --tone-from: #2f312e; --tone-to: #514c38; --tone-accent: #c4b993; }
+.face .stage[data-tone="licensing-reminders"] { --tone-from: #33302a; --tone-to: #5e4e29; --tone-accent: #d1b670; }
+.face .stage[data-tone="licensed-npn"] { --tone-from: #352f27; --tone-to: #665224; --tone-accent: #d8b862; }
+.face .stage[data-tone="contracting"] { --tone-from: #372f23; --tone-to: #6f5520; --tone-accent: #dfb952; }
+.face .stage[data-tone="training"] { --tone-from: #3a2f1f; --tone-to: #7a591b; --tone-accent: #e6bb45; }
+.face .stage[data-tone="completed"] { --tone-from: #3d301c; --tone-to: #876117; --tone-accent: #f0c23a; }
+@media (max-width: 600px) { .view3d { grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 6px; } .turnRail span { font-size: 24px; } .face { padding: 12px 10px 16px; } }
+@media (prefers-reduced-motion: reduce) { .prism { transition: none; } }
+
+/* Recruit names stay collapsed under each stage's heading and open over the board while the pointer is on the stage
+   (or keyboard focus is inside it), so the board never shifts. They stay closed while a recruit is dragged or the
+   pipeline turns. A stage's pop-out still lists everyone. */
+.stage:hover, .stage:has(:focus-visible) { z-index: 30; }
+.stage .stageContent, .stage.expanded .stageContent, .face .stage .stageContent { position: absolute; top: calc(100% - 1px); left: 0; right: 0; z-index: 30; padding: 4px 10px 6px; border: 1px solid #4a4028; border-top: 0; border-radius: 0 0 10px 10px; background: #15140f; box-shadow: 0 16px 30px #000b; visibility: hidden; opacity: 0; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease, visibility 0s linear .14s; }
+.stage .stageContent:empty { display: none; }
+.stage:hover .stageContent, .stage:has(:focus-visible) .stageContent { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
+.dragging .stage .stageContent { visibility: hidden; opacity: 0; transition: none; }
+.face .stage .stageContent { background: #17150f; }
+@media (prefers-reduced-motion: reduce) { .stage .stageContent { transform: none; transition: none; } }
+
+/* The 3D view takes the same space as All stages: the same overall height, with type and cards sized like the board's,
+   so switching views keeps the dashboard still. */
+.turnHint { margin: -8px 0 8px; font-size: 12px; }
+.face { padding: 12px 16px 14px; }
+.face .faceHeading { margin: 0 0 10px; }
+.face .faceHeading span { font-size: 11px; }
+.face .faceHeading h3 { font-size: 17px; }
+.face .entryPaths, .face .licensePaths, .face .outcomes { gap: 32px; }
+.face .entryPath h3, .face .licensingRoute h3 { margin-bottom: 6px; font-size: 13px; line-height: 1.4; }
+.face .stage { min-height: 90px; }
+.face .stage .stageHeading { padding: 8px 8px 8px 14px; border-radius: 9px; }
+.face .stageToggle { grid-template-columns: minmax(0, 1fr) 28px; gap: 4px; min-height: 74px; font-size: 14px; }
+.face .stageToggle small { margin-top: 2px; font-size: 12px; }
+.face .count { font-size: 20px; }
+.face .expandButton { width: 28px; height: 30px; font-size: 18px; }
+.face .stage .recruitSummary > a { font-size: 14px; }
+.face .stage .recruit:has(.grip) { padding-top: 30px; }
+.face .stage .grip { width: 26px; height: 26px; font-size: 18px; }
+.face .dropHint { font-size: 13px; }
+.faceFlow { gap: 20px; }
+

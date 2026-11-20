@@ -10,6 +10,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Production deployments
 
+- Version 2 (`/v2`) requires CRM sign-in, then redirects to `https://lgcy-onboard.carlos-831.workers.dev/` as a top-level navigation. Do not restore the cross-site iframe: the browser refused its navigation and the site's SameSite=Lax session also prevents reliable embedded sign-in. The site's source is `LegacyAgencyPartners/LGCY-Onboard` (Cloudflare app in `onboard/` and the root mockup). Its deployment requires access to its owning Cloudflare account. Legacy Vercel routes and their separate database remain unchanged.
+
 - Production is `main` in `ChandlerMS/lgcyap-crm` on GitHub, deployed by the existing Vercel Git integration.
 - Before publishing, fetch `origin/main` and incorporate its latest changes without overwriting other work. Push or merge the complete reviewed change to `main`; wait for that Git deployment and verify its commit against GitHub.
 - Do not use local `vercel --prod`, `vercel deploy --prod`, prebuilt production uploads, arbitrary alias assignments, or promotion of another branch to publish this project. Local checkouts are for development and preview deployments.
@@ -25,6 +27,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Inspect the actual diff and run relevant checks after a worker returns. Never run concurrent writers in one checkout.
 - Keep credentials, environment files, and customer records out of task packets and logs.
 - Both checkouts target existing Vercel project `legacy-recruiting-private`, team `main-team8`. Never create a duplicate project or deploy merely to test collaboration.
+
+## Bottom window launchers
+
+Use `FloatingLauncher` from `app/floating-launcher.tsx` for every bottom window button,
+inside `FloatingActions`. Keep WhatsApp, PolicyTek and RingCentral in `floating-actions-communications` on the bottom right. Keep Legacy Bot and Support in `legacy-bot-dock` at the bottom left of the workspace, just to the right of the expanded desktop sidebar, with Support immediately to the right of Legacy Bot. Gemini has been removed. Supply its current `expanded` state and `onExpand`/`onCollapse`
+callbacks. Keep the launcher visible while open. Embedded windows must remain mounted
+when collapsed so sign-in and ongoing work survive. WhatsApp is a separate popup and
+its second click closes that popup. The dock measures its wrapped height so panels
+remain above all buttons on narrow screens.
 
 ## lgcyap-crm design rules
 

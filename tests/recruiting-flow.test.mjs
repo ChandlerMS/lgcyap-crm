@@ -13,7 +13,7 @@ test('new intake has two exact sources and starts at the source-specific entry',
   assert.equal(entryStageKey('genpop'), 'hiring-event');
   assert.equal(entryStageKey('mass_recruiting'), 'application');
   for (const path of ['', null, undefined, 'mass', 'Referrals', '__proto__']) assert.equal(entryStageKey(path), null);
-  assert.deepEqual(FLOW_STAGES.filter(stage => stage.terminal).map(stage => stage.key), ['completed', 'withdrawn']);
+  assert.deepEqual(FLOW_STAGES.filter(stage => stage.terminal).map(stage => stage.key), ['completed', 'rejected', 'withdrawn']);
   assert.equal(FLOW_STAGES.find(stage => stage.key === 'licensed-npn').label, 'Licensed w/ NPN');
 });
 
@@ -71,12 +71,12 @@ test('the unlicensed route has the normal forward chain and real backward candid
 test('merged stages work without guessing source or route, and both terminal outcomes retain backward moves', () => {
   const { forwardStageChoices, backwardStageChoices, validateFlowTransition } = requireFlow();
   assert.deepEqual(keys(forwardStageChoices(state('contracting'))), ['training']);
-  assert.deepEqual(keys(forwardStageChoices(state('training'))), ['completed', 'withdrawn']);
-  for (const terminal of ['completed', 'withdrawn']) {
+  assert.deepEqual(keys(forwardStageChoices(state('training'))), ['completed', 'rejected', 'withdrawn']);
+  for (const terminal of ['completed', 'rejected', 'withdrawn']) {
     assert.deepEqual(forwardStageChoices(state(terminal)), []);
-    assert.deepEqual(keys(backwardStageChoices(state(terminal))), ['training']);
+    assert.deepEqual(keys(backwardStageChoices(state(terminal))), terminal === 'completed' ? ['training'] : []);
     assert.deepEqual(validateFlowTransition(state('training'), state(terminal)), { ok: true });
-    assert.deepEqual(validateFlowTransition(state(terminal), state('training')), { ok: true });
+    assert.equal(validateFlowTransition(state(terminal), state('training')).ok, terminal === 'completed');
   }
   assert.deepEqual(validateFlowTransition(state('completed'), state('withdrawn')).ok, false);
   assert.deepEqual(validateFlowTransition(state('application', 'genpop'), state('withdrawn', 'genpop')).ok, false);

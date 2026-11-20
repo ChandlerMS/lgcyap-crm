@@ -106,17 +106,21 @@ with reserved fictional phones and example.invalid email addresses. Demo edits
 and stage moves live only in browser memory and reset on reload. They never write
 to HubSpot. Live tools and intake cannot mount beneath a demo label.
 
-The entire Recruits row toggles its keyboard-accessible disclosure, with only
-Add Recruits and Pipeline links underneath. Pipeline opens the main recruiting
-pipeline page (`#today`), where stage links open their filtered queues. Recruits
-starts collapsed on app opening. The full sidebar also collapses.
+Recruiting Dashboard heads the sidebar, above a gold rule, and opens the main
+recruiting pipeline page (`#today`), where stage links open their filtered queues.
+Add Recruits (`#add-recruits`) opens from the button beside the dashboard's
+reporting period. Event Attendance is a section of the dashboard between the
+pipeline and Meetings and Calendar; saved `#event-attendance` links still open
+its full page. Below the gold rule come Leaderboard (with a toggle to Call
+Analytics) and Queues (Shopper and Standard vs Preferred, which open and close
+under it). The full sidebar also collapses.
 Customer Success, Inbox, Tickets, Calls, Contacts, Tasks, Calendar and
 Meetings use the existing approved-user session. CRM tables have sortable columns,
 global search and in-app detail views. Contacts, tickets, tasks, companies and
 meetings offer Edit → Review → Save for their fixed supported fields when the
 server verifies the required write grants. No generic creation, deletion or
 messaging is added. Calendar represents CRM meetings, not Google Calendar.
-Inbox reads plain-text messages without sending or attachments. See
+The full Inbox page reads plain-text messages. Its dashboard hover preview can reply to supported conversations using the existing production HubSpot connection; see [Inbox replies](docs/inbox-replies.md). Attachments remain in HubSpot. See
 [the API contract and scope requirements](HUBSPOT-TOOLS-API.md).
 
 ## Leaderboard and Inbox pagination
@@ -202,13 +206,21 @@ ten stages, including zeros. Shared stages count each recruit once; entry cards
 show each path's subset, and unclassified legacy records remain visible. Counts
 cover loaded records and are marked when the data is partial.
 
-Today includes every loaded recruiting pipeline record, including Completed and
-Withdrawn, under Follow-up, with the same List/Board selector, filters and row controls as
-stage pages. Search on Today covers the pipeline. Upcoming orientations appear
-below this full-width collection. Follow-up has no separate menu item; existing
-`#follow-up` links normalize to `#today`. Suggested reviews keep the existing
-five-day open-stage rule for the Suggested for review statistic, independently
-of the complete Follow-up collection.
+Beside the totals sit two chip boxes. Tasks, the smaller one on the left, lists
+open HubSpot tasks (anything not Completed) soonest due first, so overdue tasks
+lead and undated ones come last; days are counted on the Eastern calendar. Each
+chip opens that task in HubSpot, and "+N more" opens HubSpot's task list. In
+Demo mode the box asks for live data instead. Follow up chips name the recruits
+waiting more than 15 days since their last contact (or creation, if never
+contacted), longest first, and count the rest as "+N more". Under the pipeline,
+two columns show Meetings | Calendar and, below them, Recruits | Calls. Meetings,
+Calendar and Calls are live HubSpot panels. Recruits lists every loaded recruit
+by name with stage, last contact and contact tools, 20 at a time, ignoring the
+Today date selection and search. The Recruits and Calls titles open their full
+pages (filters and the board on Recruits), which are not in the sidebar and link
+back to the Recruiting Dashboard. Search on Today
+covers the pipeline. There is no Tasks page or full Follow Up list; existing
+`#tasks` and `#follow-up` links open Recruits.
 
 Typography uses native Apple system fonts on Apple platforms and Segoe UI Variable
 on supported Windows systems, with standard fallbacks. Body, headings and controls
@@ -286,6 +298,11 @@ Production uses the existing approved writer app `Legacy Recruiting Command Cent
 `Legacy Recruiting Vercel Reader` (`59299825`) and keep saves disabled. Credentials
 are server-only secrets scoped to the intended environment. Use a stable Preview host
 for exact OAuth redirects. Do not trust wildcard *.vercel.app origins or redirects.
+
+Applicant photo IDs on the Applications page are private HubSpot files. The writer app
+has no file access, so Production reads them with `HUBSPOT_FILES_ACCESS_TOKEN`: a HubSpot
+service key with only the files permission, marked Sensitive. It is used for the file
+alone; notes and records still use `HUBSPOT_ACCESS_TOKEN`. Leave it unset in Preview.
 
 Run npm run preflight after configuration. It checks formats and required settings
 without printing values. It does not verify live connectivity or permissions.
@@ -443,7 +460,7 @@ remain in browser memory, without localStorage/sessionStorage persistence.
 - [Hobby restrictions](https://vercel.com/docs/plans/hobby)
 ## Queue (PolicyTek live calls and availability)
 
-Open **Queue** in the recruiting sidebar, or visit `/queue`. Approved employees use the existing Google sign-in. The board shows only On Live Calls and Available, polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
+Open **Queues → Shopper** in the recruiting sidebar, or visit `/queue` (which shows Shopper and Standard vs Preferred together; `?source=shopper` or `?source=svp` shows one). Approved employees use the existing Google sign-in. The board shows Available and On Live Calls under two totals, Total Calls Today (sales agents' PolicyTek calls since midnight Eastern, read once a minute; past PolicyTek's 999-call page the day is read in halves until each part fits, and the total shows a + if PolicyTek would not split it further) and Average Wait Time (the average wait of the agents in Available), polls every five seconds, and retains its last successful board with an outage notice when PolicyTek is unavailable. Counts cover only the workspace's sales-agent list when configured. Calls use PolicyTek's two-hour query window.
 
 Set these **server-only** environment variables in the Vercel project before deploying:
 
@@ -457,3 +474,7 @@ For local development, add the two variables to the ignored `.env.local`. Keep t
 The default `availableRule` in `lib/phone-hud-rule.mjs` shows every explicitly available, non-busy sales agent. Heartbeat and idle cutoffs can be configured there. Names, source labels and times are projected from upstream responses; phone numbers, emails and credentials never reach the board. Cached boards and access tokens are shared only within each server instance, so multiple Vercel instances can independently read PolicyTek.
 
 Run `node --test tests/phone-hud.test.mjs` for Queue filtering, caching, token retry, safe failures and endpoint authorization tests. Fixtures are synthetic and make no live PolicyTek calls.
+
+Automatic monthly application Google Sheets: see [setup, owner consent, weekly tabs and 9 am Eastern refresh](docs/application-sheets.md).
+
+Private received HubSpot Email: [mailbox setup and access](docs/private-hubspot-email.md). Monthly signed-in recruits: [Sign-Ins Sheets](docs/sign-in-sheets.md), using the Applications Google connection.

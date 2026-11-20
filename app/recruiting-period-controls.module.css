@@ -1,5 +1,6 @@
 .section { width: 100%; min-width: 0; margin: 0 0 36px; container-type: inline-size; }
 .heading { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.titleRow { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; min-width: 0; }
 .title { margin: 0; min-width: 0; }
 .title select { display: block; max-width: 100%; color: var(--text); background: transparent; border: 0; border-bottom: 1px solid #64532c; border-radius: 0; padding: 0 28px 4px 0; font-size: clamp(30px, 3vw, 40px); font-weight: 600; line-height: 1.25; letter-spacing: -.035em; }
 .title option { font-size: 16px; background: #141414; color: var(--text); }
@@ -9,10 +10,10 @@
 .dates input[aria-invalid="true"] { border-color: var(--error); }
 .description { margin: 12px 0 24px; color: var(--muted); font-size: 13px; }
 .context { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 20px 46px; margin: 0; }
+.stats { display: grid; align-items: start; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 20px 46px; margin: 0; }
 .stats div { display: flex; flex-direction: column-reverse; gap: 7px; min-width: 110px; }
 .stats dt { color: var(--muted); font-size: 12px; line-height: 1.4; }
-.stats dd { margin: 0; color: var(--text); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.stats dd { margin: 0; color: var(--gold); font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .error { color: var(--error); margin: -12px 0 20px; font-size: 13px; }
 .note { color: var(--muted); margin: 12px 0 0; font-size: 12px; }
 /* The aside spans the title and totals rows on the right, and stays hidden where it could only fit by pushing the pipeline down. */
@@ -24,3 +25,45 @@
 }
 @media (max-width: 1000px) { .stats { margin-left: 0; gap: 18px 30px; } }
 @media (max-width: 620px) { .section { margin-bottom: 26px; } .stats { width: 100%; gap: 18px; } .stats div { min-width: 0; flex: 1; } .stats dd { font-size: 30px; } }
+
+/* Period, totals, then recruit actions share the desktop heading row. */
+.actions { min-width: 0; }
+@container (min-width: 900px) {
+  .heading { grid-template-columns: minmax(180px, max-content) minmax(300px, 1fr) max-content; align-items: center; column-gap: 16px; }
+  .heading > .titleRow { grid-column: 1; grid-row: 1; }
+  .heading > .stats { grid-column: 2; grid-row: 1; gap: 16px; }
+  .heading > .actions { grid-column: 3; grid-row: 1; }
+  .heading > .dates { grid-column: 1 / -1; }
+}
+.stats div { min-width: 0; }
+.title select { width: auto; min-width: min(180px, 100%); field-sizing: content; }
+
+/* Slim header: the period with its dates and an info mark, the totals on one line, then the actions. */
+.section { margin-bottom: 18px; }
+.heading { row-gap: 12px; }
+.titleRow { flex-wrap: nowrap; align-items: baseline; gap: 6px 12px; }
+.title select { padding: 0 24px 2px 0; font-size: clamp(24px, 2vw, 28px); line-height: 1.2; min-width: 0; }
+.description { margin: 0; white-space: nowrap; color: var(--muted); font-size: 13px; }
+.stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 26px; }
+.stats div { flex-direction: row-reverse; justify-content: flex-end; align-items: baseline; gap: 7px; }
+.stats dd { font-size: clamp(22px, 1.8vw, 26px); line-height: 1.1; }
+.stats dt { font-size: 13px; white-space: nowrap; }
+.info { position: relative; align-self: center; }
+.infoButton { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1px solid #5a4d28; border-radius: 50%; background: transparent; color: #d7bd73; font: italic 600 12px/1 Georgia, serif; cursor: help; }
+.infoButton:hover { border-color: var(--gold); color: var(--gold); }
+.infoButton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.tip { position: absolute; top: calc(100% + 8px); left: -8px; z-index: 40; width: 300px; max-width: 80vw; padding: 10px 12px; border: 1px solid #685a34; border-radius: 8px; background: #19170f; color: #e8e2d3; font-size: 12px; line-height: 1.5; white-space: normal; box-shadow: 0 12px 28px #000a; visibility: hidden; opacity: 0; transition: opacity .12s, visibility 0s linear .12s; }
+.info:hover .tip, .info:focus-within .tip { visibility: visible; opacity: 1; transition-delay: 0s; }
+@container (min-width: 900px) { .heading { grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 28px; } }
+@media (max-width: 620px) { .titleRow { flex-wrap: wrap; } .stats dd { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+/* Keep the period explanation within the mobile header, including while hidden. */
+@media (max-width: 620px) {
+  .titleRow { position: relative; }
+  .info { position: static; }
+  .tip { left: 0; width: min(300px, 100%); max-width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 620px) {
+  .stats div { flex: 0 1 auto; max-width: 100%; }
+  .stats dt { white-space: normal; }
+}

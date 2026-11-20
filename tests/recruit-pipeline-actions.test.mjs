@@ -1,7 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pipelineAge, pipelineDropChoice, sortPipelineRecruits } from '../app/recruit-pipeline-actions.mjs';
+import { besideAnchorPosition, pipelineAge, pipelineDegreesPerPixel, pipelineDropChoice, pipelineRotationLimit, pipelineSettleFace, pipelineVisibleFaces, popoutPosition, sortPipelineRecruits } from '../app/recruit-pipeline-actions.mjs';
 import { stageIdForKey } from '../lib/recruiting-config.mjs';
+
+test('the 3D pipeline turns between three faces and stops at the first and last', () => {
+  assert.equal(pipelineDegreesPerPixel(1000), .24);
+  assert.equal(pipelineDegreesPerPixel(100), .75, 'A narrow pipeline still needs a real drag to turn.');
+  assert.equal(pipelineRotationLimit(120), 120);
+  assert.equal(pipelineRotationLimit(-50), -15);
+  assert.equal(pipelineRotationLimit(-500), -30);
+  assert.equal(pipelineRotationLimit(300), 258);
+  assert.equal(pipelineRotationLimit(900), 270);
+  assert.equal(pipelineRotationLimit(NaN), 0);
+  // Bits name the faces turned toward the viewer: one at rest, two while turning between them.
+  assert.equal(pipelineVisibleFaces(0), 0b001);
+  assert.equal(pipelineVisibleFaces(60), 0b011);
+  assert.equal(pipelineVisibleFaces(120), 0b010);
+  assert.equal(pipelineVisibleFaces(185), 0b110);
+  assert.equal(pipelineVisibleFaces(240), 0b100);
+  assert.equal(pipelineVisibleFaces(-30), 0b001);
+});
+
+test('a released drag settles on the nearest face, a flick carries it on, and one drag turns one face', () => {
+  assert.equal(pipelineSettleFace(50, 0), 0);
+  assert.equal(pipelineSettleFace(70, 0), 1);
+  assert.equal(pipelineSettleFace(30, 0, .3), 1, 'A quick flick turns to the next face.');
+  assert.equal(pipelineSettleFace(30, 0, -.3), 0);
+  assert.equal(pipelineSettleFace(230, 0, 1), 1, 'One drag never skips a face.');
+  assert.equal(pipelineSettleFace(130, 1, -.5), 0);
+  assert.equal(pipelineSettleFace(260, 2, 1), 2);
+  assert.equal(pipelineSettleFace(-30, 0, -1), 0);
+  assert.equal(pipelineSettleFace(NaN, 7, NaN), 1);
+});
 
 function recruit(stageKey, path = 'genpop', route = '') {
   return { id: '123', stageKey, stageId: stageIdForKey(stageKey), recruitingPath: path, licenseRoute: route,
@@ -76,4 +106,49 @@ test('stage-age and last-contact sorting compare dates rather than formatted lab
   assert.deepEqual(sortPipelineRecruits(records, 'timeInStage', 'asc').map(row => row.id), ['new', 'old', 'missing']);
   assert.deepEqual(sortPipelineRecruits(records, 'timeInStage', 'desc').map(row => row.id), ['old', 'new', 'missing']);
   assert.deepEqual(sortPipelineRecruits(records, 'lastContactedAt', 'desc').map(row => row.id), ['old', 'new', 'missing']);
+});
+test('a recruit without a recorded path can be dropped onto either path and records it', () => {
+  for (const source of ['hiring-event', 'application', 'phone-interview']) {
+    const record = recruit(source, '');
+    for (const path of ['genpop', 'mass_recruiting']) for (const destination of ['hiring-event', 'application', 'phone-interview']) {
+      const choice = pipelineDropChoice(record, { stageId: stageIdForKey(destination), recruitingPath: path });
+      assert.equal(choice?.stageKey, destination, `${source} → ${path}/${destination}`);
+      assert.deepEqual(choice.flowChanges, { recruiting_path: path }, 'The drop must record exactly the destination path.');
+    }
+  }
+});
+test('path drops never change a recorded path, skip a path, or accept the unrecorded cards', () => {
+  const unrecorded = recruit('application', '');
+  assert.equal(pipelineDropChoice(unrecorded, { stageId: stageIdForKey('offer') }), null, 'Offer needs a path first.');
+  assert.equal(pipelineDropChoice(unrecorded, { stageId: stageIdForKey('application') }), null, 'A same-stage drop must record something.');
+  assert.equal(pipelineDropChoice(unrecorded, { stageId: stageIdForKey('hiring-event'), allowDrop: false }), null);
+  const recorded = recruit('application', 'genpop');
+  assert.equal(pipelineDropChoice(recorded, { stageId: stageIdForKey('application'), recruitingPath: 'genpop' }), null);
+  assert.equal(pipelineDropChoice(recorded, { stageId: stageIdForKey('application'), recruitingPath: 'mass_recruiting' }), null);
+  assert.equal(pipelineDropChoice(recorded, { stageId: stageIdForKey('phone-interview'), recruitingPath: 'mass_recruiting' }), null);
+});
+test('a Contracting recruit without a branch can be dropped onto a branch to record it', () => {
+  const record = recruit('contracting', 'genpop', '');
+  assert.deepEqual(pipelineDropChoice(record, { stageId: stageIdForKey('contracting'), licenseRoute: 'licensed' })?.flowChanges, { licensing_branch: 'licensed' });
+  assert.deepEqual(pipelineDropChoice(record, { stageId: stageIdForKey('contracting'), licenseRoute: 'not_licensed' })?.flowChanges, { licensing_branch: 'not_licensed' });
+  assert.equal(pipelineDropChoice(recruit('contracting', 'genpop', 'licensed'), { stageId: stageIdForKey('contracting'), licenseRoute: 'not_licensed' }), null);
+});
+test('the recruit hover card sits beside its row and never leaves the viewport', () => {
+  const viewport = { width: 1400, height: 900 }, size = { width: 330, height: 420 };
+  assert.deepEqual(besideAnchorPosition({ top: 200, bottom: 220, left: 100, right: 260 }, size, viewport), { top: 190, left: 270 });
+  assert.deepEqual(besideAnchorPosition({ top: 200, bottom: 220, left: 1000, right: 1160 }, size, viewport), { top: 190, left: 660 });
+  assert.deepEqual(besideAnchorPosition({ top: 800, bottom: 820, left: 100, right: 260 }, size, viewport), { top: 468, left: 270 });
+  const narrow = besideAnchorPosition({ top: 100, bottom: 120, left: 20, right: 360 }, size, { width: 375, height: 800 });
+  assert.deepEqual(narrow, { top: 126, left: 20 });
+  for (const position of [narrow, besideAnchorPosition({ top: -50, bottom: -30, left: -40, right: 10 }, size, viewport)]) {
+    assert.ok(position.left >= 12 && position.top >= 12);
+  }
+});
+test('the stage pop-out opens below its stage, flips above when needed, and stays on screen', () => {
+  const viewport = { width: 1400, height: 900 };
+  assert.deepEqual(popoutPosition({ top: 100, bottom: 200, left: 300, right: 420 }, { width: 656, height: 500 }, viewport), { top: 208, left: 300 });
+  assert.deepEqual(popoutPosition({ top: 600, bottom: 700, left: 1200, right: 1320 }, { width: 656, height: 500 }, viewport), { top: 92, left: 728 });
+  assert.deepEqual(popoutPosition({ top: 300, bottom: 400, left: 0, right: 120 }, { width: 952, height: 868 }, viewport), { top: 16, left: 16 });
+  const small = popoutPosition({ top: 300, bottom: 400, left: 10, right: 120 }, { width: 343, height: 600 }, { width: 375, height: 700 });
+  assert.ok(small.left === 16 && small.top >= 16 && small.top + 600 <= 700 - 16);
 });

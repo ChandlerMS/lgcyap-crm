@@ -3,5 +3,34 @@
   "framework": "nextjs",
   "buildCommand": "node scripts/verify-production-source.mjs && npm run build && node scripts/verify-production-source.mjs",
   "installCommand": "npm ci",
-  "crons": [{ "path": "/api/cron/recruit-lifecycle", "schedule": "* * * * *" }]
+  "crons": [
+    {
+      "path": "/api/cron/recruit-lifecycle",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/svp-ringcx-calls",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/lead-data",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/no-contact-tasks",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/application-sheets",
+      "schedule": "*/15 13-15 * * *"
+    },
+    {
+      "path": "/api/cron/custom-recruits",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/sign-in-sheets",
+      "schedule": "*/15 13-15 * * *"
+    }
+  ]
 }
