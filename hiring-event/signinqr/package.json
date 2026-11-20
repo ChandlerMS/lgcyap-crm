@@ -1,0 +1,10 @@
+{
+  "name": "lgcyap-signinqr",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hiring-event QR display for the conference room TV, plus the printable security-desk sign. Static files only.",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  }
+}

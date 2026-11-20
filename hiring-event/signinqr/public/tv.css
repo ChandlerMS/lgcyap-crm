@@ -1,0 +1,79 @@
+/* Built for a 100-inch TV in the conference room. Every size is in viewport units
+   (clamped for small screens), so it is just as sharp at 1080p as at 4K. */
+:root {
+  color-scheme: dark;
+  --bg: #0A0A0B;
+  --line: #2C2A24;
+  --gold: #D4AF37;
+  --gold-lite: #F1D27A;
+  --gold-deep: #A9842A;
+  --text: #EDEAE2;
+  --muted: #9C988C;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); }
+body { color: var(--text); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+body.idle { cursor: none; }
+
+/* Broadcast-safe area: TVs can crop up to ~4% of each edge. */
+.screen {
+  height: 100vh;
+  padding: 4.5vh 4.5vw;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5vh;
+  background:
+    radial-gradient(120vh 70vh at 15% -10%, rgba(212, 175, 55, .12), transparent 60%),
+    radial-gradient(90vh 60vh at 100% 110%, rgba(212, 175, 55, .06), transparent 60%),
+    var(--bg);
+  transition: transform 2s ease;
+}
+
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 3vw; padding-bottom: 2.2vh; border-bottom: 1px solid var(--line); }
+.logo { height: clamp(48px, 9.5vh, 220px); width: auto; display: block; }
+.meta { display: flex; flex-direction: column; align-items: flex-end; gap: .6em; font: 600 clamp(10px, 1.45vh, 32px)/1 Poppins, system-ui, sans-serif; letter-spacing: .24em; text-transform: uppercase; }
+.meta .hot { color: var(--gold); font-size: 1.25em; font-weight: 700; }
+.meta .dim { color: var(--muted); }
+
+.split { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 5vw; }
+
+.eyebrow { display: inline-flex; align-items: center; gap: .8em; margin: 0 0 2.6vh; font: 600 clamp(11px, 1.7vh, 38px)/1 Poppins, system-ui, sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); }
+.eyebrow::before { content: ""; width: .65em; height: .65em; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 .28em rgba(212, 175, 55, .2); animation: beacon 2.4s ease-in-out infinite; }
+@keyframes beacon { 50% { box-shadow: 0 0 0 .55em rgba(212, 175, 55, 0); } }
+h1 { margin: 0 0 3vh; font: 800 clamp(40px, min(13vh, 7.3vw), 290px)/.9 Poppins, system-ui, sans-serif; letter-spacing: -.02em; text-transform: uppercase; }
+h1 .gold { background: linear-gradient(100deg, var(--gold) 0%, #F0DA96 45%, var(--gold-deep) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lede { margin: 0 0 4.5vh; max-width: 21em; font: 500 clamp(15px, min(3vh, 1.7vw), 66px)/1.35 Inter, system-ui, sans-serif; color: #CFCBBF; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2vh; }
+.steps li { display: flex; align-items: baseline; gap: .9em; font: 500 clamp(14px, min(2.8vh, 1.6vw), 60px)/1.25 Inter, system-ui, sans-serif; }
+.steps .n { flex: none; min-width: 1.9em; font: 700 .72em/1 Poppins, system-ui, sans-serif; letter-spacing: .06em; color: var(--gold); }
+
+.scan { display: flex; flex-direction: column; align-items: center; gap: 2.6vh; }
+.card { padding: 1.2vh; border-radius: 1.6vh; background: #fff; line-height: 0; box-shadow: 0 0 0 .35vh var(--gold), 0 0 0 1.1vh rgba(212, 175, 55, .18), 0 4vh 9vh rgba(0, 0, 0, .65); }
+.qr { display: block; width: min(60vh, 44vw); height: auto; }
+.url { margin: 0; text-align: center; font: 700 clamp(15px, 3vh, 64px)/1.15 Poppins, system-ui, sans-serif; letter-spacing: .03em; color: var(--gold); }
+.url .lead { display: block; margin-bottom: .55em; font-size: .5em; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; color: var(--muted); }
+
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 2vw; padding-top: 2.2vh; border-top: 1px solid var(--line); font: 600 clamp(9px, 1.35vh, 30px)/1 Poppins, system-ui, sans-serif; letter-spacing: .26em; text-transform: uppercase; color: var(--muted); }
+.foot .tag { color: var(--gold); opacity: .9; }
+
+.hint { position: fixed; left: 50%; bottom: 2vh; transform: translateX(-50%); margin: 0; padding: .7em 1.3em; border: 1px solid var(--line); border-radius: 99px; background: rgba(10, 10, 11, .9); color: var(--muted); font: 500 clamp(12px, 1.5vh, 28px)/1 Inter, system-ui, sans-serif; transition: opacity .6s; }
+.hint b { color: var(--gold); }
+.hint.fade { opacity: 0; }
+@media (hover: none) { .hint { display: none; } }
+
+/* Portrait screens and phones: stack. */
+@media (max-aspect-ratio: 1/1) {
+  body { overflow: auto; }
+  .screen { height: auto; min-height: 100vh; }
+  .split { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 4vh; }
+  .scan { order: -1; }
+  h1 { font-size: clamp(40px, 12vw, 200px); }
+  .lede { margin-left: auto; margin-right: auto; }
+  .steps { display: inline-flex; align-items: flex-start; text-align: left; }
+  .qr { width: min(78vw, 46vh); }
+  .meta { align-items: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow::before { animation: none; }
+  .screen { transition: none; }
+}
