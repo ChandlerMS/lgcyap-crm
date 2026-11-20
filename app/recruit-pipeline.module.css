@@ -299,3 +299,10 @@
 .face .dropHint { font-size: 13px; }
 .faceFlow { gap: 20px; }
 
+
+/* Phones: the stage and route names and the expand arrows keep their look; an invisible 44px layer centred on each one takes
+   the tap (the design rules' 44px minimum). */
+@media (max-width: 800px) {
+  .stageTitle, .expandButton, .licensingRoute h3 a { position: relative; }
+  .stageTitle::after, .expandButton::after, .licensingRoute h3 a::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}

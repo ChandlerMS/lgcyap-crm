@@ -161,3 +161,12 @@
 @media(max-width:480px){.peopleExportButtons{grid-template-columns:1fr;gap:8px}.peopleExport button{padding:6px;font-size:12px}.dateFilter.peopleFilters,.peopleFilters>.dateRangeFields{grid-template-columns:1fr}}
 
 .peopleFilters input:disabled{opacity:.5;cursor:not-allowed}
+
+/* Phones: Refresh, Export CSV and the other toolbar buttons are 44px tall, the design rules' minimum. The day
+   names, counts and text buttons keep their look; an invisible 44px layer centred on each one takes the tap. */
+@media (max-width: 800px) {
+  .controls button:not(:global(.section-toggle)), .controls .action { min-height: 44px; }
+  .card summary { padding-block: 10px; }
+  .dayButton, .countButton, .linkButton { position: relative; }
+  .dayButton::after, .countButton::after, .linkButton::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}

@@ -1258,3 +1258,29 @@ html[data-workspace-fullscreen="true"] main.content:has(.qr-presentation-workspa
 html[data-workspace-fullscreen="true"] .qr-presentation-heading { display: none; }
 html[data-workspace-fullscreen="true"] .qr-presentation-workspace { height: 100dvh; min-height: 0; }
 html[data-workspace-fullscreen="true"] .qr-presentation-embed { border-radius: 0; }
+
+/* Phones: every control gets a tap target at least 44px tall, the design rules' minimum.
+   Buttons that stand on their own grow to 44px. Borderless icons and links inside text or tables keep their
+   look and spacing: an invisible 44px layer centred on each one (its ::after) takes the tap instead. */
+@media (max-width: 800px) {
+  .view-switch .btn, .page-switch a, .page-switch button, .email-panel-actions .btn, .email-view-tabs .btn,
+  .btn.refresh-button, .summary-card-list a, .summary-card-list .summary-card-select { min-height: 44px; }
+  .panel-pager-page { min-width: 44px; min-height: 44px; }
+  .btn.mobile-close { min-width: 44px; min-height: 44px; }
+  .stage-arrow-button, .intake-remove { width: 44px; }
+  .expand-collapse-arrow { width: 44px; height: 44px; }
+  .signout-link { padding-block: 12px; }
+  .activity-entry summary { padding-block: 10px; }
+  /* The summary-card titles clip their own overflow, so their padding (cancelled by the margin) is the tap area. */
+  .summary-card .summary-chips-link { padding-block: 11px; margin-block: -11px; }
+  /* The full-screen arrow sits centred in the title bar's 56px first row. */
+  .workspace-view-control { top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right)); width: 44px; height: 44px; }
+
+  .section-toggle, button.gold-close, .summary-add, .admin-menu-toggle, .column-sort, .panel-title-link,
+  .summary-chips-link, .summary-card-more, .recruit-quick-actions .quick-action-button, .communication-button { position: relative; }
+  .section-toggle::after, button.gold-close::after, .summary-add::after, .admin-menu-toggle::after, .column-sort::after,
+  .panel-title-link::after, .summary-chips-link::after, .summary-card-more::after,
+  .recruit-quick-actions .quick-action-button::after, .communication-button::after {
+    content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+  }
+}

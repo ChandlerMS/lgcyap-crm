@@ -128,3 +128,11 @@
 .weekWithMeetings:hover, .weekWithMeetings:focus-visible, .weekWithMeetings:has(:focus-visible) { background: #14130e; }
 .weekRow:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .weekDay .event:first-child { margin-top: 8px; }
+
+/* Phones: links and sort buttons in the tables keep their look and the rows keep their height; an invisible
+   44px layer centred on each one takes the tap (the design rules' 44px minimum). */
+@media (max-width: 800px) {
+  .toolbar select { min-height: 44px; }
+  .nativeLink, .recordName, .sortButton { position: relative; }
+  .nativeLink::after, .recordName::after, .sortButton::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}

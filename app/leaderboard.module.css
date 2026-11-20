@@ -163,3 +163,6 @@
 /* Phones: the narrow call-total columns break long header words (hyphenated where the browser can)
    instead of letting "Connected" and "Abandoned" run into the next column. */
 @media (max-width: 560px) { .chartHead > span { hyphens: auto; overflow-wrap: break-word; } }
+
+/* Phones: board tabs, sort buttons and the TV link are 44px tall, the design rules' minimum. */
+@media (max-width: 800px) { .boardTabs button, .segment button, .tvLink { min-height: 44px; } }
