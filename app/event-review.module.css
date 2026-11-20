@@ -4,3 +4,6 @@
 .approve { color: #79d69a; }.deny { color: #f08080; }.reviewButton[aria-pressed="true"] { opacity: 1; background: #ffffff12; box-shadow: 0 0 0 1px currentColor; }.reviewButton:hover { opacity: 1; }.reviewButton:disabled { cursor: default; }.reviewButton:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
 .reviewStatus { min-width: 82px; color: #d5cdbb; font-size: 13px; }
 .muted { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* Phones: 44px Approve and Deny buttons, the design rules' minimum. */
+@media (max-width: 800px) { .reviewButton { width: 44px; height: 44px; } }

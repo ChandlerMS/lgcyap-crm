@@ -103,3 +103,11 @@ dialog.photoDialog { width: min(980px, calc(100vw - 40px)); }
 .sheetsPanel p[role="alert"] { color: #f0c36a; }
 .sheetsActions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media print { .sheetsPanel { display: none; } }
+
+/* Phones: 44px search and filters (the design rules' minimum); the inline links keep their look, and an
+   invisible 44px layer centred on each one takes the tap. */
+@media (max-width: 800px) {
+  .search input, .select select { min-height: 44px; }
+  .linkButton, .facts dd a { position: relative; }
+  .linkButton::after, .facts dd a::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}

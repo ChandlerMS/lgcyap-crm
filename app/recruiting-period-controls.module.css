@@ -67,3 +67,11 @@
   .stats div { flex: 0 1 auto; max-width: 100%; }
   .stats dt { white-space: normal; }
 }
+
+/* Phones: the period menu is 44px tall (the design rules' minimum); the small "i" keeps its look, and an
+   invisible 44px layer centred on it takes the tap. */
+@media (max-width: 800px) {
+  .title select { min-height: 44px; }
+  .infoButton { position: relative; }
+  .infoButton::after { content: ""; position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+}

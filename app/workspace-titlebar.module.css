@@ -40,3 +40,13 @@
 .support a { position: relative; justify-content: center; width: 40px; height: 40px; padding: 8px; box-sizing: border-box; }
 .support .badge { position: absolute; top: -3px; right: -3px; font-size: 10px; }
 @media(max-width:720px) { .support { flex: 1 1 auto; }.support a { width: 36px; height: 36px; padding: 7px; } }
+
+/* Phones: Live/Demo and search share one row, and the eight shortcut icons get a full row of their own
+   (they wrapped seven-and-one before). */
+@media(max-width:720px) { .search { order: 2; flex: 1 1 140px; min-width: 0; }.support { order: 3; flex: 1 1 100%; justify-content: space-between; } }
+@media(max-width:360px) { .support { gap: 0; } }
+
+/* Phones: Live/Demo, search and the shortcut icons are 44px tall, the design rules' minimum. Below 720px the
+   eight icons share their row equally, up to 44px wide each, so they stay on one line down to 320px. */
+@media(max-width:800px) { .mode { padding: 0; }.mode button { min-height: 44px; }.search input { height: 44px; }.support a { width: 44px; height: 44px; } }
+@media(max-width:720px) { .support a { flex: 1 1 0; width: auto; min-width: 0; max-width: 44px; } }
