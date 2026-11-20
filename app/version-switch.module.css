@@ -28,3 +28,12 @@
 @media(max-width:1300px) { .withControls .brand span { display: none; }.withControls { gap: 12px; }.withControls .brand { font-size: 12px; letter-spacing: .06em; } }
 @media(max-width:1100px) { .controlHost { flex-basis: 100%; min-width: 0; }.withControls .tabs { margin-left: auto; } }
 @media(max-width:720px) { .withControls { gap: 4px 10px; }.withControls .tabs { min-height: 40px; }.withControls .tabs a { min-width: 80px; }.withControls .mark { height: 26px; margin-right: 6px; } }
+
+/* Phones: the menu arrow (.sidebar-fab-mobile in globals.css) joins this bar's first row, left of the mark,
+   and only that row keeps room for the fixed full-screen arrow on the right, so the shortcut icons below get
+   the full width and stay on one line. */
+@media(max-width:800px) { :global(body:has(.sidebar-fab-mobile)) .bar .brand { margin-left: calc(44px + var(--space-2)); } }
+@media(max-width:720px) { .withControls { padding-right: var(--space-3); }.withControls .tabs { margin-right: 42px; } }
+/* Under 400px the mark stands alone (its alt text still names Legacy Agency Partners) so both version tabs fit beside it. */
+@media(max-width:399px) { :global(body:has(.sidebar-fab-mobile)) .bar .brand { font-size: 0; letter-spacing: 0; }:global(body:has(.sidebar-fab-mobile)) .withControls .mark { margin-right: 0; } }
+@media(max-width:360px) { .withControls .tabs a { min-width: 72px; padding: 0 var(--space-2); } }

@@ -26,7 +26,9 @@
 .providerSearch > p { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
 .providerSearch > p.messageError { color: var(--error); }
 .searchSummary { margin: 0 0 15px; color: #dfcd98; font-size: 13px; overflow-wrap: anywhere; }
-.tableWrap { max-width: 100%; overflow-x: auto; scrollbar-color: #756333 #111; }
+/* position: relative keeps the absolutely positioned screen-reader labels inside the scroll box;
+   without it they escape the clip and widen the whole page on phones. */
+.tableWrap { position: relative; max-width: 100%; overflow-x: auto; scrollbar-color: #756333 #111; }
 .table { border-collapse: collapse; width: 100%; min-width: 720px; text-align: left; font-size: 13px; }
 .table th { padding: 14px 17px; border-bottom: 1px solid #4a4332; font-weight: 400; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .table td { padding: 22px 17px; border-bottom: 1px solid var(--line); color: #d2cec3; vertical-align: top; max-width: 310px; overflow-wrap: anywhere; }
@@ -74,7 +76,7 @@
 .monthHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 19px; }
 .monthHeading h2 { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: -.025em; }
 .monthHeading > div { display: flex; align-items: center; gap: 8px; }
-.calendar { overflow-x: auto; border-top: 1px solid #443c29; border-left: 1px solid var(--line); margin-bottom: 30px; }
+.calendar { position: relative; overflow-x: auto; border-top: 1px solid #443c29; border-left: 1px solid var(--line); margin-bottom: 30px; }
 .weekdays, .days { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); min-width: 735px; }
 .weekdays span { padding: 12px 11px; font-size: 12px; color: var(--muted); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .day, .paddingDay { min-height: 112px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px 9px; }
